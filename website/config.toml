@@ -1,4 +1,4 @@
-baseurl = "https://betterbeauty.io/"
+baseurl = "http://betterbeauty.s3-website-us-east-1.amazonaws.com/"
 title = "BetterBeauty Inc."
 theme = "universal"
 #themesDir = "../.."
