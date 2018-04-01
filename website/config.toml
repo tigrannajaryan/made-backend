@@ -1,4 +1,4 @@
-baseurl = "http://dev.betterbeauty.io/"
+baseurl = "https://dev.betterbeauty.io/"
 title = "BetterBeauty Inc."
 theme = "universal"
 #themesDir = "../.."
