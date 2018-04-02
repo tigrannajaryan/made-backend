@@ -2,7 +2,7 @@
 BetterBeauty source code monorepo.
 
 # Directory Structure
-\apps    - application source code.
+\webapp  - application backend API and admin
 \website - betterbeauty.com public web site.
 
 # Getting Started
