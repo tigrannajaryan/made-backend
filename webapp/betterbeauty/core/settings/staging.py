@@ -1,5 +1,5 @@
 from .defaults import *  # noqa
 
-# TODO: add DB config
+ALLOWED_HOSTS = ('*.admindev.betterbeauty.io', 'admindev.betterbeauty.io', )
 
 DEBUG = True

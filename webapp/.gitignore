@@ -129,3 +129,6 @@ ENV/
 # PyCharm settings
 .idea
 /foo.txt
+
+# Elastic Beanstalk Files
+**/.elasticbeanstalk/*

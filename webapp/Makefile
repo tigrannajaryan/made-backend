@@ -7,7 +7,7 @@ PYTHON = $(ENV)/bin/python
 PYTEST = $(ENV)/bin/pytest
 ENV ?= venv
 
-requirements = -r requirements/$(LEVEL).txt
+requirements = -r $(PROJECT)/requirements/$(LEVEL).txt
 
 MYPYPATH=mypy
 FLAKE8 = $(ENV)/bin/flake8
@@ -30,7 +30,7 @@ setup-db:
 	. install_scripts/local_setup.sh
 
 install-py: .install-py
-.install-py: requirements/common.txt requirements/$(LEVEL).txt
+.install-py: $(PROJECT)/requirements/common.txt $(PROJECT)/requirements/$(LEVEL).txt
 	[ ! -d "$(ENV)/" ] && virtualenv -p python3 $(ENV)/ || :
 	$(ENV)/bin/pip install --exists-action w $(requirements)
 	touch $@
