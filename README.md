@@ -2,7 +2,8 @@
 BetterBeauty source code monorepo.
 
 # Directory Structure
-\webapp  - application backend API and admin
+\mobile  - mobile Ionic application.
+\webapp  - application backend API and admin.
 \website - betterbeauty.com public web site.
 
 # Getting Started
