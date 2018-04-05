@@ -12,7 +12,7 @@ def test_data():
 
 
 # generic test function to verify pytest
-def test_test_serilizer(test_data):
+def test_test_serializer(test_data):
     s = serializers.TestSerializer(
         data=test_data
     )
