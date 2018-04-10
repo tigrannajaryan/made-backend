@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     # Internal apps
     'api',
     'core',
+    'salon',
 ]
 
 MIDDLEWARE = [
