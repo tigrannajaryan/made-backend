@@ -15,7 +15,7 @@ from core.types import Weekday
 class Salon(models.Model):
     name = models.CharField(max_length=255)
     timezone = TimeZoneField()
-    photo = models.ImageField(null=True)
+    photo = models.ImageField(blank=True, null=True)
     address = models.CharField(max_length=255)
     city = models.CharField(max_length=64)
     state = models.CharField(max_length=2, blank=True)
@@ -33,7 +33,7 @@ class Salon(models.Model):
 class Stylist(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     salon = models.ForeignKey(Salon, on_delete=models.PROTECT)
-    profile_photo = models.ImageField(null=True)
+    profile_photo = models.ImageField(blank=True, null=True)
     work_start_at = models.TimeField()
     work_end_at = models.TimeField()
 
