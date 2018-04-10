@@ -1,3 +1,8 @@
 from .defaults import *  # noqa
 
-# TODO: add db config
+ALLOWED_HOSTS = ('*.admin.betterbeauty.io', 'admin.betterbeauty.io', )
+
+DEBUG = False
+
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto.S3BotoStorage'
+AWS_STORAGE_BUCKET_NAME = 'betterbeauty-webapp-production-public'

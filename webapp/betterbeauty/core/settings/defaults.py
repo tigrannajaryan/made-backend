@@ -41,6 +41,7 @@ INSTALLED_APPS = [
 
     # Third party apps
     'django_extensions',
+    'storages',
 
     # Internal apps
     'api',
