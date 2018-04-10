@@ -11,3 +11,9 @@ class User(AbstractUser):
     EMAIL_FIELD = 'email'
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS: List[str] = []
+
+    def is_customer(self) -> bool:
+        return hasattr(self, 'customer')
+
+    def is_stylist(self) -> bool:
+        return hasattr(self, 'stylist')

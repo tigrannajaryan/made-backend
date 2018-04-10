@@ -1,3 +1,4 @@
+import datetime
 import os
 from .utils import parse_database_url  # NOQA
 
@@ -40,7 +41,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # Third party apps
+    'corsheaders',
     'django_extensions',
+    'rest_framework',
     'storages',
 
     # Internal apps
@@ -50,6 +53,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -97,8 +101,23 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
+    ),
+}
+
 AUTH_USER_MODEL = 'core.User'
 
+JWT_AUTH = {
+    'JWT_ALLOW_REFRESH': True,
+    'JWT_AUTH_HEADER_PREFIX': 'Token',  # add header Authentication: Token <jwt_token>
+    'JWT_EXPIRATION_DELTA': datetime.timedelta(hours=24),  # set expiration for 1 day
+}
+
+# as long as we employ JWT based auth - we can safely enable CORS requests from anywhere
+CORS_ORIGIN_ALLOW_ALL = True
 
 # Internationalization
 
