@@ -11,6 +11,15 @@ local dev server for dev/testing and open the app in your default browser.
 
 To build only run `npm run build`.
 
+# Debugging in VS Code
+
+- run `npm run ionic:serve -- -b` to build the app and start the server.
+- open `/mobile` directory in VS code.
+- Press F5. This should open the app in Chrome and attach
+debugger to it. You should be able to set and hit breakpoints
+in *.ts files in VS Code.
+
+
 # Android App
 
 ## Prerequisites
@@ -28,3 +37,4 @@ To build only run `npm run build`.
 
 To build and run on Android emulator or connected Android device
 use command `ionic cordova run android --device`
+
