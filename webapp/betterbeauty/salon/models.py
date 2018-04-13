@@ -23,11 +23,16 @@ class Salon(models.Model):
     latitude = models.DecimalField(decimal_places=8, max_digits=10, null=True, blank=True)
     longitude = models.DecimalField(decimal_places=8, max_digits=11, null=True, blank=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '{0} ({1})'.format(self.name, self.get_full_address())
 
-    def get_full_address(self):
+    def get_full_address(self) -> str:
         return u', '.join((self.address, self.city, self.state))
+
+    def get_photo_url(self) -> Optional[str]:
+        if self.photo:
+            return self.photo.url
+        return None
 
 
 class Stylist(models.Model):
@@ -37,7 +42,7 @@ class Stylist(models.Model):
     work_start_at = models.TimeField()
     work_end_at = models.TimeField()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'Stylist: {0}'.format(self.user)
 
     @property
@@ -57,6 +62,11 @@ class Stylist(models.Model):
 
     def get_full_name(self) -> str:
         return self.user.get_full_name()
+
+    def get_profile_photo_url(self) -> Optional[str]:
+        if self.profile_photo:
+            return self.profile_photo.url
+        return None
 
     def get_weekday_discount_percent(self, weekday: Weekday) -> int:
         weekday_discount = self.weekday_discounts.filter(
@@ -132,7 +142,7 @@ class StylistFirstTimeBookDiscount(models.Model):
         Stylist, on_delete=models.CASCADE, related_name='first_time_book_discount')
     discount_percent = models.PositiveIntegerField(validators=[MaxValueValidator(100)])
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '{0}% ({1})'.format(
             self.discount_percent, self.stylist
         )

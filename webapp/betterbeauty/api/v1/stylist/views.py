@@ -7,7 +7,7 @@ from api.common.permissions import StylistPermission
 from .serializers import StylistSerializer
 
 
-class StylistView(generics.RetrieveAPIView):
+class StylistView(generics.RetrieveUpdateAPIView):
     serializer_class = StylistSerializer
     permission_classes = [StylistPermission, ]
 

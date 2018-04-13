@@ -115,6 +115,7 @@ JWT_AUTH = {
     'JWT_ALLOW_REFRESH': True,
     'JWT_AUTH_HEADER_PREFIX': 'Token',  # add header Authentication: Token <jwt_token>
     'JWT_EXPIRATION_DELTA': datetime.timedelta(hours=24),  # set expiration for 1 day
+    'JWT_RESPONSE_PAYLOAD_HANDLER': 'core.utils.auth.jwt_response_payload_handler',
 }
 
 # as long as we employ JWT based auth - we can safely enable CORS requests from anywhere
