@@ -5,7 +5,7 @@ import { SplashScreen } from '@ionic-native/splash-screen';
 
 import { HomePage } from '../pages/home/home';
 import { ListPage } from '../pages/list/list';
-import { LoginPage } from '../pages/login/login';
+import { PageNames } from '../pages/page-names';
 
 @Component({
   templateUrl: 'app.html'
@@ -13,7 +13,7 @@ import { LoginPage } from '../pages/login/login';
 export class MyApp {
   @ViewChild(Nav) nav: Nav;
 
-  rootPage: any = LoginPage;
+  rootPage: any = PageNames.FirstScreen;
 
   pages: Array<{title: string, component: any}>;
 
@@ -55,6 +55,6 @@ export class MyApp {
     this.menuCtrl.close();
 
     // Erase all previous navigation history and make LoginPage the root
-    this.nav.setRoot(LoginPage);
+    this.nav.setRoot(PageNames.FirstScreen);
   }
 }

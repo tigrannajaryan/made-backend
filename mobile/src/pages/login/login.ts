@@ -28,28 +28,28 @@ export class LoginPage {
     console.log('ionViewDidLoad LoginPage');
   }
 
-  login() {
-    this.authService.doAuth(this.userData).
-      then((authResponse) => {
-        // Auth successfull. Remember token in local storage.
-        console.log("Auth API successfull, token=" + authResponse.token);
-        localStorage.setItem('authToken', JSON.stringify(authResponse.token));
+  async login() {
+    try {
+      const authResponse = await this.authService.doAuth(this.userData);
 
-        // Erase all previous navigation history and make HomePage the root
-        this.navCtrl.setRoot('RegisterSalonPage');
-      },
-        (err) => {
-          // Error log
-          console.log("Login failed:" + JSON.stringify(err));
+      // Auth successfull. Remember token in local storage.
+      console.log("Auth API successfull, token=" + authResponse.token);
+      localStorage.setItem('authToken', JSON.stringify(authResponse.token));
 
-          // Show an error message
-          let alert = this.alertCtrl.create({
-            title: 'Login failed',
-            subTitle: 'Invalid email or password',
-            buttons: ['Dismiss']
-          });
-          alert.present();
-        });
+      // Erase all previous navigation history and make HomePage the root
+      this.navCtrl.setRoot('RegisterSalonPage');
+    }
+    catch (e) {
+      // Error log
+      console.log("Login failed:" + JSON.stringify(e));
 
+      // Show an error message
+      const alert = this.alertCtrl.create({
+        title: 'Login failed',
+        subTitle: 'Invalid email or password',
+        buttons: ['Dismiss']
+      });
+      alert.present();
+    }
   }
 }
