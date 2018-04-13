@@ -1,0 +1,53 @@
+<!--
+  Generated template for the RegisterConfigureServicesPage page.
+
+  See http://ionicframework.com/docs/components/#navigation for more info on
+  Ionic pages and navigation.
+-->
+<ion-header>
+
+  <ion-navbar>
+    <ion-title>Configure Services</ion-title>
+  </ion-navbar>
+
+</ion-header>
+
+
+<ion-content padding>
+
+  What services do you provide?
+
+  <ion-grid>
+    <ion-row align-items-center *ngFor="let s of services">
+      <ion-col col-auto>
+        <ion-checkbox checked="true"></ion-checkbox>
+      </ion-col>
+      <ion-col>
+        <ion-label item-start>{{s.name}}</ion-label>
+      </ion-col>
+      <ion-col align-self-end col-auto>
+        <ion-label>$</ion-label>
+      </ion-col>
+      <ion-col col-auto>
+        <ion-input item-start type="number" value="{{s.price}}" min=0 max=100 text-left></ion-input>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <ion-list>
+    <ion-item text-center>
+      <button ion-button round large>
+        Add Service &nbsp;
+        <ion-icon name="plus"></ion-icon>
+      </button>
+    </ion-item>
+
+    <ion-item>
+      <button ion-button item-right large>
+        Next &nbsp;
+        <ion-icon name="arrow-forward"></ion-icon>
+      </button>
+    </ion-item>
+  </ion-list>
+
+</ion-content>

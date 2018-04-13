@@ -1,6 +1,5 @@
 import { Component } from '@angular/core';
 import { IonicPage, NavController, NavParams, AlertController } from 'ionic-angular';
-import { HomePage } from '../home/home';
 import { AuthServiceProvider } from '../../providers/auth-service/auth-service';
 
 /**
@@ -37,7 +36,7 @@ export class LoginPage {
         localStorage.setItem('authToken', JSON.stringify(authResponse.token));
 
         // Erase all previous navigation history and make HomePage the root
-        this.navCtrl.setRoot(HomePage);
+        this.navCtrl.setRoot('RegisterSalonPage');
       },
         (err) => {
           // Error log
