@@ -38,16 +38,7 @@ export class RegisterSalonPage {
 
   async next() {
     try {
-      await this.authService.setStylistProfile({
-        ... this.formData,
-        // TODO: we need to decide if we want to split address into
-        // components on the client side or server side.
-        // I am including this in the request for now since they are
-        // required by the server-side API.
-        salon_zipcode: "234",
-        salon_city: "SomeCity",
-        salon_state: "ST"
-      });
+      await this.authService.setStylistProfile(this.formData);
       this.navCtrl.push(PageNames.RegisterConfigureServices, {}, { animate: false });
     }
     catch (e) {

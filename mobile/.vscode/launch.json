@@ -5,6 +5,19 @@
     "version": "0.2.0",
     "configurations": [
         {
+            // See http://blog.mlewandowski.com/Debugging-Karma-tests-with-VSCode.html
+            // for instructions on how to debug Karma tests.
+            "type": "chrome",
+            "request": "attach",
+            "name": "Attach to Karma Chrome",
+            "port": 9333,
+            "webRoot": "${workspaceFolder}",
+            "pathMapping": {
+                "/": "${workspaceRoot}",
+                "/base/": "${workspaceRoot}/"
+            }
+        },
+        {
             "type": "chrome",
             "request": "launch",
             "name": "Launch mobile app in Chrome against localhost:8100",

@@ -24,9 +24,6 @@ export interface StylistProfile {
   phone: string;
   salon_name: string;
   salon_address: string;
-  salon_zipcode: string;
-  salon_city: string;
-  salon_state: string;
 }
 
 /**
@@ -38,7 +35,7 @@ export class AuthServiceProvider {
   private authResponse: AuthResponse;
 
   constructor(public http: HttpClient) {
-    console.log('Hello AuthServiceProvider Provider');
+    console.log('AuthServiceProvider constructed.');
   }
 
   private post<ResponseType>(apiPath: string, data: any): Promise<ResponseType> {
@@ -113,6 +110,6 @@ export class AuthServiceProvider {
    * so this is a works-only-once type of call. I asked backend to change the behavior.
    */
   async setStylistProfile(data: StylistProfile): Promise<AuthResponse> {
-    return this.post<AuthResponse>('stylist/profile/', data);
+    return this.post<AuthResponse>('stylist/profile', data);
   }
 }

@@ -16,7 +16,7 @@ import { AuthServiceProvider } from '../../providers/auth-service/auth-service';
 })
 export class LoginPage {
 
-  userData = { email: "", password: "" };
+  formData = { email: "", password: "" };
 
   constructor(public navCtrl: NavController,
     public navParams: NavParams,
@@ -30,7 +30,7 @@ export class LoginPage {
 
   async login() {
     try {
-      const authResponse = await this.authService.doAuth(this.userData);
+      const authResponse = await this.authService.doAuth(this.formData);
 
       // Auth successfull. Remember token in local storage.
       console.log("Auth API successfull, token=" + authResponse.token);

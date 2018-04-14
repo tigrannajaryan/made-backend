@@ -19,6 +19,14 @@ To build only run `npm run build`.
 debugger to it. You should be able to set and hit breakpoints
 in *.ts files in VS Code.
 
+# Running tests
+
+- run `npm test` to build and run Karma unit tests.
+
+To debug the tests use "Attach to Karma Chrome" debugging configuration and run this config
+to attach to Chrome running Karma tests, set any breakpoints and reload the Karma page to
+trigger the breakpoints.
+
 
 # Android App
 
