@@ -19,6 +19,6 @@ echo "Starting postgres"
 sudo -u postgres /usr/lib/postgresql/10/bin/pg_ctl -D /etc/postgresql/10/main -l /tmp/postgres.log start || true
 
 echo "Setting up pip"
-pip install --upgrade pip
-pip install --upgrade virtualenv
+pip install pip==9.0.1
+pip install virtualenv==15.1
 
