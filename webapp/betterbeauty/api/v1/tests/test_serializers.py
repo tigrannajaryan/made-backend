@@ -43,10 +43,45 @@ class TestStylistSerializer(object):
     def test_stylist_serializer_update(self, stylist_data: Stylist):
         data = {
             'first_name': 'Jane',
+            'last_name': 'McBob',
+            'phone': '(650) 350-1111',
             'salon_name': 'Janes beauty',
+            'salon_address': '1234 Front Street',
+            # TODO: uncomment below lines when we enable address splitting
+            # 'salon_city': 'Menlo Park',
+            # 'salon_zipcode': '12345',
+            # 'salon_state': 'CA',
         }
-        serializer = StylistSerializer(instance=stylist_data, data=data, partial=True)
+        serializer = StylistSerializer(
+            instance=stylist_data, data=data, context={'user': stylist_data.user}
+        )
         serializer.is_valid(raise_exception=True)
         stylist = serializer.save()
         assert(stylist.user.first_name == 'Jane')
         assert(stylist.salon.name == 'Janes beauty')
+
+    @pytest.mark.django_db
+    def test_stylist_create(self):
+        user: User = G(
+            User,
+            email='stylist@example.com',
+        )
+        assert(user.is_stylist() is False)
+        data = {
+            'first_name': 'Jane',
+            'last_name': 'McBob',
+            'phone': '(650) 350-1111',
+            'salon_name': 'Test salon',
+            'salon_address': '1234 Front Street',
+            # TODO: uncomment below lines when we enable address splitting
+            # 'salon_city': 'Menlo Park',
+            # 'salon_zipcode': '12345',
+            # 'salon_state': 'CA',
+        }
+        serializer = StylistSerializer(data=data, context={'user': user})
+        serializer.is_valid(raise_exception=True)
+        stylist: Stylist = serializer.save()
+        assert(stylist is not None)
+        assert(stylist.salon.name == 'Test salon')
+        assert(stylist.user.first_name == 'Jane')
+        assert(stylist.user.is_stylist() is True)

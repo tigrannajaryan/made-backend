@@ -14,12 +14,14 @@ from core.types import Weekday
 
 class Salon(models.Model):
     name = models.CharField(max_length=255)
-    timezone = TimeZoneField()
+    timezone = TimeZoneField(null=True)  # temporarily setting to nullable
     photo = models.ImageField(blank=True, null=True)
     address = models.CharField(max_length=255)
-    city = models.CharField(max_length=64)
-    state = models.CharField(max_length=2, blank=True)
-    zip_code = models.CharField(max_length=5, blank=True)
+    # TODO: Remove null/blank on address sub-fields as soon as we have
+    # TODO: proper address splitting mechanics in place.
+    city = models.CharField(max_length=64, null=True, blank=True)
+    state = models.CharField(max_length=2, null=True, blank=True)
+    zip_code = models.CharField(max_length=5, null=True, blank=True)
     latitude = models.DecimalField(decimal_places=8, max_digits=10, null=True, blank=True)
     longitude = models.DecimalField(decimal_places=8, max_digits=11, null=True, blank=True)
 
@@ -39,8 +41,6 @@ class Stylist(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     salon = models.ForeignKey(Salon, on_delete=models.PROTECT)
     profile_photo = models.ImageField(blank=True, null=True)
-    work_start_at = models.TimeField()
-    work_end_at = models.TimeField()
 
     def __str__(self) -> str:
         return 'Stylist: {0}'.format(self.user)
