@@ -14,28 +14,33 @@
 
 <ion-content padding>
 
-  You do not seem to have an account with us. Please register as a stylist now.
+  Let's set up your account.
 
   <ion-list>
 
     <ion-item>
       <ion-label floating>Your First Name</ion-label>
-      <ion-input type="text" value=""></ion-input>
+      <ion-input type="text" value="" [(ngModel)]="formData.first_name"></ion-input>
     </ion-item>
 
     <ion-item>
       <ion-label floating>Your Last Name</ion-label>
-      <ion-input type="text" value=""></ion-input>
+      <ion-input type="text" value="" [(ngModel)]="formData.last_name"></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label floating>Mobile Phone</ion-label>
+      <ion-input type="text" value="" [(ngModel)]="formData.phone"></ion-input>
     </ion-item>
 
     <ion-item>
       <ion-label floating>Salon Name</ion-label>
-      <ion-input type="text" value=""></ion-input>
+      <ion-input type="text" value="" [(ngModel)]="formData.salon_name"></ion-input>
     </ion-item>
 
     <ion-item>
       <ion-label floating>Salon Address</ion-label>
-      <ion-input type="text" value=""></ion-input>
+      <ion-input type="text" value="" [(ngModel)]="formData.salon_address"></ion-input>
     </ion-item>
 
     <ion-item>

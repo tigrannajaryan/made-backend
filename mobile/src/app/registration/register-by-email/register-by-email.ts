@@ -4,7 +4,7 @@ import { AuthServiceProvider } from '../../../providers/auth-service/auth-servic
 import { PageNames } from '../../../pages/page-names';
 
 /**
- * Generated class for the RegisterSalonPage page.
+ * Generated class for the RegisterByEmailPage page.
  *
  * See https://ionicframework.com/docs/components/#navigation for more info on
  * Ionic pages and navigation.
@@ -12,18 +12,12 @@ import { PageNames } from '../../../pages/page-names';
 
 @IonicPage()
 @Component({
-  selector: 'page-register-salon',
-  templateUrl: 'register-salon.html',
+  selector: 'page-register-by-email',
+  templateUrl: 'register-by-email.html',
 })
-export class RegisterSalonPage {
+export class RegisterByEmailPage {
 
-  formData = {
-    first_name: "",
-    last_name: "",
-    phone: "",
-    salon_name: "",
-    salon_address: ""
-  }
+  formData = { email: "", password: "" };
 
   constructor(
     public navCtrl: NavController,
@@ -33,17 +27,17 @@ export class RegisterSalonPage {
   }
 
   ionViewDidLoad() {
-    console.log('ionViewDidLoad '+PageNames.RegisterSalon);
+    console.log('ionViewDidLoad RegisterByEmailPage');
   }
 
-  async next() {
+  async register() {
     try {
-      await this.authService.setStylistProfile(this.formData);
-      this.navCtrl.push(PageNames.RegisterConfigureServices, {}, { animate: false });
+      await this.authService.registerByEmail(this.formData);
+      this.navCtrl.push(PageNames.RegisterSalon, {}, { animate: false });
     }
     catch (e) {
       const alert = this.alertCtrl.create({
-        title: 'Saving profile information failed',
+        title: 'Registration failed',
         subTitle: e.message,
         buttons: ['Dismiss']
       });
