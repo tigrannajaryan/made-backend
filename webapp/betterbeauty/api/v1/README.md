@@ -120,7 +120,7 @@ The endpoint **does not** create a stylist or salon; you should use **profile** 
 ```
 
 ### Create new profile
-**POST /api/v1/stylist/profile**
+**POST/PUT /api/v1/stylist/profile**
 
 ```
 curl -X POST \
@@ -192,7 +192,7 @@ curl -X PATCH \
   -F 'salon_address=1234 Front Street'
 ```
 
-Note: all fields listed above are required.
+Note: you can patch individual fields with PATCH.
 
 **Response 200 OK**
 

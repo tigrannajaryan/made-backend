@@ -29,7 +29,8 @@ class Salon(models.Model):
         return '{0} ({1})'.format(self.name, self.get_full_address())
 
     def get_full_address(self) -> str:
-        return u', '.join((self.address, self.city, self.state))
+        # TODO: change this to proper address generation
+        return self.address
 
     def get_photo_url(self) -> Optional[str]:
         if self.photo:

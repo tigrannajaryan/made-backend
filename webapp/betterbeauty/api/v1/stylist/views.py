@@ -1,5 +1,5 @@
+from annoying.functions import get_object_or_None
 from rest_framework import generics, permissions
-from django.shortcuts import get_object_or_404
 
 from salon.models import Stylist
 from api.common.permissions import StylistRegisterUpdatePermission
@@ -14,7 +14,7 @@ class StylistView(
     permission_classes = [StylistRegisterUpdatePermission, permissions.IsAuthenticated]
 
     def get_object(self):
-        return get_object_or_404(
+        return get_object_or_None(
             Stylist,
             user=self.request.user
         )
