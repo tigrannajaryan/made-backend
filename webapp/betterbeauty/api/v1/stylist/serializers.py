@@ -1,9 +1,20 @@
+from typing import Optional
+
 from rest_framework import serializers
 
 from django.db import transaction
 
 from core.models import User
-from salon.models import Salon, Stylist, StylistService, StylistServicePhotoSample
+from salon.models import (
+    Salon,
+    ServiceTemplate,
+    ServiceTemplateSet,
+    Stylist,
+    StylistService,
+    StylistServicePhotoSample,
+)
+from .constants import MAX_SERVICE_TEMPLATE_PREVIEW_COUNT
+from .fields import DurationMinuteField
 
 
 class StylistUserSerializer(serializers.ModelSerializer):
@@ -33,8 +44,33 @@ class StylistServicePhotoSampleSerializer(serializers.ModelSerializer):
 
 
 class StylistServiceSerializer(serializers.ModelSerializer):
-    duration_minutes = serializers.SerializerMethodField()
-    photo_samples = StylistServicePhotoSampleSerializer(many=True)
+    id = serializers.IntegerField(required=False)
+    duration_minutes = DurationMinuteField(source='duration')
+    photo_samples = StylistServicePhotoSampleSerializer(
+        many=True, read_only=True)
+    base_price = serializers.DecimalField(
+        coerce_to_string=False, max_digits=6, decimal_places=2
+    )
+
+    def validate_id(self, pk: Optional[int]) -> Optional[int]:
+        if pk is not None:
+            stylist = self.context['stylist']
+            if not stylist.services.filter(pk=pk).exists():
+                raise serializers.ValidationError(
+                    'Stylist does not have service with id == {0}'.format(pk)
+                )
+        return pk
+
+    def create(self, validated_data):
+        stylist = self.context['stylist']
+        data_to_save = validated_data.copy()
+        data_to_save.update({'stylist': stylist})
+        pk = data_to_save.pop('id', None)
+        try:
+            service = stylist.services.get(pk=pk)
+            return self.update(service, data_to_save)
+        except StylistService.DoesNotExist:
+            return StylistService.objects.create(**data_to_save)
 
     class Meta:
         model = StylistService
@@ -42,9 +78,6 @@ class StylistServiceSerializer(serializers.ModelSerializer):
             'id', 'name', 'description', 'base_price', 'duration_minutes',
             'is_enabled', 'photo_samples',
         ]
-
-    def get_duration_minutes(self, obj: StylistService) -> int:
-        return int(obj.duration.total_seconds() / 60)
 
 
 class StylistSerializer(serializers.ModelSerializer):
@@ -122,3 +155,44 @@ class StylistSerializer(serializers.ModelSerializer):
                 }
             )
             return super(StylistSerializer, self).create(validated_data)
+
+
+class ServiceTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ServiceTemplate
+        fields = ['name', ]
+
+
+class ServiceTemplateDetailsSerializer(serializers.ModelSerializer):
+    duration_minutes = DurationMinuteField(source='duration')
+    base_price = serializers.DecimalField(
+        coerce_to_string=False, max_digits=6, decimal_places=2)
+
+    class Meta:
+        model = ServiceTemplate
+        fields = ['name', 'description', 'base_price', 'duration_minutes', ]
+
+
+class ServiceTemplateSetListSerializer(serializers.ModelSerializer):
+    templates = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ServiceTemplateSet
+        fields = ['id', 'name', 'description', 'templates', ]
+
+    def get_templates(self, template_set: ServiceTemplateSet):
+        templates = template_set.templates.all()[:MAX_SERVICE_TEMPLATE_PREVIEW_COUNT]
+        return ServiceTemplateSerializer(templates, many=True).data
+
+
+class ServiceTemplateSetDetailsSerializer(serializers.ModelSerializer):
+    templates = ServiceTemplateDetailsSerializer(many=True)
+
+    class Meta:
+        model = ServiceTemplateSet
+        fields = ['id', 'name', 'description', 'templates', ]
+
+
+class StylistServiceListSerializer(serializers.Serializer):
+    """Serves for convenience of packing services under dictionary key"""
+    services = StylistServiceSerializer(many=True)

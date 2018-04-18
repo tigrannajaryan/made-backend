@@ -4,6 +4,7 @@ from typing import Optional
 from timezone_field import TimeZoneField
 
 from django.contrib.postgres.fields import DateRangeField
+from django.conf import settings
 from django.core.validators import MaxValueValidator
 from django.db import models
 
@@ -12,9 +13,16 @@ from core.models import User
 from core.types import Weekday
 
 
+class StylistServiceManager(models.Manager):
+    def get_queryset(self, *args, **kwargs):
+        return super(StylistServiceManager, self).get_queryset(*args, **kwargs).filter(
+            deleted_at__isnull=True
+        )
+
+
 class Salon(models.Model):
     name = models.CharField(max_length=255)
-    timezone = TimeZoneField(null=True)  # temporarily setting to nullable
+    timezone = TimeZoneField(default=settings.TIME_ZONE)
     photo = models.ImageField(blank=True, null=True)
     address = models.CharField(max_length=255)
     # TODO: Remove null/blank on address sub-fields as soon as we have
@@ -102,6 +110,15 @@ class ServiceTemplate(models.Model):
         return 'Service template: {0}'.format(self.name)
 
 
+class ServiceTemplateSet(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    templates = models.ManyToManyField(ServiceTemplate)
+
+    def __str__(self):
+        return 'Service Template Set: {0}'.format(self.name)
+
+
 class StylistService(models.Model):
     stylist = models.ForeignKey(Stylist, on_delete=models.CASCADE, related_name='services')
     name = models.CharField(max_length=255)
@@ -110,8 +127,14 @@ class StylistService(models.Model):
     duration = models.DurationField()
     is_enabled = models.BooleanField(default=False)
 
+    deleted_at = models.DateTimeField(null=True)
+
+    objects = StylistServiceManager()
+    all_objects = models.Manager()
+
     def __str__(self):
-        return 'Service: {0} by {1}'.format(self.name, self.stylist)
+        deleted_str = '[DELETED] ' if self.deleted_at else ''
+        return '{2}{0} by {1}'.format(self.name, self.stylist, deleted_str)
 
 
 class StylistServicePhotoSample(models.Model):

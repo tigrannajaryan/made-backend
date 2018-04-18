@@ -1,11 +1,12 @@
 import datetime
 import pytest
+import pytz
 
 from django_dynamic_fixture import G
 
-from api.v1.stylist.serializers import StylistSerializer
+from api.v1.stylist.serializers import StylistSerializer, StylistServiceSerializer
 from core.models import User
-from salon.models import Salon, Stylist
+from salon.models import Salon, Stylist, StylistService
 
 
 @pytest.fixture
@@ -83,5 +84,68 @@ class TestStylistSerializer(object):
         stylist: Stylist = serializer.save()
         assert(stylist is not None)
         assert(stylist.salon.name == 'Test salon')
+        assert(stylist.salon.timezone == pytz.timezone('America/New_York'))
         assert(stylist.user.first_name == 'Jane')
         assert(stylist.user.is_stylist() is True)
+
+
+class TestStylistServiceSerializer(object):
+    @pytest.mark.django_db
+    def test_create(self):
+        stylist = G(Stylist)
+        data = [
+            {
+                'name': 'service 1',
+                'duration_minutes': 10,
+                'base_price': 20,
+                'is_enabled': True
+            }
+        ]
+        serializer = StylistServiceSerializer(
+            data=data,
+            context={'stylist': stylist},
+            many=True
+        )
+        assert(serializer.is_valid(raise_exception=True))
+
+        serializer.save()
+        assert(StylistService.objects.count() == 1)
+        service = StylistService.objects.last()
+        assert(service.name == 'service 1')
+        assert(service.duration == datetime.timedelta(minutes=10))
+        assert(service.base_price == 20)
+
+    @pytest.mark.django_db
+    def test_update(self):
+        stylist = G(Stylist)
+        stylist_service = G(
+            StylistService,
+            stylist=stylist,
+            name='old name',
+            duration=datetime.timedelta(0),
+            base_price=10,
+            is_enabled=True,
+            deleted_at=None
+        )
+        data = [
+            {
+                'id': stylist_service.id,
+                'name': 'new name',
+                'duration_minutes': 10,
+                'base_price': 20,
+                'is_enabled': True
+            }
+        ]
+        serializer = StylistServiceSerializer(
+            data=data,
+            context={'stylist': stylist},
+            many=True
+        )
+        assert (serializer.is_valid(raise_exception=True))
+
+        serializer.save()
+        assert (StylistService.objects.count() == 1)
+        service = StylistService.objects.last()
+        assert (service.name == 'new name')
+        assert (service.duration == datetime.timedelta(minutes=10))
+        assert (service.base_price == 20)

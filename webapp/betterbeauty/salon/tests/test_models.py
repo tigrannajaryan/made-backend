@@ -1,5 +1,6 @@
 import datetime
 import pytest
+from pytz import utc
 
 from psycopg2.extras import DateRange
 
@@ -12,6 +13,7 @@ from salon.models import (
     Salon,
     StylistDateRangeDiscount,
     StylistFirstTimeBookDiscount,
+    StylistService,
     StylistWeekdayDiscount,
 )
 
@@ -78,3 +80,14 @@ class TestStylist(object):
         assert (
             stylist_data.get_date_range_discount_percent(datetime.date(2018, 4, 12)) == 30
         )
+
+
+class TestStylistService(object):
+    @pytest.mark.django_db
+    def test_deleted_at(self):
+        service = G(StylistService, duration=datetime.timedelta(), deleted_at=None)
+        assert(StylistService.objects.count() == 1)
+        service.deleted_at = utc.localize(datetime.datetime.now())
+        service.save()
+        assert (StylistService.objects.count() == 0)
+        assert (StylistService.all_objects.count() == 1)
