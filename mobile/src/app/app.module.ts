@@ -10,6 +10,7 @@ import { HomePage } from '../pages/home/home';
 import { ListPage } from '../pages/list/list';
 import { AuthServiceProvider } from '../providers/auth-service/auth-service';
 import { httpInterceptorProviders } from '../http-interceptors';
+import { StylistServiceProvider } from '../providers/stylist-service/stylist-service';
 
 @NgModule({
   declarations: [
@@ -33,6 +34,7 @@ import { httpInterceptorProviders } from '../http-interceptors';
     SplashScreen,
     {provide: ErrorHandler, useClass: IonicErrorHandler},
     AuthServiceProvider,
+    StylistServiceProvider,
     httpInterceptorProviders
   ]
 })

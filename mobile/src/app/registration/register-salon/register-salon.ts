@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 import { IonicPage, NavController, NavParams, AlertController } from 'ionic-angular';
-import { AuthServiceProvider } from '../../../providers/auth-service/auth-service';
 import { PageNames } from '../../../pages/page-names';
+import { StylistServiceProvider } from '../../../providers/stylist-service/stylist-service';
+import { StylistProfile } from '../../../providers/stylist-service/stylist-models';
 
 /**
  * Generated class for the RegisterSalonPage page.
@@ -17,7 +18,7 @@ import { PageNames } from '../../../pages/page-names';
 })
 export class RegisterSalonPage {
 
-  formData = {
+  formData: StylistProfile = {
     first_name: "",
     last_name: "",
     phone: "",
@@ -28,17 +29,22 @@ export class RegisterSalonPage {
   constructor(
     public navCtrl: NavController,
     public navParams: NavParams,
-    private authService: AuthServiceProvider,
+    private apiService: StylistServiceProvider,
     private alertCtrl: AlertController) {
   }
 
-  ionViewDidLoad() {
-    console.log('ionViewDidLoad '+PageNames.RegisterSalon);
+  async ionViewDidLoad() {
+    try {
+      console.log('ionViewDidLoad ' + PageNames.RegisterSalon);
+      this.formData = await this.apiService.getProfile();
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   async next() {
     try {
-      await this.authService.setStylistProfile(this.formData);
+      await this.apiService.setProfile(this.formData);
       this.navCtrl.push(PageNames.RegisterConfigureServices, {}, { animate: false });
     }
     catch (e) {

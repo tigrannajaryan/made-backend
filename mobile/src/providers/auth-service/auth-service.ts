@@ -1,9 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import 'rxjs/add/operator/toPromise';
-
-// TODO: the URL should be different for development, staging and production
-const apiBaseUrl = 'http://betterbeauty.local:8000/api/v1/';
+import { BaseServiceProvider } from '../base-service';
 
 export interface AuthCredentials {
   email: string;
@@ -18,44 +16,17 @@ export interface RegisterError {
   error: { email: string, password: string };
 }
 
-export interface StylistProfile {
-  first_name: string;
-  last_name: string;
-  phone: string;
-  salon_name: string;
-  salon_address: string;
-}
-
 /**
  * AuthServiceProvider provides authentication against server API.
  */
 @Injectable()
-export class AuthServiceProvider {
+export class AuthServiceProvider extends BaseServiceProvider {
 
   private authResponse: AuthResponse;
 
   constructor(public http: HttpClient) {
+    super(http);
     console.log('AuthServiceProvider constructed.');
-  }
-
-  private post<ResponseType>(apiPath: string, data: any): Promise<ResponseType> {
-    // For help on how to use HttpClient see https://angular.io/guide/http
-
-    const httpOptions = {
-      headers: new HttpHeaders({
-        // TODO: are standard HTTP headers defined as a constant anywhere?
-        'Content-Type': 'application/json',
-      })
-    };
-
-    const url = apiBaseUrl + apiPath;
-    console.log("Calling API " + url);
-
-    return this.http.post<ResponseType>(url, JSON.stringify(data), httpOptions).toPromise().
-      catch(e => {
-        console.log("API call failed: " + JSON.stringify(e));
-        throw e;
-      });
   }
 
   /**
@@ -102,14 +73,5 @@ export class AuthServiceProvider {
    */
   getAuthToken(): string {
     return this.authResponse ? this.authResponse.token : null;
-  }
-
-  /**
-   * Set the profile of the stylist. The stylist must be already authenticated as a user.
-   * Existing limitation: does not work if the stylist profile already exists,
-   * so this is a works-only-once type of call. I asked backend to change the behavior.
-   */
-  async setStylistProfile(data: StylistProfile): Promise<AuthResponse> {
-    return this.post<AuthResponse>('stylist/profile', data);
   }
 }
