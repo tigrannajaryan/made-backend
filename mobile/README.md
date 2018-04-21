@@ -27,6 +27,9 @@ To debug the tests use "Attach to Karma Chrome" debugging configuration and run 
 to attach to Chrome running Karma tests, set any breakpoints and reload the Karma page to
 trigger the breakpoints.
 
+To run the tests in headless mode (e.g. for CI) use `npm run test-headless`.
+Note: to run successfully on VSTS this requires Hosted VS2017 agent.
+
 
 # Android App
 
