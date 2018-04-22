@@ -5,51 +5,64 @@
   Ionic pages and navigation.
 -->
 <ion-header>
-
-  <ion-navbar>
-    <ion-title>Register Now</ion-title>
+  <ion-navbar color="white">
+    <ion-buttons end>
+      <button ion-button icon-only>
+        <ion-icon name="key"></ion-icon>
+      </button>
+    </ion-buttons>
   </ion-navbar>
-
 </ion-header>
 
 <ion-content padding>
 
-  Let's set up your account.
+  <form class="form" [formGroup]="form" (ngSubmit)="next()">
+    <ion-list>
+      <div class="row">
+        <div class="col text-center">
+          <div class="circle">
+            <div class="small-circle">
+              <ion-icon name="add"></ion-icon>
+            </div>
+          </div>
+        </div>
+      </div>
 
-  <ion-list>
+      <ion-item>
+        <ion-grid item-content>
+          <ion-row>
+            <ion-col>
+              <ion-label stacked>First name</ion-label>
+              <ion-input placeholder="ex. John" type="text" formControlName="first_name"></ion-input>
+            </ion-col>
+            <ion-col>
+              <ion-label stacked>Last name</ion-label>
+              <ion-input placeholder="ex. Malkovich" type="text" formControlName="last_name"></ion-input>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-item>
+      <br />
 
-    <ion-item>
-      <ion-label floating>Your First Name</ion-label>
-      <ion-input type="text" value="" [(ngModel)]="formData.first_name"></ion-input>
-    </ion-item>
+      <ion-item>
+        <ion-label stacked>Phone number</ion-label>
+        <ion-input type="phone" placeholder="ex. 123-456-7890" formControlName="phone"></ion-input>
+      </ion-item>
 
-    <ion-item>
-      <ion-label floating>Your Last Name</ion-label>
-      <ion-input type="text" value="" [(ngModel)]="formData.last_name"></ion-input>
-    </ion-item>
+      <ion-item>
+        <ion-label stacked>Salon name</ion-label>
+        <ion-input type="text" placeholder="ex. The Morning Beauty" formControlName="salon_name"></ion-input>
+      </ion-item>
+      <br />
 
-    <ion-item>
-      <ion-label floating>Mobile Phone</ion-label>
-      <ion-input type="text" value="" [(ngModel)]="formData.phone"></ion-input>
-    </ion-item>
+      <ion-item>
+        <ion-label stacked>Address</ion-label>
+        <ion-input type="text" placeholder="Type or Find on map" formControlName="salon_address"></ion-input>
+        <ion-icon name="ios-pin-outline" item-right></ion-icon>
+      </ion-item>
 
-    <ion-item>
-      <ion-label floating>Salon Name</ion-label>
-      <ion-input type="tel" value="" [(ngModel)]="formData.salon_name"></ion-input>
-    </ion-item>
-
-    <ion-item>
-      <ion-label floating>Salon Address</ion-label>
-      <ion-input type="text" value="" [(ngModel)]="formData.salon_address"></ion-input>
-    </ion-item>
-
-    <ion-item>
-      <button ion-button item-right large (click)="next()">
-        Next &nbsp;
-        <ion-icon name="arrow-forward"></ion-icon>
-      </button>
-    </ion-item>
-
-  </ion-list>
-
+      <br />
+      <button ion-button color="dark" full type="submit" [disabled]="!form.valid">Next step</button>
+    </ion-list>
+  </form>
 </ion-content>

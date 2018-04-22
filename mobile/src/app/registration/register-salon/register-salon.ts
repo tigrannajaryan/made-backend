@@ -1,8 +1,9 @@
 import { Component } from '@angular/core';
+import { Validators, FormBuilder, FormGroup, FormControl } from '@angular/forms';
 import { IonicPage, NavController, NavParams, AlertController } from 'ionic-angular';
+
 import { PageNames } from '../../../pages/page-names';
 import { StylistServiceProvider } from '../../../providers/stylist-service/stylist-service';
-import { StylistProfile } from '../../../providers/stylist-service/stylist-models';
 
 /**
  * Generated class for the RegisterSalonPage page.
@@ -18,33 +19,49 @@ import { StylistProfile } from '../../../providers/stylist-service/stylist-model
 })
 export class RegisterSalonPage {
 
-  formData: StylistProfile = {
-    first_name: "",
-    last_name: "",
-    phone: "",
-    salon_name: "",
-    salon_address: ""
-  }
+  form: FormGroup;
 
   constructor(
     public navCtrl: NavController,
     public navParams: NavParams,
+    public formBuilder: FormBuilder,
     private apiService: StylistServiceProvider,
     private alertCtrl: AlertController) {
+
   }
 
-  async ionViewDidLoad() {
-    try {
-      console.log('ionViewDidLoad ' + PageNames.RegisterSalon);
-      this.formData = await this.apiService.getProfile();
-    } catch (e) {
-      console.error(e);
-    }
+  ionViewWillLoad() {
+    this.form = this.formBuilder.group({
+      first_name: new FormControl('', Validators.compose([
+        Validators.maxLength(25),
+        Validators.minLength(2),
+        Validators.required
+      ])),
+      last_name: new FormControl('', Validators.compose([
+        Validators.maxLength(25),
+        Validators.minLength(2),
+        Validators.required
+      ])),
+      phone: new FormControl('', Validators.compose([
+        Validators.maxLength(15),
+        Validators.minLength(5),
+        Validators.required
+      ])),
+      salon_name: new FormControl('', Validators.compose([
+        Validators.maxLength(25),
+        Validators.minLength(3),
+        Validators.nullValidator
+      ])),
+      salon_address: new FormControl('', Validators.required),
+    });
   }
 
   async next() {
     try {
-      await this.apiService.setProfile(this.formData);
+      // TODO: decide on fullname vs firstname/last and add phone field to the form.
+      await this.apiService.setProfile({
+        ...this.form.value
+      });
       this.navCtrl.push(PageNames.RegisterConfigureServices, {}, { animate: false });
     }
     catch (e) {
