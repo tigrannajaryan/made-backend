@@ -12,22 +12,18 @@ import { PageNames } from '../page-names';
 @IonicPage()
 @Component({
   selector: 'page-first-screen',
-  templateUrl: 'first-screen.html',
+  templateUrl: 'first-screen.html'
 })
-export class FirstScreenPage {
+export class FirstScreenComponent {
 
   constructor(public navCtrl: NavController, public navParams: NavParams) {
   }
 
-  ionViewDidLoad() {
-    console.log('ionViewDidLoad FirstScreenPage');
-  }
-
-  loginByEmail() {
+  loginByEmail(): void {
     this.navCtrl.push(PageNames.Login, {}, {animate: false});
   }
 
-  register() {
+  register(): void {
     this.navCtrl.push(PageNames.RegisterByEmail, {}, {animate: false});
   }
 }

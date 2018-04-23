@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { AuthResponse, AuthCredentials } from './auth-service';
+import { AuthCredentials, AuthResponse } from './auth-service';
 import { StylistProfile } from '../stylist-service/stylist-models';
 
 /**
@@ -12,27 +12,24 @@ export class AuthServiceProviderMock {
   /**
    * Credentials that will result in success for doAuth() function.
    */
-  public successAuthCredentials: AuthCredentials = {
-    email: "user@test.com", password: "pass123"
+  successAuthCredentials: AuthCredentials = {
+    email: 'user@test.com', password: 'pass123'
   };
 
   private authResponse: AuthResponse;
-
-  constructor() {
-    console.log('AuthServiceProviderMock constructed.');
-  }
 
   /**
    * Authenticate using the API. If successfull remembers the auth response
    * and token which can be later obtained via getAuthToken().
    */
   async doAuth(credentials: AuthCredentials): Promise<AuthResponse> {
-    if (credentials.email == this.successAuthCredentials.email &&
-      credentials.password == this.successAuthCredentials.password) {
-      this.authResponse = { token: "test-token" };
+    if (credentials.email === this.successAuthCredentials.email &&
+      credentials.password === this.successAuthCredentials.password) {
+      this.authResponse = { token: 'test-token' };
+
       return Promise.resolve(this.authResponse);
     } else {
-      throw new Error("authentication failed");
+      throw new Error('authentication failed');
     }
   }
 
@@ -41,7 +38,8 @@ export class AuthServiceProviderMock {
    * and token which can be later obtained via getAuthToken().
    */
   async registerByEmail(credentials: AuthCredentials): Promise<AuthResponse> {
-    this.authResponse = { token: "test-token" };
+    this.authResponse = { token: 'test-token' };
+
     return Promise.resolve(this.authResponse);
   }
 
@@ -49,7 +47,7 @@ export class AuthServiceProviderMock {
    * Return token remembered after the last succesfull authentication.
    */
   getAuthToken(): string {
-    return this.authResponse ? this.authResponse.token : null;
+    return this.authResponse ? this.authResponse.token : undefined;
   }
 
   /**
@@ -58,6 +56,6 @@ export class AuthServiceProviderMock {
    * so this is a works-only-once type of call. I asked backend to change the behavior.
    */
   async setStylistProfile(data: StylistProfile): Promise<AuthResponse> {
-    return Promise.resolve({ token: "test-token" });
+    return Promise.resolve({ token: 'test-token' });
   }
 }

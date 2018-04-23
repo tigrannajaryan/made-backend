@@ -1,34 +1,38 @@
-import { ComponentFixture, async, TestBed } from '@angular/core/testing';
+import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 import { TestUtils } from '../../test';
-import { LoginPage } from './login';
+import { LoginComponent } from './login';
 import { AuthServiceProvider } from '../../providers/auth-service/auth-service';
 
-let fixture: ComponentFixture<LoginPage> = null;
-let instance: LoginPage = null;
+let fixture: ComponentFixture<LoginComponent>;
+let instance: LoginComponent;
 
-describe('Pages: LoginPage', () => {
+describe('Pages: LoginComponent', () => {
 
-  beforeEach(async(() => TestUtils.beforeEachCompiler([LoginPage]).then(compiled => {
-    fixture = compiled.fixture;
-    instance = compiled.instance;
-  })));
+  beforeEach(async(() => TestUtils.beforeEachCompiler([LoginComponent])
+    .then(compiled => {
+      fixture = compiled.fixture;
+      instance = compiled.instance;
+    })));
 
   it('should create the page', async(() => {
-    expect(instance).toBeTruthy();
+    expect(instance)
+      .toBeTruthy();
   }));
 
   it('should authenticate after login is called with valid credentials', async(() => {
 
     const authService = TestBed.get(AuthServiceProvider);
 
-    expect(authService.getAuthToken()).toEqual(null);
+    expect(authService.getAuthToken())
+      .toEqual(undefined);
 
-    instance.formData.email = "user@test.com";
-    instance.formData.password = "pass123";
+    instance.formData.email = 'user@test.com';
+    instance.formData.password = 'pass123';
 
-    instance.login().
-      then(() => {
-        expect(authService.getAuthToken()).toEqual('test-token');
+    instance.login()
+      .then(() => {
+        expect(authService.getAuthToken())
+          .toEqual('test-token');
       });
   }));
 
@@ -36,14 +40,16 @@ describe('Pages: LoginPage', () => {
 
     const authService = TestBed.get(AuthServiceProvider);
 
-    expect(authService.getAuthToken()).toEqual(null);
+    expect(authService.getAuthToken())
+      .toEqual(undefined);
 
-    instance.formData.email = "user@test.com";
-    instance.formData.password = "wrongpassword";
+    instance.formData.email = 'user@test.com';
+    instance.formData.password = 'wrongpassword';
 
-    instance.login().
-      then(() => {
-        expect(authService.getAuthToken()).toEqual(null);
+    instance.login()
+      .then(() => {
+        expect(authService.getAuthToken())
+          .toEqual(undefined);
       });
   }));
 });

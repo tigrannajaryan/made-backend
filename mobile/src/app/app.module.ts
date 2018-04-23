@@ -5,29 +5,29 @@ import { BrowserModule } from '@angular/platform-browser';
 import { ErrorHandler, NgModule } from '@angular/core';
 import { IonicApp, IonicErrorHandler, IonicModule } from 'ionic-angular';
 
-import { MyApp } from './app.component';
-import { HomePage } from '../pages/home/home';
-import { ListPage } from '../pages/list/list';
+import { MyAppComponent } from './app.component';
+import { HomeComponent } from '../pages/home/home';
+import { ListComponent } from '../pages/list/list';
 import { AuthServiceProvider } from '../providers/auth-service/auth-service';
 import { httpInterceptorProviders } from '../http-interceptors';
 import { StylistServiceProvider } from '../providers/stylist-service/stylist-service';
 
 @NgModule({
   declarations: [
-    MyApp,
-    HomePage,
-    ListPage,
+    MyAppComponent,
+    HomeComponent,
+    ListComponent
   ],
   imports: [
     BrowserModule,
     HttpClientModule,
-    IonicModule.forRoot(MyApp),
+    IonicModule.forRoot(MyAppComponent)
   ],
   bootstrap: [IonicApp],
   entryComponents: [
-    MyApp,
-    HomePage,
-    ListPage,
+    MyAppComponent,
+    HomeComponent,
+    ListComponent
   ],
   providers: [
     StatusBar,

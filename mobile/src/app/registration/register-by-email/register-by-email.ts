@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
-import { IonicPage, NavController, NavParams, AlertController } from 'ionic-angular';
+import { AlertController, IonicPage, NavController, NavParams } from 'ionic-angular';
+
 import { AuthServiceProvider } from '../../../providers/auth-service/auth-service';
 import { PageNames } from '../../../pages/page-names';
 
@@ -13,11 +14,11 @@ import { PageNames } from '../../../pages/page-names';
 @IonicPage()
 @Component({
   selector: 'page-register-by-email',
-  templateUrl: 'register-by-email.html',
+  templateUrl: 'register-by-email.html'
 })
-export class RegisterByEmailPage {
+export class RegisterByEmailComponent {
 
-  formData = { email: "", password: "" };
+  formData = { email: '', password: '' };
 
   constructor(
     public navCtrl: NavController,
@@ -26,16 +27,11 @@ export class RegisterByEmailPage {
     private alertCtrl: AlertController) {
   }
 
-  ionViewDidLoad() {
-    console.log('ionViewDidLoad RegisterByEmailPage');
-  }
-
-  async register() {
+  async register(): Promise<void> {
     try {
       await this.authService.registerByEmail(this.formData);
       this.navCtrl.push(PageNames.RegisterSalon, {}, { animate: false });
-    }
-    catch (e) {
+    } catch (e) {
       const alert = this.alertCtrl.create({
         title: 'Registration failed',
         subTitle: e.message,

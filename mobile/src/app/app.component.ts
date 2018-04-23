@@ -1,54 +1,56 @@
 import { Component, ViewChild } from '@angular/core';
-import { Nav, Platform, MenuController } from 'ionic-angular';
+import { MenuController, Nav, Platform } from 'ionic-angular';
 import { StatusBar } from '@ionic-native/status-bar';
 import { SplashScreen } from '@ionic-native/splash-screen';
 
-import { HomePage } from '../pages/home/home';
-import { ListPage } from '../pages/list/list';
+import { HomeComponent } from '../pages/home/home';
+import { ListComponent } from '../pages/list/list';
 import { PageNames } from '../pages/page-names';
 
 @Component({
   templateUrl: 'app.html'
 })
-export class MyApp {
+export class MyAppComponent {
   @ViewChild(Nav) nav: Nav;
 
   rootPage: any = PageNames.FirstScreen;
 
-  pages: Array<{title: string, component: any}>;
+  pages: Array<{ title: string, component: any }>;
 
   constructor(public platform: Platform,
               public statusBar: StatusBar,
               public splashScreen: SplashScreen,
               public menuCtrl: MenuController) {
+
     this.initializeApp();
 
     // used for an example of ngFor and navigation
     this.pages = [
-      { title: 'Home', component: HomePage },
-      { title: 'List', component: ListPage }
+      { title: 'Home', component: HomeComponent },
+      { title: 'List', component: ListComponent }
     ];
 
   }
 
-  initializeApp() {
-    this.platform.ready().then(() => {
-      // Okay, so the platform is ready and our plugins are available.
-      // Here you can do any higher level native things you might need.
-      this.statusBar.styleDefault();
-      this.splashScreen.hide();
-    });
+  initializeApp(): void {
+    this.platform.ready()
+      .then(() => {
+        // Okay, so the platform is ready and our plugins are available.
+        // Here you can do any higher level native things you might need.
+        this.statusBar.styleDefault();
+        this.splashScreen.hide();
+      });
   }
 
-  openPage(page) {
+  openPage(page): void {
     // selected page different from current?
-    if (page.component != this.nav.getActive().component) {
+    if (page.component !== this.nav.getActive().component) {
       // yes, push it to history and navigate to it
-      this.nav.push(page.component, {}, {animate: false});
+      this.nav.push(page.component, {}, { animate: false });
     }
   }
 
-  logout(){
+  logout(): void {
     // TODO: Call logout API
 
     // Hide the menu

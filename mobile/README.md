@@ -11,6 +11,10 @@ local dev server for dev/testing and open the app in your default browser.
 
 To build only run `npm run build`.
 
+# Coding guidelines
+
+Follow Angular Style Guide: https://angular.io/guide/styleguide
+
 # Debugging in VS Code
 
 - run `npm run ionic:serve -- -b` to build the app and start the server.

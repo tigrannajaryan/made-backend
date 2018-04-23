@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
-import { Validators, FormBuilder, FormGroup, FormControl } from '@angular/forms';
-import { IonicPage, NavController, NavParams, AlertController } from 'ionic-angular';
+import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { AlertController, IonicPage, NavController, NavParams } from 'ionic-angular';
 
 import { PageNames } from '../../../pages/page-names';
 import { StylistServiceProvider } from '../../../providers/stylist-service/stylist-service';
@@ -15,9 +15,9 @@ import { StylistServiceProvider } from '../../../providers/stylist-service/styli
 @IonicPage()
 @Component({
   selector: 'page-register-salon',
-  templateUrl: 'register-salon.html',
+  templateUrl: 'register-salon.html'
 })
-export class RegisterSalonPage {
+export class RegisterSalonComponent {
 
   form: FormGroup;
 
@@ -30,7 +30,7 @@ export class RegisterSalonPage {
 
   }
 
-  ionViewWillLoad() {
+  ionViewWillLoad(): void {
     this.form = this.formBuilder.group({
       first_name: new FormControl('', Validators.compose([
         Validators.maxLength(25),
@@ -52,19 +52,18 @@ export class RegisterSalonPage {
         Validators.minLength(3),
         Validators.nullValidator
       ])),
-      salon_address: new FormControl('', Validators.required),
+      salon_address: new FormControl('', Validators.required)
     });
   }
 
-  async next() {
+  async next(): Promise<void> {
     try {
       // TODO: decide on fullname vs firstname/last and add phone field to the form.
       await this.apiService.setProfile({
         ...this.form.value
       });
       this.navCtrl.push(PageNames.RegisterConfigureServices, {}, { animate: false });
-    }
-    catch (e) {
+    } catch (e) {
       const alert = this.alertCtrl.create({
         title: 'Saving profile information failed',
         subTitle: e.message,

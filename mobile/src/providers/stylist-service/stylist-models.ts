@@ -8,7 +8,6 @@ export interface StylistProfile {
   salon_address: string;
 }
 
-
 // Stylist availability days and hours
 
 export interface StylistAvailabilityDay {
@@ -23,7 +22,6 @@ export interface StylistAvailability {
   weekdays: StylistAvailabilityDay[];
 }
 
-
 // Weekday discounts
 
 export interface WeekdayDiscount {
@@ -36,7 +34,6 @@ export interface WeekdayDiscounts {
   weekdays: WeekdayDiscount[];
 }
 
-
 // Other discounts
 
 export interface SimpleDiscounts {
@@ -44,7 +41,6 @@ export interface SimpleDiscounts {
   repeat_within_1_week_discount_percent: number;
   repeat_within_2_week_discount_percent: number;
 }
-
 
 // Service templates
 
@@ -66,7 +62,6 @@ export interface ServiceTemplateSets {
   sets: ServiceTemplateSet[];
 }
 
-
 // Services
 
 export interface Service extends ServiceTemplate {
@@ -76,4 +71,3 @@ export interface Service extends ServiceTemplate {
 export interface Services {
   services: Service[];
 }
-

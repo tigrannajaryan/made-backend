@@ -19,54 +19,58 @@ import {
 } from '@angular/platform-browser-dynamic/testing';
 
 import {
+  AlertController,
   App,
   Config,
   DeepLinker,
+  DomController,
   Form,
+  GestureController,
   IonicModule,
   Keyboard,
-  DomController,
   MenuController,
   NavController,
-  Platform,
   NavParams,
-  GestureController,
-  AlertController,
+  Platform
 } from 'ionic-angular';
 
-import { ConfigMock, PlatformMock, AlertControllerMock } from 'ionic-mocks';
+import { AlertControllerMock, ConfigMock, PlatformMock } from 'ionic-mocks';
 import { AuthServiceProviderMock } from './providers/auth-service/auth-service-mock';
 import { AuthServiceProvider } from './providers/auth-service/auth-service';
 
 declare const require: any;
 
 // First, initialize the Angular testing environment.
-getTestBed().initTestEnvironment(
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting(),
-);
+getTestBed()
+  .initTestEnvironment(
+    BrowserDynamicTestingModule,
+    platformBrowserDynamicTesting()
+  );
 // Then we find all the tests.
 const context: any = require.context('./', true, /\.spec\.ts$/);
 // And load the modules.
-context.keys().map(context);
+context.keys()
+  .map(context);
 
 export class TestUtils {
 
-  public static beforeEachCompiler(components: Array<any>): Promise<{ fixture: any, instance: any }> {
+  static beforeEachCompiler(components: any[]): Promise<{ fixture: any, instance: any }> {
     return TestUtils.configureIonicTestingModule(components)
-      .compileComponents().then(() => {
-        let fixture: any = TestBed.createComponent(components[0]);
+      .compileComponents()
+      .then(() => {
+        const fixture: any = TestBed.createComponent(components[0]);
+
         return {
-          fixture: fixture,
-          instance: fixture.debugElement.componentInstance,
+          fixture,
+          instance: fixture.debugElement.componentInstance
         };
       });
   }
 
-  public static configureIonicTestingModule(components: Array<any>): typeof TestBed {
+  static configureIonicTestingModule(components: any[]): typeof TestBed {
     return TestBed.configureTestingModule({
       declarations: [
-        ...components,
+        ...components
       ],
       providers: [
         App, Form, Keyboard, DomController, MenuController, NavController, NavParams, GestureController, AlertControllerMock,
@@ -74,22 +78,22 @@ export class TestUtils {
         { provide: Config, useFactory: () => ConfigMock.instance() },
         { provide: DeepLinker, useFactory: () => ConfigMock.instance() },
         { provide: AlertController, useFactory: () => AlertControllerMock.instance() },
-        { provide: AuthServiceProvider, useClass: AuthServiceProviderMock },
+        { provide: AuthServiceProvider, useClass: AuthServiceProviderMock }
       ],
       imports: [
         FormsModule,
         IonicModule,
-        ReactiveFormsModule,
-      ],
+        ReactiveFormsModule
+      ]
     });
   }
 
   // http://stackoverflow.com/questions/2705583/how-to-simulate-a-click-with-javascript
-  public static eventFire(el: any, etype: string): void {
+  static eventFire(el: any, etype: string): void {
     if (el.fireEvent) {
-      el.fireEvent('on' + etype);
+      el.fireEvent(`on${etype}`);
     } else {
-      let evObj: any = document.createEvent('Events');
+      const evObj: any = document.createEvent('Events');
       evObj.initEvent(etype, true, false);
       el.dispatchEvent(evObj);
     }

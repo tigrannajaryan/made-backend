@@ -1,12 +1,5 @@
 import { Component } from '@angular/core';
-
-import {
-  IonicPage,
-  NavController,
-  NavParams,
-  AlertController
-} from 'ionic-angular';
-
+import { AlertController, IonicPage, NavController, NavParams } from 'ionic-angular';
 import { AuthServiceProvider } from '../../providers/auth-service/auth-service';
 
 /**
@@ -19,38 +12,28 @@ import { AuthServiceProvider } from '../../providers/auth-service/auth-service';
 @IonicPage()
 @Component({
   selector: 'page-login',
-  templateUrl: 'login.html',
+  templateUrl: 'login.html'
 })
-export class LoginPage {
+export class LoginComponent {
 
-  formData = { email: "", password: "" };
-  errorMsg: string;
+  formData = { email: '', password: '' };
 
-  constructor(
-    public navCtrl: NavController,
-    public navParams: NavParams,
-    public authService: AuthServiceProvider,
-    private alertCtrl: AlertController) {}
-
-  ionViewDidEnter() {
-    console.log('ionViewDidEnter LoginPage');
+  constructor(public navCtrl: NavController,
+              public navParams: NavParams,
+              public authService: AuthServiceProvider,
+              private alertCtrl: AlertController) {
   }
 
-  async login() {
+  async login(): Promise<void> {
     try {
       const authResponse = await this.authService.doAuth(this.formData);
 
       // Auth successfull. Remember token in local storage.
-      console.log("Auth API successfull, token=" + authResponse.token);
       localStorage.setItem('authToken', JSON.stringify(authResponse.token));
 
       // Erase all previous navigation history and make HomePage the root
       this.navCtrl.setRoot('RegisterSalonPage');
-    }
-    catch (e) {
-      // Error log
-      console.log("Login failed:" + JSON.stringify(e));
-
+    } catch (e) {
       // Show an error message
       const alert = this.alertCtrl.create({
         title: 'Login failed',

@@ -15,7 +15,6 @@ export class StylistServiceProvider extends BaseServiceProvider {
 
   constructor(public http: HttpClient) {
     super(http);
-    console.log('StylistServiceProvider constructed.');
   }
 
   /**

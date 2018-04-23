@@ -14,7 +14,7 @@ export interface AuthResponse {
 
 export interface AuthError {
   non_field_errors?: string[];
-  email?: string[]
+  email?: string[];
   password?: string[];
 }
 
@@ -28,7 +28,31 @@ export class AuthServiceProvider extends BaseServiceProvider {
 
   constructor(public http: HttpClient) {
     super(http);
-    console.log('AuthServiceProvider constructed.');
+  }
+
+  /**
+   * Authenticate using the API. If successfull remembers the auth response
+   * and token which can be later obtained via getAuthToken().
+   */
+  async doAuth(credentials: AuthCredentials): Promise<AuthResponse> {
+    return this.processAuthResponse(
+      () => this.post<AuthResponse>('auth/get-token', credentials));
+  }
+
+  /**
+   * Register a new user authenticate using the API. If successfull remembers the auth response
+   * and token which can be later obtained via getAuthToken().
+   */
+  async registerByEmail(credentials: AuthCredentials): Promise<AuthResponse> {
+    return this.processAuthResponse(
+      () => this.post<AuthResponse>('auth/register', credentials));
+  }
+
+  /**
+   * Return token remembered after the last succesfull authentication.
+   */
+  getAuthToken(): string {
+    return this.authResponse ? this.authResponse.token : undefined;
   }
 
   /**
@@ -39,47 +63,17 @@ export class AuthServiceProvider extends BaseServiceProvider {
    * @returns the same response that it received from apiCall (or re-throws the error).
    */
   private async processAuthResponse(apiCall: () => Promise<AuthResponse>): Promise<AuthResponse> {
-    return apiCall().
-      then(response => {
+    return apiCall()
+      .then(response => {
         // Save auth response
         this.authResponse = response;
+
         return response;
-      }).
-      catch((e: HttpErrorResponse) => {
+      })
+      .catch(e => {
         // Failed authentication. Clear previously saved successfull response (if any).
-        this.authResponse = null;
-
-        if (e.error instanceof Error) {
-          throw e.error;
-        }
-
-        const err = e.error as AuthError;
-        throw err;
+        this.authResponse = undefined;
+        throw e;
       });
-  }
-
-  /**
-   * Authenticate using the API. If successfull remembers the auth response
-   * and token which can be later obtained via getAuthToken().
-   */
-  async doAuth(credentials: AuthCredentials): Promise<AuthResponse> {
-    return this.processAuthResponse(
-      () => { return this.post<AuthResponse>('auth/get-token', credentials) });
-  }
-
-  /**
-   * Register a new user authenticate using the API. If successfull remembers the auth response
-   * and token which can be later obtained via getAuthToken().
-   */
-  async registerByEmail(credentials: AuthCredentials): Promise<AuthResponse> {
-    return this.processAuthResponse(
-      () => { return this.post<AuthResponse>('auth/register', credentials) });
-  }
-
-  /**
-   * Return token remembered after the last succesfull authentication.
-   */
-  getAuthToken(): string {
-    return this.authResponse ? this.authResponse.token : null;
   }
 }

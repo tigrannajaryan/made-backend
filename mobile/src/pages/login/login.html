@@ -27,10 +27,6 @@
       <ion-input type="password" [(ngModel)]="formData.password"></ion-input>
     </ion-item>
 
-    <ion-item *ngIf="errorMsg">
-      <div class="alert alert-danger">{{errorMsg}}</div>
-    </ion-item>
-
     <button ion-button block color="primary" (click)="login()">Login</button>
 
   </ion-list>

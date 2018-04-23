@@ -11,9 +11,9 @@ import { IonicPage, NavController, NavParams } from 'ionic-angular';
 @IonicPage()
 @Component({
   selector: 'page-register-configure-services',
-  templateUrl: 'register-configure-services.html',
+  templateUrl: 'register-configure-services.html'
 })
-export class RegisterConfigureServicesPage {
+export class RegisterConfigureServicesComponent {
 
   services = [
     { name: 'Haircut', price: 70 },
@@ -22,9 +22,4 @@ export class RegisterConfigureServicesPage {
 
   constructor(public navCtrl: NavController, public navParams: NavParams) {
   }
-
-  ionViewDidLoad() {
-    console.log('ionViewDidLoad RegisterConfigureServicesPage');
-  }
-
 }

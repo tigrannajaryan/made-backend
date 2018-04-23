@@ -4,9 +4,9 @@
  * to the page name as string (e.g. when passing to lazy loading navCtrl).
  */
 export enum PageNames {
-    FirstScreen = "FirstScreenPage",
-    Login = "LoginPage",
-    RegisterByEmail = "RegisterByEmailPage",
-    RegisterSalon = "RegisterSalonPage",
-    RegisterConfigureServices = "RegisterConfigureServicesPage"
+    FirstScreen = 'FirstScreenComponent',
+    Login = 'LoginComponent',
+    RegisterByEmail = 'RegisterByEmailComponent',
+    RegisterSalon = 'RegisterSalonComponent',
+    RegisterConfigureServices = 'RegisterConfigureServicesComponent'
 }
