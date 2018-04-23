@@ -95,3 +95,6 @@ class User(BaseEmailUser):
 
     def is_stylist(self) -> bool:
         return self.role == USER_ROLE.stylist
+
+    class Meta:
+        db_table = 'user'

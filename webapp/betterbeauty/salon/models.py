@@ -32,6 +32,9 @@ class Salon(models.Model):
     latitude = models.DecimalField(decimal_places=8, max_digits=10, null=True, blank=True)
     longitude = models.DecimalField(decimal_places=8, max_digits=11, null=True, blank=True)
 
+    class Meta:
+        db_table = 'salon'
+
     def __str__(self) -> str:
         return '{0} ({1})'.format(self.name, self.get_full_address())
 
@@ -43,6 +46,9 @@ class Salon(models.Model):
 class Stylist(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     salon = models.ForeignKey(Salon, on_delete=models.PROTECT, null=True)
+
+    class Meta:
+        db_table = 'stylist'
 
     def __str__(self) -> str:
         return 'Stylist: {0}'.format(self.user)
@@ -99,6 +105,9 @@ class ServiceTemplate(models.Model):
     base_price = models.DecimalField(max_digits=6, decimal_places=2)
     duration = models.DurationField()
 
+    class Meta:
+        db_table = 'service_template'
+
     def __str__(self):
         return 'Service template: {0}'.format(self.name)
 
@@ -107,6 +116,9 @@ class ServiceTemplateSet(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     templates = models.ManyToManyField(ServiceTemplate)
+
+    class Meta:
+        db_table = 'service_template_set'
 
     def __str__(self):
         return 'Service Template Set: {0}'.format(self.name)
@@ -125,6 +137,9 @@ class StylistService(models.Model):
     objects = StylistServiceManager()
     all_objects = models.Manager()
 
+    class Meta:
+        db_table = 'stylist_service'
+
     def __str__(self):
         deleted_str = '[DELETED] ' if self.deleted_at else ''
         return '{2}{0} by {1}'.format(self.name, self.stylist, deleted_str)
@@ -135,12 +150,16 @@ class StylistServicePhotoSample(models.Model):
         StylistService, on_delete=models.CASCADE, related_name='photo_samples')
     photo = models.ImageField()
 
+    class Meta:
+        db_table = 'stylist_service_photo_sample'
+
 
 class StylistAvailableDay(models.Model):
     stylist = models.ForeignKey(Stylist, on_delete=models.CASCADE, related_name='available_days')
     weekday = models.PositiveSmallIntegerField(choices=WEEKDAY)
 
     class Meta:
+        db_table = 'stylist_available_day'
         unique_together = ('stylist', 'weekday', )
 
 
@@ -151,6 +170,7 @@ class StylistWeekdayDiscount(models.Model):
     discount_percent = models.PositiveIntegerField(validators=[MaxValueValidator(100)])
 
     class Meta:
+        db_table = 'stylist_weekday_discount'
         unique_together = ('stylist', 'weekday', )
 
 
@@ -158,6 +178,9 @@ class StylistFirstTimeBookDiscount(models.Model):
     stylist = models.OneToOneField(
         Stylist, on_delete=models.CASCADE, related_name='first_time_book_discount')
     discount_percent = models.PositiveIntegerField(validators=[MaxValueValidator(100)])
+
+    class Meta:
+        db_table = 'stylist_first_time_book_discount'
 
     def __str__(self) -> str:
         return '{0}% ({1})'.format(
@@ -172,9 +195,15 @@ class StylistDateRangeDiscount(models.Model):
     dates = DateRangeField()
     # TODO: enforce uniqueness on date range. Django doesn't support it directly
 
+    class Meta:
+        db_table = 'stylist_date_range_discount'
+
 
 class StylistEarlyRebookDiscount(models.Model):
     stylist = models.OneToOneField(
         Stylist, on_delete=models.CASCADE, related_name='early_rebook_discount')
     discount_percent = models.PositiveIntegerField(validators=[MaxValueValidator(100)])
     minrebook_interval = models.DurationField()
+
+    class Meta:
+        db_table = 'stylist_early_rebook_discount'
