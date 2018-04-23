@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import 'rxjs/add/operator/toPromise';
 import { BaseServiceProvider } from '../base-service';
 
@@ -12,8 +12,10 @@ export interface AuthResponse {
   token: string;
 }
 
-export interface RegisterError {
-  error: { email: string, password: string };
+export interface AuthError {
+  non_field_errors?: string[];
+  email?: string[]
+  password?: string[];
 }
 
 /**
@@ -43,10 +45,16 @@ export class AuthServiceProvider extends BaseServiceProvider {
         this.authResponse = response;
         return response;
       }).
-      catch(e => {
+      catch((e: HttpErrorResponse) => {
         // Failed authentication. Clear previously saved successfull response (if any).
         this.authResponse = null;
-        throw e;
+
+        if (e.error instanceof Error) {
+          throw e.error;
+        }
+
+        const err = e.error as AuthError;
+        throw err;
       });
   }
 

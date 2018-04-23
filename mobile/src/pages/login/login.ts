@@ -1,5 +1,12 @@
 import { Component } from '@angular/core';
-import { IonicPage, NavController, NavParams, AlertController } from 'ionic-angular';
+
+import {
+  IonicPage,
+  NavController,
+  NavParams,
+  AlertController
+} from 'ionic-angular';
+
 import { AuthServiceProvider } from '../../providers/auth-service/auth-service';
 
 /**
@@ -17,15 +24,16 @@ import { AuthServiceProvider } from '../../providers/auth-service/auth-service';
 export class LoginPage {
 
   formData = { email: "", password: "" };
+  errorMsg: string;
 
-  constructor(public navCtrl: NavController,
+  constructor(
+    public navCtrl: NavController,
     public navParams: NavParams,
     public authService: AuthServiceProvider,
-    private alertCtrl: AlertController) {
-  }
+    private alertCtrl: AlertController) {}
 
-  ionViewDidLoad() {
-    console.log('ionViewDidLoad LoginPage');
+  ionViewDidEnter() {
+    console.log('ionViewDidEnter LoginPage');
   }
 
   async login() {

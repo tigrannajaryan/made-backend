@@ -23,6 +23,10 @@ export class FirstScreenPage {
     console.log('ionViewDidLoad FirstScreenPage');
   }
 
+  loginByEmail() {
+    this.navCtrl.push(PageNames.Login, {}, {animate: false});
+  }
+
   register() {
     this.navCtrl.push(PageNames.RegisterByEmail, {}, {animate: false});
   }
