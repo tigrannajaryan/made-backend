@@ -6,7 +6,7 @@ from api.v1.auth.serializers import AuthTokenSerializer
 def jwt_response_payload_handler(token, user=None, request=None):
     stylist = None
     if user is not None and user.is_stylist():
-        stylist = user.stylist
+        stylist = getattr(user, 'stylist', None)
     return AuthTokenSerializer({
         'token': token,
         'expires_in': jwt_api_settings.JWT_EXPIRATION_DELTA.total_seconds(),

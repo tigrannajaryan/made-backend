@@ -6,5 +6,5 @@ from api import urls as api_urls
 
 urlpatterns = [
     path('djangoadmin/', admin.site.urls),
-    url(r'^api/', include(api_urls)),
+    url(r'^api/', include(api_urls, namespace='api')),
 ]

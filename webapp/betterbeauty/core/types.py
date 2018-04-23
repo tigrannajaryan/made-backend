@@ -1,3 +1,5 @@
+from typing import NewType
+
 from enum import IntEnum
 
 
@@ -9,3 +11,7 @@ class Weekday(IntEnum):
     FRIDAY = 5
     SATURDAY = 6
     SUNDAY = 7
+
+
+FBUserID = NewType('FBUserID', str)
+FBAccessToken = NewType('FBAccessToken', str)

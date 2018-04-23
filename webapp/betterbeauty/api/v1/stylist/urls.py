@@ -8,8 +8,10 @@ from .views import (
     ServiceTemplateSetDetailsView,
 )
 
+app_name = 'stylist'
+
 urlpatterns = [
-    url('profile$', StylistView.as_view()),
+    url('profile$', StylistView.as_view(), name='profile'),
     url('service-template-sets$', ServiceTemplateSetListView.as_view()),
     url('service-template-sets/(?P<template_set_pk>\d+)$',
         ServiceTemplateSetDetailsView.as_view()),

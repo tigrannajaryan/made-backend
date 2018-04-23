@@ -7,7 +7,7 @@
 # Project specific files
 caches/
 envs/dev/requirements/*
-betterbeauty/core/settings/local.py
+betterbeauty/core/settings/local*
 /media/
 /static/
 ansible/tmp

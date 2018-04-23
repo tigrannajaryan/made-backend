@@ -13,3 +13,13 @@ WEEKDAY = Choices(
     (Weekday.SATURDAY, 'saturday', _('Saturday')),
     (Weekday.SUNDAY, 'sunday', _('Sunday')),
 )
+
+CUSTOMER = 'customer'
+STYLIST = 'stylist'
+STAFF = 'staff'
+
+USER_ROLE = Choices(
+    (CUSTOMER, 'customer', _('Customer')),
+    (STYLIST, 'stylist', _('Stylist')),
+    (STAFF, 'staff', _('Staff')),
+)

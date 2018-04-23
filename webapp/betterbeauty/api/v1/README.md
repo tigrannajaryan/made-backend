@@ -1,5 +1,5 @@
 # Authorization
-## Getting auth token
+## Getting auth token with email/password credentials
 In order to make requests to the API, client needs a JWT token. There are 2 ways to obtain
 the token - authorize with existing user's credentials, or register new user.
 
@@ -19,7 +19,6 @@ the token - authorize with existing user's credentials, or register new user.
         "last_name": "McBob",
         "phone": "(650) 350-1234",
         "profile_photo_url": null,
-        "salon_photo_url": null,
         "salon_name": "Jane salon",
         "salon_address": "1234 Front Street"
     }
@@ -27,6 +26,10 @@ the token - authorize with existing user's credentials, or register new user.
 ```
 
 Note: if user doesn't have stylist profile - `stylist` field will be `null`
+
+## Getting auth token with Facebook credentials
+
+See **Registration** - **Register user with Facebook credentials**
 
 ## Using auth token for authorization
 
@@ -63,6 +66,32 @@ Note: make sure to set proper content type (to `application/json`)
 Before creating customer or stylist, new user must be registered. There will be multtiple
 ways of creation of user entity using social networks; section below is about registering
 a user with email credentials. Social network methods are to be added.
+
+## Register user with Facebook credentials
+This endpoint creates a user based on Facebook auth token and returns JWT token back to client.
+If user already exists - endpoint just refreshes the JWT token.
+
+**POST /api/v1/auth/get-token-fb**
+
+`curl -X POST -d "fbAccessToken=long_facebook_token&fbUserID=numeric_facebook_user_id" http://apiserver/api/v1/auth/get-token-fb`
+
+**Response 200 OK**
+
+```
+{
+    "token": "jwt_token",
+    "expires_in": 86400,
+    "stylist": {
+        "id": 17,
+        "first_name": "Charlie",
+        "last_name": "Martinazzison",
+        "phone": "",
+        "profile_photo_url": "http://profile_photo_url",
+        "salon_name": null,
+        "salon_address": null
+    }
+}
+```
 
 ## Register user with email and password credentials
 
@@ -113,7 +142,6 @@ The endpoint **does not** create a stylist or salon; you should use **profile** 
     "last_name": "McBob",
     "phone": "(650) 350-1234",
     "profile_photo_url": "http://example.com/profile_photo.jpg",
-    "salon_photo_url": null,
     "salon_name": "Jane's Beauty",
     "salon_address": "3945 El Camino Real"
 }
@@ -144,7 +172,6 @@ Note: all fields listed above are required.
     "last_name": "McBob",
     "phone": "(650) 350-1234",
     "profile_photo_url": null,
-    "salon_photo_url": null,
     "salon_name": "Jane salon",
     "salon_address": "1234 Front Street"
 }
@@ -175,7 +202,6 @@ Note: all fields listed above are required.
     "last_name": "McBob",
     "phone": "(650) 350-1234",
     "profile_photo_url": null,
-    "salon_photo_url": null,
     "salon_name": "Jane salon",
     "salon_address": "1234 Front Street"
 }
@@ -203,7 +229,6 @@ Note: you can patch individual fields with PATCH.
     "last_name": "McBob",
     "phone": "(650) 350-1234",
     "profile_photo_url": null,
-    "salon_photo_url": null,
     "salon_name": "Jane salon",
     "salon_address": "1234 Front Street"
 }

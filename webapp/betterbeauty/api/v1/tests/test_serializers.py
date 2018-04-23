@@ -5,6 +5,7 @@ import pytz
 from django_dynamic_fixture import G
 
 from api.v1.stylist.serializers import StylistSerializer, StylistServiceSerializer
+from core.choices import USER_ROLE
 from core.models import User
 from salon.models import Salon, Stylist, StylistService
 
@@ -20,7 +21,8 @@ def stylist_data() -> Stylist:
     stylist_user = G(
         User,
         is_staff=False, is_superuser=False, email='test_stylist@example.com',
-        first_name='Fred', last_name='McBob', phone='(650) 350-1111'
+        first_name='Fred', last_name='McBob', phone='(650) 350-1111',
+        role=USER_ROLE.stylist,
     )
     stylist = G(
         Stylist,
@@ -66,8 +68,9 @@ class TestStylistSerializer(object):
         user: User = G(
             User,
             email='stylist@example.com',
+            role=USER_ROLE.stylist,
         )
-        assert(user.is_stylist() is False)
+        assert(user.is_stylist() is True)
         data = {
             'first_name': 'Jane',
             'last_name': 'McBob',
@@ -83,10 +86,10 @@ class TestStylistSerializer(object):
         serializer.is_valid(raise_exception=True)
         stylist: Stylist = serializer.save()
         assert(stylist is not None)
+        assert(stylist.user.id == user.id)
         assert(stylist.salon.name == 'Test salon')
         assert(stylist.salon.timezone == pytz.timezone('America/New_York'))
         assert(stylist.user.first_name == 'Jane')
-        assert(stylist.user.is_stylist() is True)
 
 
 class TestStylistServiceSerializer(object):

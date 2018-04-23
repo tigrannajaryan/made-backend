@@ -23,7 +23,6 @@ class StylistServiceManager(models.Manager):
 class Salon(models.Model):
     name = models.CharField(max_length=255)
     timezone = TimeZoneField(default=settings.TIME_ZONE)
-    photo = models.ImageField(blank=True, null=True)
     address = models.CharField(max_length=255)
     # TODO: Remove null/blank on address sub-fields as soon as we have
     # TODO: proper address splitting mechanics in place.
@@ -40,16 +39,10 @@ class Salon(models.Model):
         # TODO: change this to proper address generation
         return self.address
 
-    def get_photo_url(self) -> Optional[str]:
-        if self.photo:
-            return self.photo.url
-        return None
-
 
 class Stylist(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    salon = models.ForeignKey(Salon, on_delete=models.PROTECT)
-    profile_photo = models.ImageField(blank=True, null=True)
+    salon = models.ForeignKey(Salon, on_delete=models.PROTECT, null=True)
 
     def __str__(self) -> str:
         return 'Stylist: {0}'.format(self.user)
@@ -73,8 +66,8 @@ class Stylist(models.Model):
         return self.user.get_full_name()
 
     def get_profile_photo_url(self) -> Optional[str]:
-        if self.profile_photo:
-            return self.profile_photo.url
+        if self.user.photo:
+            return self.user.photo.url
         return None
 
     def get_weekday_discount_percent(self, weekday: Weekday) -> int:

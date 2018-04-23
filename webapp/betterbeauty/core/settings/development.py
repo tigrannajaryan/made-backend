@@ -11,3 +11,6 @@ DATABASES = {
 }
 
 DEBUG = True
+
+FB_APP_ID = '<override in local settings>'
+FB_APP_SECRET = '<override in local settings>'

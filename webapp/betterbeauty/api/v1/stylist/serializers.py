@@ -83,16 +83,14 @@ class StylistServiceSerializer(serializers.ModelSerializer):
 class StylistSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
 
-    salon_name = serializers.CharField(source='salon.name')
-    salon_address = serializers.CharField(source='salon.address')
+    salon_name = serializers.CharField(source='salon.name', allow_null=True)
+    salon_address = serializers.CharField(source='salon.address', allow_null=True)
 
     # TODO: Enable address sub-fields as soon as we have proper address splitting mechanics
 
     # salon_city = serializers.CharField(source='salon.city', required=False)
     # salon_zipcode = serializers.CharField(source='salon.zip_code', required=False)
     # salon_state = serializers.CharField(source='salon.state', required=False)
-
-    salon_photo_url = serializers.CharField(read_only=True, source='salon.get_photo_url')
 
     profile_photo_url = serializers.CharField(read_only=True, source='get_profile_photo_url')
 
@@ -103,9 +101,19 @@ class StylistSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stylist
         fields = [
-            'id', 'first_name', 'last_name', 'phone', 'profile_photo_url', 'salon_photo_url',
+            'id', 'first_name', 'last_name', 'phone', 'profile_photo_url',
             'salon_name', 'salon_address',
         ]
+
+    def validate_salon_name(self, salon_name: str) -> str:
+        if not salon_name:
+            raise serializers.ValidationError('This field is required')
+        return salon_name
+
+    def validate_salon_address(self, salon_address: str) -> str:
+        if not salon_address:
+            raise serializers.ValidationError('This field is required')
+        return salon_address
 
     def update(self, stylist: Stylist, validated_data) -> Stylist:
         with transaction.atomic():
@@ -129,7 +137,7 @@ class StylistSerializer(serializers.ModelSerializer):
     def create(self, validated_data) -> Stylist:
         user = self.context['user']
 
-        if user and user.is_stylist():
+        if user and hasattr(user, 'stylist'):
             return self.update(user.stylist, validated_data)
 
         with transaction.atomic():

@@ -6,6 +6,8 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from .choices import USER_ROLE
+
 
 class BaseEmailUserManager(BaseUserManager):
     use_in_migrations = True
@@ -75,7 +77,12 @@ class BaseEmailUser(AbstractBaseUser, PermissionsMixin):
 
 
 class User(BaseEmailUser):
+    role = models.CharField(max_length=10, choices=USER_ROLE)
+
     phone = models.CharField(max_length=20, blank=True)
+    photo = models.ImageField(blank=True, null=True)
+
+    facebook_id = models.CharField(max_length=255, blank=True, null=True)
 
     date_joined = models.DateTimeField(_('date joined'), default=timezone.now)
 
@@ -84,7 +91,7 @@ class User(BaseEmailUser):
     REQUIRED_FIELDS: List[str] = []
 
     def is_customer(self) -> bool:
-        return hasattr(self, 'customer')
+        return self.role == USER_ROLE.customer
 
     def is_stylist(self) -> bool:
-        return hasattr(self, 'stylist')
+        return self.role == USER_ROLE.stylist
