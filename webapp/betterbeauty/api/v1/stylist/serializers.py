@@ -234,3 +234,53 @@ class ServiceTemplateSetDetailsSerializer(serializers.ModelSerializer):
 class StylistServiceListSerializer(serializers.Serializer):
     """Serves for convenience of packing services under dictionary key"""
     services = StylistServiceSerializer(many=True)
+
+
+class StylistProfileStatusSerializer(serializers.ModelSerializer):
+    has_personal_data = serializers.SerializerMethodField()
+    has_picture_set = serializers.SerializerMethodField()
+    has_services_set = serializers.SerializerMethodField()
+    has_business_hours_set = serializers.SerializerMethodField()
+    has_weekday_discounts_set = serializers.SerializerMethodField()
+    has_other_discounts_set = serializers.SerializerMethodField()
+    has_invited_clients = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Stylist
+        fields = [
+            'has_personal_data', 'has_picture_set', 'has_services_set',
+            'has_business_hours_set', 'has_weekday_discounts_set', 'has_other_discounts_set',
+            'has_invited_clients',
+        ]
+
+    def get_has_personal_data(self, stylist: Stylist) -> bool:
+        full_name = stylist.get_full_name()
+        has_name = full_name and len(full_name) > 1
+        salon: Optional[Salon] = getattr(stylist, 'salon')
+        has_address = salon and salon.address
+        return bool(has_name and stylist.user.phone and has_address)
+
+    def get_has_picture_set(self, stylist: Stylist) -> bool:
+        return stylist.get_profile_photo_url() is not None
+
+    def get_has_services_set(self, stylist: Stylist) -> bool:
+        return stylist.services.exists()
+
+    def get_has_business_hours_set(self, stylist: Stylist) -> bool:
+        return stylist.available_days.exists()
+
+    def get_has_weekday_discounts_set(self, stylist: Stylist) -> bool:
+        return stylist.weekday_discounts.exists()
+
+    def get_has_other_discounts_set(self, stylist: Stylist) -> bool:
+        """Returns True if any of the miscellaneous discounts is set"""
+        return any([
+            hasattr(stylist, 'early_rebook_discount'),
+            hasattr(stylist, 'first_time_book_discount'),
+            stylist.date_range_discounts.exists()
+        ])
+
+    def get_has_invited_clients(self, stylist: Stylist) -> bool:
+        # We don't have model for this right now, so set to False
+        # TODO: reflect actual state
+        return False

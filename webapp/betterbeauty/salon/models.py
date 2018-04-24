@@ -132,7 +132,7 @@ class StylistService(models.Model):
     duration = models.DurationField()
     is_enabled = models.BooleanField(default=False)
 
-    deleted_at = models.DateTimeField(null=True)
+    deleted_at = models.DateTimeField(null=True, default=None)
 
     objects = StylistServiceManager()
     all_objects = models.Manager()

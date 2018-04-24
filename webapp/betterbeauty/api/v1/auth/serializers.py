@@ -4,7 +4,7 @@ from rest_framework.exceptions import ValidationError
 from django.db import transaction
 from django.utils.translation import ugettext_lazy as _
 
-from api.v1.stylist.serializers import StylistSerializer
+from api.v1.stylist.serializers import StylistSerializer, StylistProfileStatusSerializer
 from core.choices import USER_ROLE
 from core.models import User
 from core.types import FBAccessToken, FBUserID
@@ -38,6 +38,9 @@ class AuthTokenSerializer(serializers.Serializer):
     token = serializers.CharField(read_only=True)
     expires_in = serializers.IntegerField(read_only=True)
     stylist = StylistSerializer(allow_null=True)
+    stylist_profile_status = StylistProfileStatusSerializer(
+        allow_null=True, read_only=True
+    )
 
 
 class FacebookAuthTokenSerializer(serializers.Serializer):

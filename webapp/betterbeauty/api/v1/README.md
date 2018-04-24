@@ -23,11 +23,21 @@ the token - authorize with existing user's credentials, or register new user.
         "profile_photo_url": null,
         "salon_name": "Jane salon",
         "salon_address": "1234 Front Street"
+    },
+    "stylist_profile_status": {
+        "has_personal_data": true,
+        "has_picture_set": false,
+        "has_services_set": false,
+        "has_business_hours_set": false,
+        "has_weekday_discounts_set": false,
+        "has_other_discounts_set": false,
+        "has_invited_clients": false
     }
 }
 ```
 
-Note: if user doesn't have stylist profile - `stylist` field will be `null`
+Note: if user doesn't have stylist profile - `stylist` and `stylist_profile_status`
+fields will be `null`
 
 ## Getting auth token with Facebook credentials
 
@@ -57,7 +67,8 @@ If the token has not yet expired, it can be refreshed to a new one:
 {
     "token": "refreshed_jwt_token",
     "expires_in": 86400,
-    "stylist": null
+    "stylist": null,
+    "stylist_profile_status": null
 }
 ```
 
@@ -91,6 +102,15 @@ If user already exists - endpoint just refreshes the JWT token.
         "profile_photo_url": "http://profile_photo_url",
         "salon_name": null,
         "salon_address": null
+    },
+    "stylist_profile_status": {
+        "has_personal_data": true,
+        "has_picture_set": false,
+        "has_services_set": false,
+        "has_business_hours_set": false,
+        "has_weekday_discounts_set": false,
+        "has_other_discounts_set": false,
+        "has_invited_clients": false
     }
 }
 ```
@@ -112,7 +132,8 @@ The endpoint **does not** create a stylist or salon; you should use **profile** 
 {
     "token": "jwt_token",
     "expires_in": 86400,
-    "stylist": null
+    "stylist": null,
+    "stylist_profile_status": null
 }
 ```
 
