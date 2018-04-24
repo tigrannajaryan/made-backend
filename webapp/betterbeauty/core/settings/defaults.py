@@ -5,7 +5,7 @@ from .utils import parse_database_url  # NOQA
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 PATH = Path(__file__).parent
-ROOT_PATH = PATH.parent.parent.parent
+ROOT_PATH = PATH.parent.parent
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 LOGS_PATH = ROOT_PATH / 'logs'
