@@ -1,5 +1,7 @@
 from typing import List
 
+import uuid
+
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.db import models
@@ -98,3 +100,11 @@ class User(BaseEmailUser):
 
     class Meta:
         db_table = 'user'
+
+
+class TemporaryFile(models.Model):
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
+    file = models.FileField(upload_to='user_uploads')

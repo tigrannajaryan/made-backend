@@ -1,3 +1,5 @@
+# BetterBeauty API v.1
+
 # Authorization
 ## Getting auth token with email/password credentials
 In order to make requests to the API, client needs a JWT token. There are 2 ways to obtain
@@ -29,7 +31,7 @@ Note: if user doesn't have stylist profile - `stylist` field will be `null`
 
 ## Getting auth token with Facebook credentials
 
-See **Registration** - **Register user with Facebook credentials**
+See [Register user with Facebook credentials](#register-user-with-facebook-credentials)
 
 ## Using auth token for authorization
 
@@ -233,6 +235,68 @@ Note: you can patch individual fields with PATCH.
     "salon_address": "1234 Front Street"
 }
 ```
+
+### Add profile image file
+In order to add an image file to stylist's profile, you should upload the file first
+and obtain the upload's UUID. See section [Image upload](#image-upload) on how to upload
+a file.
+
+After UUID of an image is received, you can POST or PATCH this UUID to `profile_photo_id` field:
+
+**PATCH /api/v1/stylist/profile**
+
+```
+curl -X PATCH \
+  http://apiserver/api/v1/stylist/profile \
+  -H 'Authorization: Token jwt_token' \
+  -F 'profile_photo_id=83a7d4e8-0462-4f9d-bb04-c51c47047318'
+```
+
+**Response 200 OK**
+```
+{
+    "id": 1,
+    "first_name": "Jane",
+    "last_name": "McBob",
+    "phone": "(650) 350-1234",
+    "profile_photo_url": "http://example.com/your_image.jpg",
+    "salon_name": "Jane salon",
+    "salon_address": "1234 Front Street"
+}
+```
+
+or use during the POST:
+
+**POST/PUT /api/v1/stylist/profile**
+
+```
+curl -X POST \
+  http://apiserver/api/v1/stylist/profile \
+  -H 'Authorization: Token jwt_token' \
+  -F first_name=Jane \
+  -F last_name=McBob \
+  -F 'phone=(650) 350-1234' \
+  -F 'salon_name=Jane salon' \
+  -F 'salon_address=1234 Front Street' \
+  -F 'profile_photo_id=83a7d4e8-0462-4f9d-bb04-c51c47047318'
+```
+
+Note: all fields listed above are required.
+
+**Response 200 OK**
+
+```
+{
+    "id": 1,
+    "first_name": "Jane",
+    "last_name": "McBob",
+    "phone": "(650) 350-1234",
+    "profile_photo_url": "http://example.com/your_image.jpg",
+    "salon_name": "Jane salon",
+    "salon_address": "1234 Front Street"
+}
+```
+
 
 ## Service templates and template sets
 
@@ -449,4 +513,55 @@ Actual `salon.StylistService` object will be kept in the DB, but `deleted_at` fi
         "is_enabled": false
     }
 ]
+```
+
+# Files upload
+## Image upload
+
+It may require to upload an image file for future use. Common use case is when
+a client uploads an image multiple times (looking for better picture) before actually
+assigning it to a parent object.
+
+Uploading an image to this endpoint will return a UUID string which may further be used
+to assign uploaded image to an entity (e.g. stylist profile, or a service).
+
+The endpoint accepts only image files less than 5MB in size.
+
+Note: image uploads will have limited lifetime, so after some time after uploading UUID
+will no longer be valid.
+
+**POST /api/v1/common/image/upload**
+
+```
+curl -X POST \
+  http://apiserver/api/v1/common/image/upload \
+  -H 'Authorization: Token jwt_token' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -H 'content-type: multipart/form-data' \
+  -F file=@path_to_your_file
+```
+
+**Response 201 Created**
+```
+{
+    "uuid": "83a7d4e8-0462-4f9d-bb04-c51c47047318"
+}
+```
+
+**Response 400 Bad Request**
+```
+{
+    "file": [
+        "Upload a valid image. The file you uploaded was either not an image or a corrupted image."
+    ]
+}
+```
+
+**Response 400 Bad Request**
+```
+{
+    "file": [
+        "File is too big, max. size 5242880 bytes"
+    ]
+}
 ```

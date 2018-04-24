@@ -2,9 +2,12 @@ from typing import Optional
 
 from rest_framework import serializers
 
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 
-from core.models import User
+from core.models import TemporaryFile, User
 from salon.models import (
     Salon,
     ServiceTemplate,
@@ -92,6 +95,7 @@ class StylistSerializer(serializers.ModelSerializer):
     # salon_zipcode = serializers.CharField(source='salon.zip_code', required=False)
     # salon_state = serializers.CharField(source='salon.state', required=False)
 
+    profile_photo_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
     profile_photo_url = serializers.CharField(read_only=True, source='get_profile_photo_url')
 
     first_name = serializers.CharField(source='user.first_name')
@@ -102,7 +106,7 @@ class StylistSerializer(serializers.ModelSerializer):
         model = Stylist
         fields = [
             'id', 'first_name', 'last_name', 'phone', 'profile_photo_url',
-            'salon_name', 'salon_address',
+            'salon_name', 'salon_address', 'profile_photo_id',
         ]
 
     def validate_salon_name(self, salon_name: str) -> str:
@@ -132,10 +136,13 @@ class StylistSerializer(serializers.ModelSerializer):
                 )
                 if salon_serializer.is_valid(raise_exception=True):
                     salon_serializer.save()
+            self._save_profile_photo(
+                stylist.user, validated_data.get('profile_photo_id', None)
+            )
         return super(StylistSerializer, self).update(stylist, validated_data)
 
     def create(self, validated_data) -> Stylist:
-        user = self.context['user']
+        user: User = self.context['user']
 
         if user and hasattr(user, 'stylist'):
             return self.update(user.stylist, validated_data)
@@ -162,7 +169,30 @@ class StylistSerializer(serializers.ModelSerializer):
                     'user': user,
                 }
             )
-            return super(StylistSerializer, self).create(validated_data)
+            profile_photo_id = validated_data.pop('profile_photo_id', None)
+            stylist = super(StylistSerializer, self).create(validated_data)
+            self._save_profile_photo(
+                user, profile_photo_id
+            )
+            return stylist
+
+    def _save_profile_photo(
+            self, user: Optional[User], photo_uuid: Optional[str]
+    ) -> None:
+        if not user or not photo_uuid:
+            return
+
+        image_file_record: TemporaryFile = get_object_or_404(
+            TemporaryFile,
+            uuid=photo_uuid,
+            uploaded_by=user
+        )
+        content_file = ContentFile(image_file_record.file.read())
+        target_file_name = image_file_record.file.name
+        user.photo.save(
+            default_storage.get_available_name(target_file_name), content_file
+        )
+        image_file_record.file.close()
 
 
 class ServiceTemplateSerializer(serializers.ModelSerializer):

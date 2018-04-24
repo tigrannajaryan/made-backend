@@ -1,5 +1,7 @@
 from .defaults import *  # noqa
 
+LEVEL = 'production'
+
 ALLOWED_HOSTS = ('*.admin.betterbeauty.io', 'admin.betterbeauty.io', )
 
 DEBUG = False

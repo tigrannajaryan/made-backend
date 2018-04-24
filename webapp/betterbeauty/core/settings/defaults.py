@@ -1,12 +1,14 @@
 import datetime
 import os
+from path import Path
 from .utils import parse_database_url  # NOQA
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+PATH = Path(__file__).parent
+ROOT_PATH = PATH.parent.parent.parent
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-LOGS_PATH = os.path.join(BASE_DIR, '../../logs')
-# LOGS_PATH = Path(os.path.join(BASE_DIR, '../../logs'))
+LOGS_PATH = ROOT_PATH / 'logs'
 LOG_MAX_FILESIZE = 10485760
 
 # SECURITY WARNING: keep the secret key used in production secret!
@@ -134,7 +136,12 @@ USE_L10N = True
 
 USE_TZ = True
 
+# Static files settings
+MEDIA_ROOT = (ROOT_PATH / 'media')
+MEDIA_URL = '/media/'
+STATIC_ROOT = (ROOT_PATH / 'static')
 STATIC_URL = '/static/'
-STATIC_ROOT = 'static'
+
+MAX_FILE_UPLOAD_SIZE = 1024 * 1024 * 5  # 5MB
 
 DEBUG = False
