@@ -12,7 +12,8 @@
     "ionic:serve": "ionic-app-scripts serve",
     "test-coverage": "ng test --code-coverage",
     "test": "ng test",
-    "test-headless": "ng test --watch=false --single-run=true --reporters=junit,progress --browsers=ChromeHeadless"
+    "test-headless": "ng test --watch=false --single-run=true --reporters=junit,progress --browsers=ChromeHeadless",
+    "build-full": "npm run build && npm run test-headless"
   },
   "dependencies": {
     "@angular/animations": "5.2.9",

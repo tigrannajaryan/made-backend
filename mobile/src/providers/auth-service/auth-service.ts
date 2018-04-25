@@ -2,14 +2,27 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import 'rxjs/add/operator/toPromise';
 import { BaseServiceProvider } from '../base-service';
+import { StylistProfile } from '../stylist-service/stylist-models';
 
 export interface AuthCredentials {
   email: string;
   password: string;
 }
 
+export interface StylistProfileStatus {
+  has_personal_data: boolean;
+  has_picture_set: boolean;
+  has_services_set: boolean;
+  has_business_hours_set: boolean;
+  has_weekday_discounts_set: boolean;
+  has_other_discounts_set: boolean;
+  has_invited_clients: boolean;
+}
+
 export interface AuthResponse {
   token: string;
+  stylist?: StylistProfile;
+  stylist_profile_status?: StylistProfileStatus;
 }
 
 export interface AuthError {

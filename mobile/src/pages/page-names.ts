@@ -8,5 +8,6 @@ export enum PageNames {
     Login = 'LoginComponent',
     RegisterByEmail = 'RegisterByEmailComponent',
     RegisterSalon = 'RegisterSalonComponent',
-    RegisterConfigureServices = 'RegisterConfigureServicesComponent'
+    RegisterConfigureServices = 'RegisterConfigureServicesComponent',
+    Today = 'TodayComponent'
 }
