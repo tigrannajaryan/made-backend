@@ -74,5 +74,8 @@
     "platforms": [
       "android"
     ]
+  },
+  "config": {
+    "ionic_bail_on_lint_error": true
   }
 }
