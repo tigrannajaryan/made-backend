@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import 'rxjs/add/operator/toPromise';
+import 'rxjs/add/operator/catch';
+import 'rxjs/add/operator/map';
 
-// TODO: the URL should be different for development, staging and production
-const apiBaseUrl = 'http://192.168.31.109:8000/api/v1/';
+import { ENV } from '../environments/environment.default';
 
 /**
  * AuthServiceProvider provides authentication against server API.
@@ -25,7 +26,7 @@ export class BaseServiceProvider {
       body: data ? JSON.stringify(data) : undefined
     };
 
-    const url = apiBaseUrl + apiPath;
+    const url = ENV.apiUrl + apiPath;
 
     return this.http.request<ResponseType>(method, url, httpOptions)
       .toPromise()
@@ -48,9 +49,19 @@ export class BaseServiceProvider {
       })
     };
 
-    const url = apiBaseUrl + apiPath;
+    const url = ENV.apiUrl + apiPath;
 
     return this.http.post<ResponseType>(url, JSON.stringify(data), httpOptions)
+      .toPromise()
+      .catch(e => {
+        throw e;
+      });
+  }
+
+  uploadFile(formData: FormData): Promise<ResponseType> {
+    const url = `${ENV.apiUrl}common/image/upload`;
+
+    return this.http.post<ResponseType>(url, formData)
       .toPromise()
       .catch(e => {
         throw e;

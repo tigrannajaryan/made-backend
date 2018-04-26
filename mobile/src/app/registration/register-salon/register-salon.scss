@@ -1,6 +1,9 @@
 page-register-salon {
   .circle {
     background: color($colors, bb_beige);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
     width: 200px;
     height: 200px;
     border-radius: 50%;
@@ -8,6 +11,7 @@ page-register-salon {
   }
 
   .small-circle {
+    display: block;
     background: color($colors, bb_violet);
     width: 40px;
     height: 40px;

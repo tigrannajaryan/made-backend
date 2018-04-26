@@ -14,10 +14,17 @@ import { IonicPage, NavController, NavParams } from 'ionic-angular';
   templateUrl: 'register-configure-services.html'
 })
 export class RegisterConfigureServicesComponent {
-
-  services = [
-    { name: 'Haircut', price: 70 },
-    { name: 'Nails', price: 30 }
+  defServices = [
+    {
+      id: 0,
+      name: 'Black hair',
+      color: 'black'
+    },
+    {
+      id: 1,
+      name: 'White hair',
+      color: 'violet'
+    }
   ];
 
   constructor(public navCtrl: NavController, public navParams: NavParams) {

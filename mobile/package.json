@@ -8,15 +8,15 @@
     "clean": "ionic-app-scripts clean",
     "build": "ionic-app-scripts build",
     "lint": "ionic-app-scripts lint",
-    "ionic:build": "ionic-app-scripts build",
-    "ionic:serve": "ionic-app-scripts serve",
+    "ionic:build": "set BB_ENV=prod&& ionic-app-scripts build --prod",
+    "ionic:serve": "set BB_ENV=dev&& ionic-app-scripts serve",
+    "mobserve": "ionic serve -c",
     "test-coverage": "ng test --code-coverage",
     "test": "ng test",
     "test-headless": "ng test --watch=false --single-run=true --reporters=junit,progress --browsers=ChromeHeadless",
     "build-full": "npm run build && npm run test-headless"
   },
   "dependencies": {
-    "@angular/animations": "5.2.9",
     "@angular/common": "5.2.9",
     "@angular/compiler": "5.2.9",
     "@angular/compiler-cli": "5.2.9",
@@ -77,6 +77,7 @@
     ]
   },
   "config": {
-    "ionic_bail_on_lint_error": true
+    "ionic_bail_on_lint_error": true,
+    "ionic_webpack": "./config/webpack.config.js"
   }
 }
