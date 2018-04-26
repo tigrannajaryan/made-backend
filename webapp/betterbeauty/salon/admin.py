@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from .models import (
     Salon,
+    ServiceCategory,
     ServiceTemplate,
     ServiceTemplateSet,
     Stylist,
@@ -17,7 +18,8 @@ from .models import (
 
 class ServiceTemplateAdmin(admin.ModelAdmin):
     # TODO: decide on filter/search fields
-    list_filter = ['servicetemplateset__name', ]
+    list_filter = ['templateset__name', 'category', ]
+    list_display = ['name', 'category', 'templateset', 'base_price', 'duration', ]
     search_fields = ['name', 'description', ]
 
 
@@ -71,6 +73,7 @@ class StylistAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Salon, SalonAdmin)
+admin.site.register(ServiceCategory)
 admin.site.register(ServiceTemplate, ServiceTemplateAdmin)
 admin.site.register(ServiceTemplateSet, ServiceTemplateSetAdmin)
 admin.site.register(Stylist, StylistAdmin)

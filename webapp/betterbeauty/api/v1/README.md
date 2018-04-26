@@ -344,30 +344,33 @@ curl http://apiserver/api/v1/stylist/service-template-sets \
 **Response 200 OK**
 ```
 {
-    "service_template_sets": [
+    "service_templates": [
         {
-            "id": 1,
+            "uuid": "f2f0d141-47a8-4393-9c8e-c79126502c41",
             "name": "set 1",
-            "description": "this is set 1",
-            "templates": [
+            "description": "",
+            "services": [
                 {
-                    "name": "service 1",
+                    "name": "Custom wigs"
                 },
                 {
-                    "name": "service 2",
+                    "name": "Full sew-in with lace/closure"
+                },
+                {
+                    "name": "Full sew-in"
                 }
             ]
         },
         {
-            "id": 2,
+            "uuid": "44f049c3-1a3a-46c7-ade1-1c1cf1bd6c7e",
             "name": "set 2",
-            "description": null,
-            "templates": [
+            "description": "",
+            "services": [
                 {
-                    "name": "service 1",
+                    "name": "Balayage"
                 },
                 {
-                    "name": "service 3",
+                    "name": "Full highlights"
                 }
             ]
         }
@@ -376,34 +379,64 @@ curl http://apiserver/api/v1/stylist/service-template-sets \
 ```
 
 ### Get full info for template set's services
-**GET /api/v1/stylist/service-template-sets/{template_set_id}**
+**GET /api/v1/stylist/service-template-sets/{template_set_uuid}**
 
 ```
-curl http://apiserver/api/v1/stylist/service-template-sets/{template_set_id} \
+curl http://apiserver/api/v1/stylist/service-template-sets/{template_set_uuid} \
   -H 'Authorization: Token jwt_token'
 ```
 
 **Response 200 OK**
 ```
-    {
+ {
+    "template_set": {
         "id": 1,
         "name": "set 1",
-        "description": "this is set 1",
-        "templates": [
+        "description": "",
+        "categories": [
             {
-                "name": "service 1",
-                "description": "Great service",
-                "base_price": 10.0,
-                "duration_minutes": 25
+                "name": "Special Occassions",
+                "uuid": "01899abd-89d9-4776-a74c-7e7d155b58af",
+                "services": [
+                    {
+                        "id": 31,
+                        "name": "Bridal/special events",
+                        "description": "",
+                        "base_price": 500,
+                        "duration_minutes": 240
+                    },
+                    {
+                        "id": 32,
+                        "name": "Ponytails",
+                        "description": "",
+                        "base_price": 65,
+                        "duration_minutes": 60
+                    }
+                ]
             },
             {
-                "name": "service 2",
-                "description": "Even better service service",
-                "base_price": 20.0,
-                "duration_minutes": 45
+                "name": "Color",
+                "uuid": "25a87cf1-ec92-4723-8e97-c5dbe9de4f48",
+                "services": [
+                    {
+                        "id": 17,
+                        "name": "Color correction",
+                        "description": "",
+                        "base_price": 200,
+                        "duration_minutes": 120
+                    },
+                    {
+                        "id": 18,
+                        "name": "Full highlights",
+                        "description": "",
+                        "base_price": 140,
+                        "duration_minutes": 90
+                    }
+                ]
             }
         ]
     }
+}
 ```
 
 
@@ -476,7 +509,8 @@ curl -X POST http://apiserver/api/v1/stylist/services \
         "description": "We're adding new service here",
         "base_price": 25.0,
         "duration_minutes": 25,
-        "is_enabled": true
+        "is_enabled": true,
+        "category_uuid": "01899abd-89d9-4776-a74c-7e7d155b58af"
     },
     {
         "id": 25,
@@ -484,9 +518,10 @@ curl -X POST http://apiserver/api/v1/stylist/services \
         "description": "Updating existing service here",
         "base_price": 35.0,
         "duration_minutes": 45,
-        "is_enabled": false
+        "is_enabled": false,
+        "category_uuid": "01899abd-89d9-4776-a74c-7e7d155b58af"
     }
-   ]'
+]'
 ```
 
 
@@ -500,7 +535,10 @@ curl -X POST http://apiserver/api/v1/stylist/services \
             "description": "We're adding new service here",
             "base_price": 25.0,
             "duration_minutes": 25,
-            "is_enabled": true
+            "is_enabled": true,
+            "photo_samples": [],
+            "category_uuid": "01899abd-89d9-4776-a74c-7e7d155b58af",
+            "category_name": "Special Occassions"
         },
         {
             "id": 25, // note: it was an existing object, so id is unchanged
@@ -508,7 +546,10 @@ curl -X POST http://apiserver/api/v1/stylist/services \
             "description": "Updating existing service here",
             "base_price": 35.0,
             "duration_minutes": 45,
-            "is_enabled": false
+            "is_enabled": false,
+            "photo_samples": [],
+            "category_uuid": "01899abd-89d9-4776-a74c-7e7d155b58af",
+            "category_name": "Special Occassions"
         }
     ]
 }
@@ -531,7 +572,10 @@ Actual `salon.StylistService` object will be kept in the DB, but `deleted_at` fi
         "description": "Updating existing service here",
         "base_price": 35.0,
         "duration_minutes": 45,
-        "is_enabled": false
+        "is_enabled": false,
+        "photo_samples": [],
+        "category_uuid": "01899abd-89d9-4776-a74c-7e7d155b58af",
+        "category_name": "Special Occassions"
     }
 ]
 ```

@@ -5,8 +5,9 @@ from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
 
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 
-from salon.models import Stylist, StylistService, ServiceTemplateSet
+from salon.models import ServiceTemplateSet, Stylist, StylistService
 from api.common.permissions import (
     StylistPermission,
     StylistRegisterUpdatePermission,
@@ -39,25 +40,34 @@ class StylistView(
         }
 
 
-class ServiceTemplateSetListView(generics.ListAPIView):
+class ServiceTemplateSetListView(views.APIView):
     serializer_class = ServiceTemplateSetListSerializer
     permission_classes = [StylistPermission, permissions.IsAuthenticated]
 
+    def get(self, request):
+        return Response(
+            {
+                'service_templates': self.serializer_class(self.get_queryset(), many=True).data
+            }
+        )
+
     def get_queryset(self):
         return ServiceTemplateSet.objects.all()
 
 
-class ServiceTemplateSetDetailsView(generics.RetrieveAPIView):
-    serializer_class = ServiceTemplateSetDetailsSerializer
+class ServiceTemplateSetDetailsView(views.APIView):
     permission_classes = [StylistPermission, permissions.IsAuthenticated]
-    lookup_url_kwarg = 'template_set_pk'
 
-    def get_queryset(self):
-        return ServiceTemplateSet.objects.all()
+    def get(self, request, template_set_uuid):
+        template_set = get_object_or_404(ServiceTemplateSet, uuid=template_set_uuid)
+        return Response(
+            {
+                'template_set': ServiceTemplateSetDetailsSerializer(template_set).data,
+            }
+        )
 
 
 class StylistServiceListView(views.APIView):
-    serializer_class = StylistServiceListSerializer
     permission_classes = [StylistPermission, permissions.IsAuthenticated]
 
     def get(self, *args, **kwargs):

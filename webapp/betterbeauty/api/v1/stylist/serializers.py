@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404
 from core.models import TemporaryFile, User
 from salon.models import (
     Salon,
+    ServiceCategory,
     ServiceTemplate,
     ServiceTemplateSet,
     Stylist,
@@ -38,6 +39,12 @@ class SalonSerializer(serializers.ModelSerializer):
         ]
 
 
+class ServiceCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ServiceCategory
+        fields = ['name', 'uuid', ]
+
+
 class StylistServicePhotoSampleSerializer(serializers.ModelSerializer):
     url = serializers.CharField(read_only=True, source='photo.url')
 
@@ -54,6 +61,8 @@ class StylistServiceSerializer(serializers.ModelSerializer):
     base_price = serializers.DecimalField(
         coerce_to_string=False, max_digits=6, decimal_places=2
     )
+    category_uuid = serializers.UUIDField(source='category.uuid')
+    category_name = serializers.CharField(source='category.name', read_only=True)
 
     def validate_id(self, pk: Optional[int]) -> Optional[int]:
         if pk is not None:
@@ -69,6 +78,12 @@ class StylistServiceSerializer(serializers.ModelSerializer):
         data_to_save = validated_data.copy()
         data_to_save.update({'stylist': stylist})
         pk = data_to_save.pop('id', None)
+
+        category_data = data_to_save.pop('category', {})
+        category_uuid = category_data.get('uuid', None)
+        category = get_object_or_404(ServiceCategory, uuid=category_uuid)
+
+        data_to_save.update({'category': category})
         try:
             service = stylist.services.get(pk=pk)
             return self.update(service, data_to_save)
@@ -79,7 +94,7 @@ class StylistServiceSerializer(serializers.ModelSerializer):
         model = StylistService
         fields = [
             'id', 'name', 'description', 'base_price', 'duration_minutes',
-            'is_enabled', 'photo_samples',
+            'is_enabled', 'photo_samples', 'category_uuid', 'category_name',
         ]
 
 
@@ -208,27 +223,52 @@ class ServiceTemplateDetailsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ServiceTemplate
-        fields = ['name', 'description', 'base_price', 'duration_minutes', ]
+        fields = ['id', 'name', 'description', 'base_price', 'duration_minutes', ]
 
 
 class ServiceTemplateSetListSerializer(serializers.ModelSerializer):
-    templates = serializers.SerializerMethodField()
+    services = serializers.SerializerMethodField()
 
     class Meta:
         model = ServiceTemplateSet
-        fields = ['id', 'name', 'description', 'templates', ]
+        fields = ['uuid', 'name', 'description', 'services', ]
 
-    def get_templates(self, template_set: ServiceTemplateSet):
+    def get_services(self, template_set: ServiceTemplateSet):
         templates = template_set.templates.all()[:MAX_SERVICE_TEMPLATE_PREVIEW_COUNT]
         return ServiceTemplateSerializer(templates, many=True).data
 
 
+class ServiceCategoryDetailsSerializer(serializers.ModelSerializer):
+
+    services = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ServiceCategory
+        fields = ['name', 'uuid', 'services']
+
+    def get_services(self, service_category: ServiceCategory):
+        templates = service_category.templates.order_by('-base_price')
+        if 'service_template_set' in self.context:
+            templates = templates.filter(templateset=self.context['service_template_set'])
+        return ServiceTemplateDetailsSerializer(templates, many=True).data
+
+
 class ServiceTemplateSetDetailsSerializer(serializers.ModelSerializer):
-    templates = ServiceTemplateDetailsSerializer(many=True)
+    categories = serializers.SerializerMethodField()
 
     class Meta:
         model = ServiceTemplateSet
-        fields = ['id', 'name', 'description', 'templates', ]
+        fields = ['id', 'name', 'description', 'categories', ]
+
+    def get_categories(self, service_template_set: ServiceTemplateSet):
+        category_queryset = ServiceCategory.objects.all().order_by(
+            'name', 'uuid'
+        ).distinct('name', 'uuid')
+        return ServiceCategoryDetailsSerializer(
+            category_queryset,
+            context={'service_template_set': service_template_set},
+            many=True
+        ).data
 
 
 class StylistServiceListSerializer(serializers.Serializer):

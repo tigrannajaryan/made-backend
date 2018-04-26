@@ -1,10 +1,10 @@
-from rest_framework import permissions, generics
+from rest_framework import permissions, generics, parsers
 
 from .serializers import TemporaryImageSerializer
 
 
 class TemporaryImageUploadView(generics.CreateAPIView):
-
+    parser_classes = [parsers.MultiPartParser, ]
     permission_classes = [permissions.IsAuthenticated, ]
     serializer_class = TemporaryImageSerializer
 

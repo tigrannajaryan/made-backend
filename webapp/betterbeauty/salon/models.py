@@ -2,6 +2,7 @@ import datetime
 from typing import Optional
 
 from timezone_field import TimeZoneField
+import uuid
 
 from django.contrib.postgres.fields import DateRangeField
 from django.conf import settings
@@ -18,6 +19,10 @@ class StylistServiceManager(models.Manager):
         return super(StylistServiceManager, self).get_queryset(*args, **kwargs).filter(
             deleted_at__isnull=True
         )
+
+
+class StylistServiceWithDeletedManager(models.Manager):
+    use_in_migrations = True
 
 
 class Salon(models.Model):
@@ -98,24 +103,21 @@ class Stylist(models.Model):
         return 0
 
 
-class ServiceTemplate(models.Model):
-    """Base service template; StylistService object will be copied from this one"""
-    name = models.CharField(max_length=255)
-    description = models.TextField(blank=True)
-    base_price = models.DecimalField(max_digits=6, decimal_places=2)
-    duration = models.DurationField()
+class ServiceCategory(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
     class Meta:
-        db_table = 'service_template'
+        db_table = 'service_category'
 
     def __str__(self):
-        return 'Service template: {0}'.format(self.name)
+        return self.name
 
 
 class ServiceTemplateSet(models.Model):
-    name = models.CharField(max_length=255)
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    name = models.CharField(max_length=255, unique=True)
     description = models.TextField(blank=True)
-    templates = models.ManyToManyField(ServiceTemplate)
 
     class Meta:
         db_table = 'service_template_set'
@@ -124,8 +126,33 @@ class ServiceTemplateSet(models.Model):
         return 'Service Template Set: {0}'.format(self.name)
 
 
+class ServiceTemplate(models.Model):
+    """Base service template; StylistService object will be copied from this one"""
+    category = models.ForeignKey(
+        ServiceCategory, on_delete=models.PROTECT, related_name='templates'
+    )
+
+    templateset = models.ForeignKey(
+        ServiceTemplateSet, on_delete=models.PROTECT,
+        related_name='templates'
+    )
+
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    base_price = models.DecimalField(max_digits=6, decimal_places=2)
+    duration = models.DurationField()
+
+    class Meta:
+        db_table = 'service_template'
+        # unique_together = ('name', 'templateset',)
+
+    def __str__(self):
+        return 'Service template: {0}'.format(self.name)
+
+
 class StylistService(models.Model):
     stylist = models.ForeignKey(Stylist, on_delete=models.CASCADE, related_name='services')
+    category = models.ForeignKey(ServiceCategory, on_delete=models.PROTECT, null=True)
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     base_price = models.DecimalField(max_digits=6, decimal_places=2)
@@ -135,7 +162,7 @@ class StylistService(models.Model):
     deleted_at = models.DateTimeField(null=True, default=None)
 
     objects = StylistServiceManager()
-    all_objects = models.Manager()
+    all_objects = StylistServiceWithDeletedManager()
 
     class Meta:
         db_table = 'stylist_service'

@@ -15,6 +15,7 @@ from core.choices import USER_ROLE
 from core.models import User
 from salon.models import (
     Salon,
+    ServiceCategory,
     Stylist,
     StylistAvailableDay,
     StylistDateRangeDiscount,
@@ -110,13 +111,15 @@ class TestStylistSerializer(object):
 class TestStylistServiceSerializer(object):
     @pytest.mark.django_db
     def test_create(self):
-        stylist = G(Stylist)
+        stylist: Stylist = G(Stylist)
+        category: ServiceCategory = G(ServiceCategory)
         data = [
             {
                 'name': 'service 1',
                 'duration_minutes': 10,
                 'base_price': 20,
-                'is_enabled': True
+                'is_enabled': True,
+                'category_uuid': category.uuid
             }
         ]
         serializer = StylistServiceSerializer(
@@ -136,9 +139,11 @@ class TestStylistServiceSerializer(object):
     @pytest.mark.django_db
     def test_update(self):
         stylist = G(Stylist)
+        category: ServiceCategory = G(ServiceCategory)
         stylist_service = G(
             StylistService,
             stylist=stylist,
+            category=category,
             name='old name',
             duration=datetime.timedelta(0),
             base_price=10,
@@ -151,7 +156,8 @@ class TestStylistServiceSerializer(object):
                 'name': 'new name',
                 'duration_minutes': 10,
                 'base_price': 20,
-                'is_enabled': True
+                'is_enabled': True,
+                'category_uuid': category.uuid
             }
         ]
         serializer = StylistServiceSerializer(
