@@ -24,6 +24,7 @@ export class FirstScreenComponent {
   }
 
   register(): void {
+    // this.navCtrl.push(PageNames.Services, {}, {animate: false});
     this.navCtrl.push(PageNames.RegisterByEmail, {}, {animate: false});
   }
 }

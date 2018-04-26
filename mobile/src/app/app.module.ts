@@ -11,6 +11,8 @@ import { ListComponent } from '../pages/list/list';
 import { AuthServiceProvider } from '../providers/auth-service/auth-service';
 import { httpInterceptorProviders } from '../http-interceptors';
 import { StylistServiceProvider } from '../providers/stylist-service/stylist-service';
+import { StoreService } from '../providers/store/store';
+import { StoreServiceHelper } from '../providers/store/store-helper';
 
 @NgModule({
   declarations: [
@@ -21,7 +23,7 @@ import { StylistServiceProvider } from '../providers/stylist-service/stylist-ser
   imports: [
     BrowserModule,
     HttpClientModule,
-    IonicModule.forRoot(MyAppComponent)
+    IonicModule.forRoot(MyAppComponent, {backButtonText: '', backButtonIcon: 'md-arrow-back'})
   ],
   bootstrap: [IonicApp],
   entryComponents: [
@@ -35,7 +37,9 @@ import { StylistServiceProvider } from '../providers/stylist-service/stylist-ser
     {provide: ErrorHandler, useClass: IonicErrorHandler},
     AuthServiceProvider,
     StylistServiceProvider,
-    httpInterceptorProviders
+    httpInterceptorProviders,
+    StoreService,
+    StoreServiceHelper
   ]
 })
 export class AppModule {}

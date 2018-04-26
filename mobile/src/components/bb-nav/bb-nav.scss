@@ -1,0 +1,40 @@
+bb-nav {
+
+  .nav{
+    &-scroll{
+      white-space: nowrap;
+
+      &-item{
+        font-size: pxtoem(20);
+        color: color($colors, bb_gray);
+        text-decoration: none;
+        display: inline-block;
+        vertical-align: middle;
+        padding: 0 5px 0;
+
+        &.active{
+          color: color($colors, dark);
+        }
+
+        &:after{
+          content: '';
+          display: inline-block;
+          vertical-align: middle;
+          width: 45px;
+          height: 1px;
+          background: color($colors, bb_gray);
+          margin: 0 0 0 10px;
+        }
+        &:last-child:after{display: none;}
+      }
+    }
+
+    &-info{
+      padding: 3px 5px;
+      font-size: pxtoem(14);
+      color: color($colors, bb_honey);
+    }
+  }
+
+}
+

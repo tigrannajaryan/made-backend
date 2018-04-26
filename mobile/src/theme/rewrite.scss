@@ -1,0 +1,19 @@
+// rewrite ionic def style
+button[color="bb_violet"]{
+  color: #000;
+}
+ion-header ion-icon.back-button-icon.icon {
+  color: map-get($colors, dark);
+}
+
+
+.ion-bb{
+  &-header{
+    .toolbar-background{
+      border-color: transparent;
+      background: none;
+    }
+
+    &:after{display: none;}
+  }
+}
