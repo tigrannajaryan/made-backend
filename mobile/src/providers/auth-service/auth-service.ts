@@ -11,6 +11,12 @@ export interface AuthCredentials {
   password: string;
 }
 
+export interface FbAuthCredentials {
+  fbAccessToken: string;
+  fbUserID: string;
+  role: string;
+}
+
 export interface StylistProfileStatus {
   has_personal_data: boolean;
   has_picture_set: boolean;
@@ -75,6 +81,14 @@ export class AuthServiceProvider extends BaseServiceProvider {
   async registerByEmail(credentials: AuthCredentials): Promise<AuthResponse> {
     return this.processAuthResponse(
       () => this.post<AuthResponse>('auth/register', credentials));
+  }
+
+  /**
+   * Register a new user authenticate using the API. If successfull remembers the auth response
+   * and token which can be later obtained via getAuthToken().
+   */
+  async loginByFb(credentials: FbAuthCredentials): Promise<AuthResponse> {
+    return this.post<AuthResponse>('auth/get-token-fb', credentials);
   }
 
   /**

@@ -1,13 +1,15 @@
 import { Component } from '@angular/core';
-import { IonicPage, NavController, NavParams } from 'ionic-angular';
-import { PageNames } from '../page-names';
+import { AlertController, IonicPage, NavController } from 'ionic-angular';
+import { Facebook, FacebookLoginResponse } from '@ionic-native/facebook';
 
-/**
- * Generated class for the FirstScreenPage page.
- *
- * See https://ionicframework.com/docs/components/#navigation for more info on
- * Ionic pages and navigation.
- */
+import { PageNames } from '../page-names';
+import { AuthServiceProvider, FbAuthCredentials } from '../../providers/auth-service/auth-service';
+import { profileStatusToPage } from '../../shared/functions';
+
+// Permissions of Facebook Login
+// https://developers.facebook.com/docs/facebook-login/permissions/v3.0
+const permission = ['public_profile', 'email'];
+const connected = 'connected';
 
 @IonicPage()
 @Component({
@@ -16,7 +18,12 @@ import { PageNames } from '../page-names';
 })
 export class FirstScreenComponent {
 
-  constructor(public navCtrl: NavController, public navParams: NavParams) {
+  constructor(
+    private navCtrl: NavController,
+    private fb: Facebook,
+    private authServiceProvider: AuthServiceProvider,
+    private alertCtrl: AlertController
+  ) {
   }
 
   loginByEmail(): void {
@@ -24,7 +31,34 @@ export class FirstScreenComponent {
   }
 
   register(): void {
-    // this.navCtrl.push(PageNames.Services, {}, {animate: false});
     this.navCtrl.push(PageNames.RegisterByEmail, {}, {animate: false});
+  }
+
+  async loginByFb(): Promise<void>  {
+    try {
+      const fbResponse: FacebookLoginResponse = await this.fb.login(permission);
+
+      if (fbResponse.status === connected) {
+        const credentials: FbAuthCredentials = {
+          fbAccessToken: fbResponse.authResponse.accessToken,
+          fbUserID: fbResponse.authResponse.userID,
+          role: 'stylist'
+        };
+
+        const authResponse = await this.authServiceProvider.loginByFb(credentials);
+
+        // Erase all previous navigation history and go the next
+        // page that must be shown to this user.
+        this.navCtrl.setRoot(profileStatusToPage(authResponse.stylist_profile_status));
+      }
+    } catch (e) {
+      // Show an error message
+      const alert = this.alertCtrl.create({
+        title: 'Login failed',
+        subTitle: 'Invalid email or password',
+        buttons: ['Dismiss']
+      });
+      alert.present();
+    }
   }
 }

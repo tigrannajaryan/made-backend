@@ -1,8 +1,7 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 import { TestUtils } from '../../test';
 import { LoginComponent } from './login.component';
-import { AuthServiceProvider, StylistProfileStatus } from '../../providers/auth-service/auth-service';
-import { PageNames } from '../page-names';
+import { AuthServiceProvider } from '../../providers/auth-service/auth-service';
 
 let fixture: ComponentFixture<LoginComponent>;
 let instance: LoginComponent;
@@ -52,26 +51,5 @@ describe('Pages: LoginComponent', () => {
         expect(authService.getAuthToken())
           .toEqual(undefined);
       });
-  }));
-
-  it('should correctly map stylist profile completeness to pages', async(() => {
-    // Check edge cases (checking all combinations is not feasible)
-
-    // No profile
-    expect(LoginComponent.profileStatusToPage(undefined))
-      .toEqual(PageNames.RegisterSalon);
-
-    // Full profile
-    const profileStatus: StylistProfileStatus = {
-      has_business_hours_set: true,
-      has_invited_clients: true,
-      has_other_discounts_set: true,
-      has_personal_data: true,
-      has_picture_set: true,
-      has_services_set: true,
-      has_weekday_discounts_set: true
-    };
-    expect(LoginComponent.profileStatusToPage(profileStatus))
-      .toEqual(PageNames.Today);
   }));
 });
