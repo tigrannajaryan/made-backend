@@ -48,6 +48,34 @@ class Salon(models.Model):
         return self.address
 
 
+class StylistAvailableWeekDay(models.Model):
+    stylist = models.ForeignKey(
+        'salon.Stylist', on_delete=models.CASCADE, related_name='available_days'
+    )
+    weekday = models.PositiveSmallIntegerField(choices=WEEKDAY)
+    work_start_at = models.TimeField(null=True)
+    work_end_at = models.TimeField(null=True)
+    is_available = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'stylist_available_day'
+        unique_together = ('stylist', 'weekday', )
+
+    def __str__(self):
+        availability_str = ' not'
+        availability_time = ''
+        if self.is_available:
+            availability_str = ''
+            availability_time = ' {0} - {1}'.format(
+                self.work_start_at,
+                self.work_end_at
+            )
+        return '{0}:{1} available on {2}{3}'.format(
+            self.stylist, availability_str, self.get_weekday_display(),
+            availability_time
+        )
+
+
 class Stylist(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     salon = models.ForeignKey(Salon, on_delete=models.PROTECT, null=True)
@@ -101,6 +129,11 @@ class Stylist(models.Model):
         if range_discount:
             return range_discount.discount_percent
         return 0
+
+    def get_or_create_weekday_availability(
+            self, weekday: Weekday
+    ) -> StylistAvailableWeekDay:
+        return self.available_days.get_or_create(weekday=weekday)[0]
 
 
 class ServiceCategory(models.Model):
@@ -186,15 +219,6 @@ class StylistServicePhotoSample(models.Model):
 
     class Meta:
         db_table = 'stylist_service_photo_sample'
-
-
-class StylistAvailableDay(models.Model):
-    stylist = models.ForeignKey(Stylist, on_delete=models.CASCADE, related_name='available_days')
-    weekday = models.PositiveSmallIntegerField(choices=WEEKDAY)
-
-    class Meta:
-        db_table = 'stylist_available_day'
-        unique_together = ('stylist', 'weekday', )
 
 
 class StylistWeekdayDiscount(models.Model):

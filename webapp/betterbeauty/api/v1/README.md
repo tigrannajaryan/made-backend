@@ -633,3 +633,144 @@ curl -X POST \
     ]
 }
 ```
+
+## Availability
+### Retrieve availability
+**GET /api/v1/stylist/availability/weekdays**
+
+**Response 200 OK**
+```
+{
+    "weekdays": [
+        {
+            "weekday_iso": 1,
+            "label": "Monday",
+            "work_start_at": "15:00:00",
+            "work_end_at": "18:00:00",
+            "is_available": true
+        },
+        {
+            "weekday_iso": 2,
+            "label": "Tuesday",
+            "work_start_at": null,
+            "work_end_at": null,
+            "is_available": false
+        },
+        {
+            "weekday_iso": 3,
+            "label": "Wednesday",
+            "work_start_at": null,
+            "work_end_at": null,
+            "is_available": false
+        },
+        {
+            "weekday_iso": 4,
+            "label": "Thursday",
+            "work_start_at": null,
+            "work_end_at": null,
+            "is_available": false
+        },
+        {
+            "weekday_iso": 5,
+            "label": "Friday",
+            "work_start_at": null,
+            "work_end_at": null,
+            "is_available": false
+        },
+        {
+            "weekday_iso": 6,
+            "label": "Saturday",
+            "work_start_at": null,
+            "work_end_at": null,
+            "is_available": false
+        },
+        {
+            "weekday_iso": 7,
+            "label": "Sunday",
+            "work_start_at": null,
+            "work_end_at": null,
+            "is_available": false
+        }
+    ]
+}
+```
+
+Note: time is passed in salon's local timezone
+
+### Set availability for one or multiple days
+**POST/PATCH /api/v1/stylist/availability/weekdays**
+
+**Content-Type=application/json**
+
+**Body**
+```
+[
+    {
+        "weekday_iso": 2,
+        "is_available": true,
+        "work_start_at": "08:30:00",
+        "work_end_at": "15:00:00"
+    },
+    {
+        "weekday_iso": 4,
+        "is_available": false
+    }
+]
+```
+
+**Response 200 OK**
+```
+{
+    "weekdays": [
+        {
+            "weekday_iso": 1,
+            "label": "Monday",
+            "work_start_at": null,
+            "work_end_at": null,
+            "is_available": false
+        },
+        {
+            "weekday_iso": 2,
+            "label": "Tuesday",
+            "work_start_at": "08:30:00",
+            "work_end_at": "15:00:00",
+            "is_available": true
+        },
+        {
+            "weekday_iso": 3,
+            "label": "Wednesday",
+            "work_start_at": null,
+            "work_end_at": null,
+            "is_available": false
+        },
+        {
+            "weekday_iso": 4,
+            "label": "Thursday",
+            "work_start_at": "08:30:00",
+            "work_end_at": "15:00:00",
+            "is_available": true
+        },
+        {
+            "weekday_iso": 5,
+            "label": "Friday",
+            "work_start_at": null,
+            "work_end_at": null,
+            "is_available": false
+        },
+        {
+            "weekday_iso": 6,
+            "label": "Saturday",
+            "work_start_at": null,
+            "work_end_at": null,
+            "is_available": false
+        },
+        {
+            "weekday_iso": 7,
+            "label": "Sunday",
+            "work_start_at": null,
+            "work_end_at": null,
+            "is_available": false
+        }
+    ]
+}
+```

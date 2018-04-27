@@ -1,6 +1,7 @@
 from django.conf.urls import url
 
 from .views import (
+    StylistAvailabilityView,
     StylistView,
     StylistServiceView,
     StylistServiceListView,
@@ -17,4 +18,5 @@ urlpatterns = [
         ServiceTemplateSetDetailsView.as_view()),
     url('services$', StylistServiceListView.as_view()),
     url('services/(?P<service_pk>\d+)$', StylistServiceView.as_view()),
+    url('availability/weekdays$', StylistAvailabilityView.as_view(), name='availability_weekdays'),
 ]

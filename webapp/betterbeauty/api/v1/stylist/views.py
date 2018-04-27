@@ -15,6 +15,8 @@ from api.common.permissions import (
 from .serializers import (
     ServiceTemplateSetDetailsSerializer,
     ServiceTemplateSetListSerializer,
+    StylistAvailableWeekDayListSerializer,
+    StylistAvailableWeekDaySerializer,
     StylistSerializer,
     StylistServiceSerializer,
     StylistServiceListSerializer,
@@ -25,7 +27,6 @@ class StylistView(
     generics.CreateAPIView, generics.RetrieveUpdateAPIView
 ):
     serializer_class = StylistSerializer
-
     permission_classes = [StylistRegisterUpdatePermission, permissions.IsAuthenticated]
 
     def get_object(self):
@@ -123,3 +124,27 @@ class StylistServiceView(generics.DestroyAPIView):
 
     def get_queryset(self):
         return self.request.user.stylist.services.all()
+
+
+class StylistAvailabilityView(views.APIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response(StylistAvailableWeekDayListSerializer(self.get_object()).data)
+
+    def patch(self, request):
+        return self.post(request)
+
+    def post(self, request):
+        serializer = StylistAvailableWeekDaySerializer(
+            data=request.data, many=True,
+            context={'user': self.request.user}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save(stylist=self.get_object())
+        return Response(
+            StylistAvailableWeekDayListSerializer(self.get_object()).data
+        )
+
+    def get_object(self):
+        return getattr(self.request.user, 'stylist', None)

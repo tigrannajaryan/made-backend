@@ -7,6 +7,7 @@ from psycopg2.extras import DateRange
 from django_dynamic_fixture import G
 
 from api.v1.stylist.serializers import (
+    StylistAvailableWeekDaySerializer,
     StylistSerializer,
     StylistServiceSerializer,
     StylistProfileStatusSerializer,
@@ -17,7 +18,7 @@ from salon.models import (
     Salon,
     ServiceCategory,
     Stylist,
-    StylistAvailableDay,
+    StylistAvailableWeekDay,
     StylistDateRangeDiscount,
     StylistFirstTimeBookDiscount,
     StylistEarlyRebookDiscount,
@@ -106,6 +107,7 @@ class TestStylistSerializer(object):
         assert(stylist.salon.name == 'Test salon')
         assert(stylist.salon.timezone == pytz.timezone('America/New_York'))
         assert(stylist.user.first_name == 'Jane')
+        assert(stylist.available_days.count() == 7)
 
 
 class TestStylistServiceSerializer(object):
@@ -245,7 +247,13 @@ class TestStylistProfileCompletenessSerializer(object):
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_business_hours_set'] is False
         )
-        G(StylistAvailableDay, stylist=stylist_data)
+        G(StylistAvailableWeekDay, weekday=1, stylist=stylist_data, is_available=False)
+        assert (
+            StylistProfileStatusSerializer(
+                instance=stylist_data).data['has_business_hours_set'] is False
+        )
+        G(StylistAvailableWeekDay, weekday=2, stylist=stylist_data, is_available=True,
+          work_start_at=datetime.time(8, 0), work_end_at=datetime.time(15, 0))
         assert (
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_business_hours_set'] is True
@@ -292,3 +300,55 @@ class TestStylistProfileCompletenessSerializer(object):
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_other_discounts_set'] is True
         )
+
+
+class TestStylistAvailableWeekDaySerializer(object):
+
+    @pytest.mark.django_db
+    def test_create(self):
+        stylist = G(Stylist)
+        data = {
+            'weekday_iso': 1,
+            'is_available': True,
+            'work_start_at': '8:00',
+            'work_end_at': '15:30'
+        }
+        serializer = StylistAvailableWeekDaySerializer(
+            data=data, context={'user': stylist.user}
+        )
+        assert(serializer.is_valid(raise_exception=False))
+        available_day = serializer.save()
+        assert(available_day.work_start_at == datetime.time(8, 0))
+        assert(available_day.work_end_at == datetime.time(15, 30))
+        assert(available_day.stylist == stylist)
+        assert(available_day.is_available is True)
+
+    @pytest.mark.django_db
+    def test_validate(self):
+        stylist = G(Stylist)
+        data = {
+            'weekday_iso': 1,
+            'is_available': False,
+        }
+        serializer = StylistAvailableWeekDaySerializer(
+            data=data, context={'user': stylist.user}
+        )
+        assert(serializer.is_valid(raise_exception=False) is True)
+
+        data['is_available'] = True
+        serializer = StylistAvailableWeekDaySerializer(
+            data=data, context={'user': stylist.user}
+        )
+        assert (serializer.is_valid(raise_exception=False) is False)
+
+        data['work_start_at'] = '8:00'
+        serializer = StylistAvailableWeekDaySerializer(
+            data=data, context={'user': stylist.user}
+        )
+        assert (serializer.is_valid(raise_exception=False) is False)
+
+        data['work_end_at'] = '15:30'
+        serializer = StylistAvailableWeekDaySerializer(
+            data=data, context={'user': stylist.user}
+        )
+        assert (serializer.is_valid(raise_exception=False) is True)

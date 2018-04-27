@@ -9,7 +9,7 @@ from core.choices import USER_ROLE
 from core.models import User
 from core.types import FBAccessToken, FBUserID
 from core.utils.facebook import get_or_create_facebook_user
-from salon.models import Stylist
+from salon.utils import create_stylist_profile_for_user
 
 
 class UserRegistrationSerializer(serializers.Serializer):
@@ -61,5 +61,5 @@ class FacebookAuthTokenSerializer(serializers.Serializer):
                 fb_access_token, fb_user_id
             )
             if created:
-                Stylist.objects.create(user=user)
+                create_stylist_profile_for_user(user=user)
             return user

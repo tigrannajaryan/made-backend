@@ -8,15 +8,18 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 
 from core.models import TemporaryFile, User
+from core.types import Weekday
 from salon.models import (
     Salon,
     ServiceCategory,
     ServiceTemplate,
     ServiceTemplateSet,
     Stylist,
+    StylistAvailableWeekDay,
     StylistService,
     StylistServicePhotoSample,
 )
+from salon.utils import create_stylist_profile_for_user
 from .constants import MAX_SERVICE_TEMPLATE_PREVIEW_COUNT
 from .fields import DurationMinuteField
 
@@ -177,15 +180,8 @@ class StylistSerializer(serializers.ModelSerializer):
             )
             salon_serializer.is_valid(raise_exception=True)
             salon = salon_serializer.save()
-
-            validated_data.update(
-                {
-                    'salon': salon,
-                    'user': user,
-                }
-            )
             profile_photo_id = validated_data.pop('profile_photo_id', None)
-            stylist = super(StylistSerializer, self).create(validated_data)
+            stylist = create_stylist_profile_for_user(user, salon=salon)
             self._save_profile_photo(
                 user, profile_photo_id
             )
@@ -309,7 +305,11 @@ class StylistProfileStatusSerializer(serializers.ModelSerializer):
         return stylist.services.exists()
 
     def get_has_business_hours_set(self, stylist: Stylist) -> bool:
-        return stylist.available_days.exists()
+        return stylist.available_days.filter(
+            is_available=True,
+            work_start_at__isnull=False,
+            work_end_at__isnull=False
+        ).exists()
 
     def get_has_weekday_discounts_set(self, stylist: Stylist) -> bool:
         return stylist.weekday_discounts.exists()
@@ -326,3 +326,48 @@ class StylistProfileStatusSerializer(serializers.ModelSerializer):
         # We don't have model for this right now, so set to False
         # TODO: reflect actual state
         return False
+
+
+class StylistAvailableWeekDaySerializer(serializers.ModelSerializer):
+    label = serializers.CharField(read_only=True, source='get_weekday_display')
+    weekday_iso = serializers.IntegerField(source='weekday')
+
+    def validate(self, attrs):
+        if attrs.get('is_available', False) is True:
+            if not attrs.get('work_start_at', None) or not attrs.get('work_end_at', None):
+                raise serializers.ValidationError('Day marked as available, but time is not set')
+        else:
+            attrs['work_start_at'] = None
+            attrs['work_end_at'] = None
+        return attrs
+
+    def create(self, validated_data):
+        weekday: Weekday = validated_data['weekday']
+        stylist: Stylist = self.context['user'].stylist
+        weekday_db = stylist.available_days.filter(weekday=weekday).last()
+        if weekday_db:
+            return self.update(weekday_db, validated_data)
+
+        validated_data.update({
+            'stylist': stylist
+        })
+        return super(StylistAvailableWeekDaySerializer, self).create(validated_data)
+
+    class Meta:
+        model = StylistAvailableWeekDay
+        fields = ['weekday_iso', 'label', 'work_start_at', 'work_end_at', 'is_available', ]
+
+
+class StylistAvailableWeekDayListSerializer(serializers.ModelSerializer):
+    weekdays = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Stylist
+        fields = ['weekdays', ]
+
+    def get_weekdays(self, stylist: Stylist):
+        weekday_availability = [
+            stylist.get_or_create_weekday_availability(Weekday(weekday))
+            for weekday in range(1, 8)
+        ]
+        return StylistAvailableWeekDaySerializer(weekday_availability, many=True).data

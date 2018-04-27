@@ -6,7 +6,7 @@ from .models import (
     ServiceTemplate,
     ServiceTemplateSet,
     Stylist,
-    StylistAvailableDay,
+    StylistAvailableWeekDay,
     StylistDateRangeDiscount,
     StylistEarlyRebookDiscount,
     StylistFirstTimeBookDiscount,
@@ -46,7 +46,7 @@ class StylistAdmin(admin.ModelAdmin):
         extra = 0
 
     class StylistAvailableDayInline(admin.TabularInline):
-        model = StylistAvailableDay
+        model = StylistAvailableWeekDay
         extra = 1
 
     class StylistWeekdayDiscount(admin.StackedInline):

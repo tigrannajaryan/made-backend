@@ -82,6 +82,7 @@ class TestFBRegisterLoginView(object):
         stylist_data = data['stylist']
         created_stylist = Stylist.objects.last()
         assert (stylist_data['id'] == created_stylist.id)
+        assert (created_stylist.available_days.count() == 7)
         user = created_stylist.user
         assert(user.first_name == 'Jane')
         assert(user.last_name == 'McBob')
