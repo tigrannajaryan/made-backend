@@ -349,6 +349,7 @@ curl http://apiserver/api/v1/stylist/service-template-sets \
             "uuid": "f2f0d141-47a8-4393-9c8e-c79126502c41",
             "name": "set 1",
             "description": "",
+            "image_url": "http://example.com/image_set_1.png",
             "services": [
                 {
                     "name": "Custom wigs"
@@ -365,6 +366,7 @@ curl http://apiserver/api/v1/stylist/service-template-sets \
             "uuid": "44f049c3-1a3a-46c7-ade1-1c1cf1bd6c7e",
             "name": "set 2",
             "description": "",
+            "image_url": "http://example.com/image_set_2.png",
             "services": [
                 {
                     "name": "Balayage"
@@ -393,6 +395,7 @@ curl http://apiserver/api/v1/stylist/service-template-sets/{template_set_uuid} \
         "id": 1,
         "name": "set 1",
         "description": "",
+        "image_url": "http://example.com/image_set_1.png",
         "categories": [
             {
                 "name": "Special Occassions",

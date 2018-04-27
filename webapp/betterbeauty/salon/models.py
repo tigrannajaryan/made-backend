@@ -117,6 +117,8 @@ class ServiceCategory(models.Model):
 class ServiceTemplateSet(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     name = models.CharField(max_length=255, unique=True)
+    image = models.ImageField(upload_to='template_set_images', null=True, blank=True)
+
     description = models.TextField(blank=True)
 
     class Meta:
@@ -124,6 +126,11 @@ class ServiceTemplateSet(models.Model):
 
     def __str__(self):
         return 'Service Template Set: {0}'.format(self.name)
+
+    def get_image_url(self) -> Optional[str]:
+        if self.image:
+            return self.image.url
+        return None
 
 
 class ServiceTemplate(models.Model):

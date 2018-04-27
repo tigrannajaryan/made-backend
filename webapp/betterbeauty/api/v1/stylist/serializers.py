@@ -228,10 +228,11 @@ class ServiceTemplateDetailsSerializer(serializers.ModelSerializer):
 
 class ServiceTemplateSetListSerializer(serializers.ModelSerializer):
     services = serializers.SerializerMethodField()
+    image_url = serializers.CharField(read_only=True, source='get_image_url')
 
     class Meta:
         model = ServiceTemplateSet
-        fields = ['uuid', 'name', 'description', 'services', ]
+        fields = ['uuid', 'name', 'description', 'services', 'image_url', ]
 
     def get_services(self, template_set: ServiceTemplateSet):
         templates = template_set.templates.all()[:MAX_SERVICE_TEMPLATE_PREVIEW_COUNT]
@@ -255,10 +256,11 @@ class ServiceCategoryDetailsSerializer(serializers.ModelSerializer):
 
 class ServiceTemplateSetDetailsSerializer(serializers.ModelSerializer):
     categories = serializers.SerializerMethodField()
+    image_url = serializers.CharField(read_only=True, source='get_image_url')
 
     class Meta:
         model = ServiceTemplateSet
-        fields = ['id', 'name', 'description', 'categories', ]
+        fields = ['id', 'name', 'description', 'categories', 'image_url']
 
     def get_categories(self, service_template_set: ServiceTemplateSet):
         category_queryset = ServiceCategory.objects.all().order_by(
