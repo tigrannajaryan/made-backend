@@ -17,6 +17,7 @@ from core.models import User
 from salon.models import (
     Salon,
     ServiceCategory,
+    ServiceTemplate,
     Stylist,
     StylistAvailableWeekDay,
     StylistDateRangeDiscount,
@@ -115,6 +116,11 @@ class TestStylistServiceSerializer(object):
     def test_create(self):
         stylist: Stylist = G(Stylist)
         category: ServiceCategory = G(ServiceCategory)
+        template: ServiceTemplate = G(
+            ServiceTemplate,
+            duration=datetime.timedelta(),
+            name='service 1', category=category,
+        )
         data = [
             {
                 'name': 'service 1',
@@ -137,6 +143,7 @@ class TestStylistServiceSerializer(object):
         assert(service.name == 'service 1')
         assert(service.duration == datetime.timedelta(minutes=10))
         assert(service.base_price == 20)
+        assert(service.service_uuid == template.uuid)
 
     @pytest.mark.django_db
     def test_update(self):
@@ -152,6 +159,7 @@ class TestStylistServiceSerializer(object):
             is_enabled=True,
             deleted_at=None
         )
+        old_service_uuid = stylist_service.service_uuid
         data = [
             {
                 'id': stylist_service.id,
@@ -175,6 +183,7 @@ class TestStylistServiceSerializer(object):
         assert (service.name == 'new name')
         assert (service.duration == datetime.timedelta(minutes=10))
         assert (service.base_price == 20)
+        assert(old_service_uuid != service.service_uuid)
 
 
 class TestStylistProfileCompletenessSerializer(object):

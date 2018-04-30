@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import Dict, Optional
+import uuid
 
 from rest_framework import serializers
 
@@ -76,7 +77,7 @@ class StylistServiceSerializer(serializers.ModelSerializer):
                 )
         return pk
 
-    def create(self, validated_data):
+    def create(self, validated_data: Dict):
         stylist = self.context['stylist']
         data_to_save = validated_data.copy()
         data_to_save.update({'stylist': stylist})
@@ -86,7 +87,19 @@ class StylistServiceSerializer(serializers.ModelSerializer):
         category_uuid = category_data.get('uuid', None)
         category = get_object_or_404(ServiceCategory, uuid=category_uuid)
 
-        data_to_save.update({'category': category})
+        # check if date from client actually matches a service template
+        # if it does not - generate service uuid from scratch, otherwise assign from template
+        service_uuid = uuid.uuid4()
+
+        service_template = ServiceTemplate.objects.filter(
+            name=data_to_save['name'],
+            category=category
+        ).last()
+
+        if service_template:
+            service_uuid = service_template.uuid
+
+        data_to_save.update({'category': category, 'service_uuid': service_uuid})
         try:
             service = stylist.services.get(pk=pk)
             return self.update(service, data_to_save)
