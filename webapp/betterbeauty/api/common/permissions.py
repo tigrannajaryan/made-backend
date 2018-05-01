@@ -11,3 +11,8 @@ class StylistRegisterUpdatePermission(permissions.BasePermission):
 class StylistPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.is_stylist()
+
+
+class ClientPermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.is_client()

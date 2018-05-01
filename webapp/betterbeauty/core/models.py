@@ -92,8 +92,8 @@ class User(BaseEmailUser):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS: List[str] = []
 
-    def is_customer(self) -> bool:
-        return self.role == USER_ROLE.customer
+    def is_client(self) -> bool:
+        return self.role == USER_ROLE.client
 
     def is_stylist(self) -> bool:
         return self.role == USER_ROLE.stylist

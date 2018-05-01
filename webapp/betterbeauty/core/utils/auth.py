@@ -11,5 +11,5 @@ def jwt_response_payload_handler(token, user=None, request=None):
         'token': token,
         'expires_in': jwt_api_settings.JWT_EXPIRATION_DELTA.total_seconds(),
         'stylist': stylist,
-        'stylist_profile_status': stylist
+        'stylist_profile_status': stylist,
     }).data
