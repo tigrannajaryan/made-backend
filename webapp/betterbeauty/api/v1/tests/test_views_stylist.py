@@ -6,7 +6,7 @@ from django_dynamic_fixture import G
 
 from django.urls import reverse
 
-from core.choices import USER_ROLE
+from core.types import UserRole
 from core.models import User
 from salon.models import Stylist
 
@@ -16,13 +16,15 @@ class TestStylistView(object):
     def _create_and_authorize_user(self, client):
         user = G(
             User, email='email@example.com', first_name='Jane', last_name='McBob',
-            role=USER_ROLE.stylist
+            role=UserRole.STYLIST
         )
         user.set_password('password')
         user.save()
         auth_url = reverse('api:v1:auth:get_jwt_token')
         data = client.post(
-            auth_url, data={'email': 'email@example.com', 'password': 'password'}
+            auth_url, data={
+                'email': 'email@example.com', 'password': 'password', 'role': UserRole.STYLIST
+            }
         ).data
         token = data['token']
         return user, token

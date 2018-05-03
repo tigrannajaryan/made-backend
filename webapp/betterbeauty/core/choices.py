@@ -2,24 +2,21 @@ from model_utils import Choices
 
 from django.utils.translation import ugettext_lazy as _
 
-from .types import Weekday
+from .types import UserRole, Weekday
 
 WEEKDAY = Choices(
-    (Weekday.MONDAY, 'monday', _('Monday')),
-    (Weekday.TUESDAY, 'tuesday', _('Tuesday')),
-    (Weekday.WEDNESDAY, 'wednesday', _('Wednesday')),
-    (Weekday.THURSDAY, 'thursday', _('Thursday')),
-    (Weekday.FRIDAY, 'friday', _('Friday')),
-    (Weekday.SATURDAY, 'saturday', _('Saturday')),
-    (Weekday.SUNDAY, 'sunday', _('Sunday')),
+    (Weekday.MONDAY.value, 'monday', _('Monday')),
+    (Weekday.TUESDAY.value, 'tuesday', _('Tuesday')),
+    (Weekday.WEDNESDAY.value, 'wednesday', _('Wednesday')),
+    (Weekday.THURSDAY.value, 'thursday', _('Thursday')),
+    (Weekday.FRIDAY.value, 'friday', _('Friday')),
+    (Weekday.SATURDAY.value, 'saturday', _('Saturday')),
+    (Weekday.SUNDAY.value, 'sunday', _('Sunday')),
 )
 
-CLIENT = 'client'
-STYLIST = 'stylist'
-STAFF = 'staff'
 
 USER_ROLE = Choices(
-    (CLIENT, 'client', _('Client')),
-    (STYLIST, 'stylist', _('Stylist')),
-    (STAFF, 'staff', _('Staff')),
+    (UserRole.CLIENT.value, 'client', _('Client')),
+    (UserRole.STYLIST.value, 'stylist', _('Stylist')),
+    (UserRole.STAFF.value, 'staff', _('Staff')),
 )

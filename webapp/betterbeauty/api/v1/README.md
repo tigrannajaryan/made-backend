@@ -15,7 +15,8 @@ the token - authorize with existing user's credentials, or register new user.
 {
     "token": "jwt_token",
     "expires_in": 86400,
-    "stylist": {
+    "role": "stylist",
+    "profile": {
         "id": 1,
         "first_name": "Jane",
         "last_name": "McBob",
@@ -24,7 +25,7 @@ the token - authorize with existing user's credentials, or register new user.
         "salon_name": "Jane salon",
         "salon_address": "1234 Front Street"
     },
-    "stylist_profile_status": {
+    "profile_status": {
         "has_personal_data": true,
         "has_picture_set": false,
         "has_services_set": false,
@@ -36,7 +37,7 @@ the token - authorize with existing user's credentials, or register new user.
 }
 ```
 
-Note: if user doesn't have stylist profile - `stylist` and `stylist_profile_status`
+Note: if user doesn't have stylist profile - `profile` and `profile_status`
 fields will be `null`
 
 ## Getting auth token with Facebook credentials
@@ -67,8 +68,9 @@ If the token has not yet expired, it can be refreshed to a new one:
 {
     "token": "refreshed_jwt_token",
     "expires_in": 86400,
-    "stylist": null,
-    "stylist_profile_status": null
+    "role": "stylist",
+    "profile": null,
+    "profile_status": null
 }
 ```
 
@@ -76,7 +78,7 @@ Note: make sure to set proper content type (to `application/json`)
 
 # Registration
 
-Before creating customer or stylist, new user must be registered. There will be multtiple
+Before creating client or stylist, new user must be registered. There will be multiple
 ways of creation of user entity using social networks; section below is about registering
 a user with email credentials. Social network methods are to be added.
 
@@ -86,7 +88,12 @@ If user already exists - endpoint just refreshes the JWT token.
 
 **POST /api/v1/auth/get-token-fb**
 
-`curl -X POST -d "fbAccessToken=long_facebook_token&fbUserID=numeric_facebook_user_id" http://apiserver/api/v1/auth/get-token-fb`
+```
+curl -X POST http://apiserver/api/v1/auth/get-token-fb \
+  -F 'fbAccessToken=long_facebook_token' \
+  -F 'fbUserID=numeric_facebook_user_id' \
+  -F 'role=stylist'
+```
 
 **Response 200 OK**
 
@@ -94,7 +101,8 @@ If user already exists - endpoint just refreshes the JWT token.
 {
     "token": "jwt_token",
     "expires_in": 86400,
-    "stylist": {
+    "role": "stylist",
+    "profile": {
         "id": 17,
         "first_name": "Charlie",
         "last_name": "Martinazzison",
@@ -103,7 +111,7 @@ If user already exists - endpoint just refreshes the JWT token.
         "salon_name": null,
         "salon_address": null
     },
-    "stylist_profile_status": {
+    "profile_status": {
         "has_personal_data": true,
         "has_picture_set": false,
         "has_services_set": false,
@@ -124,7 +132,12 @@ The endpoint **does not** create a stylist or salon; you should use **profile** 
 
 **POST /api/v1/auth/register**
 
-`curl -X POST -d "email=stylist2@example.com&password=my_new_password http://apiserver//api/v1/auth/register`
+```
+curl -X POST http://apiserver//api/v1/auth/register \
+  -F 'email=stylist2@example.com \
+  -F 'password=my_new_password' \
+  -F 'role=stylist'
+```
 
 **Response 200 OK**
 
@@ -132,8 +145,9 @@ The endpoint **does not** create a stylist or salon; you should use **profile** 
 {
     "token": "jwt_token",
     "expires_in": 86400,
-    "stylist": null,
-    "stylist_profile_status": null
+    "role": "stylist",
+    "profile": null,
+    "profile_status": null
 }
 ```
 

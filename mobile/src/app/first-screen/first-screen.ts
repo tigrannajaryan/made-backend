@@ -3,7 +3,7 @@ import { AlertController, IonicPage, NavController } from 'ionic-angular';
 import { Facebook, FacebookLoginResponse } from '@ionic-native/facebook';
 
 import { profileStatusToPage } from '../shared/functions';
-import { AuthServiceProvider, FbAuthCredentials } from '../shared/auth-service/auth-service';
+import { AuthServiceProvider, FbAuthCredentials, UserRole } from '../shared/auth-service/auth-service';
 import { PageNames } from '../shared/page-names';
 
 // Permissions of Facebook Login
@@ -42,14 +42,14 @@ export class FirstScreenComponent {
         const credentials: FbAuthCredentials = {
           fbAccessToken: fbResponse.authResponse.accessToken,
           fbUserID: fbResponse.authResponse.userID,
-          role: 'stylist'
+          role: UserRole.stylist
         };
 
         const authResponse = await this.authServiceProvider.loginByFb(credentials);
 
         // Erase all previous navigation history and go the next
         // page that must be shown to this user.
-        this.navCtrl.setRoot(profileStatusToPage(authResponse.stylist_profile_status));
+        this.navCtrl.setRoot(profileStatusToPage(authResponse.profile_status));
       }
     } catch (e) {
       // Show an error message

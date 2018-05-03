@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { AlertController, IonicPage, NavController, NavParams } from 'ionic-angular';
 import { profileStatusToPage } from '../shared/functions';
-import { AuthServiceProvider } from '../shared/auth-service/auth-service';
+import { AuthCredentials, AuthServiceProvider, UserRole } from '../shared/auth-service/auth-service';
 
 /**
  * Generated class for the LoginPage page.
@@ -17,7 +17,7 @@ import { AuthServiceProvider } from '../shared/auth-service/auth-service';
 })
 export class LoginComponent {
 
-  formData = { email: '', password: '' };
+  formData = { email: '', password: ''};
 
   constructor(public navCtrl: NavController,
               public navParams: NavParams,
@@ -27,13 +27,18 @@ export class LoginComponent {
 
   async login(): Promise<void> {
     try {
-      const authResponse = await this.authService.doAuth(this.formData);
+      const authCredentialsRecord: AuthCredentials = {
+        email: this.formData.email,
+        password: this.formData.password,
+        role: UserRole.stylist
+      };
+      const authResponse = await this.authService.doAuth(authCredentialsRecord);
 
       // Auth successfull. Remember token in local storage.
       localStorage.setItem('authToken', JSON.stringify(authResponse.token));
 
       // process authResponse and move to needed page
-      this.navCtrl.setRoot(profileStatusToPage(authResponse.stylist_profile_status));
+      this.navCtrl.setRoot(profileStatusToPage(authResponse.profile_status));
     } catch (e) {
       // Show an error message
       const alert = this.alertCtrl.create({

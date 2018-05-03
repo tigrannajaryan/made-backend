@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { AlertController, IonicPage, NavController, NavParams } from 'ionic-angular';
 
-import { AuthServiceProvider } from '../shared/auth-service/auth-service';
+import { AuthCredentials, AuthServiceProvider, UserRole } from '../shared/auth-service/auth-service';
 import { PageNames } from '../shared/page-names';
 
 /**
@@ -28,8 +28,13 @@ export class RegisterByEmailComponent {
   }
 
   async register(): Promise<void> {
+    const authCredentialsRecord: AuthCredentials = {
+      email: this.formData.email,
+      password: this.formData.password,
+      role: UserRole.stylist
+    };
     try {
-      await this.authService.registerByEmail(this.formData);
+      await this.authService.registerByEmail(authCredentialsRecord);
       this.navCtrl.push(PageNames.RegisterSalon, {}, { animate: false });
     } catch (e) {
       const alert = this.alertCtrl.create({

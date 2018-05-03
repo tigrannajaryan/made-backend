@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { AuthCredentials, AuthResponse } from './auth-service';
+import { AuthCredentials, AuthResponse, UserRole } from './auth-service';
 import { StylistProfile } from '../stylist-service/stylist-models';
 
 /**
@@ -13,7 +13,7 @@ export class AuthServiceProviderMock {
    * Credentials that will result in success for doAuth() function.
    */
   successAuthCredentials: AuthCredentials = {
-    email: 'user@test.com', password: 'pass123'
+    email: 'user@test.com', password: 'pass123', role: UserRole.stylist
   };
 
   private authResponse: AuthResponse;
@@ -25,7 +25,7 @@ export class AuthServiceProviderMock {
   async doAuth(credentials: AuthCredentials): Promise<AuthResponse> {
     if (credentials.email === this.successAuthCredentials.email &&
       credentials.password === this.successAuthCredentials.password) {
-      this.authResponse = { token: 'test-token' };
+      this.authResponse = { token: 'test-token', role: UserRole.stylist};
 
       return Promise.resolve(this.authResponse);
     } else {
@@ -38,7 +38,7 @@ export class AuthServiceProviderMock {
    * and token which can be later obtained via getAuthToken().
    */
   async registerByEmail(credentials: AuthCredentials): Promise<AuthResponse> {
-    this.authResponse = { token: 'test-token' };
+    this.authResponse = { token: 'test-token', role: UserRole.stylist };
 
     return Promise.resolve(this.authResponse);
   }
@@ -56,6 +56,6 @@ export class AuthServiceProviderMock {
    * so this is a works-only-once type of call. I asked backend to change the behavior.
    */
   async setStylistProfile(data: StylistProfile): Promise<AuthResponse> {
-    return Promise.resolve({ token: 'test-token' });
+    return Promise.resolve({ token: 'test-token', role: UserRole.stylist });
   }
 }

@@ -5,9 +5,8 @@ import facebook
 from django.conf import settings
 from django.db import transaction
 
-from core.choices import USER_ROLE
 from core.models import User
-from core.types import FBAccessToken, FBUserID
+from core.types import FBAccessToken, FBUserID, UserRole
 from ..utils.storage import fetch_image_to_image_field
 
 facebook_application_api = facebook.GraphAPI()
@@ -37,7 +36,7 @@ def get_profile_data(fb_user_token: FBAccessToken, fb_user_id: FBUserID) -> Dict
 
 
 def get_or_create_facebook_user(
-        fb_user_token: FBAccessToken, fb_user_id: FBUserID
+        fb_user_token: FBAccessToken, fb_user_id: FBUserID, role: UserRole
 ) -> Tuple[User, bool]:
     profile_data: Dict = get_profile_data(fb_user_token, fb_user_id)
     first_name: str = profile_data.get('first_name', '')
@@ -51,7 +50,8 @@ def get_or_create_facebook_user(
         user, created = User.objects.get_or_create(defaults={
             'first_name': first_name,
             'last_name': last_name,
-        }, facebook_id=fb_user_id, role=USER_ROLE.stylist, email=email
+            'role': role,
+        }, facebook_id=fb_user_id, email=email
         )
         if created and picture_url:
             # try to fetch and save profile picture

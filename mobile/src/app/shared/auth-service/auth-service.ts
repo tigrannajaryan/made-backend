@@ -6,15 +6,18 @@ import { BaseServiceProvider } from '../base-service';
 import { StylistProfile } from '../stylist-service/stylist-models';
 import { Logger } from '../../shared/logger';
 
+export enum UserRole {stylist = 'stylist', client = 'client'}
+
 export interface AuthCredentials {
   email: string;
   password: string;
+  role: UserRole;
 }
 
 export interface FbAuthCredentials {
   fbAccessToken: string;
   fbUserID: string;
-  role: string;
+  role: UserRole;
 }
 
 export interface StylistProfileStatus {
@@ -29,8 +32,9 @@ export interface StylistProfileStatus {
 
 export interface AuthResponse {
   token: string;
-  stylist?: StylistProfile;
-  stylist_profile_status?: StylistProfileStatus;
+  role: UserRole;
+  profile?: StylistProfile;
+  profile_status?: StylistProfileStatus;
 }
 
 export interface AuthError {

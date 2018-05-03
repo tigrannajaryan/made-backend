@@ -1,6 +1,10 @@
 from typing import NewType
 
-from enum import IntEnum
+from enum import Enum, IntEnum
+
+
+class StrEnum(str, Enum):
+    """Enum where members are also (and must be) strs"""
 
 
 class Weekday(IntEnum):
@@ -15,3 +19,9 @@ class Weekday(IntEnum):
 
 FBUserID = NewType('FBUserID', str)
 FBAccessToken = NewType('FBAccessToken', str)
+
+
+class UserRole(StrEnum):
+    CLIENT = 'client'
+    STYLIST = 'stylist'
+    STAFF = 'staff'
