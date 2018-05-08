@@ -1,23 +1,23 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # IMPORTANT: if you edit this script, you have to make corresponding 
-# changes to /mobile/scripts/ci-checkchanges.sh. This script is basically a 
+# changes to /webapp/scripts/ci-checkchanges.sh. This script is basically a 
 # copy of it with different APP_DIR and changes_detected variable output.
 # Main reason for duplicating the script (rather than having one unified)
 # is to simplify possible dissection of repositories in the future.
 
-# This scripts performs checks and sets webapp_changesdetected=1 variable
+# This scripts performs checks and sets mobileapp_changesdetected=1 variable
 # in VSTS if it decides that it is neccessary to build the webapp.
 # If the variable is not set to 1 then VSTS is configured to skip
 # all subsequent build steps using Custom Condition in the following form
-#   and(succeeded(), eq(variables['webapp_changesdetected'], '1'))
+#   and(succeeded(), eq(variables['mobileapp_changesdetected'], '1'))
 
 # The base branch to check changes against
 BASE_BRANCH_NAME="develop"
 
 # The directory to check the changes in. Any changes outside
 # this directroy will not trigger the build.
-APP_DIR='webapp'
+APP_DIR='mobile'
 
 # BUILD_SOURCEBRANCH env variable is set by VSTS
 
@@ -40,7 +40,7 @@ echo "Building branch $BUILD_SOURCEBRANCH"
 
 if [[ "${BUILD_SOURCEBRANCH}" = "refs/heads/${BASE_BRANCH_NAME}" ]]; then
     echo "On ${BUILD_SOURCEBRANCH} branch, always build, don't check what is changed."
-    echo "##vso[task.setvariable variable=webapp_changesdetected]1"
+    echo "##vso[task.setvariable variable=mobileapp_changesdetected]1"
     exit 0
 fi
 
@@ -56,9 +56,9 @@ echo Changes in ${APP_DIR} are $changes
 
 if [[ ${#changes[@]} -eq 0 ]]; then
     echo No changes detected in $APP_DIR. Build will be skipped.
-    echo "##vso[task.setvariable variable=webapp_changesdetected]0"
+    echo "##vso[task.setvariable variable=mobileapp_changesdetected]0"
 else
     echo Changes detected in $APP_DIR:
     echo $changes
-    echo "##vso[task.setvariable variable=webapp_changesdetected]1"
+    echo "##vso[task.setvariable variable=mobileapp_changesdetected]1"
 fi
