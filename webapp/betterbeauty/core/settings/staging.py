@@ -11,5 +11,5 @@ AWS_STORAGE_BUCKET_NAME = 'elasticbeanstalk-us-east-1-024990310245'
 AWS_LOCATION = 'uploads'
 
 # TODO: add FB settings
-FB_APP_ID = ''
-FB_APP_SECRET = ''
+FB_APP_ID = '1332946860139961'
+FB_APP_SECRET = 'a2013eb7dc891c5534bcad9ee69bae98'
