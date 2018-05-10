@@ -12,7 +12,6 @@ from salon.models import (
     Stylist,
     Salon,
     StylistDateRangeDiscount,
-    StylistFirstTimeBookDiscount,
     StylistService,
     StylistWeekdayDiscount,
 )
@@ -41,10 +40,6 @@ def stylist_data() -> Stylist:
         stylist=stylist, weekday=Weekday.MONDAY, discount_percent=50)
 
     G(
-        StylistFirstTimeBookDiscount, stylist=stylist, discount_percent=40
-    )
-
-    G(
         StylistDateRangeDiscount, stylist=stylist, discount_percent=30,
         dates=DateRange(datetime.date(2018, 4, 8), datetime.date(2018, 4, 10))
 
@@ -61,12 +56,6 @@ class TestStylist(object):
         )
         assert(
             stylist_data.get_weekday_discount_percent(Weekday.TUESDAY) == 0
-        )
-
-    @pytest.mark.django_db
-    def test_get_first_time_discount_percent(self, stylist_data: Stylist):
-        assert(
-            stylist_data.get_first_time_discount_percent() == 40
         )
 
     @pytest.mark.django_db

@@ -8,8 +8,6 @@ from .models import (
     Stylist,
     StylistAvailableWeekDay,
     StylistDateRangeDiscount,
-    StylistEarlyRebookDiscount,
-    StylistFirstTimeBookDiscount,
     StylistService,
     StylistServicePhotoSample,
     StylistWeekdayDiscount,
@@ -33,16 +31,9 @@ class SalonAdmin(admin.ModelAdmin):
 
 
 class StylistAdmin(admin.ModelAdmin):
-    class StylistFirstTimeBookDiscountInline(admin.StackedInline):
-        model = StylistFirstTimeBookDiscount
-        extra = 1
 
     class StylistDateRangeDiscountInline(admin.StackedInline):
         model = StylistDateRangeDiscount
-        extra = 0
-
-    class StylistEarlyRebookDiscount(admin.StackedInline):
-        model = StylistEarlyRebookDiscount
         extra = 0
 
     class StylistAvailableDayInline(admin.TabularInline):
@@ -63,9 +54,7 @@ class StylistAdmin(admin.ModelAdmin):
         extra = 0
 
     inlines = [
-        StylistFirstTimeBookDiscountInline,
         StylistDateRangeDiscountInline,
-        StylistEarlyRebookDiscount,
         StylistWeekdayDiscount,
         StylistAvailableDayInline,
         StylistServiceInline,

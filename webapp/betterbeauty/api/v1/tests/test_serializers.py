@@ -21,8 +21,6 @@ from salon.models import (
     Stylist,
     StylistAvailableWeekDay,
     StylistDateRangeDiscount,
-    StylistFirstTimeBookDiscount,
-    StylistEarlyRebookDiscount,
     StylistService,
     StylistWeekdayDiscount,
 )
@@ -286,22 +284,23 @@ class TestStylistProfileCompletenessSerializer(object):
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_other_discounts_set'] is False
         )
-        discount = G(
-            StylistEarlyRebookDiscount,
-            stylist=stylist_data, minrebook_interval=datetime.timedelta(0)
-        )
+        stylist_data.first_time_book_discount_percent = 10
+        stylist_data.save()
         assert (
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_other_discounts_set'] is True
         )
-        discount.delete()
-        discount = G(StylistFirstTimeBookDiscount, stylist=stylist_data)
+        stylist_data.first_time_book_discount_percent = 0
+        stylist_data.rebook_within_1_week_discount_percent = 10
+        stylist_data.save()
         assert (
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_other_discounts_set'] is True
         )
-        discount.delete()
-        discount = G(
+        stylist_data.first_time_book_discount_percent = 0
+        stylist_data.rebook_within_1_week_discount_percent = 0
+        stylist_data.save()
+        G(
             StylistDateRangeDiscount, stylist=stylist_data,
             dates=DateRange(datetime.date(2018, 4, 8), datetime.date(2018, 4, 10))
         )

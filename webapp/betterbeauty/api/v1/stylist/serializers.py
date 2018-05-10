@@ -19,6 +19,7 @@ from salon.models import (
     StylistAvailableWeekDay,
     StylistService,
     StylistServicePhotoSample,
+    StylistWeekdayDiscount,
 )
 from salon.utils import create_stylist_profile_for_user
 from .constants import MAX_SERVICE_TEMPLATE_PREVIEW_COUNT
@@ -330,8 +331,9 @@ class StylistProfileStatusSerializer(serializers.ModelSerializer):
     def get_has_other_discounts_set(self, stylist: Stylist) -> bool:
         """Returns True if any of the miscellaneous discounts is set"""
         return any([
-            hasattr(stylist, 'early_rebook_discount'),
-            hasattr(stylist, 'first_time_book_discount'),
+            stylist.first_time_book_discount_percent > 0,
+            stylist.rebook_within_1_week_discount_percent > 0,
+            stylist.rebook_within_2_weeks_discount_percent > 0,
             stylist.date_range_discounts.exists()
         ])
 
@@ -384,3 +386,48 @@ class StylistAvailableWeekDayListSerializer(serializers.ModelSerializer):
             for weekday in range(1, 8)
         ]
         return StylistAvailableWeekDaySerializer(weekday_availability, many=True).data
+
+
+class StylistWeekdayDiscountSerializer(serializers.ModelSerializer):
+    discount_percent = serializers.IntegerField(
+        min_value=0, max_value=100
+    )
+
+    class Meta:
+        model = StylistWeekdayDiscount
+        fields = ['weekday', 'discount_percent']
+
+
+class StylistDiscountsSerializer(serializers.ModelSerializer):
+    weekdays = StylistWeekdayDiscountSerializer(
+        source='weekday_discounts', many=True
+    )
+    first_booking = serializers.IntegerField(
+        source='first_time_book_discount_percent',
+        min_value=0, max_value=100
+    )
+    rebook_within_1_week = serializers.IntegerField(
+        source='rebook_within_1_week_discount_percent',
+        min_value=0, max_value=100
+    )
+    rebook_within_2_weeks = serializers.IntegerField(
+        source='rebook_within_2_weeks_discount_percent',
+        min_value=0, max_value=100
+    )
+
+    def update(self, stylist: Stylist, validated_data):
+        with transaction.atomic():
+            if 'weekday_discounts' in validated_data:
+                stylist.weekday_discounts.all().delete()
+                for weekday_discount in validated_data.pop('weekday_discounts', []):
+                    discount_serializer = StylistWeekdayDiscountSerializer(
+                        data=weekday_discount)
+                    discount_serializer.is_valid(raise_exception=True)
+                    discount_serializer.save(stylist=stylist)
+            return super(StylistDiscountsSerializer, self).update(stylist, validated_data)
+
+    class Meta:
+        model = Stylist
+        fields = [
+            'weekdays', 'first_booking', 'rebook_within_1_week', 'rebook_within_2_weeks',
+        ]

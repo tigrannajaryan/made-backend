@@ -597,57 +597,6 @@ Actual `salon.StylistService` object will be kept in the DB, but `deleted_at` fi
 ]
 ```
 
-# Files upload
-## Image upload
-
-It may require to upload an image file for future use. Common use case is when
-a client uploads an image multiple times (looking for better picture) before actually
-assigning it to a parent object.
-
-Uploading an image to this endpoint will return a UUID string which may further be used
-to assign uploaded image to an entity (e.g. stylist profile, or a service).
-
-The endpoint accepts only image files less than 5MB in size.
-
-Note: image uploads will have limited lifetime, so after some time after uploading UUID
-will no longer be valid.
-
-**POST /api/v1/common/image/upload**
-
-```
-curl -X POST \
-  http://apiserver/api/v1/common/image/upload \
-  -H 'Authorization: Token jwt_token' \
-  -H 'Content-Type: application/x-www-form-urlencoded' \
-  -H 'content-type: multipart/form-data' \
-  -F file=@path_to_your_file
-```
-
-**Response 201 Created**
-```
-{
-    "uuid": "83a7d4e8-0462-4f9d-bb04-c51c47047318"
-}
-```
-
-**Response 400 Bad Request**
-```
-{
-    "file": [
-        "Upload a valid image. The file you uploaded was either not an image or a corrupted image."
-    ]
-}
-```
-
-**Response 400 Bad Request**
-```
-{
-    "file": [
-        "File is too big, max. size 5242880 bytes"
-    ]
-}
-```
-
 ## Availability
 ### Retrieve availability
 **GET /api/v1/stylist/availability/weekdays**
@@ -785,6 +734,135 @@ Note: time is passed in salon's local timezone
             "work_end_at": null,
             "is_available": false
         }
+    ]
+}
+```
+
+## Discounts
+### Retrieve discounts
+**GET /api/v1/stylist/discounts**
+
+```
+curl -H 'Authorization: Token jwt_token' http://apiserver/api/v1/stylist/discounts
+```
+
+**Response 200 OK**
+```
+{
+    "weekdays": [
+        {
+            "weekday": 1,
+            "discount_percent": 20
+        },
+        {
+            "weekday": 3,
+            "discount_percent": 20
+        },
+        {
+            "weekday": 4,
+            "discount_percent": 20
+        }
+    ],
+    "first_booking": 10,
+    "rebook_within_1_week": 20,
+    "rebook_within_2_weeks": 30
+}
+```
+
+### Set discounts
+**POST /api/v1/stylist/discounts**
+
+```
+curl -X POST \
+  http://apiserver/api/v1/stylist/discounts \
+  -H 'Authorization: Token jwt_token' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "weekdays": [
+        {
+            "weekday": 4,
+            "discount_percent": 20
+        },
+        {
+            "weekday": 1,
+            "discount_percent": 20
+        }
+    ],
+    "first_booking": 10,
+    "rebook_within_1_week": 20,
+    "rebook_within_2_weeks": 30
+}'
+```
+
+**Response 200 OK**
+
+```
+{
+    "weekdays": [
+        {
+            "weekday": 4,
+            "discount_percent": 20
+        },
+        {
+            "weekday": 1,
+            "discount_percent": 20
+        }
+    ],
+    "first_booking": 10,
+    "rebook_within_1_week": 20,
+    "rebook_within_2_weeks": 30
+}
+
+```
+
+
+# Files upload
+## Image upload
+
+It may require to upload an image file for future use. Common use case is when
+a client uploads an image multiple times (looking for better picture) before actually
+assigning it to a parent object.
+
+Uploading an image to this endpoint will return a UUID string which may further be used
+to assign uploaded image to an entity (e.g. stylist profile, or a service).
+
+The endpoint accepts only image files less than 5MB in size.
+
+Note: image uploads will have limited lifetime, so after some time after uploading UUID
+will no longer be valid.
+
+**POST /api/v1/common/image/upload**
+
+```
+curl -X POST \
+  http://apiserver/api/v1/common/image/upload \
+  -H 'Authorization: Token jwt_token' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -H 'content-type: multipart/form-data' \
+  -F file=@path_to_your_file
+```
+
+**Response 201 Created**
+```
+{
+    "uuid": "83a7d4e8-0462-4f9d-bb04-c51c47047318"
+}
+```
+
+**Response 400 Bad Request**
+```
+{
+    "file": [
+        "Upload a valid image. The file you uploaded was either not an image or a corrupted image."
+    ]
+}
+```
+
+**Response 400 Bad Request**
+```
+{
+    "file": [
+        "File is too big, max. size 5242880 bytes"
     ]
 }
 ```

@@ -80,6 +80,16 @@ class Stylist(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     salon = models.ForeignKey(Salon, on_delete=models.PROTECT, null=True)
 
+    rebook_within_1_week_discount_percent = models.PositiveIntegerField(
+        default=0, validators=[MaxValueValidator(100)]
+    )
+    rebook_within_2_weeks_discount_percent = models.PositiveIntegerField(
+        default=0, validators=[MaxValueValidator(100)]
+    )
+    first_time_book_discount_percent = models.PositiveIntegerField(
+        default=0, validators=[MaxValueValidator(100)]
+    )
+
     class Meta:
         db_table = 'stylist'
 
@@ -115,11 +125,6 @@ class Stylist(models.Model):
         ).last()
         if weekday_discount:
             return weekday_discount.discount_percent
-        return 0
-
-    def get_first_time_discount_percent(self) -> int:
-        if hasattr(self, 'first_time_book_discount'):
-            return self.first_time_book_discount.discount_percent
         return 0
 
     def get_date_range_discount_percent(self, date: datetime.date) -> int:
@@ -235,20 +240,6 @@ class StylistWeekdayDiscount(models.Model):
         unique_together = ('stylist', 'weekday', )
 
 
-class StylistFirstTimeBookDiscount(models.Model):
-    stylist = models.OneToOneField(
-        Stylist, on_delete=models.CASCADE, related_name='first_time_book_discount')
-    discount_percent = models.PositiveIntegerField(validators=[MaxValueValidator(100)])
-
-    class Meta:
-        db_table = 'stylist_first_time_book_discount'
-
-    def __str__(self) -> str:
-        return '{0}% ({1})'.format(
-            self.discount_percent, self.stylist
-        )
-
-
 class StylistDateRangeDiscount(models.Model):
     stylist = models.ForeignKey(
         Stylist, on_delete=models.CASCADE, related_name='date_range_discounts')
@@ -258,13 +249,3 @@ class StylistDateRangeDiscount(models.Model):
 
     class Meta:
         db_table = 'stylist_date_range_discount'
-
-
-class StylistEarlyRebookDiscount(models.Model):
-    stylist = models.OneToOneField(
-        Stylist, on_delete=models.CASCADE, related_name='early_rebook_discount')
-    discount_percent = models.PositiveIntegerField(validators=[MaxValueValidator(100)])
-    minrebook_interval = models.DurationField()
-
-    class Meta:
-        db_table = 'stylist_early_rebook_discount'

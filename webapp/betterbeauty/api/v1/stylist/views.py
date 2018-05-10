@@ -17,9 +17,10 @@ from .serializers import (
     ServiceTemplateSetListSerializer,
     StylistAvailableWeekDayListSerializer,
     StylistAvailableWeekDaySerializer,
+    StylistDiscountsSerializer,
     StylistSerializer,
-    StylistServiceSerializer,
     StylistServiceListSerializer,
+    StylistServiceSerializer,
 )
 
 
@@ -145,6 +146,27 @@ class StylistAvailabilityView(views.APIView):
         return Response(
             StylistAvailableWeekDayListSerializer(self.get_object()).data
         )
+
+    def get_object(self):
+        return getattr(self.request.user, 'stylist', None)
+
+
+class StylistDiscountsView(views.APIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+    serializer_class = StylistDiscountsSerializer
+
+    def get(self, request):
+        return Response(StylistDiscountsSerializer(self.get_object()).data)
+
+    def post(self, request):
+        serializer = StylistDiscountsSerializer(
+            instance=self.request.user.stylist,
+            data=request.data,
+            context={'user': self.request.user}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(StylistDiscountsSerializer(self.get_object()).data)
 
     def get_object(self):
         return getattr(self.request.user, 'stylist', None)
