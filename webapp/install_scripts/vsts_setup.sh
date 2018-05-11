@@ -13,7 +13,7 @@ update-locale LANG=en_US.UTF-8
 export LANG=en_US.UTF-8
 
 echo "Installing packages"
-apt-get install --yes postgresql postgresql-10=10.3-1.* python3.6=3.6.* python-dev python-pip python-psycopg2 python-virtualenv
+apt-get install --yes postgresql postgresql-10 python3.6=3.6.* python-dev python-pip python-psycopg2  python3-distutils python3-virtualenv
 
 echo "Starting postgres"
 sudo -u postgres /usr/lib/postgresql/10/bin/pg_ctl -D /etc/postgresql/10/main -l /tmp/postgres.log start || true
@@ -21,4 +21,3 @@ sudo -u postgres /usr/lib/postgresql/10/bin/pg_ctl -D /etc/postgresql/10/main -l
 echo "Setting up pip"
 pip install pip==9.0.1
 pip install virtualenv==15.1
-
