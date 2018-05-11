@@ -51,6 +51,7 @@ INSTALLED_APPS = [
 
     # Internal apps
     'api',
+    'appointment',
     'client',
     'core',
     'salon',

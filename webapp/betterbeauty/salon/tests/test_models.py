@@ -1,11 +1,15 @@
 import datetime
 import pytest
-from pytz import utc
+import pytz
 
 from psycopg2.extras import DateRange
 
+from freezegun import freeze_time
+
 from django_dynamic_fixture import G
 
+from appointment.models import Appointment
+from client.models import Client
 from core.models import User
 from core.types import Weekday
 from salon.models import (
@@ -22,7 +26,7 @@ def stylist_data() -> Stylist:
     salon = G(
         Salon,
         name='Test salon', address='2000 Rilma Lane', city='Los Altos', state='CA',
-        zip_code='94022', latitude=37.4009997, longitude=-122.1185007
+        zip_code='94022', latitude=37.4009997, longitude=-122.1185007, timezone='UTC'
     )
     stylist_user = G(
         User,
@@ -41,7 +45,7 @@ def stylist_data() -> Stylist:
 
     G(
         StylistDateRangeDiscount, stylist=stylist, discount_percent=30,
-        dates=DateRange(datetime.date(2018, 4, 8), datetime.date(2018, 4, 10))
+        dates=DateRange(datetime.date(2018, 4, 8), datetime.date(2018, 4, 11))
 
     )
 
@@ -59,7 +63,7 @@ class TestStylist(object):
         )
 
     @pytest.mark.django_db
-    def get_date_range_discount_percent(self, stylist_data: Stylist):
+    def test_get_date_range_discount_percent(self, stylist_data: Stylist):
         assert(
             stylist_data.get_date_range_discount_percent(datetime.date(2018, 4, 9)) == 30
         )
@@ -67,8 +71,67 @@ class TestStylist(object):
             stylist_data.get_date_range_discount_percent(datetime.date(2018, 4, 10)) == 30
         )
         assert (
-            stylist_data.get_date_range_discount_percent(datetime.date(2018, 4, 12)) == 30
+            stylist_data.get_date_range_discount_percent(datetime.date(2018, 4, 12)) == 0
         )
+
+    @freeze_time('2018-05-14 13:30:00 UTC')
+    @pytest.mark.django_db
+    def test_get_today_appointments(self, stylist_data: Stylist):
+        client = G(Client)
+        current_appointment = G(
+            Appointment, client=client, stylist=stylist_data,
+            datetime_start_at=pytz.timezone(stylist_data.salon.timezone).localize(
+                datetime.datetime(2018, 5, 14, 13, 20)),
+            duration=datetime.timedelta(minutes=30)
+        )
+
+        past_appointment = G(
+            Appointment, client=client, stylist=stylist_data,
+            datetime_start_at=pytz.timezone(stylist_data.salon.timezone).localize(
+                datetime.datetime(2018, 5, 14, 12, 20)),
+            duration=datetime.timedelta(minutes=30)
+        )
+
+        future_appointment = G(
+            Appointment, client=client, stylist=stylist_data,
+            datetime_start_at=pytz.timezone(stylist_data.salon.timezone).localize(
+                datetime.datetime(2018, 5, 14, 14, 20)),
+            duration=datetime.timedelta(minutes=30)
+        )
+
+        late_night_appointment = G(
+            Appointment, client=client, stylist=stylist_data,
+            datetime_start_at=pytz.timezone(stylist_data.salon.timezone).localize(
+                datetime.datetime(2018, 5, 14, 23, 50)),
+            duration=datetime.timedelta(minutes=30)
+        )
+
+        next_day_appointment = G(
+            Appointment, client=client, stylist=stylist_data,
+            datetime_start_at=pytz.timezone(stylist_data.salon.timezone).localize(
+                datetime.datetime(2018, 5, 15, 13, 20)),
+            duration=datetime.timedelta(minutes=30)
+        )
+
+        today_appointments = [a.id for a in stylist_data.get_today_appointments()]
+
+        assert(len(today_appointments) == 3)
+        assert(current_appointment.id in today_appointments)
+        assert(past_appointment.id not in today_appointments)
+        assert(future_appointment.id in today_appointments)
+        assert(late_night_appointment.id in today_appointments)
+        assert(next_day_appointment.id not in today_appointments)
+
+        today_appointments = [
+            a.id for a in stylist_data.get_today_appointments(upcoming_only=False)
+        ]
+
+        assert (len(today_appointments) == 4)
+        assert (current_appointment.id in today_appointments)
+        assert (past_appointment.id in today_appointments)
+        assert (future_appointment.id in today_appointments)
+        assert (late_night_appointment.id in today_appointments)
+        assert (next_day_appointment.id not in today_appointments)
 
 
 class TestStylistService(object):
@@ -76,7 +139,7 @@ class TestStylistService(object):
     def test_deleted_at(self):
         service = G(StylistService, duration=datetime.timedelta(), deleted_at=None)
         assert(StylistService.objects.count() == 1)
-        service.deleted_at = utc.localize(datetime.datetime.now())
+        service.deleted_at = pytz.utc.localize(datetime.datetime.now())
         service.save()
         assert (StylistService.objects.count() == 0)
         assert (StylistService.all_objects.count() == 1)

@@ -1,6 +1,7 @@
 import datetime
 
 from annoying.functions import get_object_or_None
+import pytz
 from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
 
@@ -21,6 +22,7 @@ from .serializers import (
     StylistSerializer,
     StylistServiceListSerializer,
     StylistServiceSerializer,
+    StylistTodaySerializer,
 )
 
 
@@ -111,7 +113,7 @@ class StylistServiceView(generics.DestroyAPIView):
 
     def delete(self, request, *args, **kwargs):
         service: StylistService = self.get_object()
-        current_now = service.stylist.salon.timezone.localize(
+        current_now = pytz.timezone(service.stylist.salon.timezone).localize(
             datetime.datetime.now()
         )
         service.deleted_at = current_now
@@ -167,6 +169,16 @@ class StylistDiscountsView(views.APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(StylistDiscountsSerializer(self.get_object()).data)
+
+    def get_object(self):
+        return getattr(self.request.user, 'stylist', None)
+
+
+class StylistTodayView(views.APIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response(StylistTodaySerializer(self.get_object()).data)
 
     def get_object(self):
         return getattr(self.request.user, 'stylist', None)

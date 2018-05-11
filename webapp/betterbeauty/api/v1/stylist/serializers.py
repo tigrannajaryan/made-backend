@@ -8,6 +8,7 @@ from django.core.files.storage import default_storage
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 
+from appointment.models import Appointment
 from core.models import TemporaryFile, User
 from core.types import Weekday
 from salon.models import (
@@ -431,3 +432,49 @@ class StylistDiscountsSerializer(serializers.ModelSerializer):
         fields = [
             'weekdays', 'first_booking', 'rebook_within_1_week', 'rebook_within_2_weeks',
         ]
+
+
+class AppointmentSerializer(serializers.ModelSerializer):
+    client_uuid = serializers.UUIDField(source='client.uuid', allow_null=True)
+
+    client_first_name = serializers.CharField(
+        source='client.user.first_name', allow_null=True, allow_blank=True
+    )
+    client_last_name = serializers.CharField(
+        source='client.user.last_name', allow_null=True, allow_blank=True
+    )
+    client_phone = serializers.CharField(
+        source='client.user.phone', allow_null=True, allow_blank=True
+    )
+
+    regular_price = serializers.DecimalField(
+        max_digits=6, decimal_places=2, coerce_to_string=False
+    )
+    client_price = serializers.DecimalField(
+        max_digits=6, decimal_places=2, coerce_to_string=False
+    )
+
+    service_name = serializers.CharField(allow_null=True, allow_blank=True)
+    service_uuid = serializers.UUIDField(allow_null=True)
+
+    datetime_start_at = serializers.DateTimeField()
+    duration = serializers.DurationField
+
+    class Meta:
+        model = Appointment
+        fields = [
+            'uuid', 'client_uuid', 'client_first_name', 'client_last_name',
+            'client_phone', 'regular_price', 'client_price', 'service_name',
+            'service_uuid', 'datetime_start_at', 'duration',
+        ]
+
+
+class StylistTodaySerializer(serializers.ModelSerializer):
+    upcoming_appointments = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Stylist
+        fields = ['upcoming_appointments', ]
+
+    def get_upcoming_appointments(self, stylist: Stylist):
+        return AppointmentSerializer(stylist.get_today_appointments(), many=True).data

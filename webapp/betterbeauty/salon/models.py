@@ -2,12 +2,14 @@ import datetime
 from typing import Optional
 
 from timezone_field import TimeZoneField
+import pytz
 import uuid
 
 from django.contrib.postgres.fields import DateRangeField
 from django.conf import settings
 from django.core.validators import MaxValueValidator
 from django.db import models
+from django.db.models import F
 
 from core.choices import WEEKDAY
 from core.models import User
@@ -139,6 +141,25 @@ class Stylist(models.Model):
             self, weekday: Weekday
     ) -> StylistAvailableWeekDay:
         return self.available_days.get_or_create(weekday=weekday)[0]
+
+    def get_today_appointments(self, upcoming_only=True):
+        # TODO: need to find better way to handle this
+        if not self.salon:
+            raise AssertionError('Stylist does not have a profile - hence no timezone info')
+        current_now: datetime.datetime = pytz.timezone(self.salon.timezone).localize(
+            datetime.datetime.now()
+        )
+        today_midnight = current_now.replace(hour=0, minute=0, second=0)
+        next_midnight = current_now.replace(hour=23, minute=59, second=59)
+        appointments = self.appointments.filter(
+            datetime_start_at__gte=today_midnight - F('duration'),
+            datetime_start_at__lte=next_midnight
+        )
+        if upcoming_only is True:
+            appointments = appointments.filter(
+                datetime_start_at__gte=current_now - F('duration'),
+            )
+        return appointments
 
 
 class ServiceCategory(models.Model):

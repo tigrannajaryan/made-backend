@@ -7,6 +7,7 @@ from .views import (
     StylistDiscountsView,
     StylistServiceListView,
     StylistServiceView,
+    StylistTodayView,
     StylistView,
 )
 
@@ -20,5 +21,6 @@ urlpatterns = [
     url('services$', StylistServiceListView.as_view()),
     url('services/(?P<service_pk>\d+)$', StylistServiceView.as_view()),
     url('availability/weekdays$', StylistAvailabilityView.as_view(), name='availability_weekdays'),
-    url('discounts$', StylistDiscountsView.as_view(), name='discounts')
+    url('discounts$', StylistDiscountsView.as_view(), name='discounts'),
+    url('today$', StylistTodayView.as_view(), name='today'),
 ]
