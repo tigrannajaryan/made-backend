@@ -327,7 +327,7 @@ class StylistProfileStatusSerializer(serializers.ModelSerializer):
         ).exists()
 
     def get_has_weekday_discounts_set(self, stylist: Stylist) -> bool:
-        return stylist.weekday_discounts.exists()
+        return stylist.weekday_discounts.filter(discount_percent__gt=0).exists()
 
     def get_has_other_discounts_set(self, stylist: Stylist) -> bool:
         """Returns True if any of the miscellaneous discounts is set"""
@@ -393,10 +393,11 @@ class StylistWeekdayDiscountSerializer(serializers.ModelSerializer):
     discount_percent = serializers.IntegerField(
         min_value=0, max_value=100
     )
+    weekday_verbose = serializers.CharField(source='get_weekday_display', read_only=True)
 
     class Meta:
         model = StylistWeekdayDiscount
-        fields = ['weekday', 'discount_percent']
+        fields = ['weekday', 'weekday_verbose', 'discount_percent']
 
 
 class StylistDiscountsSerializer(serializers.ModelSerializer):
@@ -419,10 +420,12 @@ class StylistDiscountsSerializer(serializers.ModelSerializer):
     def update(self, stylist: Stylist, validated_data):
         with transaction.atomic():
             if 'weekday_discounts' in validated_data:
-                stylist.weekday_discounts.all().delete()
                 for weekday_discount in validated_data.pop('weekday_discounts', []):
+                    instance = stylist.weekday_discounts.filter(
+                        weekday=weekday_discount['weekday']
+                    ).last()
                     discount_serializer = StylistWeekdayDiscountSerializer(
-                        data=weekday_discount)
+                        instance=instance, data=weekday_discount)
                     discount_serializer.is_valid(raise_exception=True)
                     discount_serializer.save(stylist=stylist)
             return super(StylistDiscountsSerializer, self).update(stylist, validated_data)

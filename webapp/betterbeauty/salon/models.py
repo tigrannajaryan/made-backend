@@ -83,6 +83,17 @@ class StylistAvailableWeekDay(models.Model):
         )
 
 
+class StylistWeekdayDiscount(models.Model):
+    stylist = models.ForeignKey(
+        'Stylist', on_delete=models.CASCADE, related_name='weekday_discounts')
+    weekday = models.PositiveSmallIntegerField(choices=WEEKDAY)
+    discount_percent = models.PositiveIntegerField(validators=[MaxValueValidator(100)])
+
+    class Meta:
+        db_table = 'stylist_weekday_discount'
+        unique_together = ('stylist', 'weekday', )
+
+
 class Stylist(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     salon = models.ForeignKey(Salon, on_delete=models.PROTECT, null=True)
@@ -146,6 +157,13 @@ class Stylist(models.Model):
             self, weekday: Weekday
     ) -> StylistAvailableWeekDay:
         return self.available_days.get_or_create(weekday=weekday)[0]
+
+    def get_or_create_weekday_discount(
+            self, weekday: Weekday, discount_percent: int
+    ) -> StylistWeekdayDiscount:
+        return self.weekday_discounts.get_or_create(
+            weekday=weekday, discount_percent=discount_percent
+        )[0]
 
     def get_today_appointments(self, upcoming_only=True):
         # TODO: need to find better way to handle this
@@ -253,17 +271,6 @@ class StylistServicePhotoSample(models.Model):
 
     class Meta:
         db_table = 'stylist_service_photo_sample'
-
-
-class StylistWeekdayDiscount(models.Model):
-    stylist = models.ForeignKey(
-        Stylist, on_delete=models.CASCADE, related_name='weekday_discounts')
-    weekday = models.PositiveSmallIntegerField(choices=WEEKDAY)
-    discount_percent = models.PositiveIntegerField(validators=[MaxValueValidator(100)])
-
-    class Meta:
-        db_table = 'stylist_weekday_discount'
-        unique_together = ('stylist', 'weekday', )
 
 
 class StylistDateRangeDiscount(models.Model):

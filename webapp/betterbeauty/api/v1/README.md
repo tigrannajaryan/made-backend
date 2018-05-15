@@ -752,20 +752,43 @@ curl -H 'Authorization: Token jwt_token' http://apiserver/api/v1/stylist/discoun
     "weekdays": [
         {
             "weekday": 1,
-            "discount_percent": 20
+            "weekday_verbose": "Monday",
+            "discount_percent": 0
+        },
+        {
+            "weekday": 2,
+            "weekday_verbose": "Tuesday",
+            "discount_percent": 0
         },
         {
             "weekday": 3,
-            "discount_percent": 20
+            "weekday_verbose": "Wednesday",
+            "discount_percent": 0
         },
         {
             "weekday": 4,
-            "discount_percent": 20
+            "weekday_verbose": "Thursday",
+            "discount_percent": 0
+        },
+        {
+            "weekday": 5,
+            "weekday_verbose": "Friday",
+            "discount_percent": 0
+        },
+        {
+            "weekday": 6,
+            "weekday_verbose": "Saturday",
+            "discount_percent": 0
+        },
+        {
+            "weekday": 7,
+            "weekday_verbose": "Sunday",
+            "discount_percent": 0
         }
     ],
-    "first_booking": 10,
-    "rebook_within_1_week": 20,
-    "rebook_within_2_weeks": 30
+    "first_booking": 0,
+    "rebook_within_1_week": 0,
+    "rebook_within_2_weeks": 0
 }
 ```
 
@@ -800,12 +823,39 @@ curl -X POST \
 {
     "weekdays": [
         {
-            "weekday": 4,
+            "weekday": 1,
+            "weekday_verbose": "Monday",
             "discount_percent": 20
         },
         {
-            "weekday": 1,
+            "weekday": 2,
+            "weekday_verbose": "Tuesday",
+            "discount_percent": 0
+        },
+        {
+            "weekday": 3,
+            "weekday_verbose": "Wednesday",
+            "discount_percent": 0
+        },
+        {
+            "weekday": 4,
+            "weekday_verbose": "Thursday",
             "discount_percent": 20
+        },
+        {
+            "weekday": 5,
+            "weekday_verbose": "Friday",
+            "discount_percent": 0
+        },
+        {
+            "weekday": 6,
+            "weekday_verbose": "Saturday",
+            "discount_percent": 0
+        },
+        {
+            "weekday": 7,
+            "weekday_verbose": "Sunday",
+            "discount_percent": 0
         }
     ],
     "first_booking": 10,

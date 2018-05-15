@@ -8,6 +8,7 @@ from psycopg2.extras import DateRange
 
 from api.v1.stylist.serializers import (
     StylistAvailableWeekDaySerializer,
+    StylistDiscountsSerializer,
     StylistProfileStatusSerializer,
     StylistSerializer,
     StylistServiceSerializer,
@@ -19,10 +20,8 @@ from salon.models import (
     ServiceCategory,
     ServiceTemplate,
     Stylist,
-    StylistAvailableWeekDay,
     StylistDateRangeDiscount,
     StylistService,
-    StylistWeekdayDiscount,
 )
 
 
@@ -40,10 +39,10 @@ def stylist_data() -> Stylist:
         first_name='Fred', last_name='McBob', phone='(650) 350-1111',
         role=USER_ROLE.stylist,
     )
-    stylist = G(
-        Stylist,
-        salon=salon, user=stylist_user,
-        work_start_at=datetime.time(8, 0), work_end_at=datetime.time(15, 0),
+    from salon.utils import create_stylist_profile_for_user
+    stylist = create_stylist_profile_for_user(
+        stylist_user,
+        salon=salon,
     )
 
     return stylist
@@ -254,13 +253,14 @@ class TestStylistProfileCompletenessSerializer(object):
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_business_hours_set'] is False
         )
-        G(StylistAvailableWeekDay, weekday=1, stylist=stylist_data, is_available=False)
         assert (
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_business_hours_set'] is False
         )
-        G(StylistAvailableWeekDay, weekday=2, stylist=stylist_data, is_available=True,
-          work_start_at=datetime.time(8, 0), work_end_at=datetime.time(15, 0))
+        stylist_data.available_days.filter(weekday=2).update(
+            weekday=2, is_available=True,
+            work_start_at=datetime.time(8, 0), work_end_at=datetime.time(15, 0)
+        )
         assert (
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_business_hours_set'] is True
@@ -268,11 +268,14 @@ class TestStylistProfileCompletenessSerializer(object):
 
     @pytest.mark.django_db
     def test_weekday_discounts_set(self, stylist_data: Stylist):
+        assert(stylist_data.weekday_discounts.count() == 7)
         assert (
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_weekday_discounts_set'] is False
         )
-        G(StylistWeekdayDiscount, stylist=stylist_data)
+        stylist_data.weekday_discounts.filter(weekday=1).update(
+            discount_percent=20
+        )
         assert (
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_weekday_discounts_set'] is True
@@ -360,3 +363,37 @@ class TestStylistAvailableWeekDaySerializer(object):
             data=data, context={'user': stylist.user}
         )
         assert (serializer.is_valid(raise_exception=False) is True)
+
+
+class TestStylistDiscountsSerializer(object):
+
+    @pytest.mark.django_db
+    def test_save(self, stylist_data: Stylist):
+        data = {
+            'first_booking': 10,
+            'rebook_within_1_week': 20,
+            'rebook_within_2_weeks': 30,
+            'weekdays': [
+                {
+                    'weekday': 1,
+                    'discount_percent': 40
+                },
+                {
+                    'weekday': 2,
+                    'discount_percent': 50
+                }
+            ]
+
+        }
+
+        serializer = StylistDiscountsSerializer(
+            instance=stylist_data, data=data
+        )
+        assert(serializer.is_valid() is True)
+        stylist: Stylist = serializer.save()
+        assert(stylist.first_time_book_discount_percent == 10)
+        assert(stylist.rebook_within_1_week_discount_percent == 20)
+        assert(stylist.rebook_within_2_weeks_discount_percent == 30)
+        assert(stylist.weekday_discounts.filter(discount_percent=0).count() == 5)
+        assert(stylist.weekday_discounts.get(weekday=1).discount_percent == 40)
+        assert (stylist.weekday_discounts.get(weekday=2).discount_percent == 50)
