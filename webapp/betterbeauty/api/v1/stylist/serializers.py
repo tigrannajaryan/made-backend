@@ -465,7 +465,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
         fields = [
             'uuid', 'client_uuid', 'client_first_name', 'client_last_name',
             'client_phone', 'regular_price', 'client_price', 'service_name',
-            'service_uuid', 'datetime_start_at', 'duration',
+            'service_uuid', 'datetime_start_at', 'duration', 'status',
         ]
 
 

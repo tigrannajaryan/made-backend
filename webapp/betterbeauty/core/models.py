@@ -4,7 +4,6 @@ from typing import List
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.db import models
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from .choices import USER_ROLE
@@ -85,7 +84,7 @@ class User(BaseEmailUser):
 
     facebook_id = models.CharField(max_length=255, blank=True, null=True)
 
-    date_joined = models.DateTimeField(_('date joined'), default=timezone.now)
+    date_joined = models.DateTimeField(_('date joined'), auto_now_add=True)
 
     EMAIL_FIELD = 'email'
     USERNAME_FIELD = 'email'

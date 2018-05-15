@@ -6,6 +6,9 @@ from client.models import Client
 from core.models import User
 from salon.models import Stylist
 
+from .choices import APPOINTMENT_STATUS_CHOICES
+from .types import AppointmentStatus
+
 
 class AppointmentManager(models.Manager):
 
@@ -42,6 +45,14 @@ class Appointment(models.Model):
     datetime_start_at = models.DateTimeField()
     duration = models.DurationField()
 
+    status = models.CharField(
+        max_length=15, choices=APPOINTMENT_STATUS_CHOICES, default=AppointmentStatus.NEW)
+    status_updated_at = models.DateTimeField(null=True, default=None)
+    status_updated_by = models.ForeignKey(
+        User, null=True, default=None, on_delete=models.PROTECT,
+        related_name='updated_appointments'
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         User, on_delete=models.PROTECT, related_name='created_appointments'
@@ -58,3 +69,18 @@ class Appointment(models.Model):
 
     class Meta:
         db_table = 'appointment'
+
+    def __str__(self):
+        return '{0} at {1}: {2} - {3}'.format(
+            self.service_name,
+            self.datetime_start_at,
+            self.get_client_full_name(),
+            self.stylist.get_full_name()
+        )
+
+    def get_client_full_name(self):
+        if self.client:
+            return self.client.user.get_full_name()
+        return '{0} {1}'.format(
+            self.client_first_name, self.client_last_name
+        )
