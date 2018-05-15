@@ -1,12 +1,12 @@
-from typing import Dict, Optional
 import uuid
-
-from rest_framework import serializers
+from typing import Dict, Optional
 
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+
+from rest_framework import serializers
 
 from appointment.models import Appointment
 from core.models import TemporaryFile, User

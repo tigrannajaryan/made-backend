@@ -1,7 +1,7 @@
-from django.contrib import admin
-from django.urls import path
 from django.conf import settings
 from django.conf.urls import include, url
+from django.contrib import admin
+from django.urls import path
 from django.views.static import serve
 
 from api import urls as api_urls

@@ -1,13 +1,12 @@
 import pytest
 
-from rest_framework import status
-
-from django_dynamic_fixture import G
-
 from django.urls import reverse
 
-from core.types import UserRole
+from django_dynamic_fixture import G
+from rest_framework import status
+
 from core.models import User
+from core.types import UserRole
 from salon.models import Stylist
 
 

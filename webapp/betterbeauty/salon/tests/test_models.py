@@ -1,20 +1,19 @@
 import datetime
+
 import pytest
 import pytz
 
-from psycopg2.extras import DateRange
-
-from freezegun import freeze_time
-
 from django_dynamic_fixture import G
+from freezegun import freeze_time
+from psycopg2.extras import DateRange
 
 from appointment.models import Appointment
 from client.models import Client
 from core.models import User
 from core.types import Weekday
 from salon.models import (
-    Stylist,
     Salon,
+    Stylist,
     StylistDateRangeDiscount,
     StylistService,
     StylistWeekdayDiscount,

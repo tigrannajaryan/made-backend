@@ -1,15 +1,16 @@
 import datetime
+import uuid
 from typing import Optional
 
-from timezone_field import TimeZoneField
 import pytz
-import uuid
 
-from django.contrib.postgres.fields import DateRangeField
 from django.conf import settings
+from django.contrib.postgres.fields import DateRangeField
 from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import F
+
+from timezone_field import TimeZoneField
 
 from core.choices import WEEKDAY
 from core.models import User

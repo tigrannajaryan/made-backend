@@ -1,8 +1,8 @@
-from rest_framework_jwt.views import obtain_jwt_token, refresh_jwt_token
-
 from django.conf.urls import url
 
-from .views import RegisterUserView, FBRegisterLoginView
+from rest_framework_jwt.views import obtain_jwt_token, refresh_jwt_token
+
+from .views import FBRegisterLoginView, RegisterUserView
 
 app_name = 'auth'
 

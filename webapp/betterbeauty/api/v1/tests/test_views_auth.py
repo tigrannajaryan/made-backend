@@ -1,11 +1,10 @@
-import pytest
 import mock
-
-from django_dynamic_fixture import G
-
-from rest_framework import status
+import pytest
 
 from django.urls import reverse
+
+from django_dynamic_fixture import G
+from rest_framework import status
 
 from client.models import Client
 from core.models import User

@@ -1,6 +1,5 @@
-from typing import List
-
 import uuid
+from typing import List
 
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin

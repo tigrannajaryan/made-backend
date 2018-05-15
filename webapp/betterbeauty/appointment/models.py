@@ -2,8 +2,8 @@ from uuid import uuid4
 
 from django.db import models
 
-from core.models import User
 from client.models import Client
+from core.models import User
 from salon.models import Stylist
 
 

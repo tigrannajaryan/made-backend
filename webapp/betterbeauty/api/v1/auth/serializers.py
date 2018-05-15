@@ -1,12 +1,12 @@
-from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
-
 from django.db import transaction
 from django.utils.translation import ugettext_lazy as _
 
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
 from api.v1.auth.constants import ROLES_WITH_ALLOWED_LOGIN
 from api.v1.client.serializers import ClientSerializer
-from api.v1.stylist.serializers import StylistSerializer, StylistProfileStatusSerializer
+from api.v1.stylist.serializers import StylistProfileStatusSerializer, StylistSerializer
 from client.utils import create_client_profile_for_user
 from core.choices import USER_ROLE
 from core.models import User

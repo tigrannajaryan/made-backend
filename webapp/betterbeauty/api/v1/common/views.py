@@ -1,4 +1,4 @@
-from rest_framework import permissions, generics, parsers
+from rest_framework import generics, parsers, permissions
 
 from .serializers import TemporaryImageSerializer
 

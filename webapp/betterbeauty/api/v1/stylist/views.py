@@ -1,18 +1,21 @@
 import datetime
 
-from annoying.functions import get_object_or_None
 import pytz
-from rest_framework import generics, permissions, status, views
-from rest_framework.response import Response
+
+from annoying.functions import get_object_or_None
 
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 
-from salon.models import ServiceTemplateSet, Stylist, StylistService
+from rest_framework import generics, permissions, status, views
+from rest_framework.response import Response
+
+
 from api.common.permissions import (
     StylistPermission,
     StylistRegisterUpdatePermission,
 )
+from salon.models import ServiceTemplateSet, Stylist, StylistService
 from .serializers import (
     ServiceTemplateSetDetailsSerializer,
     ServiceTemplateSetListSerializer,

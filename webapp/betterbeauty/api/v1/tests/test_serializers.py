@@ -1,16 +1,16 @@
 import datetime
+
 import pytest
 import pytz
 
-from psycopg2.extras import DateRange
-
 from django_dynamic_fixture import G
+from psycopg2.extras import DateRange
 
 from api.v1.stylist.serializers import (
     StylistAvailableWeekDaySerializer,
+    StylistProfileStatusSerializer,
     StylistSerializer,
     StylistServiceSerializer,
-    StylistProfileStatusSerializer,
 )
 from core.choices import USER_ROLE
 from core.models import User

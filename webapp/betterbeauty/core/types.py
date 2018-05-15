@@ -1,6 +1,5 @@
-from typing import NewType
-
 from enum import Enum, IntEnum
+from typing import NewType
 
 
 class StrEnum(str, Enum):

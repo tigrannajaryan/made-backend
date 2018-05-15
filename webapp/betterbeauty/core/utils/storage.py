@@ -1,6 +1,8 @@
-import requests
 from mimetypes import guess_extension
 from uuid import uuid4
+
+import requests
+
 
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
