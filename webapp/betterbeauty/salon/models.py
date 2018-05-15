@@ -12,9 +12,13 @@ from django.db.models import F
 
 from timezone_field import TimeZoneField
 
+from client.models import Client
 from core.choices import WEEKDAY
 from core.models import User
 from core.types import Weekday
+
+from .choices import INVITATION_STATUS_CHOICES
+from .types import InvitationStatus
 
 
 class StylistServiceManager(models.Manager):
@@ -271,3 +275,19 @@ class StylistDateRangeDiscount(models.Model):
 
     class Meta:
         db_table = 'stylist_date_range_discount'
+
+
+class Invitation(models.Model):
+    stylist = models.ForeignKey(Stylist, on_delete=models.CASCADE)
+    phone = models.CharField(max_length=15)
+    status = models.CharField(
+        max_length=15, choices=INVITATION_STATUS_CHOICES, default=InvitationStatus.UNSENT
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    delivered_at = models.DateTimeField(null=True, default=None)
+    accepted_at = models.DateTimeField(null=True, default=None)
+
+    created_client = models.ForeignKey(Client, null=True, default=None, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = 'invitation'
