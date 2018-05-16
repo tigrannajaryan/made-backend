@@ -4,17 +4,25 @@ import pytest
 import pytz
 
 from django_dynamic_fixture import G
+from freezegun import freeze_time
 from psycopg2.extras import DateRange
 
+import appointment.error_constants as appointment_errors
 from api.v1.stylist.serializers import (
+    AppointmentSerializer,
     StylistAvailableWeekDaySerializer,
     StylistDiscountsSerializer,
     StylistProfileStatusSerializer,
     StylistSerializer,
     StylistServiceSerializer,
+    StylistTodaySerializer,
 )
+from appointment.models import Appointment
+from appointment.types import AppointmentStatus
+from client.models import Client
 from core.choices import USER_ROLE
 from core.models import User
+from core.types import Weekday
 from salon.models import (
     Salon,
     ServiceCategory,
@@ -23,6 +31,8 @@ from salon.models import (
     StylistDateRangeDiscount,
     StylistService,
 )
+from salon.tests.test_models import stylist_appointments_data
+from salon.utils import create_stylist_profile_for_user
 
 
 @pytest.fixture
@@ -30,7 +40,7 @@ def stylist_data() -> Stylist:
     salon = G(
         Salon,
         name='Test salon', address='2000 Rilma Lane', city='Los Altos', state='CA',
-        zip_code='94022', latitude=37.4009997, longitude=-122.1185007
+        zip_code='94022', latitude=37.4009997, longitude=-122.1185007, timezone=pytz.utc
     )
 
     stylist_user = G(
@@ -39,7 +49,7 @@ def stylist_data() -> Stylist:
         first_name='Fred', last_name='McBob', phone='(650) 350-1111',
         role=USER_ROLE.stylist,
     )
-    from salon.utils import create_stylist_profile_for_user
+
     stylist = create_stylist_profile_for_user(
         stylist_user,
         salon=salon,
@@ -403,3 +413,214 @@ class TestStylistDiscountsSerializer(object):
         assert(stylist.weekday_discounts.filter(discount_percent=0).count() == 5)
         assert(stylist.weekday_discounts.get(weekday=1).discount_percent == 40)
         assert (stylist.weekday_discounts.get(weekday=2).discount_percent == 50)
+
+
+class TestStylistTodaySerializer(object):
+    @freeze_time('2018-05-14 13:30:00 UTC')
+    @pytest.mark.django_db
+    def test_serializer_with_current_appointment(self, stylist_data: Stylist):
+        appointments = stylist_appointments_data(stylist_data)
+        serializer = StylistTodaySerializer(instance=stylist_data)
+        data = serializer.data
+        next_appointments = data['next_appointments']
+        assert(len(next_appointments) == 2)
+        assert(next_appointments[0]['uuid'] == str(appointments['current_appointment'].uuid))
+        assert(next_appointments[1]['uuid'] == str(appointments['future_appointment'].uuid))
+        assert(data['today_visits_count'] == 4)
+        assert(data['week_visits_count'] == 5)
+        assert(data['past_visits_count'] == 2)
+
+    @freeze_time('2018-05-14 14:00:00 UTC')
+    @pytest.mark.django_db
+    def test_serializer_without_current_appointment(self, stylist_data: Stylist):
+        appointments = stylist_appointments_data(stylist_data)
+        serializer = StylistTodaySerializer(instance=stylist_data)
+        data = serializer.data
+        next_appointments = data['next_appointments']
+        assert (len(next_appointments) == 1)
+        assert (next_appointments[0]['uuid'] == str(appointments['future_appointment'].uuid))
+        assert (data['today_visits_count'] == 4)
+        assert (data['week_visits_count'] == 5)
+        assert (data['past_visits_count'] == 3)
+
+    @freeze_time('2018-05-16 14:00:00 UTC')
+    @pytest.mark.django_db
+    def test_serializer_without_current_and_next_appointment(self, stylist_data: Stylist):
+        # call fixture method just to generate appointments data
+        stylist_appointments_data(stylist_data)
+        serializer = StylistTodaySerializer(instance=stylist_data)
+        data = serializer.data
+        next_appointments = data['next_appointments']
+        # there are no other appointments for this day
+        assert (len(next_appointments) == 0)
+        assert (data['today_visits_count'] == 0)
+        assert (data['week_visits_count'] == 5)
+        assert (data['past_visits_count'] == 6)
+
+
+class TestAppointmentSerializer(object):
+    @freeze_time('2018-05-17 15:30:00 UTC')
+    @pytest.mark.django_db
+    def test_validate_start_time(self, stylist_data: Stylist):
+        service: StylistService = G(
+            StylistService,
+            stylist=stylist_data, duration=datetime.timedelta(minutes=30),
+            base_price=50
+        )
+        stylist_data.available_days.filter(weekday=Weekday.THURSDAY).update(
+            is_available=True,
+            work_start_at=datetime.time(8, 0),
+            work_end_at=datetime.time(17, 0)
+        )
+        past_datetime: datetime.datetime = datetime.datetime(
+            2018, 5, 17, 14, 00, tzinfo=pytz.utc)
+        data = {
+            'client_first_name': 'Fred',
+            'client_last_name': 'McBob',
+            'service_uuid': service.service_uuid,
+            'datetime_start_at': past_datetime.isoformat()
+        }
+        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        serializer.is_valid()
+        assert(serializer.is_valid(raise_exception=False) is False)
+        assert(
+            appointment_errors.ERR_APPOINTMENT_IN_THE_PAST in
+            serializer.errors.get('datetime_start_at')
+        )
+
+        outside_working_hours: datetime.datetime = datetime.datetime(
+            2018, 5, 17, 19, 00, tzinfo=pytz.utc)
+        data = {
+            'client_first_name': 'Fred',
+            'client_last_name': 'McBob',
+            'service_uuid': service.service_uuid,
+            'datetime_start_at': outside_working_hours.isoformat()
+        }
+        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        assert (serializer.is_valid(raise_exception=False) is False)
+        assert (
+            appointment_errors.ERR_APPOINTMENT_OUTSIDE_WORKING_HOURS in
+            serializer.errors.get('datetime_start_at')
+        )
+
+        available_time: datetime.datetime = datetime.datetime(
+            2018, 5, 17, 16, 00, tzinfo=pytz.utc)
+
+        data = {
+            'client_first_name': 'Fred',
+            'client_last_name': 'McBob',
+            'service_uuid': service.service_uuid,
+            'datetime_start_at': available_time.isoformat()
+        }
+        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        assert (serializer.is_valid(raise_exception=False) is True)
+
+        # add another appointment to check intersection
+        previous_appointment = G(
+            Appointment, stylist=stylist_data,
+            datetime_start_at=datetime.datetime(2018, 5, 17, 15, 50, tzinfo=pytz.utc),
+            status=AppointmentStatus.NEW, duration=datetime.timedelta(minutes=30)
+        )
+        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        assert (serializer.is_valid(raise_exception=False) is False)
+        assert (
+            appointment_errors.ERR_APPOINTMENT_INTERSECTION in
+            serializer.errors.get('datetime_start_at')
+        )
+        previous_appointment.delete()
+        # check next appointment
+        next_appointment = G(
+            Appointment, stylist=stylist_data,
+            datetime_start_at=datetime.datetime(2018, 5, 17, 16, 20, tzinfo=pytz.utc),
+            status=AppointmentStatus.NEW, duration=datetime.timedelta(minutes=30)
+        )
+        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        assert (serializer.is_valid(raise_exception=False) is False)
+        assert (
+            appointment_errors.ERR_APPOINTMENT_INTERSECTION in
+            serializer.errors.get('datetime_start_at')
+        )
+        next_appointment.delete()
+        # try inner appointment
+        G(
+            Appointment, stylist=stylist_data,
+            datetime_start_at=datetime.datetime(2018, 5, 17, 16, 10, tzinfo=pytz.utc),
+            status=AppointmentStatus.NEW, duration=datetime.timedelta(minutes=10)
+        )
+        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        assert (serializer.is_valid(raise_exception=False) is False)
+        assert (
+            appointment_errors.ERR_APPOINTMENT_INTERSECTION in
+            serializer.errors.get('datetime_start_at')
+        )
+        # force it!
+        serializer = AppointmentSerializer(
+            data=data, context={'stylist': stylist_data, 'force_start': True}
+        )
+        serializer.is_valid()
+        assert (serializer.is_valid(raise_exception=False) is True)
+
+    @freeze_time('2018-05-17 15:30:00 UTC')
+    @pytest.mark.django_db
+    def test_create_without_client(self, stylist_data: Stylist):
+        service: StylistService = G(
+            StylistService,
+            stylist=stylist_data, duration=datetime.timedelta(minutes=30),
+            base_price=50
+        )
+        stylist_data.available_days.filter(weekday=Weekday.THURSDAY).update(
+            is_available=True,
+            work_start_at=datetime.time(8, 0),
+            work_end_at=datetime.time(17, 0)
+        )
+        available_time: datetime.datetime = datetime.datetime(
+            2018, 5, 17, 16, 00, tzinfo=pytz.utc)
+
+        data = {
+            'client_first_name': 'Fred',
+            'client_last_name': 'McBob',
+            'service_uuid': service.service_uuid,
+            'datetime_start_at': available_time.isoformat()
+        }
+        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        assert(serializer.is_valid() is True)
+        appointment: Appointment = serializer.save()
+
+        assert(appointment.service_name == service.name)
+        assert(appointment.service_uuid == service.service_uuid)
+        assert(appointment.regular_price == service.base_price)
+        assert(appointment.duration == service.duration)
+        assert(appointment.client_first_name == 'Fred')
+        assert(appointment.client is None)
+
+    @freeze_time('2018-05-17 15:30:00 UTC')
+    @pytest.mark.django_db
+    def test_create_with_client(self, stylist_data: Stylist):
+        service: StylistService = G(
+            StylistService,
+            stylist=stylist_data, duration=datetime.timedelta(minutes=30),
+            base_price=50
+        )
+        stylist_data.available_days.filter(weekday=Weekday.THURSDAY).update(
+            is_available=True,
+            work_start_at=datetime.time(8, 0),
+            work_end_at=datetime.time(17, 0)
+        )
+        available_time: datetime.datetime = datetime.datetime(
+            2018, 5, 17, 16, 00, tzinfo=pytz.utc)
+        client: Client = G(Client)
+        data = {
+            'client_uuid': client.uuid,
+            'service_uuid': service.service_uuid,
+            'datetime_start_at': available_time.isoformat()
+        }
+        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        assert(serializer.is_valid() is True)
+        appointment: Appointment = serializer.save()
+
+        assert(appointment.service_name == service.name)
+        assert(appointment.service_uuid == service.service_uuid)
+        assert(appointment.regular_price == service.base_price)
+        assert(appointment.duration == service.duration)
+        assert(appointment.client_first_name == client.user.first_name)
+        assert(appointment.client == client)

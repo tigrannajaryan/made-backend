@@ -866,6 +866,231 @@ curl -X POST \
 ```
 
 
+## Appointments
+### List existing appointments
+**GET /api/v1/stylist/appointments**?date_from=yyyy-mm-dd&date_to=yyyy-mm-dd&&include_cancelled=true|false&&limit=N]*
+
+Optional parameters:
+- **date_from** (yyy-mm-dd) - inclusive. If not specified will output appointments since the beginning of era
+- **date_to** (yyy-mm-dd) - inclusive. If not specified will output appointments till the end of era
+- **include_cancelled** - False by default, if true, will also return cancelled appointments
+- **limit** - limit the query, default is 100
+
+```
+curl -X GET -H 'Authorization: Token jwt_token' \
+    http://apiserver//api/v1/stylist/appointments?include_cancelled=true
+```
+
+**Response 200 OK**
+```
+[
+    {
+        "uuid": "f9c736e1-2d0d-4daf-b30f-3225dd51a313",
+        "client_first_name": "Fred",
+        "client_last_name": "McBob",
+        "regular_price": 90,
+        "client_price": 90,
+        "service_name": "Haircut",
+        "service_uuid": "ca821ca4-3d34-454a-9aa7-daa291ce2840",
+        "datetime_start_at": "2018-05-15T18:00:00-04:00",
+        "duration_minutes": 30,
+        "status": "new"
+    },
+    {
+        "uuid": "59636867-a7ba-4736-ac89-51aefeddec4e",
+        "client_first_name": "John",
+        "client_last_name": "Connor",
+        "regular_price": 90,
+        "client_price": 90,
+        "service_name": "Updos",
+        "service_uuid": "ca821ca4-3d34-454a-9aa7-daa291ce2840",
+        "datetime_start_at": "2018-05-16T18:00:00-04:00",
+        "duration_minutes": 60,
+        "status": "cancelled_by_stylist"
+    }
+]
+```
+
+### Retrieve single appointment
+**GET /api/v1/appointments/{appointment_uuid}**
+
+```
+curl -X GET \
+  http://apiserver/api/v1/stylist/appointments/8cdc4851-62a6-4f91-9ff1-dba9d346f0a1 \
+  -H 'Authorization: Token jwt_token'
+```
+
+**Response 200 OK**
+```
+{
+    "uuid": "8cdc4851-62a6-4f91-9ff1-dba9d346f0a1",
+    "client_uuid": "5637ce6c-7efd-4a0f-a9e4-86d6324d3a5d",
+    "client_first_name": "Fred",
+    "client_last_name": "McBob",
+    "client_phone": "123456789",
+    "regular_price": 90,
+    "client_price": 90,
+    "service_name": "Updos",
+    "service_uuid": "ca821ca4-3d34-454a-9aa7-daa291ce2840",
+    "datetime_start_at": "2018-05-19T22:00:00-04:00",
+    "duration_minutes": 60,
+    "status": "new"
+}
+```
+
+
+### Add appointment
+
+There can be 2 possible situations:
+
+- client is in the system. In this case frontend should pass
+client's uuid; it will be verified, and if it's valid - an appointment
+will be created for this client. `client_first_name` and `client_last_name`
+params, even if supplied, will be discarded and replaced with actual
+client's name.
+
+- client is not in the system yet, so uuid is unknown. In this case
+frontend must omit the `client_uuid` param and instead supply
+`client_first_name` and `client_last_name`
+
+**POST /api/v1/stylist/appointments[?force_start=true]**
+
+- **force_start** param, if set to `true`, disables time range checks
+
+#### Out-of-system client
+
+```
+curl -X POST \
+  http://apiserver/api/v1/stylist/appointments \
+  -H 'Authorization: Token jwt_tokent' \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "client_first_name": "John",
+        "client_last_name": "Connor",
+        "service_uuid": "ca821ca4-3d34-454a-9aa7-daa291ce2840",
+        "datetime_start_at": "2018-05-20T18:00:00-04:00"
+       }'
+```
+
+#### In-the-system client
+
+```
+curl -X POST \
+  http://betterbeauty.local:8000/api/v1/stylist/appointments \
+  -H 'Authorization: Token jwt_token' \
+  -H 'Content-Type: application/json' \
+  -d '{
+
+        "client_uuid": "5637ce6c-7efd-4a0f-a9e4-86d6324d3a5d",
+        "service_uuid": "ca821ca4-3d34-454a-9aa7-daa291ce2840",
+        "datetime_start_at": "2018-05-20T14:00:00-04:00"
+       }'
+```
+
+
+**Response 201 Created**
+```
+{
+    "uuid": "a406c7cc-17c2-493a-90e0-9091f740be37",
+    "client_first_name": "Fred",
+    "client_last_name": "McBob",
+    "regular_price": 90,
+    "client_price": 90,
+    "service_name": "Updos",
+    "service_uuid": "ca821ca4-3d34-454a-9aa7-daa291ce2840",
+    "datetime_start_at": "2018-05-20T18:00:00-04:00",
+    "duration_minutes": 60,
+    "status": "new"
+}
+```
+
+**Response 400 Bad Request**
+```
+{
+    "datetime_start_at": [
+        "Cannot add appointment for a past date and time"
+    ]
+}
+```
+
+**Response 400 Bad Request**
+```
+{
+    "datetime_start_at": [
+        "Cannot add appointment outside working hours"
+    ]
+}
+```
+**Response 400 Bad Request**
+```
+{
+    "datetime_start_at": [
+        "Cannot add appointment intersecting with another"
+    ]
+}
+```
+**Response 400 Bad Request**
+```
+{
+    "service_uuid": [
+        "No such service"
+    ]
+}
+```
+**Response 400 Bad Request**
+```
+{
+    "client_uuid": [
+        "No such client"
+    ]
+}
+```
+
+
+## Today screen
+**GET /api/v1/stylist/today**
+
+`curl -H "Authorization: Token jwt_token" http://apiserver/api/v1/stylist/today`
+
+
+**Response 200 OK**
+```
+{
+    "next_appointments": [
+        {
+            "uuid": "f9c736e1-2d0d-4daf-b30f-3225dd51a313",
+            "client_first_name": "Fred",
+            "client_last_name": "McBob",
+            "client_phone": "",
+            "regular_price": 90,
+            "client_price": 90,
+            "service_name": "Haircut",
+            "service_uuid": "ca821ca4-3d34-454a-9aa7-daa291ce2840",
+            "datetime_start_at": "2018-05-15T16:00:00-04:00",
+            "duration_minutes": 30,
+            "status": "new"
+        },
+        {
+            "uuid": "59636867-a7ba-4736-ac89-51aefeddec4e",
+            "client_first_name": "John",
+            "client_last_name": "Connor",
+            "client_phone": "",
+            "regular_price": 90,
+            "client_price": 90,
+            "service_name": "Updos",
+            "service_uuid": "ca821ca4-3d34-454a-9aa7-daa291ce2840",
+            "datetime_start_at": "2018-05-15T18:00:00-04:00",
+            "duration_minutes": 60,
+            "status": "new"
+        }
+    ],
+    "today_visits_count": 2,
+    "week_visits_count": 7,
+    "past_visits_count": 2
+}
+```
+
+
 # Files upload
 ## Image upload
 

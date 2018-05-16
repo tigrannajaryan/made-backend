@@ -1,4 +1,5 @@
 import datetime
+from typing import Dict
 
 import pytest
 import pytz
@@ -8,6 +9,7 @@ from freezegun import freeze_time
 from psycopg2.extras import DateRange
 
 from appointment.models import Appointment
+from appointment.types import AppointmentStatus
 from client.models import Client
 from core.models import User
 from core.types import Weekday
@@ -25,7 +27,8 @@ def stylist_data() -> Stylist:
     salon = G(
         Salon,
         name='Test salon', address='2000 Rilma Lane', city='Los Altos', state='CA',
-        zip_code='94022', latitude=37.4009997, longitude=-122.1185007, timezone='UTC'
+        zip_code='94022', latitude=37.4009997, longitude=-122.1185007,
+        timezone=pytz.utc
     )
     stylist_user = G(
         User,
@@ -49,6 +52,68 @@ def stylist_data() -> Stylist:
     )
 
     return stylist
+
+
+def stylist_appointments_data(stylist: Stylist) -> Dict[str, Appointment]:
+    client = G(Client)
+    current_appointment = G(
+        Appointment, client=client, stylist=stylist,
+        datetime_start_at=stylist.salon.timezone.localize(
+            datetime.datetime(2018, 5, 14, 13, 20)),
+        duration=datetime.timedelta(minutes=30)
+    )
+
+    past_appointment = G(
+        Appointment, client=client, stylist=stylist,
+        datetime_start_at=stylist.salon.timezone.localize(
+            datetime.datetime(2018, 5, 14, 12, 20)),
+        duration=datetime.timedelta(minutes=30)
+    )
+
+    last_week_appointment = G(
+        Appointment, client=client, stylist=stylist,
+        datetime_start_at=stylist.salon.timezone.localize(
+            datetime.datetime(2018, 5, 7, 12, 20)),
+        duration=datetime.timedelta(minutes=30)
+    )
+
+    next_week_appointment = G(
+        Appointment, client=client, stylist=stylist,
+        datetime_start_at=stylist.salon.timezone.localize(
+            datetime.datetime(2018, 5, 21, 12, 20)),
+        duration=datetime.timedelta(minutes=30)
+    )
+
+    future_appointment = G(
+        Appointment, client=client, stylist=stylist,
+        datetime_start_at=stylist.salon.timezone.localize(
+            datetime.datetime(2018, 5, 14, 14, 20)),
+        duration=datetime.timedelta(minutes=30)
+    )
+
+    late_night_appointment = G(
+        Appointment, client=client, stylist=stylist,
+        datetime_start_at=stylist.salon.timezone.localize(
+            datetime.datetime(2018, 5, 14, 23, 50)),
+        duration=datetime.timedelta(minutes=30)
+    )
+
+    next_day_appointment = G(
+        Appointment, client=client, stylist=stylist,
+        datetime_start_at=stylist.salon.timezone.localize(
+            datetime.datetime(2018, 5, 15, 13, 20)),
+        duration=datetime.timedelta(minutes=30)
+    )
+
+    return {
+        'current_appointment': current_appointment,
+        'past_appointment': past_appointment,
+        'future_appointment': future_appointment,
+        'late_night_appointment': late_night_appointment,
+        'next_day_appointment': next_day_appointment,
+        'last_week_appointment': last_week_appointment,
+        'next_week_appointment': next_week_appointment,
+    }
 
 
 class TestStylist(object):
@@ -75,62 +140,94 @@ class TestStylist(object):
 
     @freeze_time('2018-05-14 13:30:00 UTC')
     @pytest.mark.django_db
-    def test_get_today_appointments(self, stylist_data: Stylist):
-        client = G(Client)
-        current_appointment = G(
-            Appointment, client=client, stylist=stylist_data,
-            datetime_start_at=pytz.timezone(stylist_data.salon.timezone).localize(
-                datetime.datetime(2018, 5, 14, 13, 20)),
-            duration=datetime.timedelta(minutes=30)
-        )
-
-        past_appointment = G(
-            Appointment, client=client, stylist=stylist_data,
-            datetime_start_at=pytz.timezone(stylist_data.salon.timezone).localize(
-                datetime.datetime(2018, 5, 14, 12, 20)),
-            duration=datetime.timedelta(minutes=30)
-        )
-
-        future_appointment = G(
-            Appointment, client=client, stylist=stylist_data,
-            datetime_start_at=pytz.timezone(stylist_data.salon.timezone).localize(
-                datetime.datetime(2018, 5, 14, 14, 20)),
-            duration=datetime.timedelta(minutes=30)
-        )
-
-        late_night_appointment = G(
-            Appointment, client=client, stylist=stylist_data,
-            datetime_start_at=pytz.timezone(stylist_data.salon.timezone).localize(
-                datetime.datetime(2018, 5, 14, 23, 50)),
-            duration=datetime.timedelta(minutes=30)
-        )
-
-        next_day_appointment = G(
-            Appointment, client=client, stylist=stylist_data,
-            datetime_start_at=pytz.timezone(stylist_data.salon.timezone).localize(
-                datetime.datetime(2018, 5, 15, 13, 20)),
-            duration=datetime.timedelta(minutes=30)
-        )
-
+    def test_get_today_appointments(
+            self, stylist_data: Stylist,
+    ):
+        appointments: Dict[str, Appointment] = stylist_appointments_data(stylist_data)
         today_appointments = [a.id for a in stylist_data.get_today_appointments()]
 
         assert(len(today_appointments) == 3)
-        assert(current_appointment.id in today_appointments)
-        assert(past_appointment.id not in today_appointments)
-        assert(future_appointment.id in today_appointments)
-        assert(late_night_appointment.id in today_appointments)
-        assert(next_day_appointment.id not in today_appointments)
+        assert(appointments['current_appointment'].id in today_appointments)
+        assert(appointments['past_appointment'].id not in today_appointments)
+        assert(appointments['future_appointment'].id in today_appointments)
+        assert(appointments['late_night_appointment'].id in today_appointments)
+        assert(appointments['next_day_appointment'].id not in today_appointments)
 
         today_appointments = [
             a.id for a in stylist_data.get_today_appointments(upcoming_only=False)
         ]
 
         assert (len(today_appointments) == 4)
-        assert (current_appointment.id in today_appointments)
-        assert (past_appointment.id in today_appointments)
-        assert (future_appointment.id in today_appointments)
-        assert (late_night_appointment.id in today_appointments)
-        assert (next_day_appointment.id not in today_appointments)
+        assert (appointments['current_appointment'].id in today_appointments)
+        assert (appointments['past_appointment'].id in today_appointments)
+        assert (appointments['future_appointment'].id in today_appointments)
+        assert (appointments['late_night_appointment'].id in today_appointments)
+        assert (appointments['next_day_appointment'].id not in today_appointments)
+
+    @freeze_time('2018-05-14 13:30:00 UTC')
+    @pytest.mark.django_db
+    def test_get_appointments_in_datetime_range(
+            self, stylist_data: Stylist,
+    ):
+        appointments: Dict[str, Appointment] = stylist_appointments_data(stylist_data)
+        print(appointments)
+        all_appointments = stylist_data.get_appointments_in_datetime_range()
+
+        assert(all_appointments.count() == 7)
+        appointments_from_start = stylist_data.get_appointments_in_datetime_range(
+            datetime_from=None,
+            datetime_to=stylist_data.get_current_now()
+        )
+        assert(frozenset([a.id for a in appointments_from_start]) == frozenset([
+            appointments['past_appointment'].id,
+            appointments['current_appointment'].id,
+            appointments['last_week_appointment'].id,
+        ]))
+
+        apppointmens_to_end = stylist_data.get_appointments_in_datetime_range(
+            datetime_from=stylist_data.get_current_now(),
+            datetime_to=None
+        )
+        assert (frozenset([a.id for a in apppointmens_to_end]) == frozenset([
+            appointments['current_appointment'].id,
+            appointments['future_appointment'].id,
+            appointments['late_night_appointment'].id,
+            appointments['next_day_appointment'].id,
+            appointments['next_week_appointment'].id,
+        ]))
+
+        appointments_between = stylist_data.get_appointments_in_datetime_range(
+            datetime_from=pytz.timezone('UTC').localize(datetime.datetime(
+                2018, 5, 13
+            )),
+            datetime_to=pytz.timezone('UTC').localize(datetime.datetime(
+                2018, 5, 15, 23, 59, 59
+            )),
+        )
+        assert (frozenset([a.id for a in appointments_between]) == frozenset([
+            appointments['past_appointment'].id,
+            appointments['current_appointment'].id,
+            appointments['future_appointment'].id,
+            appointments['late_night_appointment'].id,
+            appointments['next_day_appointment'].id,
+        ]))
+
+    @freeze_time('2018-05-14 13:30:00 UTC')
+    @pytest.mark.django_db
+    def test_set_status(self, stylist_data: Stylist):
+        appointment: Appointment = G(
+            Appointment, stylist=stylist_data,
+            duration=datetime.timedelta()
+        )
+        assert(appointment.status == AppointmentStatus.NEW)
+
+        appointment.set_status(
+            AppointmentStatus.CANCELLED_BY_CLIENT, stylist_data.user
+        )
+        appointment.refresh_from_db()
+        assert(appointment.status == AppointmentStatus.CANCELLED_BY_CLIENT)
+        assert(appointment.status_updated_by == stylist_data.user)
+        assert(appointment.status_updated_at == stylist_data.get_current_now())
 
 
 class TestStylistService(object):

@@ -32,6 +32,8 @@ class Appointment(models.Model):
     client = models.ForeignKey(
         Client, related_name='appointments', null=True, on_delete=models.PROTECT
     )
+    client_first_name = models.CharField(max_length=255, null=True, blank=True)
+    client_last_name = models.CharField(max_length=255, null=True, blank=True)
 
     service_uuid = models.UUIDField(null=True)
     service_name = models.CharField(max_length=255)
@@ -39,14 +41,11 @@ class Appointment(models.Model):
     regular_price = models.DecimalField(max_digits=6, decimal_places=2)
     client_price = models.DecimalField(max_digits=6, decimal_places=2)
 
-    client_first_name = models.CharField(max_length=255, null=True, blank=True)
-    client_last_name = models.CharField(max_length=255, null=True, blank=True)
-
     datetime_start_at = models.DateTimeField()
     duration = models.DurationField()
 
     status = models.CharField(
-        max_length=15, choices=APPOINTMENT_STATUS_CHOICES, default=AppointmentStatus.NEW)
+        max_length=30, choices=APPOINTMENT_STATUS_CHOICES, default=AppointmentStatus.NEW)
     status_updated_at = models.DateTimeField(null=True, default=None)
     status_updated_by = models.ForeignKey(
         User, null=True, default=None, on_delete=models.PROTECT,
@@ -84,3 +83,11 @@ class Appointment(models.Model):
         return '{0} {1}'.format(
             self.client_first_name, self.client_last_name
         )
+
+    def set_status(self, status: AppointmentStatus, updated_by: User):
+        current_now = self.stylist.get_current_now()
+
+        self.status = status
+        self.status_updated_by = updated_by
+        self.status_updated_at = current_now
+        self.save(update_fields=['status', 'status_updated_by', 'status_updated_at', ])

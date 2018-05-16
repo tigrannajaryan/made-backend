@@ -1,8 +1,7 @@
 import datetime
 
-import pytz
-
 from annoying.functions import get_object_or_None
+from dateutil.parser import parse
 
 from django.db import transaction
 from django.shortcuts import get_object_or_404
@@ -10,13 +9,17 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
 
-
 from api.common.permissions import (
     StylistPermission,
     StylistRegisterUpdatePermission,
 )
+from appointment.models import Appointment
+from appointment.types import AppointmentStatus
+from core.utils import post_or_get
 from salon.models import ServiceTemplateSet, Stylist, StylistService
+from .constants import MAX_APPOINTMENTS_PER_REQUEST
 from .serializers import (
+    AppointmentSerializer,
     ServiceTemplateSetDetailsSerializer,
     ServiceTemplateSetListSerializer,
     StylistAvailableWeekDayListSerializer,
@@ -116,10 +119,7 @@ class StylistServiceView(generics.DestroyAPIView):
 
     def delete(self, request, *args, **kwargs):
         service: StylistService = self.get_object()
-        current_now = pytz.timezone(service.stylist.salon.timezone).localize(
-            datetime.datetime.now()
-        )
-        service.deleted_at = current_now
+        service.deleted_at = service.stylist.get_current_now()
         service.save(update_fields=['deleted_at', ])
         return Response(
             StylistServiceListSerializer(
@@ -185,3 +185,56 @@ class StylistTodayView(views.APIView):
 
     def get_object(self):
         return getattr(self.request.user, 'stylist', None)
+
+
+class StylistAppointmentListCreateView(generics.ListCreateAPIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+    serializer_class = AppointmentSerializer
+
+    def get_serializer_context(self):
+        return {
+            'stylist': self.request.user.stylist,
+            'force_start': post_or_get(self.request, 'force_start', False) == 'true'
+        }
+
+    def get_queryset(self):
+        stylist = self.request.user.stylist
+
+        date_from_str = post_or_get(self.request, 'date_from')
+        date_to_str = post_or_get(self.request, 'date_to')
+
+        include_cancelled = post_or_get(self.request, 'include_cancelled', False) == 'true'
+        limit = int(post_or_get(self.request, 'limit', MAX_APPOINTMENTS_PER_REQUEST))
+
+        datetime_from = None
+        datetime_to = None
+
+        if date_from_str:
+            datetime_from = parse(date_from_str).replace(
+                hour=0, minute=0, second=0
+            )
+        if date_to_str:
+            datetime_to = (parse(date_to_str) + datetime.timedelta(days=1)).replace(
+                hour=0, minute=0, second=0
+            )
+
+        return stylist.get_appointments_in_datetime_range(
+            datetime_from, datetime_to, include_cancelled
+        )[:limit]
+
+
+class StylistAppointmentRetrieveCancelView(generics.RetrieveDestroyAPIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+    serializer_class = AppointmentSerializer
+
+    lookup_url_kwarg = 'appointment_uuid'
+    lookup_field = 'uuid'
+
+    def perform_destroy(self, instance: Appointment):
+        instance.set_status(AppointmentStatus.CANCELLED_BY_STYLIST, self.request.user)
+
+    def get_queryset(self):
+        stylist = self.request.user.stylist
+        return Appointment.all_objects.filter(
+            stylist=stylist
+        ).order_by('datetime_start_at')

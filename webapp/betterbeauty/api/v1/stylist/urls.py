@@ -3,6 +3,8 @@ from django.conf.urls import url
 from .views import (
     ServiceTemplateSetDetailsView,
     ServiceTemplateSetListView,
+    StylistAppointmentListCreateView,
+    StylistAppointmentRetrieveCancelView,
     StylistAvailabilityView,
     StylistDiscountsView,
     StylistServiceListView,
@@ -23,4 +25,7 @@ urlpatterns = [
     url('availability/weekdays$', StylistAvailabilityView.as_view(), name='availability_weekdays'),
     url('discounts$', StylistDiscountsView.as_view(), name='discounts'),
     url('today$', StylistTodayView.as_view(), name='today'),
+    url('appointments$', StylistAppointmentListCreateView.as_view()),
+    url('appointments/(?P<appointment_uuid>[0-9a-f\-]+)$',
+        StylistAppointmentRetrieveCancelView.as_view()),
 ]

@@ -1,8 +1,8 @@
 import datetime
 import uuid
-from typing import Optional
 
-import pytz
+from decimal import Decimal
+from typing import Optional
 
 from django.conf import settings
 from django.contrib.postgres.fields import DateRangeField
@@ -12,6 +12,7 @@ from django.db.models import F
 
 from timezone_field import TimeZoneField
 
+from appointment.types import AppointmentStatus
 from client.models import Client
 from core.choices import WEEKDAY
 from core.models import User
@@ -165,24 +166,89 @@ class Stylist(models.Model):
             weekday=weekday, discount_percent=discount_percent
         )[0]
 
-    def get_today_appointments(self, upcoming_only=True):
-        # TODO: need to find better way to handle this
-        if not self.salon:
-            raise AssertionError('Stylist does not have a profile - hence no timezone info')
-        current_now: datetime.datetime = pytz.timezone(self.salon.timezone).localize(
+    def get_current_now(self) -> datetime.datetime:
+        """Return timezone-aware current datetime in the salon's timezone"""
+        return self.salon.timezone.localize(
             datetime.datetime.now()
         )
-        today_midnight = current_now.replace(hour=0, minute=0, second=0)
-        next_midnight = current_now.replace(hour=23, minute=59, second=59)
-        appointments = self.appointments.filter(
-            datetime_start_at__gte=today_midnight - F('duration'),
-            datetime_start_at__lte=next_midnight
-        )
+
+    def get_today_appointments(
+            self, upcoming_only=True, include_cancelled=False
+    ) -> models.QuerySet:
+        current_now: datetime.datetime = self.get_current_now()
+
+        datetime_from = current_now.replace(hour=0, minute=0, second=0)
         if upcoming_only is True:
+            datetime_from = current_now - F('duration')
+
+        next_midnight = (
+            current_now + datetime.timedelta(days=1)
+        ).replace(hour=0, minute=0, second=0)
+
+        return self.get_appointments_in_datetime_range(
+            datetime_from, next_midnight, include_cancelled
+        )
+
+    def with_salon_tz(self, date_time: datetime.datetime) -> datetime.datetime:
+        """Convert supplied timezone-aware datetime to salon's timezone"""
+        return date_time.astimezone(self.salon.timezone)
+
+    def get_appointments_in_datetime_range(
+            self,
+            datetime_from: Optional[datetime.datetime]=None,
+            datetime_to: Optional[datetime.datetime]=None,
+            including_to: Optional[bool]=False,
+            include_cancelled=False, **kwargs
+    ) -> models.QuerySet:
+        """
+        Return appointments present in given datetime range.
+        :param datetime_from: datetime at which first appointment is present
+        :param datetime_to: datetime by which last appointment starts
+        :param including_to: whether or not end datetime should be inclusive
+        :param include_cancelled: whether or not cancelled appointments are included
+        :param kwargs: any optional filter kwargs to be applied
+        :return: Resulting Appointment queryset
+        """
+
+        appointments = self.appointments.filter(
+            **kwargs
+        ).order_by('datetime_start_at')
+
+        if datetime_from is not None:
             appointments = appointments.filter(
-                datetime_start_at__gte=current_now - F('duration'),
+                datetime_start_at__gte=datetime_from - F('duration')
             )
+
+        if datetime_to is not None:
+            if including_to:
+                appointments = appointments.filter(
+                    datetime_start_at__lt=datetime_to
+                )
+            appointments = appointments.filter(
+                datetime_start_at__lt=datetime_to
+            )
+
+        if not include_cancelled:
+            return appointments.exclude(status__in=[
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+                AppointmentStatus.CANCELLED_BY_STYLIST
+            ])
         return appointments
+
+    def is_working_time(
+            self, date_time: datetime.datetime, duration: Optional[datetime.timedelta]=None
+    ) -> bool:
+        if duration is None:
+            duration = datetime.timedelta(0)
+        # FIXME: There should be extra logic to check if start and end time fall to
+        # FIXME: different dates. But I guess it should be an extremely rare case for now.
+        date_time = self.with_salon_tz(date_time)
+        end_time = (date_time + duration).time()
+        return self.available_days.filter(
+            weekday=date_time.isoweekday(),
+            work_start_at__lte=date_time.time(),
+            work_end_at__gt=end_time
+        ).exists()
 
 
 class ServiceCategory(models.Model):
@@ -262,6 +328,12 @@ class StylistService(models.Model):
     def __str__(self):
         deleted_str = '[DELETED] ' if self.deleted_at else ''
         return '{2}{0} by {1}'.format(self.name, self.stylist, deleted_str)
+
+    def calculate_price_for_client(
+            self, datetime_start_at: datetime.datetime, client=None,
+    ) -> Decimal:
+        # TODO: calculate price based on existing discounts
+        return self.base_price
 
 
 class StylistServicePhotoSample(models.Model):

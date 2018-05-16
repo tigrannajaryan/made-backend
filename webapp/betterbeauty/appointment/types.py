@@ -1,7 +1,7 @@
-from enum import Enum
+from core.types import StrEnum
 
 
-class AppointmentStatus(str, Enum):
+class AppointmentStatus(StrEnum):
     NEW = 'new'
     CANCELLED_BY_CLIENT = 'cancelled_by_client'
     CANCELLED_BY_STYLIST = 'cancelled_by_stylist'
