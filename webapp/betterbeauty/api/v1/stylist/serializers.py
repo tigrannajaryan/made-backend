@@ -168,7 +168,7 @@ class StylistSerializer(serializers.ModelSerializer):
                     instance=stylist.salon, data=salon_data, partial=True
                 )
                 if salon_serializer.is_valid(raise_exception=True):
-                    salon_serializer.save()
+                    stylist.salon = salon_serializer.save()
             self._save_profile_photo(
                 stylist.user, validated_data.get('profile_photo_id', None)
             )

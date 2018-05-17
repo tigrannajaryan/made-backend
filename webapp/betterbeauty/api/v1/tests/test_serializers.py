@@ -70,11 +70,15 @@ class TestStylistSerializer(object):
             # 'salon_zipcode': '12345',
             # 'salon_state': 'CA',
         }
+        # check case when there's no salon on stylist's profile update
+        stylist_data.salon = None
+        stylist_data.save()
         serializer = StylistSerializer(
             instance=stylist_data, data=data, context={'user': stylist_data.user}
         )
         serializer.is_valid(raise_exception=True)
         stylist = serializer.save()
+        assert(stylist.salon is not None)
         assert(stylist.user.first_name == 'Jane')
         assert(stylist.salon.name == 'Janes beauty')
 
@@ -97,10 +101,12 @@ class TestStylistSerializer(object):
             # 'salon_zipcode': '12345',
             # 'salon_state': 'CA',
         }
+        assert(hasattr(user, 'stylist') is False)
         serializer = StylistSerializer(data=data, context={'user': user})
         serializer.is_valid(raise_exception=True)
         stylist: Stylist = serializer.save()
         assert(stylist is not None)
+        assert(stylist.salon is not None)
         assert(stylist.user.id == user.id)
         assert(stylist.salon.name == 'Test salon')
         assert(stylist.salon.timezone == pytz.timezone('America/New_York'))
