@@ -865,6 +865,44 @@ curl -X POST \
 
 ```
 
+## Invitations
+
+This is a POST-only API endpoint, which accepts list of phones.
+
+### Send invitation(s) to the client(s)
+**POST /api/v1/stylist/invitations**
+
+```
+curl -X POST \
+  http://apiserver/api/v1/stylist/invitations \
+  -H 'Authorization: Token jwt_token' \
+  -H 'Content-Type: application/json' \
+  -d '[
+	{
+		"phone": "12345"
+
+	},
+	{
+		"phone": "45678"
+
+	}
+]'
+```
+
+**Response 201 Created**
+```
+[
+	{
+		"phone": "12345"
+
+	},
+	{
+		"phone": "45678"
+
+	}
+]
+```
+
 
 ## Appointments
 ### List existing appointments

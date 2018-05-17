@@ -17,6 +17,7 @@ from client.models import Client
 from core.models import TemporaryFile, User
 from core.types import Weekday
 from salon.models import (
+    Invitation,
     Salon,
     ServiceCategory,
     ServiceTemplate,
@@ -628,3 +629,12 @@ class StylistTodaySerializer(serializers.ModelSerializer):
         ).exclude(
             datetime_start_at__gt=stylist.get_current_now() - F('duration')
         ).count()
+
+
+class InvitationSerializer(serializers.ModelSerializer):
+
+    phone = serializers.CharField(required=True)
+
+    class Meta:
+        model = Invitation
+        fields = ['phone', ]

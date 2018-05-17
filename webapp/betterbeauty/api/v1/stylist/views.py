@@ -20,6 +20,7 @@ from salon.models import ServiceTemplateSet, Stylist, StylistService
 from .constants import MAX_APPOINTMENTS_PER_REQUEST
 from .serializers import (
     AppointmentSerializer,
+    InvitationSerializer,
     ServiceTemplateSetDetailsSerializer,
     ServiceTemplateSetListSerializer,
     StylistAvailableWeekDayListSerializer,
@@ -238,3 +239,19 @@ class StylistAppointmentRetrieveCancelView(generics.RetrieveDestroyAPIView):
         return Appointment.all_objects.filter(
             stylist=stylist
         ).order_by('datetime_start_at')
+
+
+class InvitationView(views.APIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = InvitationSerializer(data=request.data, many=True)
+        serializer.is_valid(raise_exception=True)
+        created_objects = serializer.save(stylist=self.request.user.stylist)
+        response_status = status.HTTP_200_OK
+        if len(created_objects) > 0:
+            response_status = status.HTTP_201_CREATED
+        return Response(
+            InvitationSerializer(created_objects, many=True).data,
+            status=response_status
+        )

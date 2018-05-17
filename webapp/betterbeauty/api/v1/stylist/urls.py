@@ -1,6 +1,7 @@
 from django.conf.urls import url
 
 from .views import (
+    InvitationView,
     ServiceTemplateSetDetailsView,
     ServiceTemplateSetListView,
     StylistAppointmentListCreateView,
@@ -28,4 +29,5 @@ urlpatterns = [
     url('appointments$', StylistAppointmentListCreateView.as_view()),
     url('appointments/(?P<appointment_uuid>[0-9a-f\-]+)$',
         StylistAppointmentRetrieveCancelView.as_view()),
+    url('invitations$', InvitationView.as_view(), name='invitation'),
 ]
