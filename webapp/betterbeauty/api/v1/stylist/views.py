@@ -23,6 +23,7 @@ from .serializers import (
     InvitationSerializer,
     ServiceTemplateSetDetailsSerializer,
     ServiceTemplateSetListSerializer,
+    StylistAppointmentStatusSerializer,
     StylistAvailableWeekDayListSerializer,
     StylistAvailableWeekDaySerializer,
     StylistDiscountsSerializer,
@@ -224,15 +225,30 @@ class StylistAppointmentListCreateView(generics.ListCreateAPIView):
         )[:limit]
 
 
-class StylistAppointmentRetrieveCancelView(generics.RetrieveDestroyAPIView):
+class StylistAppointmentRetrieveUpdateCancelView(
+    generics.RetrieveUpdateDestroyAPIView
+):
     permission_classes = [StylistPermission, permissions.IsAuthenticated]
-    serializer_class = AppointmentSerializer
 
     lookup_url_kwarg = 'appointment_uuid'
     lookup_field = 'uuid'
 
+    def post(self, request, *args, **kwargs):
+        """Use this merely to allow using POST as PATCH"""
+        return self.partial_update(request, *args, **kwargs)
+
     def perform_destroy(self, instance: Appointment):
         instance.set_status(AppointmentStatus.CANCELLED_BY_STYLIST, self.request.user)
+
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return AppointmentSerializer
+        return StylistAppointmentStatusSerializer
+
+    def get_serializer_context(self):
+        return {
+            'user': self.request.user
+        }
 
     def get_queryset(self):
         stylist = self.request.user.stylist

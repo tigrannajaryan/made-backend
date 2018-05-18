@@ -991,6 +991,12 @@ client's name.
 frontend must omit the `client_uuid` param and instead supply
 `client_first_name` and `client_last_name`
 
+This API does not allow directly setting `status` field of an appointment;
+for freshly created appointment status will be set to `new`.
+
+To set status of an appointment, use the separate
+[Change appointment status](#change-appointment-status) API.
+
 **POST /api/v1/stylist/appointments[?force_start=true]**
 
 - **force_start** param, if set to `true`, disables time range checks
@@ -1084,6 +1090,40 @@ curl -X POST \
 }
 ```
 
+### Change appointment status
+**POST/PATCH /api/v1/appointments/{appointment_uuid}**
+
+```
+curl -X POST http://apiserver/api/v1/stylist/appointments/8cdc4851-62a6-4f91-9ff1-dba9d346f0a1 \
+  -H 'Authorization: Token jwt_token' \
+  -H 'Content-Type: application/json' \
+  -d '{"status": "new"}'
+```
+
+Statuses available for stylists to set on appointments:
+
+`new`, `no_show`, `cancelled_by_stylist`, `checked_out`.
+
+Note: at later stages we may want to add more fields to the request, e.g.
+to specify some extra information about checking out, etc.
+
+**Response 200 OK**
+
+```
+{
+    "status": "new"
+}
+```
+
+**Response 400 Bad Request**
+
+```
+{
+    "status": [
+        "Setting this status is not allowed"
+    ]
+}
+```
 
 ## Today screen
 **GET /api/v1/stylist/today**

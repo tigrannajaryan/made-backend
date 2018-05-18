@@ -12,7 +12,9 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
 import appointment.error_constants as appointment_errors
+from appointment.constants import APPOINTMENT_STYLIST_SETTABLE_STATUSES
 from appointment.models import Appointment
+from appointment.types import AppointmentStatus
 from client.models import Client
 from core.models import TemporaryFile, User
 from core.types import Weekday
@@ -561,6 +563,27 @@ class AppointmentSerializer(serializers.ModelSerializer):
         data['duration'] = service.duration
 
         return super(AppointmentSerializer, self).create(data)
+
+
+class StylistAppointmentStatusSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Appointment
+        fields = ['status', ]
+
+    def validate_status(self, status: AppointmentStatus) -> AppointmentStatus:
+        if status not in APPOINTMENT_STYLIST_SETTABLE_STATUSES:
+            raise serializers.ValidationError(
+                appointment_errors.ERR_STATUS_NOT_ALLOWED
+            )
+        return status
+
+    def save(self, **kwargs):
+        status = self.validated_data['status']
+        user: User = self.context['user']
+        appointment: Appointment = self.instance
+        appointment.set_status(status, user)
+        return appointment
 
 
 class StylistTodaySerializer(serializers.ModelSerializer):

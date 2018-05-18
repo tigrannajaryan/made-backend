@@ -5,7 +5,7 @@ from .views import (
     ServiceTemplateSetDetailsView,
     ServiceTemplateSetListView,
     StylistAppointmentListCreateView,
-    StylistAppointmentRetrieveCancelView,
+    StylistAppointmentRetrieveUpdateCancelView,
     StylistAvailabilityView,
     StylistDiscountsView,
     StylistServiceListView,
@@ -28,6 +28,6 @@ urlpatterns = [
     url('today$', StylistTodayView.as_view(), name='today'),
     url('appointments$', StylistAppointmentListCreateView.as_view()),
     url('appointments/(?P<appointment_uuid>[0-9a-f\-]+)$',
-        StylistAppointmentRetrieveCancelView.as_view()),
+        StylistAppointmentRetrieveUpdateCancelView.as_view()),
     url('invitations$', InvitationView.as_view(), name='invitation'),
 ]
