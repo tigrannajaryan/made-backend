@@ -17,7 +17,7 @@ from api.v1.stylist.serializers import (
     StylistServiceSerializer,
     StylistTodaySerializer,
 )
-from appointment.models import Appointment
+from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.models import Client
 from core.choices import USER_ROLE
@@ -618,6 +618,12 @@ class TestAppointmentSerializer(object):
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == 'Fred')
         assert(appointment.client is None)
+        assert(appointment.services.count() == 1)
+        original_service: AppointmentService = appointment.services.first()
+        assert(original_service.is_original is True)
+        assert(original_service.regular_price == service.base_price)
+        assert(original_service.service_uuid == service.service_uuid)
+        assert(original_service.service_name == service.name)
 
     @freeze_time('2018-05-17 15:30:00 UTC')
     @pytest.mark.django_db
@@ -650,3 +656,10 @@ class TestAppointmentSerializer(object):
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == client.user.first_name)
         assert(appointment.client == client)
+
+        assert (appointment.services.count() == 1)
+        original_service: AppointmentService = appointment.services.first()
+        assert (original_service.is_original is True)
+        assert (original_service.regular_price == service.base_price)
+        assert (original_service.service_uuid == service.service_uuid)
+        assert (original_service.service_name == service.name)

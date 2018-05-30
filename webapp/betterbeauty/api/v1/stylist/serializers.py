@@ -14,7 +14,7 @@ from rest_framework import serializers
 
 import appointment.error_constants as appointment_errors
 from appointment.constants import APPOINTMENT_STYLIST_SETTABLE_STATUSES
-from appointment.models import Appointment
+from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.models import Client
 from core.models import TemporaryFile, User
@@ -598,14 +598,28 @@ class AppointmentSerializer(AppointmentValidationMixin, serializers.ModelSeriali
         # regular price copied from service, client's price is calculated
         data['regular_price'] = service.base_price
         datetime_start_at: datetime.datetime = data['datetime_start_at']
-        data['client_price'] = int(service.calculate_price_for_client(
+        client_price = int(service.calculate_price_for_client(
             datetime_start_at=datetime_start_at,
             client=client
         ))
+        data['client_price'] = client_price
         data['service_name'] = service.name
         data['duration'] = service.duration
 
-        return super(AppointmentSerializer, self).create(data)
+        # create first AppointmentService
+        with transaction.atomic():
+            appointment: Appointment = super(AppointmentSerializer, self).create(data)
+            AppointmentService.objects.create(
+                appointment=appointment,
+                service_name=service.name,
+                service_uuid=service.service_uuid,
+                regular_price=service.base_price,
+                client_price=client_price,
+                is_original=True,
+                duration=service.duration,
+            )
+
+        return appointment
 
 
 class AppointmentPreviewSerializer(serializers.ModelSerializer):
