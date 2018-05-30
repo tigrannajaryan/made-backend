@@ -1177,7 +1177,7 @@ to specify some extra information about checking out, etc.
 **Response 200 OK**
 ```
 {
-    "next_appointments": [
+    "today_appointments": [
         {
             "uuid": "f9c736e1-2d0d-4daf-b30f-3225dd51a313",
             "client_first_name": "Fred",

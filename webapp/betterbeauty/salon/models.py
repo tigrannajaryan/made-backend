@@ -209,7 +209,6 @@ class Stylist(models.Model):
         :param kwargs: any optional filter kwargs to be applied
         :return: Resulting Appointment queryset
         """
-
         appointments = self.appointments.filter(
             **kwargs
         ).order_by('datetime_start_at')
@@ -250,7 +249,7 @@ class Stylist(models.Model):
         ).replace(hour=0, minute=0, second=0)
 
         return self.get_appointments_in_datetime_range(
-            datetime_from, next_midnight, include_cancelled
+            datetime_from, next_midnight, include_cancelled=include_cancelled
         )
 
     def get_current_week_appointments(

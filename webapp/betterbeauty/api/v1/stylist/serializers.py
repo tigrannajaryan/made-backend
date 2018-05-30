@@ -665,7 +665,7 @@ class StylistAppointmentStatusSerializer(serializers.ModelSerializer):
 
 
 class StylistTodaySerializer(serializers.ModelSerializer):
-    next_appointments = serializers.SerializerMethodField()
+    today_appointments = serializers.SerializerMethodField()
     today_visits_count = serializers.SerializerMethodField()
     week_visits_count = serializers.SerializerMethodField()
     past_visits_count = serializers.SerializerMethodField()
@@ -673,24 +673,21 @@ class StylistTodaySerializer(serializers.ModelSerializer):
     class Meta:
         model = Stylist
         fields = [
-            'next_appointments', 'today_visits_count', 'week_visits_count', 'past_visits_count',
+            'today_appointments', 'today_visits_count', 'week_visits_count', 'past_visits_count',
         ]
 
-    def get_next_appointments(self, stylist: Stylist):
-        """Return data for current, and if exists - next appointment"""
-        stylist_current_time = stylist.get_current_now()
-        next_midnight = (
-            stylist_current_time + datetime.timedelta(days=1)
-        ).replace(hour=0, minute=0, second=0)
-        next_appointments = stylist.get_appointments_in_datetime_range(
-            datetime_from=stylist_current_time,
-            datetime_to=next_midnight
-        )[:2]
-        if next_appointments.count():
-            if next_appointments.first().datetime_start_at > stylist_current_time:
-                # there's literally no *current* appointment, so we'll limit
-                # the query to just one next appointment
-                next_appointments = next_appointments[:1]
+    def get_today_appointments(self, stylist: Stylist):
+        """Return today's appointments that are still meaningful for the stylist"""
+        next_appointments = stylist.get_today_appointments(
+            upcoming_only=False,
+            include_cancelled=True
+        ).exclude(
+            status__in=[
+                AppointmentStatus.CANCELLED_BY_STYLIST,
+                AppointmentStatus.CHECKED_OUT,
+                AppointmentStatus.NO_SHOW,
+            ]
+        )
         return AppointmentSerializer(
             next_appointments, many=True
         ).data
