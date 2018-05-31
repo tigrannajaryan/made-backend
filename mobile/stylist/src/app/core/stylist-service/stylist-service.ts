@@ -1,9 +1,11 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+
 import { BaseApiService } from '~/shared/base-api-service';
-import { ServiceItem, ServicesTemplate, ServiceTemplateSet, StylistProfile } from './stylist-models';
 import { Logger } from '~/shared/logger';
 import { ServerStatusTracker } from '~/shared/server-status-tracker';
+
+import { ServiceItem, ServicesTemplate, ServiceTemplateSet, StylistProfile, StylistSummary } from './stylist-models';
 
 export interface ServicesResponse {
   services: ServiceItem[];
@@ -47,6 +49,13 @@ export class StylistServiceProvider extends BaseApiService {
   }
 
   /**
+   * Get data for stylist settings screen. The stylist must be already authenticated as a user.
+   */
+  async getStylistSummary(): Promise<StylistSummary> {
+    return this.get<StylistSummary>('stylist/settings');
+  }
+
+  /**
    * Get default service Templates. The stylist must be already authenticated as a user.
    */
   async getServiceTemplateSets(): Promise<ServiceTemplatesResponse> {
@@ -72,5 +81,12 @@ export class StylistServiceProvider extends BaseApiService {
    */
   async setStylistServices(data: any): Promise<ServiceItem> {
     return this.post<ServiceItem>('stylist/services', data);
+  }
+
+  /**
+   * Deletes service of a stylist. The stylist must be already authenticated as a user.
+   */
+  async deleteStylistService(id: number): Promise<ServiceItem> {
+    return this.delete<ServiceItem>(`stylist/services/${id}`);
   }
 }

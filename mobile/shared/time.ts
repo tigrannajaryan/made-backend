@@ -44,14 +44,22 @@ export class TimeRange {
   }
 }
 
+export enum FormatType { ShortForm, LongForm }
+
 /**
  * It get number in minutes and return converted string
  * input: 60
  * output: 1h 0m
  */
-export function convertMinsToHrsMins(mins: number): string {
+export function convertMinsToHrsMins(mins: number, format: FormatType = FormatType.LongForm): string {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
+
+  if (format === FormatType.ShortForm) {
+    let result = h !== 0 ? `${h}h` : '';
+    result += m !== 0 ? ` ${m < 10 ? '0' : ''}${m}m` : '';
+    return result.trim();
+  }
 
   return `${h}h ${m < 10 ? '0' : ''}${m}m`;
 }
