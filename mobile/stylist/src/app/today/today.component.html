@@ -56,7 +56,13 @@
             <div class="p-t-items-item-info-time">
               {{ appointment.datetime_start_at | date: 'h:mmaaaaa' }}
             </div>
-            <div class="p-t-items-item-info-desc">{{ appointment.service_name }}</div>
+            <div class="p-t-items-item-info-desc">
+              <ng-container *ngFor="let service of appointment.services">
+                <ng-container *ngIf="service.is_original">
+                  {{ service.service_name }}
+                </ng-container>
+              </ng-container>
+            </div>
           </div>
           <div class="p-t-items-item-name">
             <div [style.background-image]="" class="p-t-items-item-name-ava"></div>
