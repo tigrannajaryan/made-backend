@@ -5,7 +5,6 @@ import pytz
 
 from django_dynamic_fixture import G
 from freezegun import freeze_time
-from psycopg2.extras import DateRange
 
 import appointment.error_constants as appointment_errors
 from api.v1.stylist.serializers import (
@@ -28,7 +27,6 @@ from salon.models import (
     ServiceCategory,
     ServiceTemplate,
     Stylist,
-    StylistDateRangeDiscount,
     StylistService,
 )
 from salon.tests.test_models import stylist_appointments_data
@@ -289,9 +287,19 @@ class TestStylistProfileCompletenessSerializer(object):
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_weekday_discounts_set'] is False
         )
-        stylist_data.weekday_discounts.filter(weekday=1).update(
-            discount_percent=20
+        data = {
+            'weekdays': [
+                {
+                    'weekday': 1,
+                    'discount_percent': 10
+                }
+            ]
+        }
+        serializer = StylistDiscountsSerializer(
+            instance=stylist_data, data=data, partial=True
         )
+        assert(serializer.is_valid() is True)
+        stylist_data = serializer.save()
         assert (
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_weekday_discounts_set'] is True
@@ -303,29 +311,17 @@ class TestStylistProfileCompletenessSerializer(object):
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_other_discounts_set'] is False
         )
-        stylist_data.first_time_book_discount_percent = 10
-        stylist_data.save()
+        data = {
+            'first_booking': 10
+        }
+        serializer = StylistDiscountsSerializer(
+            instance=stylist_data, data=data, partial=True
+        )
+        assert (serializer.is_valid() is True)
+        stylist_data = serializer.save()
         assert (
             StylistProfileStatusSerializer(
-                instance=stylist_data).data['has_other_discounts_set'] is True
-        )
-        stylist_data.first_time_book_discount_percent = 0
-        stylist_data.rebook_within_1_week_discount_percent = 10
-        stylist_data.save()
-        assert (
-            StylistProfileStatusSerializer(
-                instance=stylist_data).data['has_other_discounts_set'] is True
-        )
-        stylist_data.first_time_book_discount_percent = 0
-        stylist_data.rebook_within_1_week_discount_percent = 0
-        stylist_data.save()
-        G(
-            StylistDateRangeDiscount, stylist=stylist_data,
-            dates=DateRange(datetime.date(2018, 4, 8), datetime.date(2018, 4, 10))
-        )
-        assert (
-            StylistProfileStatusSerializer(
-                instance=stylist_data).data['has_other_discounts_set'] is True
+                instance=stylist_data).data['has_weekday_discounts_set'] is True
         )
 
 
@@ -410,7 +406,6 @@ class TestStylistDiscountsSerializer(object):
         assert(stylist.first_time_book_discount_percent == 10)
         assert(stylist.rebook_within_1_week_discount_percent == 20)
         assert(stylist.rebook_within_2_weeks_discount_percent == 30)
-        assert(stylist.weekday_discounts.filter(discount_percent=0).count() == 5)
         assert(stylist.weekday_discounts.get(weekday=1).discount_percent == 40)
         assert (stylist.weekday_discounts.get(weekday=2).discount_percent == 50)
 

@@ -110,6 +110,8 @@ class Stylist(models.Model):
         default=0, validators=[MaxValueValidator(100)]
     )
 
+    is_discount_configured = models.BooleanField(default=False)
+
     class Meta:
         db_table = 'stylist'
 

@@ -341,16 +341,10 @@ class StylistProfileStatusSerializer(serializers.ModelSerializer):
         ).exists()
 
     def get_has_weekday_discounts_set(self, stylist: Stylist) -> bool:
-        return stylist.weekday_discounts.filter(discount_percent__gt=0).exists()
+        return stylist.is_discount_configured
 
     def get_has_other_discounts_set(self, stylist: Stylist) -> bool:
-        """Returns True if any of the miscellaneous discounts is set"""
-        return any([
-            stylist.first_time_book_discount_percent > 0,
-            stylist.rebook_within_1_week_discount_percent > 0,
-            stylist.rebook_within_2_weeks_discount_percent > 0,
-            stylist.date_range_discounts.exists()
-        ])
+        return stylist.is_discount_configured
 
     def get_has_invited_clients(self, stylist: Stylist) -> bool:
         return stylist.invites.exists()
@@ -470,6 +464,7 @@ class StylistDiscountsSerializer(serializers.ModelSerializer):
                         instance=instance, data=weekday_discount)
                     discount_serializer.is_valid(raise_exception=True)
                     discount_serializer.save(stylist=stylist)
+            stylist.is_discount_configured = True
             return super(StylistDiscountsSerializer, self).update(stylist, validated_data)
 
     class Meta:
