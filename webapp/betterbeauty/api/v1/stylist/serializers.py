@@ -133,7 +133,9 @@ class StylistServiceSerializer(serializers.ModelSerializer):
 class StylistSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
 
-    salon_name = serializers.CharField(source='salon.name', allow_null=True)
+    salon_name = serializers.CharField(
+        source='salon.name', allow_null=True, required=False
+    )
     salon_address = serializers.CharField(source='salon.address', allow_null=True)
 
     # TODO: Enable address sub-fields as soon as we have proper address splitting mechanics
@@ -155,11 +157,6 @@ class StylistSerializer(serializers.ModelSerializer):
             'id', 'first_name', 'last_name', 'phone', 'profile_photo_url',
             'salon_name', 'salon_address', 'profile_photo_id',
         ]
-
-    def validate_salon_name(self, salon_name: str) -> str:
-        if not salon_name:
-            raise serializers.ValidationError('This field is required')
-        return salon_name
 
     def validate_salon_address(self, salon_address: str) -> str:
         if not salon_address:

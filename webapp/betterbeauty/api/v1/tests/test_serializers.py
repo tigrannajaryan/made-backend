@@ -124,6 +124,27 @@ class TestStylistSerializer(object):
         assert(stylist.user.first_name == 'Jane')
         assert(stylist.available_days.count() == 7)
 
+    @pytest.mark.django_db
+    def test_stylist_create_without_salon_name(self):
+        user: User = G(
+            User,
+            email='stylist@example.com',
+            role=USER_ROLE.stylist,
+        )
+        assert (user.is_stylist() is True)
+        data = {
+            'first_name': 'Jane',
+            'last_name': 'McBob',
+            'phone': '(650) 350-1111',
+            'salon_address': '1234 Front Street',
+            'salon_name': None,
+        }
+        assert (hasattr(user, 'stylist') is False)
+        serializer = StylistSerializer(data=data, context={'user': user})
+        serializer.is_valid(raise_exception=True)
+        stylist: Stylist = serializer.save()
+        assert(stylist.salon.__str__() == '[No name] (1234 Front Street)')
+
 
 class TestStylistServiceSerializer(object):
     @pytest.mark.django_db
