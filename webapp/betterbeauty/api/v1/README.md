@@ -1418,52 +1418,60 @@ in one gulp for the Stylist app's Settings screen.
             "work_start_at": "08:00:00",
             "work_end_at": "17:00:00",
             "is_available": true,
-            "booked_time_minutes": 20
+            "booked_time_minutes": 20,
+            "booked_appointments_count": 1
         },
         {
             "weekday_iso": 2,
             "work_start_at": "08:00:00",
             "work_end_at": "17:00:00",
             "is_available": true,
-            "booked_time_minutes": 20
+            "booked_time_minutes": 20,
+            "booked_appointments_count": 1
         },
         {
             "weekday_iso": 3,
             "work_start_at": "08:00:00",
             "work_end_at": "17:00:00",
             "is_available": true,
-            "booked_time_minutes": 0
+            "booked_time_minutes": 0,
+            "booked_appointments_count": 0
         },
         {
             "weekday_iso": 4,
             "work_start_at": "08:00:00",
             "work_end_at": "17:00:00",
             "is_available": true,
-            "booked_time_minutes": 0
+            "booked_time_minutes": 0,
+            "booked_appointments_count": 0
         },
         {
             "weekday_iso": 5,
             "work_start_at": "08:00:00",
             "work_end_at": "17:00:00",
             "is_available": true,
-            "booked_time_minutes": 0
+            "booked_time_minutes": 0,
+            "booked_appointments_count": 0
         },
         {
             "weekday_iso": 6,
             "work_start_at": null,
             "work_end_at": null,
             "is_available": false,
-            "booked_time_minutes": 0
+            "booked_time_minutes": 0,
+            "booked_appointments_count": 0
         },
         {
             "weekday_iso": 7,
             "work_start_at": null,
             "work_end_at": null,
             "is_available": false,
-            "booked_time_minutes": 0
+            "booked_time_minutes": 0,
+            "booked_appointments_count": 0
         }
     ],
-    "total_week_booked_minutes": 40
+    "total_week_booked_minutes": 40,
+    "total_week_appointments_count: 2
 }
 ```
 

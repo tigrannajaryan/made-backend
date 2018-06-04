@@ -383,11 +383,13 @@ class StylistAvailableWeekDaySerializer(serializers.ModelSerializer):
 class StylistAvailableWeekDayWithBookedTimeSerializer(serializers.ModelSerializer):
     weekday_iso = serializers.IntegerField(source='weekday')
     booked_time_minutes = serializers.SerializerMethodField()
+    booked_appointments_count = serializers.SerializerMethodField()
 
     class Meta:
         model = StylistAvailableWeekDay
         fields = [
             'weekday_iso', 'work_start_at', 'work_end_at', 'is_available', 'booked_time_minutes',
+            'booked_appointments_count',
         ]
 
     def get_booked_time_minutes(self, weekday: StylistAvailableWeekDay) -> int:
@@ -408,6 +410,18 @@ class StylistAvailableWeekDayWithBookedTimeSerializer(serializers.ModelSerialize
         )['total_duration']
 
         return int(total_week_duration.total_seconds() / 60)
+
+    def get_booked_appointments_count(self, weekday: StylistAvailableWeekDay) -> int:
+        stylist: Stylist = weekday.stylist
+        # ExtractWeekDay returns non-iso weekday, e.g. Sunday == 1, so need to cast
+        current_non_iso_week_day = (weekday.weekday % 7) + 1
+        return stylist.get_current_week_appointments(
+            include_cancelled=False
+        ).annotate(
+            weekday=ExtractWeekDay('datetime_start_at')
+        ).filter(
+            weekday=current_non_iso_week_day
+        ).count()
 
 
 class StylistAvailableWeekDayListSerializer(serializers.ModelSerializer):
@@ -836,11 +850,13 @@ class StylistSettingsRetrieveSerializer(serializers.ModelSerializer):
         source='available_days', many=True
     )
     total_week_booked_minutes = serializers.SerializerMethodField()
+    total_week_appointments_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Stylist
         fields = [
             'profile', 'services_count', 'services', 'worktime', 'total_week_booked_minutes',
+            'total_week_appointments_count',
         ]
 
     def get_services(self, stylist: Stylist):
@@ -858,3 +874,8 @@ class StylistSettingsRetrieveSerializer(serializers.ModelSerializer):
         )['total_duration']
 
         return int(total_week_duration.total_seconds() / 60)
+
+    def get_total_week_appointments_count(self, stylist: Stylist) -> int:
+        return stylist.get_current_week_appointments(
+            include_cancelled=False
+        ).count()

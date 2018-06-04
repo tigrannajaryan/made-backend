@@ -11,10 +11,12 @@ from api.v1.stylist.serializers import (
     AppointmentSerializer,
     AppointmentUpdateSerializer,
     StylistAvailableWeekDaySerializer,
+    StylistAvailableWeekDayWithBookedTimeSerializer,
     StylistDiscountsSerializer,
     StylistProfileStatusSerializer,
     StylistSerializer,
     StylistServiceSerializer,
+    StylistSettingsRetrieveSerializer,
     StylistTodaySerializer,
 )
 from appointment.models import Appointment, AppointmentService
@@ -22,7 +24,7 @@ from appointment.types import AppointmentStatus
 from client.models import Client
 from core.choices import USER_ROLE
 from core.models import User
-from core.types import Weekday
+from core.types import UserRole, Weekday
 from salon.models import (
     Salon,
     ServiceCategory,
@@ -835,3 +837,42 @@ class TestAppointmentUpdateSerializer(object):
             saved_appointment.services.filter(is_original=False).first().service_uuid ==
             new_service.service_uuid
         )
+
+
+class TestStylistAvailableWeekDayWithBookedTimeSerializer(object):
+    @freeze_time('2018-05-14 13:30:00 UTC')
+    @pytest.mark.django_db
+    def test_get_booked_time_and_count(self):
+        user = G(User, role=UserRole.STYLIST)
+        salon = G(Salon, timezone=pytz.utc)
+        stylist = create_stylist_profile_for_user(user, salon=salon)
+        stylist_appointments_data(stylist)
+        monday = stylist.available_days.get(weekday=Weekday.MONDAY)
+        serializer = StylistAvailableWeekDayWithBookedTimeSerializer(
+            monday
+        )
+        data = serializer.data
+        assert(data['booked_time_minutes'] == 120)
+        assert(data['booked_appointments_count'] == 4)
+
+        tuesday = stylist.available_days.get(weekday=Weekday.TUESDAY)
+        serializer = StylistAvailableWeekDayWithBookedTimeSerializer(
+            tuesday
+        )
+        data = serializer.data
+        assert (data['booked_time_minutes'] == 30)
+        assert (data['booked_appointments_count'] == 1)
+
+
+class TestStylistSettingsRetrieveSerializer(object):
+    @freeze_time('2018-05-14 13:30:00 UTC')
+    @pytest.mark.django_db
+    def test_get_total_booked_time_and_count(self):
+        user = G(User, role=UserRole.STYLIST)
+        salon = G(Salon, timezone=pytz.utc)
+        stylist = create_stylist_profile_for_user(user, salon=salon)
+        stylist_appointments_data(stylist)
+        serializer = StylistSettingsRetrieveSerializer(stylist)
+        data = serializer.data
+        assert (data['total_week_booked_minutes'] == 150)
+        assert (data['total_week_appointments_count'] == 5)
