@@ -55,7 +55,7 @@ export class ServiceItemComponent {
   async onServiceDelete(): Promise<void> {
     const {service} = this.data;
 
-    if (service && service.id !== undefined) {
+    if (service && service.uuid !== undefined) {
       await this.deleteService(service);
     }
 
@@ -68,7 +68,7 @@ export class ServiceItemComponent {
   @loading
   async deleteService(service: ServiceTemplateItem): Promise<void> {
     try {
-      await this.stylistService.deleteStylistService(service.id);
+      await this.stylistService.deleteStylistService(service.uuid);
     } catch (e) {
       showAlert(this.alertCtrl, 'Error', e);
     }
@@ -78,11 +78,11 @@ export class ServiceItemComponent {
    * Submit the data and close the modal.
    */
   submit(): void {
-    const { vars, categoryUuid, id, ...service } = this.form.value;
+    const { vars, categoryUuid, uuid, ...service } = this.form.value;
 
-    // id should be added only if present
-    if (id !== null) {
-      service.id = id;
+    // uuid should be added only if present
+    if (uuid !== null) {
+      service.uuid = uuid;
     }
 
     const newData: ServiceItemComponentData = {
@@ -105,7 +105,7 @@ export class ServiceItemComponent {
 
       categoryUuid: ['', Validators.required],
 
-      id: undefined,
+      uuid: undefined,
       base_price: ['', Validators.required],
       description: [''],
       duration_minutes: ['', Validators.required],
@@ -137,7 +137,7 @@ export class ServiceItemComponent {
       }
 
       if (data.service) {
-        this.setFormControl('id', data.service.id);
+        this.setFormControl('uuid', data.service.uuid);
         this.setFormControl('base_price', data.service.base_price);
         this.setFormControl('description', data.service.description);
         this.setFormControl('duration_minutes', data.service.duration_minutes);

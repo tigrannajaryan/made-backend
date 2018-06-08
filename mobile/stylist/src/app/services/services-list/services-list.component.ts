@@ -29,10 +29,11 @@ import { showAlert } from '~/core/utils/alert';
 })
 export class ServicesListComponent {
   protected PageNames = PageNames;
+  protected categories: ServiceCategory[] = [];
   protected isEmptyCategories = false;
   protected isProfile?: Boolean;
-  protected timeGap = 15;
   protected templateSet: ServiceTemplateSet;
+  protected timeGap = 15;
 
   static checkIfEmptyCategories(categories: ServiceCategory[]): boolean {
     return categories.every((cat: ServiceCategory) => {
@@ -61,44 +62,16 @@ export class ServicesListComponent {
       let response;
 
       if (uuid) {
-        response = await this.stylistService.getServiceTemplateSetById(uuid);
-        this.templateSet = {
-          ...response.template_set,
-          categories: response.template_set.categories.map(this.removeServicesIds)
-        };
+        response = await this.stylistService.getServiceTemplateSetByUuid(uuid);
       } else {
         response = await this.stylistService.getStylistServices();
-        this.templateSet = {
-          name: 'My services',
-          description: '',
-          categories: this.getCategorisedServices(response.services)
-        };
       }
-
-      this.isEmptyCategories = ServicesListComponent.checkIfEmptyCategories(this.templateSet.categories);
+      this.categories = response.categories;
+      this.timeGap = response.service_time_gap_minutes;
+      this.isEmptyCategories = ServicesListComponent.checkIfEmptyCategories(this.categories);
     } catch (e) {
       showAlert(this.alertCtrl, 'Loading services failed', e.message);
     }
-  }
-
-  removeServicesIds(category): ServiceCategory[] {
-    return {
-      ...category,
-      services: category.services.map(({id, ...serviceWithoutId}) => serviceWithoutId)
-    };
-  }
-
-  getCategorisedServices(services): ServiceCategory[] {
-    return services.reduce((categories, service) => {
-      let category = categories.find(({uuid}) => uuid === service.category_uuid);
-      if (!category) {
-        const {category_name: name, category_uuid: uuid} = service;
-        category = {name, uuid, services: []};
-        categories.push(category);
-      }
-      category.services.push(service);
-      return categories;
-    }, []);
   }
 
   /**
@@ -108,7 +81,7 @@ export class ServicesListComponent {
    */
   openServiceModal(category: ServiceCategory, service?: ServiceTemplateItem): void {
     const itemToEdit: ServiceItemComponentData = {
-      categories: this.templateSet.categories,
+      categories: this.categories,
       service,
       categoryUuid: category ? category.uuid : undefined
     };
@@ -126,7 +99,7 @@ export class ServicesListComponent {
   @loading
   async saveChanges(): Promise<void> {
     const categoriesServices =
-      this.templateSet.categories.reduce((services, category) => (
+      this.categories.reduce((services, category) => (
         services.concat(
           category.services.map(service => ({
             ...service,
@@ -137,7 +110,10 @@ export class ServicesListComponent {
       ), []);
 
     try {
-      await this.stylistService.setStylistServices(categoriesServices);
+      await this.stylistService.setStylistServices({
+        services: categoriesServices,
+        service_time_gap_minutes: this.timeGap
+      });
       if (this.isProfile) {
         this.navCtrl.pop();
       } else {
@@ -163,9 +139,9 @@ export class ServicesListComponent {
   async deleteService(category: ServiceCategory, idx: number): Promise<void> {
     const [service] = category.services.splice(idx, 1);
 
-    if (service.id !== undefined) {
+    if (service.uuid !== undefined) {
       try {
-        await this.stylistService.deleteStylistService(service.id);
+        await this.stylistService.deleteStylistService(service.uuid);
       } catch (e) {
         showAlert(this.alertCtrl, 'Error', e);
 
@@ -174,7 +150,7 @@ export class ServicesListComponent {
       }
     }
 
-    this.isEmptyCategories = ServicesListComponent.checkIfEmptyCategories(this.templateSet.categories);
+    this.isEmptyCategories = ServicesListComponent.checkIfEmptyCategories(this.categories);
   }
 
   /**
@@ -189,8 +165,8 @@ export class ServicesListComponent {
     }
 
     // Find old item
-    let categoryIndex = this.templateSet.categories.findIndex(x => x.uuid === itemToEdit.categoryUuid);
-    let category: ServiceCategory = this.templateSet.categories[categoryIndex];
+    let categoryIndex = this.categories.findIndex(x => x.uuid === itemToEdit.categoryUuid);
+    let category: ServiceCategory = this.categories[categoryIndex];
     let serviceIndex: number = itemToEdit.service ? category.services.findIndex(x => x === itemToEdit.service) : -1;
 
     if (itemToEdit.categoryUuid !== editedItem.categoryUuid) {
@@ -202,8 +178,8 @@ export class ServicesListComponent {
       // Edit item not empty (indicates deletion if it is empty)
       if (editedItem.service) {
         // Not empty. Add to new category.
-        categoryIndex = this.templateSet.categories.findIndex(x => x.uuid === editedItem.categoryUuid);
-        category = this.templateSet.categories[categoryIndex];
+        categoryIndex = this.categories.findIndex(x => x.uuid === editedItem.categoryUuid);
+        category = this.categories[categoryIndex];
         category.services.push(editedItem.service);
       }
     } else {
@@ -215,6 +191,6 @@ export class ServicesListComponent {
       category.services[serviceIndex] = editedItem.service;
     }
 
-    this.isEmptyCategories = ServicesListComponent.checkIfEmptyCategories(this.templateSet.categories);
+    this.isEmptyCategories = ServicesListComponent.checkIfEmptyCategories(this.categories);
   }
 }
