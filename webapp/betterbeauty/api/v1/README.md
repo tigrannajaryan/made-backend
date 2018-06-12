@@ -1154,6 +1154,8 @@ to preview resulting price and conflicting appointments (if any).
 
 - **service_uuid** (required) - uuid of a service to create appointment for
 - **datetime_start_at** (required) - datetime when appointment is to start
+- **has_tax_included** (required) - whether or not grand total should contain tax
+- **has_card_fee_included** (required) - should card fee be applied on top
 - **client_uuid** (optional) - if supplied, client price may be different
 from the base price
 
@@ -1167,7 +1169,9 @@ curl -X POST \
 	"services": [
 		{"service_uuid": "f23748c1-9201-4408-8114-72caeac291da"},
 		{"service_uuid": "c037f7be-2d29-4c52-94c1-c3e328ec202b"}
-	]
+	],
+	"has_tax_included": False,
+	"has_card_fee_included": False
 }'
 ```
 
@@ -1206,7 +1210,10 @@ curl -X POST \
     ],
     "total_client_price_before_tax": 295,
     "total_tax": 26.18,
-    "total_card_fee": 8.83
+    "total_card_fee": 8.83,
+    "grand_total": 315,
+    "has_tax_included": False,
+    "has_card_fee_included": False,
 }
 ```
 
@@ -1280,9 +1287,12 @@ curl -X POST \
     "uuid": "a406c7cc-17c2-493a-90e0-9091f740be37",
     "client_first_name": "Fred",
     "client_last_name": "McBob",
-    "total_client_price_before_tax": 90,
-    "total_card_fee": 2.7,
-    "total_tax": 7.98,
+    "total_client_price_before_tax": 295,
+    "total_tax": 26.18,
+    "total_card_fee": 8.83,
+    "grand_total": 315,
+    "has_tax_included": False,
+    "has_card_fee_included": False,
     "datetime_start_at": "2018-05-20T18:00:00-04:00",
     "duration_minutes": 60,
     "status": "new",
@@ -1391,6 +1401,9 @@ Services will be saved to the appointment, preserving `is_original` flag.
     "total_tax": 26.18,
     "total_card_fee": 8.83,
     "total_client_price_before_tax": 295,
+    "grand_total": 315,
+    "has_tax_included": False,
+    "has_card_fee_included": False,
     "services": [
         {
             "uuid": "50701ff2-4774-4457-8078-5b956a16bd61",

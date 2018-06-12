@@ -1,6 +1,7 @@
 import datetime
 
 import uuid
+from decimal import Decimal
 from typing import Dict, List, Optional
 
 from django.core.files.base import ContentFile
@@ -18,7 +19,10 @@ from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.models import Client
 from core.models import TemporaryFile, User
-from core.types import Weekday
+from core.types import AppointmentPrices, Weekday
+from core.utils import (
+    calculate_appointment_prices,
+)
 from salon.models import (
     Invitation,
     Salon,
@@ -646,6 +650,13 @@ class AppointmentSerializer(AppointmentValidationMixin, serializers.ModelSeriali
         max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
     )
 
+    grand_total = serializers.DecimalField(
+        max_digits=4, decimal_places=0, coerce_to_string=False, read_only=True
+    )
+
+    has_tax_included = serializers.NullBooleanField(read_only=True)
+    has_card_fee_included = serializers.NullBooleanField(read_only=True)
+
     services = AppointmentServiceSerializer(many=True)
 
     datetime_start_at = serializers.DateTimeField()
@@ -660,7 +671,7 @@ class AppointmentSerializer(AppointmentValidationMixin, serializers.ModelSeriali
             'uuid', 'client_uuid', 'client_first_name', 'client_last_name',
             'client_phone', 'datetime_start_at', 'duration_minutes', 'status',
             'total_tax', 'total_card_fee', 'total_client_price_before_tax',
-            'services',
+            'services', 'grand_total', 'has_tax_included', 'has_card_fee_included',
         ]
 
     def create(self, validated_data):
@@ -689,6 +700,7 @@ class AppointmentSerializer(AppointmentValidationMixin, serializers.ModelSeriali
         with transaction.atomic():
             appointment_services = data.pop('services', [])
             appointment: Appointment = super(AppointmentSerializer, self).create(data)
+            total_client_price_before_tax: Decimal = 0
             for appointment_service in appointment_services:
                 service: StylistService = stylist.services.get(
                     uuid=appointment_service['service_uuid']
@@ -707,6 +719,15 @@ class AppointmentSerializer(AppointmentValidationMixin, serializers.ModelSeriali
                     client_price=client_price,
                     is_original=True
                 )
+                total_client_price_before_tax += client_price
+
+            # set initial price settings
+            appointment_prices: AppointmentPrices = calculate_appointment_prices(
+                total_client_price_before_tax, False, False
+            )
+            for k, v in appointment_prices._asdict().items():
+                setattr(appointment, k, v)
+            appointment.save()
 
         return appointment
 
@@ -734,6 +755,8 @@ class AppointmentPreviewRequestSerializer(AppointmentValidationMixin, serializer
     )
     services = AppointmentServiceSerializer(many=True, required=True)
     datetime_start_at = serializers.DateTimeField()
+    has_tax_included = serializers.BooleanField()
+    has_card_fee_included = serializers.BooleanField()
 
 
 class AppointmentPreviewResponseSerializer(serializers.Serializer):
@@ -745,6 +768,9 @@ class AppointmentPreviewResponseSerializer(serializers.Serializer):
     )
     duration_minutes = DurationMinuteField(source='duration', read_only=True)
     conflicts_with = AppointmentPreviewSerializer(many=True)
+    grand_total = serializers.DecimalField(
+        max_digits=4, decimal_places=0, coerce_to_string=False, read_only=True
+    )
     total_client_price_before_tax = serializers.DecimalField(
         max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
     )
@@ -754,6 +780,8 @@ class AppointmentPreviewResponseSerializer(serializers.Serializer):
     total_card_fee = serializers.DecimalField(
         max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
     )
+    has_tax_included = serializers.BooleanField(read_only=True)
+    has_card_fee_included = serializers.BooleanField(read_only=True)
 
 
 class AppointmentUpdateSerializer(
@@ -761,17 +789,34 @@ class AppointmentUpdateSerializer(
 ):
 
     services = AppointmentServiceSerializer(many=True, required=False)
+    has_tax_included = serializers.NullBooleanField(required=False)
+    has_card_fee_included = serializers.NullBooleanField(required=False)
 
     class Meta:
         model = Appointment
-        fields = ['status', 'services', ]
+        fields = ['status', 'services', 'has_tax_included', 'has_card_fee_included', ]
 
     def validate(self, attrs):
         status = self.initial_data['status']
-        if status == AppointmentStatus.CHECKED_OUT and 'services' not in self.initial_data:
-            raise serializers.ValidationError({
-                'services': appointment_errors.ERR_SERVICE_REQUIRED
-            })
+        if status == AppointmentStatus.CHECKED_OUT:
+            if self.instance and self.instance.status == AppointmentStatus.CHECKED_OUT:
+                raise serializers.ValidationError({
+                    'status': appointment_errors.ERR_NO_SECOND_CHECKOUT
+                })
+            if 'services' not in self.initial_data:
+                raise serializers.ValidationError({
+                    'services': appointment_errors.ERR_SERVICE_REQUIRED
+                })
+            if 'has_tax_included' not in self.initial_data:
+                raise serializers.ValidationError({
+                    'has_tax_included':
+                        serializers.Field.default_error_messages['required']
+                })
+            if 'has_card_fee_included' not in self.initial_data:
+                raise serializers.ValidationError({
+                    'has_card_fee_included':
+                        serializers.Field.default_error_messages['required']
+                })
         return attrs
 
     def validate_services(self, services):
@@ -806,7 +851,7 @@ class AppointmentUpdateSerializer(
         appointment.services.all().delete()
         for service_record in service_records:
             service_uuid: uuid.UUID = service_record['service_uuid']
-            service: StylistService = stylist_services.get(service_uuid=service_uuid)
+            service: StylistService = stylist_services.get(uuid=service_uuid)
             AppointmentService.objects.create(
                 appointment=appointment,
                 service_uuid=service.uuid,
@@ -820,6 +865,7 @@ class AppointmentUpdateSerializer(
             )
 
     def save(self, **kwargs):
+
         status = self.validated_data['status']
         user: User = self.context['user']
         appointment: Appointment = self.instance
@@ -829,6 +875,22 @@ class AppointmentUpdateSerializer(
                     appointment, self.validated_data['services']
                 )
             appointment.set_status(status, user)
+            total_client_price_before_tax: Decimal = appointment.services.aggregate(
+                total_before_tax=Coalesce(Sum('client_price'), 0)
+            )['total_before_tax']
+
+            # update final prices and save appointment
+
+            appointment_prices: AppointmentPrices = calculate_appointment_prices(
+                total_client_price_before_tax,
+                self.validated_data['has_card_fee_included'],
+                self.validated_data['has_tax_included']
+            )
+
+            for k, v in appointment_prices._asdict().items():
+                setattr(appointment, k, v)
+            appointment.save()
+
         return appointment
 
 

@@ -15,7 +15,11 @@ from api.common.permissions import (
 from appointment.models import Appointment
 from appointment.types import AppointmentStatus
 from client.models import Client
-from core.utils import calculate_card_fee, calculate_tax, post_or_get
+from core.types import AppointmentPrices
+from core.utils import (
+    calculate_appointment_prices,
+    post_or_get,
+)
 from salon.models import ServiceTemplateSet, Stylist, StylistService
 from .constants import MAX_APPOINTMENTS_PER_REQUEST
 from .serializers import (
@@ -230,7 +234,7 @@ class StylistAppointmentPreviewView(views.APIView):
         # need to use comprehension to accommodate possible duplicated
         # services, which is actually a valid case (e.g. double conditioning)
         services = [
-            stylist.services.get(service_uuid=service['service_uuid'])
+            stylist.services.get(uuid=service['service_uuid'])
             for service in preview_request.services
         ]
         client: Optional[Client] = Client.objects.filter(
@@ -245,10 +249,11 @@ class StylistAppointmentPreviewView(views.APIView):
                 ) for service in services
             ], Decimal(0))
         )
-
-        total_tax = calculate_tax(total_client_price_before_tax)
-        total_card_fee = calculate_card_fee(total_client_price_before_tax + total_tax)
-
+        appointment_prices: AppointmentPrices = calculate_appointment_prices(
+            total_client_price_before_tax,
+            preview_request.has_card_fee_included,
+            preview_request.has_tax_included
+        )
         duration = sum(
             [service.duration for service in services], datetime.timedelta(0)
         )
@@ -258,13 +263,15 @@ class StylistAppointmentPreviewView(views.APIView):
             preview_request.datetime_start_at,
             preview_request.datetime_start_at + duration
         )
-
         return AppointmentPreviewResponse(
-            total_client_price_before_tax=total_client_price_before_tax,
-            total_tax=total_tax,
-            total_card_fee=total_card_fee,
             duration=duration,
-            conflicts_with=conflicts_with
+            conflicts_with=conflicts_with,
+            total_client_price_before_tax=appointment_prices.total_client_price_before_tax,
+            grand_total=appointment_prices.grand_total,
+            total_tax=appointment_prices.total_tax,
+            total_card_fee=appointment_prices.total_card_fee,
+            has_tax_included=appointment_prices.has_tax_included,
+            has_card_fee_included=appointment_prices.has_card_fee_included
         )
 
 

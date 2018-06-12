@@ -15,10 +15,10 @@ class AppointmentServiceAdminForm(forms.ModelForm):
         service_uuid = self.cleaned_data.get('service_uuid')
         appointment = self.cleaned_data.get('appointment')
         if not appointment.stylist.services.filter(
-                service_uuid=service_uuid
+                uuid=service_uuid
         ).exists():
             raise forms.ValidationError(
-                "Appointment service UUID must match `service_uuid` "
+                "Appointment's service_uuid must match `uuid` "
                 "of any of the stylist's services"
             )
         return service_uuid

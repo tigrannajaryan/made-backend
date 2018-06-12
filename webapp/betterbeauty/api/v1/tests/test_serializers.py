@@ -25,6 +25,7 @@ from client.models import Client
 from core.choices import USER_ROLE
 from core.models import User
 from core.types import UserRole, Weekday
+from core.utils import calculate_card_fee, calculate_tax
 from salon.models import (
     Salon,
     ServiceCategory,
@@ -779,7 +780,9 @@ class TestAppointmentUpdateSerializer(object):
             'status': AppointmentStatus.CHECKED_OUT.value,
             'services': [
                 {'service_uuid': appointment_service_valid.service_uuid}
-            ]
+            ],
+            'has_tax_included': False,
+            'has_card_fee_included': False
         }
         serializer = AppointmentUpdateSerializer(instance=appointment, data=data, context=context)
         assert (serializer.is_valid() is True)
@@ -795,6 +798,23 @@ class TestAppointmentUpdateSerializer(object):
         assert (
             appointment_errors.ERR_SERVICE_DOES_NOT_EXIST in
             serializer.errors['services']
+        )
+        appointment.status = AppointmentStatus.CHECKED_OUT
+        appointment.save()
+
+        data = {
+            'status': AppointmentStatus.CHECKED_OUT.value,
+            'services': [
+                {'service_uuid': appointment_service_valid.service_uuid}
+            ],
+            'has_tax_included': False,
+            'has_card_fee_included': False
+        }
+        serializer = AppointmentUpdateSerializer(instance=appointment, data=data, context=context)
+        assert (serializer.is_valid() is False)
+        assert (
+            appointment_errors.ERR_NO_SECOND_CHECKOUT in
+            serializer.errors['status']
         )
 
     @pytest.mark.django_db
@@ -825,7 +845,7 @@ class TestAppointmentUpdateSerializer(object):
             'stylist': appointment.stylist,
             'user': appointment.stylist.user
         }
-        original_service = G(
+        original_service: StylistService = G(
             StylistService, stylist=appointment.stylist,
             duration=datetime.timedelta(30),
         )
@@ -835,7 +855,7 @@ class TestAppointmentUpdateSerializer(object):
             duration=original_service.duration, is_original=True
         )
 
-        new_service = G(
+        new_service: StylistService = G(
             StylistService, stylist=appointment.stylist,
             duration=datetime.timedelta(30),
         )
@@ -851,7 +871,9 @@ class TestAppointmentUpdateSerializer(object):
                 {
                     'service_uuid': new_service.uuid
                 }
-            ]
+            ],
+            'has_tax_included': False,
+            'has_card_fee_included': False
         }
 
         serializer = AppointmentUpdateSerializer(
@@ -868,6 +890,13 @@ class TestAppointmentUpdateSerializer(object):
             saved_appointment.services.filter(is_original=False).first().service_uuid ==
             new_service.uuid
         )
+        assert(saved_appointment.has_card_fee_included is False)
+        assert(saved_appointment.has_tax_included is False)
+        total_services_cost = sum([s.client_price for s in saved_appointment.services.all()], 0)
+        assert(saved_appointment.total_client_price_before_tax == total_services_cost)
+        assert(saved_appointment.grand_total == total_services_cost)
+        assert(saved_appointment.total_tax == calculate_tax(total_services_cost))
+        assert(saved_appointment.total_card_fee == calculate_card_fee(total_services_cost))
 
 
 class TestStylistAvailableWeekDayWithBookedTimeSerializer(object):

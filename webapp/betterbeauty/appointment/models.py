@@ -1,5 +1,4 @@
 import datetime
-from decimal import Decimal
 
 from uuid import uuid4
 
@@ -9,7 +8,6 @@ from django.db.models.functions import Coalesce
 
 from client.models import Client
 from core.models import User
-from core.utils import calculate_card_fee, calculate_tax
 from salon.models import Stylist
 
 from .choices import APPOINTMENT_STATUS_CHOICES
@@ -62,6 +60,14 @@ class Appointment(models.Model):
         default=None
     )
 
+    # fields filled on checkout, all null by default
+    total_client_price_before_tax = models.DecimalField(max_digits=6, decimal_places=2, null=True)
+    total_tax = models.DecimalField(max_digits=6, decimal_places=2, null=True)
+    total_card_fee = models.DecimalField(max_digits=6, decimal_places=2, null=True)
+    grand_total = models.DecimalField(max_digits=4, decimal_places=0, null=True)
+    has_tax_included = models.NullBooleanField(null=True, default=None)
+    has_card_fee_included = models.NullBooleanField(null=True, default=None)
+
     objects = AppointmentManager()
     all_objects = AppointmentAllObjectsManager()
 
@@ -89,20 +95,6 @@ class Appointment(models.Model):
         self.status_updated_by = updated_by
         self.status_updated_at = current_now
         self.save(update_fields=['status', 'status_updated_by', 'status_updated_at', ])
-
-    @property
-    def total_client_price_before_tax(self) -> Decimal:
-        return self.services.all().aggregate(
-            total_sum=Coalesce(Sum('client_price'), Decimal(0))
-        )['total_sum']
-
-    @property
-    def total_tax(self) -> Decimal:
-        return calculate_tax(self.total_client_price_before_tax)
-
-    @property
-    def total_card_fee(self) -> Decimal:
-        return calculate_card_fee(self.total_client_price_before_tax + self.total_tax)
 
     @property
     def duration(self) -> datetime.timedelta:
