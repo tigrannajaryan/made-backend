@@ -79,7 +79,7 @@ class StylistAdmin(admin.ModelAdmin):
     class StylistServiceInline(admin.StackedInline):
         model = StylistService
         extra = 0
-        readonly_fields = ['deleted_at', 'service_uuid', ]
+        readonly_fields = ['deleted_at', 'uuid', ]
         # TODO: add custom form here, to add photo samples
 
     class StylistServicePhotosampleInline(admin.TabularInline):

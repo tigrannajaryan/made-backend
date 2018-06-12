@@ -725,8 +725,9 @@ curl -X POST http://apiserver/api/v1/stylist/services \
 Note: this will actually delete it from list, rather than just disable.
 Actual `salon.StylistService` object will be kept in the DB, but `deleted_at` field will be non-null
 
-**DELETE /api/v1/stylist/services/{service_uuid}**
-(ex. if we have `26` for service id, will delete the last one from previous example)
+**DELETE /api/v1/stylist/services/{uuid}**
+(ex. if we have `b0605fd7-3afe-451e-89c7-994407674f7a` for service uuid, will
+delete the last one from previous example)
 
 
 **Response 204 No content**

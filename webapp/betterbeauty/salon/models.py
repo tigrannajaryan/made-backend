@@ -348,9 +348,6 @@ class StylistService(models.Model):
     stylist = models.ForeignKey(Stylist, on_delete=models.CASCADE, related_name='services')
     category = models.ForeignKey(ServiceCategory, on_delete=models.PROTECT, null=True)
 
-    # TODO: remove this field in a separate PR
-    service_uuid = models.UUIDField(default=uuid.uuid4, editable=False)
-
     service_origin_uuid = models.UUIDField(default=uuid.uuid4, editable=False)
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 
