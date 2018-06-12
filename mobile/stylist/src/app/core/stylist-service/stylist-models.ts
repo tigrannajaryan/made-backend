@@ -61,9 +61,10 @@ export interface ServiceName {
 
 export interface ServiceTemplateSetBase {
   uuid: string;
-  name: string;
-  description: string;
-  image_url?: string;
+}
+
+export interface ServiceUuid {
+  service_uuid: string;
 }
 
 export interface ServiceTemplateSet extends ServiceTemplateSetBase {
@@ -77,7 +78,7 @@ export interface StylistServicesList {
 export interface ServiceCategory {
   uuid: string;
   name: string;
-  services: ServiceTemplateItem[];
+  services: Array<ServiceTemplateItem | ServiceItem>;
 }
 
 export interface ServiceTemplateItem {
@@ -91,6 +92,10 @@ export interface ServiceTemplateItem {
 
 // Services
 export interface ServiceItem extends ServiceTemplateItem {
+  service_uuid?: string;
+
+  category_name: string;
+  category_uuid: string;
   is_enabled: boolean;
   photo_samples: ServicesPhotoSample[];
 }
