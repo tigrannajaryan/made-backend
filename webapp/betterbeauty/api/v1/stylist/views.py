@@ -38,6 +38,8 @@ from .serializers import (
     StylistDiscountsSerializer,
     StylistSerializer,
     StylistServiceListSerializer,
+    StylistServicePricingRequestSerializer,
+    StylistServicePricingSerializer,
     StylistServiceSerializer,
     StylistSettingsRetrieveSerializer,
     StylistTodaySerializer,
@@ -419,3 +421,28 @@ class ClientSearchView(views.APIView):
             stylist=stylist,
             query=query
         )
+
+
+class StylistServicePricingView(views.APIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = StylistServicePricingRequestSerializer(
+            data=request.data, context={'stylist': request.user.stylist}
+        )
+        serializer.is_valid(raise_exception=True)
+        client_uuid = serializer.validated_data.get('client_uuid', None)
+        client = None
+        if client_uuid:
+            client = Client.objects.get(uuid=client_uuid)
+        service_uuid = serializer.validated_data['service_uuid']
+
+        print('uuid was', service_uuid)
+        service = self.get_queryset().filter(uuid=service_uuid).last()
+
+        return Response(
+            StylistServicePricingSerializer(service, context={'client': client}).data
+        )
+
+    def get_queryset(self):
+        return self.request.user.stylist.services.all()

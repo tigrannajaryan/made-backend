@@ -22,6 +22,7 @@
       - [Get list of services](#user-content-get-list-of-services)
       - [Bulk add/update services](#user-content-bulk-addupdate-services)
       - [Permanently delete a service](#user-content-permanently-delete-a-service)
+      - [Service pricing](#service-pricing)
     - [**Availability**](#user-content-availability)
       - [Retrieve availability](#user-content-retrieve-availability)
       - [Set availability for one or multiple days](#user-content-set-availability-for-one-or-multiple-days)
@@ -1003,6 +1004,70 @@ curl -X POST \
 }
 
 ```
+
+
+## Service pricing
+
+Returns prices for given service for given client in the timeframe of the
+next 14 days. If a day is unavailable for booking (e.g. no working hours,
+or completely booked), this day is excluded from the response
+
+**POST /api/v1/services/pricing**
+
+- **service_uuid** (required) - UUID of a service to get pricing for (must
+be one of authorized stylist's services)
+- **client_uuid** (optional) - UUID of a client. If supplied and not null -
+will apply corresponding discounts the client is eligible for.
+
+```
+curl -X POST \
+  http://apiserver/api/v1/stylist/services/pricing \
+  -H 'Authorization: Token jwt_token' \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "service_uuid": "e15cc4e9-e7a9-4905-a94d-5d44f1b860e9",
+        "client_uuid": "f74b1c66-943c-4bc4-bf14-6fefa21ab5a5"
+}'
+```
+
+**Response 200 OK**
+```
+{
+    "service_uuid": "e15cc4e9-e7a9-4905-a94d-5d44f1b860e9",
+    "service_name": "",
+    "prices": [
+        {
+            "date": "2018-06-18",
+            "price": 5
+        },
+        {
+            "date": "2018-06-20",
+            "price": 5
+        },
+        {
+            "date": "2018-06-21",
+            "price": 5
+        },
+        {
+            "date": "2018-06-22",
+            "price": 5
+        },
+        {
+            "date": "2018-06-25",
+            "price": 6.25
+        },
+        {
+            "date": "2018-06-27",
+            "price": 5
+        },
+        {
+            "date": "2018-06-28",
+            "price": 5
+        }
+    ]
+}
+```
+
 
 ## Invitations
 

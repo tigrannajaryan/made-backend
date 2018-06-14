@@ -86,6 +86,15 @@ class StylistAvailableWeekDay(models.Model):
             availability_time
         )
 
+    def get_available_time(self) -> Optional[datetime.timedelta]:
+        if not self.is_available:
+            return datetime.timedelta(0)
+        # we can't substract time from time, so cast it to a datetime
+        date = datetime.date(2018, 1, 1)
+        return datetime.datetime.combine(
+            date, self.work_end_at
+        ) - datetime.datetime.combine(date, self.work_start_at)
+
 
 class StylistWeekdayDiscount(models.Model):
     stylist = models.ForeignKey(
@@ -372,7 +381,6 @@ class StylistService(models.Model):
     def calculate_price_for_client(
             self, datetime_start_at: datetime.datetime, client=None,
     ) -> Decimal:
-        # TODO: calculate price based on existing discounts
         return self.base_price
 
 

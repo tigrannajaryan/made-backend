@@ -35,7 +35,10 @@ from salon.models import (
     StylistServicePhotoSample,
     StylistWeekdayDiscount,
 )
-from salon.utils import create_stylist_profile_for_user
+from salon.utils import (
+    create_stylist_profile_for_user,
+    generate_prices_for_stylist_service,
+)
 from .constants import MAX_SERVICE_TEMPLATE_PREVIEW_COUNT
 from .fields import DurationMinuteField
 
@@ -579,14 +582,13 @@ class AppointmentValidationMixin(object):
     def validate_service_uuid(self, service_uuid: str):
         context: Dict = getattr(self, 'context', {})
         stylist: Stylist = context['stylist']
-        service = stylist.services.filter(
+        if not stylist.services.filter(
             uuid=service_uuid
-        ).last()
-        if not service:
+        ).exists():
             raise serializers.ValidationError(
                 appointment_errors.ERR_SERVICE_DOES_NOT_EXIST
             )
-        return uuid
+        return service_uuid
 
     def validate_services(self, services):
         if len(services) == 0:
@@ -1025,3 +1027,37 @@ class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
         fields = ['uuid', 'first_name', 'last_name', 'phone', ]
+
+
+class StylistServicePriceSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    price = serializers.DecimalField(
+        coerce_to_string=False, max_digits=6, decimal_places=2
+    )
+
+
+class StylistServicePricingRequestSerializer(
+    AppointmentValidationMixin, serializers.Serializer
+):
+    service_uuid = serializers.UUIDField()
+    client_uuid = serializers.UUIDField(required=False, allow_null=True)
+
+
+class StylistServicePricingSerializer(serializers.ModelSerializer):
+    service_uuid = serializers.UUIDField(source='uuid', read_only=True)
+    service_name = serializers.UUIDField(source='name', read_only=True)
+    prices = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = StylistService
+        fields = ['service_uuid', 'service_name', 'prices', ]
+
+    def get_prices(self, stylist_service):
+        client = self.context.get('client', None)
+        prices_and_dates = generate_prices_for_stylist_service(
+            stylist_service, client, exclude_fully_booked=True
+        )
+        return StylistServicePriceSerializer(
+            map(lambda m: {'date': m[0], 'price': m[1].price}, prices_and_dates),
+            many=True
+        ).data

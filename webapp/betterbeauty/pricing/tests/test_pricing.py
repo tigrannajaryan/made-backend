@@ -9,14 +9,14 @@ import pytz
 
 from freezegun import freeze_time
 
-from client.pricing import (
+from core.types import Weekday
+from pricing import (
     calc_client_prices,
     DiscountSettings,
     DiscountType,
     normalize_demand,
     PRICE_BLOCK_SIZE
 )
-from core.types import Weekday
 
 
 class TestCalcClientPrices(object):
