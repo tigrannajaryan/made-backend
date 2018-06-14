@@ -758,6 +758,18 @@ class AppointmentPreviewRequestSerializer(AppointmentValidationMixin, serializer
     datetime_start_at = serializers.DateTimeField()
     has_tax_included = serializers.BooleanField()
     has_card_fee_included = serializers.BooleanField()
+    appointment_uuid = serializers.UUIDField(required=False, allow_null=True)
+
+    def validate_appointment_uuid(
+            self, appointment_uuid: Optional[uuid.UUID]
+    ) -> Optional[uuid.UUID]:
+        if appointment_uuid is not None:
+            stylist: Stylist = self.context['stylist']
+            if not stylist.appointments.filter(uuid=appointment_uuid).exists():
+                raise serializers.ValidationError(
+                    appointment_errors.ERR_APPOINTMENT_DOESNT_EXIST
+                )
+        return appointment_uuid
 
 
 class AppointmentPreviewResponseSerializer(serializers.Serializer):
@@ -783,6 +795,7 @@ class AppointmentPreviewResponseSerializer(serializers.Serializer):
     )
     has_tax_included = serializers.BooleanField(read_only=True)
     has_card_fee_included = serializers.BooleanField(read_only=True)
+    services = AppointmentServiceSerializer(many=True)
 
 
 class AppointmentUpdateSerializer(

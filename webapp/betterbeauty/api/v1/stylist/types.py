@@ -13,6 +13,17 @@ class AppointmentPreviewRequest(NamedTuple):
     has_tax_included: bool
     has_card_fee_included: bool
     client_uuid: Optional[UUID] = None
+    appointment_uuid: Optional[UUID] = None
+
+
+class AppointmentServicePreview(NamedTuple):
+    service_name: str
+    service_uuid: UUID
+    client_price: Decimal
+    regular_price: Decimal
+    duration: datetime.timedelta
+    is_original: bool
+    uuid: Optional[UUID] = None
 
 
 class AppointmentPreviewResponse(NamedTuple):
@@ -24,3 +35,4 @@ class AppointmentPreviewResponse(NamedTuple):
     conflicts_with: QuerySet
     has_tax_included: bool
     has_card_fee_included: bool
+    services: List[AppointmentServicePreview]

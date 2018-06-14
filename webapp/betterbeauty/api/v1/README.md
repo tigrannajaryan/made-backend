@@ -1158,6 +1158,10 @@ to preview resulting price and conflicting appointments (if any).
 - **has_tax_included** (required) - whether or not grand total should contain tax
 - **has_card_fee_included** (required) - should card fee be applied on top
 - **client_uuid** (optional) - if supplied, client price may be different
+- **appointment_uuid** (optional) - if preview needs to be enforced with data of an
+existing appointment. If supplied, API will use data from the services that already
+exist in this appointment.
+
 from the base price
 
 ```
@@ -1172,7 +1176,8 @@ curl -X POST \
 		{"service_uuid": "c037f7be-2d29-4c52-94c1-c3e328ec202b"}
 	],
 	"has_tax_included": False,
-	"has_card_fee_included": False
+	"has_card_fee_included": False,
+	"appointment_uuid": "bc8b2137-ec92-4e28-8993-7bff6dd5fc56"
 }'
 ```
 
@@ -1215,6 +1220,23 @@ curl -X POST \
     "grand_total": 315,
     "has_tax_included": False,
     "has_card_fee_included": False,
+    "services": [
+        {
+            "uuid": "48a468a3-6dc3-4236-b91f-1c6a92b911b4",
+            "service_name": "Balayage",
+            "service_uuid": "f23748c1-9201-4408-8114-72caeac291da",
+            "client_price": 250,
+            "regular_price": 250,
+            "is_original": true
+        },
+        {
+            "uuid": None,
+            "service_name": "Blow out",
+            "service_uuid": "c037f7be-2d29-4c52-94c1-c3e328ec202b",
+            "client_price": 45,
+            "regular_price": 45,
+            "is_original": false
+        }
 }
 ```
 

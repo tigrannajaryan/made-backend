@@ -1,6 +1,6 @@
 import datetime
 from decimal import Decimal
-from typing import Optional
+from typing import List, Optional
 
 from annoying.functions import get_object_or_None
 from dateutil.parser import parse
@@ -12,7 +12,7 @@ from api.common.permissions import (
     StylistPermission,
     StylistRegisterUpdatePermission,
 )
-from appointment.models import Appointment
+from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.models import Client
 from core.types import AppointmentPrices
@@ -39,7 +39,11 @@ from .serializers import (
     StylistSettingsRetrieveSerializer,
     StylistTodaySerializer,
 )
-from .types import AppointmentPreviewRequest, AppointmentPreviewResponse
+from .types import (
+    AppointmentPreviewRequest,
+    AppointmentPreviewResponse,
+    AppointmentServicePreview,
+)
 
 
 class StylistView(
@@ -231,31 +235,61 @@ class StylistAppointmentPreviewView(views.APIView):
             stylist: Stylist,
             preview_request: AppointmentPreviewRequest
     ) -> AppointmentPreviewResponse:
-        # need to use comprehension to accommodate possible duplicated
-        # services, which is actually a valid case (e.g. double conditioning)
-        services = [
-            stylist.services.get(uuid=service['service_uuid'])
-            for service in preview_request.services
-        ]
         client: Optional[Client] = Client.objects.filter(
             uuid=preview_request.client_uuid
         ) if preview_request.client_uuid else None
 
-        total_client_price_before_tax = Decimal(sum(
-            [
-                service.calculate_price_for_client(
-                    datetime_start_at=preview_request.datetime_start_at,
-                    client=client
-                ) for service in services
-            ], Decimal(0))
-        )
+        service_items: List[AppointmentServicePreview] = []
+        appointment: Optional[Appointment] = None
+        if preview_request.appointment_uuid is not None:
+            appointment = stylist.appointments.get(uuid=preview_request.appointment_uuid)
+
+        for service_request_item in preview_request.services:
+            appointment_service: Optional[AppointmentService] = None
+            if appointment:
+                appointment_service = appointment.services.filter(
+                    service_uuid=service_request_item['service_uuid']
+                ).last()
+            if appointment_service:
+                # service already exists in appointment, and will not be recalculated,
+                # so we should take it's data verbatim
+                service_item = AppointmentServicePreview(
+                    uuid=appointment_service.uuid,
+                    service_uuid=appointment_service.service_uuid,
+                    service_name=appointment_service.service_name,
+                    regular_price=appointment_service.regular_price,
+                    client_price=appointment_service.client_price,
+                    duration=appointment_service.duration,
+                    is_original=appointment_service.is_original
+                )
+            else:
+                # service doesn't exist in appointment yet, and is to be added, so we
+                # need to calculate the price for it
+                service: StylistService = stylist.services.get(
+                    uuid=service_request_item['service_uuid']
+                )
+                service_item = AppointmentServicePreview(
+                    uuid=None,
+                    service_uuid=service.uuid,
+                    service_name=service.name,
+                    regular_price=service.base_price,
+                    client_price=service.calculate_price_for_client(
+                        datetime_start_at=preview_request.datetime_start_at,
+                        client=client
+                    ),
+                    duration=service.duration,
+                    is_original=False
+                )
+            service_items.append(service_item)
+
+        total_client_price_before_tax = sum([s.client_price for s in service_items], Decimal(0))
         appointment_prices: AppointmentPrices = calculate_appointment_prices(
             price_before_tax=total_client_price_before_tax,
             include_card_fee=preview_request.has_card_fee_included,
             include_tax=preview_request.has_tax_included
         )
         duration = sum(
-            [service.duration for service in services], datetime.timedelta(0)
+            [s.duration for s in service_items], datetime.timedelta(0)
         )
 
         # TODO: rework along with time gap check implementation
@@ -271,7 +305,8 @@ class StylistAppointmentPreviewView(views.APIView):
             total_tax=appointment_prices.total_tax,
             total_card_fee=appointment_prices.total_card_fee,
             has_tax_included=appointment_prices.has_tax_included,
-            has_card_fee_included=appointment_prices.has_card_fee_included
+            has_card_fee_included=appointment_prices.has_card_fee_included,
+            services=service_items
         )
 
 
