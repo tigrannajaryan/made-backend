@@ -758,6 +758,7 @@ class AppointmentSerializer(AppointmentValidationMixin, serializers.ModelSeriali
             for k, v in appointment_prices._asdict().items():
                 setattr(appointment, k, v)
             appointment.save()
+            appointment.append_status_history(updated_by=stylist.user)
 
         return appointment
 
@@ -945,9 +946,12 @@ class AppointmentUpdateSerializer(
 
                 for k, v in appointment_prices._asdict().items():
                     setattr(appointment, k, v)
-                appointment.save()
 
-            appointment.set_status(status, user)
+            if appointment.status != status:
+                appointment.status = status
+                appointment.append_status_history(updated_by=user)
+
+            appointment.save(**kwargs)
 
         return appointment
 
