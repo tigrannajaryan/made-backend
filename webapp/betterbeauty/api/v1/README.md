@@ -1341,6 +1341,7 @@ curl -X POST \
   -d '{
         "client_first_name": "John",
         "client_last_name": "Connor",
+        "client_phone": "1234567"
         "services": [
             {
                 "service_uuid": "ca821ca4-3d34-454a-9aa7-daa291ce2840",
@@ -1376,6 +1377,8 @@ curl -X POST \
     "uuid": "a406c7cc-17c2-493a-90e0-9091f740be37",
     "client_first_name": "Fred",
     "client_last_name": "McBob",
+    "client_phone": "1234567",
+    "client_uuid": "ca821ca4-3d34-454a-9aa7-daa291ce2840",
     "total_client_price_before_tax": 295,
     "total_tax": 26.18,
     "total_card_fee": 8.83,

@@ -531,6 +531,7 @@ class TestAppointmentSerializer(object):
         data = {
             'client_first_name': 'Fred',
             'client_last_name': 'McBob',
+            'client_phone': '12345',
             'services': [
                 {
                     'service_uuid': service.uuid,
@@ -551,6 +552,7 @@ class TestAppointmentSerializer(object):
         data = {
             'client_first_name': 'Fred',
             'client_last_name': 'McBob',
+            'client_phone': '12345',
             'services': [
                 {
                     'service_uuid': service.uuid,
@@ -571,6 +573,7 @@ class TestAppointmentSerializer(object):
         data = {
             'client_first_name': 'Fred',
             'client_last_name': 'McBob',
+            'client_phone': '12345',
             'services': [
                 {
                     'service_uuid': service.uuid,
@@ -656,6 +659,7 @@ class TestAppointmentSerializer(object):
         data = {
             'client_first_name': 'Fred',
             'client_last_name': 'McBob',
+            'client_phone': '12345',
             'services': [
                 {
                     'service_uuid': service.uuid,
@@ -670,7 +674,12 @@ class TestAppointmentSerializer(object):
         assert(appointment.total_client_price_before_tax == 30)
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == 'Fred')
-        assert(appointment.client is None)
+        assert(appointment.client is not None)
+        user: User = appointment.client.user
+        assert(user.has_usable_password() is False)
+        assert(user.is_active is False)
+        assert(user.first_name == 'Fred')
+        assert(user.phone == '12345')
         assert(appointment.services.count() == 1)
         original_service: AppointmentService = appointment.services.first()
         assert(original_service.is_original is True)
@@ -711,8 +720,19 @@ class TestAppointmentSerializer(object):
             ],
             'datetime_start_at': available_time.isoformat()
         }
+        # check client which is not related to stylist, i.e. no prior appointments
         serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
-        assert(serializer.is_valid() is True)
+        assert(serializer.is_valid() is False)
+        assert('client_uuid' in serializer.errors)
+
+        G(
+            Appointment,
+            client=client, stylist=stylist_data, created_by=stylist_data.user,
+            datetime_start_at=stylist_data.with_salon_tz(datetime.datetime(2018, 5, 15, 15, 30))
+        )
+
+        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        assert (serializer.is_valid() is True)
         appointment: Appointment = serializer.save()
 
         assert (

@@ -18,6 +18,7 @@ from appointment.constants import APPOINTMENT_STYLIST_SETTABLE_STATUSES
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.models import Client
+from client.utils import create_nonlogin_client
 from core.models import TemporaryFile, User
 from core.types import AppointmentPrices, Weekday
 from core.utils import (
@@ -604,8 +605,14 @@ class AppointmentValidationMixin(object):
         return services
 
     def validate_client_uuid(self, client_uuid: Optional[str]):
+        context: Dict = getattr(self, 'context', {})
+        stylist: Stylist = context['stylist']
+
         if client_uuid:
-            if not Client.objects.filter(uuid=client_uuid).exists():
+            if not Client.objects.filter(
+                    uuid=client_uuid,
+                    appointments__stylist=stylist,
+            ).exists():
                 raise serializers.ValidationError(
                     appointment_errors.ERR_CLIENT_DOES_NOT_EXIST
                 )
@@ -641,7 +648,7 @@ class AppointmentSerializer(AppointmentValidationMixin, serializers.ModelSeriali
         allow_null=True, allow_blank=True, required=False
     )
     client_phone = serializers.CharField(
-        source='client.user.phone', allow_null=True, allow_blank=True, read_only=True
+        source='client.user.phone', required=False
     )
 
     total_client_price_before_tax = serializers.DecimalField(
@@ -678,22 +685,28 @@ class AppointmentSerializer(AppointmentValidationMixin, serializers.ModelSeriali
             'services', 'grand_total', 'has_tax_included', 'has_card_fee_included',
         ]
 
+    def validate(self, attrs):
+        errors = {}
+        if 'client_uuid' not in self.initial_data:
+            for field in ['client_first_name', 'client_last_name', 'client_phone']:
+                if field not in self.initial_data:
+                    errors.update({
+                        field: serializers.Field.default_error_messages['required']
+                    })
+            if errors:
+                raise serializers.ValidationError(errors)
+        return attrs
+
     def create(self, validated_data):
         data = validated_data.copy()
         stylist: Stylist = self.context['stylist']
 
-        client = None
+        client: Optional[Client] = None
         client_data = validated_data.pop('client', {})
         client_uuid = client_data.get('uuid', None)
-        if client_uuid:
-            client: Client = Client.objects.filter(
-                uuid=client_uuid
-            ).last()
 
-            if client:
-                data['client_last_name'] = client.user.last_name
-                data['client_first_name'] = client.user.first_name
-                data['client'] = client
+        if client_uuid:
+            client: Client = Client.objects.get(uuid=client_uuid)
 
         data['created_by'] = stylist.user
         data['stylist'] = stylist
@@ -702,6 +715,17 @@ class AppointmentSerializer(AppointmentValidationMixin, serializers.ModelSeriali
 
         # create first AppointmentService
         with transaction.atomic():
+            # if client doesn't exist yet - create non-login account
+            if not client:
+                client = create_nonlogin_client(
+                    first_name=data['client_first_name'],
+                    last_name=data['client_last_name'],
+                    phone=client_data['user']['phone']
+                )
+            data['client_last_name'] = client.user.last_name
+            data['client_first_name'] = client.user.first_name
+            data['client'] = client
+
             appointment_services = data.pop('services', [])
             appointment: Appointment = super(AppointmentSerializer, self).create(data)
             total_client_price_before_tax: Decimal = 0
