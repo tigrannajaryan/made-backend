@@ -5,6 +5,8 @@ from typing import List, Optional
 from annoying.functions import get_object_or_None
 from dateutil.parser import parse
 
+from django.db.models import Q, QuerySet
+
 from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
 
@@ -15,7 +17,7 @@ from api.common.permissions import (
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.models import Client
-from core.types import AppointmentPrices
+from core.types import AppointmentPrices, UserRole
 from core.utils import (
     calculate_appointment_prices,
     post_or_get,
@@ -27,6 +29,7 @@ from .serializers import (
     AppointmentPreviewResponseSerializer,
     AppointmentSerializer,
     AppointmentUpdateSerializer,
+    ClientSerializer,
     InvitationSerializer,
     ServiceTemplateSetDetailsSerializer,
     ServiceTemplateSetListSerializer,
@@ -372,3 +375,47 @@ class StylistSettingsRetrieveView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user.stylist
+
+
+class ClientSearchView(views.APIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+    serializer_class = ClientSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response({'clients': ClientSerializer(
+            self.get_queryset(), many=True
+        ).data})
+
+    @staticmethod
+    def _search_clients(stylist: Stylist, query: str) -> QuerySet:
+        if len(query) < 2:
+            return Client.objects.none()
+
+        # we will only search among current stylist's clients, i.e. those
+        # who already had appointments with this stylist in the past
+
+        # TODO: Also extend this to those clients who have accepted invitations
+        # TODO: from the stylist (even though had no appointments yet)
+
+        stylists_clients = Client.objects.filter(
+            appointments__stylist=stylist,
+            user__role=UserRole.CLIENT
+        ).distinct('id')
+
+        name_phone_query = (
+            Q(user__first_name__icontains=query) |
+            Q(user__last_name__icontains=query) |
+            Q(user__phone__icontains=query)
+        )
+
+        return stylists_clients.filter(
+            name_phone_query
+        )
+
+    def get_queryset(self):
+        query: str = post_or_get(self.request, 'query', '').strip()
+        stylist: Stylist = self.request.user.stylist
+        return self._search_clients(
+            stylist=stylist,
+            query=query
+        )

@@ -5,6 +5,9 @@ from django.urls import reverse
 from django_dynamic_fixture import G
 from rest_framework import status
 
+from api.v1.stylist.views import ClientSearchView
+from appointment.models import Appointment
+from client.models import Client
 from core.models import User
 from core.types import UserRole
 from salon.models import Stylist
@@ -50,3 +53,46 @@ class TestStylistView(object):
         data = response.data
         assert (not data['first_name'])
         assert ('id' not in data)
+
+
+class TestClientSearchView(object):
+
+    @pytest.mark.django_db
+    def test_search_clients(self):
+        stylist = G(Stylist)
+        # stray_client
+        user_1 = G(
+            User,
+            first_name='Fred',
+            last_name='McBob',
+            phone='123456',
+            role=UserRole.CLIENT
+        )
+        G(
+            Client,
+            user=user_1
+        )
+
+        # client that our stylist has appointments with
+        user_2 = G(
+            User,
+            first_name='Fred_ours',
+            last_name='McBob_ours',
+            phone='123457',
+            role=UserRole.CLIENT
+        )
+        our_client = G(
+            Client,
+            user=user_2
+        )
+        G(Appointment, stylist=stylist, client=our_client)
+
+        no_results = ClientSearchView()._search_clients(
+            stylist, 'Gemma'
+        )
+        assert(no_results.count() == 0)
+        results = ClientSearchView()._search_clients(
+            stylist, 'Fred'
+        )
+        assert(results.count() == 1)
+        assert(results.last() == our_client)

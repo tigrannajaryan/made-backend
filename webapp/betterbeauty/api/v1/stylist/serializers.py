@@ -1015,3 +1015,13 @@ class StylistSettingsRetrieveSerializer(serializers.ModelSerializer):
         return stylist.get_current_week_appointments(
             include_cancelled=False
         ).count()
+
+
+class ClientSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+    phone = serializers.CharField(source='user.phone', read_only=True)
+
+    class Meta:
+        model = Client
+        fields = ['uuid', 'first_name', 'last_name', 'phone', ]

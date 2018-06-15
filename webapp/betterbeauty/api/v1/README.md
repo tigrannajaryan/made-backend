@@ -38,6 +38,7 @@
       - [Out-of-system client](#user-content-out-of-system-client)
       - [In-the-system client](#user-content-in-the-system-client)
       - [Change appointment status](#user-content-change-appointment-status)
+      - [Client search](#client-search)
     - **Screens**
       - [Today](#user-content-today-screen)
       - [Settings](#user-content-settings-screen)
@@ -1601,6 +1602,40 @@ in one gulp for the Stylist app's Settings screen.
     "total_week_appointments_count: 2
 }
 ```
+
+## Client search
+
+This endpoint accepts URLEncoded (if necessary) `query` param,
+and will search this string in first, last names and phone of the clients
+with whom authorized stylist has appointments (i.e. "their" clients).
+
+Note: in the future we should extend this also to those clients who have
+accepted invitations from the stylist (even though they may not yet had
+any appointments scheduled)
+
+**GET /api/v1/stylist/search-clients?query=query_string**
+
+```
+curl -X GET \
+  'http://apiserver/api/v1/stylist/search-clients?query=Fred' \
+  -H 'Authorization: Token jwt_token'
+```
+
+**Response 200OK**
+
+```
+{
+    "clients": [
+        {
+            "uuid": "f74b1c66-943c-4bc4-bf14-6fefa21ab5a5",
+            "first_name": "Fred",
+            "last_name": "McBob",
+            "phone": "112233"
+        }
+    ]
+}
+```
+
 
 
 # Files upload
