@@ -60,6 +60,35 @@ describe('Pages: Add Appointment', () => {
       .toBeTruthy();
   }));
 
+  it('should search for clients', async(() => {
+    const clients = clientsMock.slice(0, 3);
+    store.dispatch(new SearchSuccessAction(clients));
+
+    fixture.detectChanges();
+
+    // expect menu show clients
+    clients.forEach(client => {
+      expect(fixture.nativeElement.textContent)
+        .toContain(`${client.first_name} ${client.last_name}`);
+    });
+
+    const client = fixture.nativeElement.querySelector('.Appointment-customersListItem');
+    expect(client)
+      .toBeTruthy();
+
+    client.click();
+
+    fixture.detectChanges();
+
+    // check value in input updated
+    expect(client.textContent)
+      .toContain(fixture.nativeElement.querySelector('[formcontrolname="client"] input').value);
+
+    // check selected client property updated
+    expect(client.textContent)
+      .toContain(`${instance.selectedClient.first_name} ${instance.selectedClient.last_name}`);
+  }));
+
   it('should receive selected service from store', async(() => {
     store.dispatch(new SelectServiceAction(fakeService));
 
@@ -85,6 +114,7 @@ describe('Pages: Add Appointment', () => {
     // add missed values
     instance.form.patchValue({
       client: `${client.first_name} ${client.last_name}`,
+      phone: client.phone,
       date: nextWeek.format('YYYY-MM-DD'),
       time: nextWeek.format('HH:mm')
     });
@@ -93,6 +123,7 @@ describe('Pages: Add Appointment', () => {
     const data = {
       client_first_name: client.first_name,
       client_last_name: client.last_name,
+      phone: client.phone,
       services: [{ service_uuid: fakeService.uuid }],
       datetime_start_at: nextWeek.format('YYYY-MM-DDTHH:mm:00')
     };

@@ -12,7 +12,9 @@ import { Client } from '~/appointment/appointment-add/clients-models';
 import { TodayService as AppointmentService } from '~/today/today.service';
 
 import {
+  ClearClientsAction,
   ClientsState,
+  SearchAction,
   selectFoundClients
 } from '~/appointment/appointment-add/clients.reducer';
 
@@ -64,10 +66,38 @@ export class AppointmentAddComponent {
       });
   }
 
+  search(): void {
+    const { client: query } = this.form.value;
+    if (query.trim().length >= 2) { // type 2 symbols to search
+      this.store.dispatch(new SearchAction(query));
+    }
+  }
+
+  getClientFullName(client: Client): string | void {
+    return client && `${client.first_name} ${client.last_name}`;
+  }
+
+  clearSelectedClient(): void {
+    const { client: query } = this.form.value;
+    const isNewClient = this.selectedClient && this.getClientFullName(this.selectedClient) !== query.trim();
+    if (isNewClient) {
+      delete this.selectedClient;
+    }
+  }
+
+  clearClientsList(): void {
+    setTimeout(() => { // allows selecting client
+      delete this.clientsList;
+    });
+  }
+
   selectClient(client: Client): void {
     this.selectedClient = client;
-    this.form.patchValue({ client: `${client.first_name} ${client.last_name}` });
-    delete this.clientsList;
+    this.form.patchValue({
+      client: this.getClientFullName(client),
+      phone: client.phone
+    });
+    this.clearClientsList();
   }
 
   selectService(event): void {
@@ -76,11 +106,22 @@ export class AppointmentAddComponent {
   }
 
   async submit(forced = false): Promise<void> {
-    const { client, date, time } = this.form.value;
-    const [ firstName, lastName ] = client.trim().split(/(^[^\s]+)/).slice(-2);
+    const { client, phone, date, time } = this.form.value;
+
+    let clientData;
+    if (this.selectedClient) {
+      clientData = { client_uuid: this.selectedClient.uuid };
+    } else {
+      const [ firstName, lastName ] = client.trim().split(/(^[^\s]+)/).slice(-2);
+      clientData = {
+        phone,
+        client_first_name: firstName,
+        client_last_name: lastName.trim() // remove leading \s
+      };
+    }
+
     const data = {
-      client_first_name: firstName,
-      client_last_name: lastName.trim(), // remove leading \s
+      ...clientData,
       services: [{ service_uuid: this.selectedService.uuid }],
       datetime_start_at: `${date}T${time}:00`
     };
@@ -118,6 +159,7 @@ export class AppointmentAddComponent {
     try {
       await this.appointmentService.createAppointment(data, forced);
       this.store.dispatch(new ClearSelectedServiceAction());
+      this.store.dispatch(new ClearClientsAction());
       this.navCtrl.pop();
     } catch (e) {
       const dateTimeError = e.errors && e.errors.get('datetime_start_at');
@@ -131,6 +173,7 @@ export class AppointmentAddComponent {
   private createForm(): void {
     this.form = this.formBuilder.group({
       client: ['', [Validators.required]],
+      phone: ['', [Validators.required]],
       date: ['', [Validators.required]],
       time: ['', [Validators.required]]
     });
