@@ -123,7 +123,7 @@ describe('Pages: Add Appointment', () => {
     const data = {
       client_first_name: client.first_name,
       client_last_name: client.last_name,
-      phone: client.phone,
+      client_phone: client.phone,
       services: [{ service_uuid: fakeService.uuid }],
       datetime_start_at: nextWeek.format('YYYY-MM-DDTHH:mm:00')
     };

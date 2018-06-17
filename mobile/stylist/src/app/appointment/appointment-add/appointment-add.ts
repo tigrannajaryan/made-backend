@@ -114,7 +114,7 @@ export class AppointmentAddComponent {
     } else {
       const [ firstName, lastName ] = client.trim().split(/(^[^\s]+)/).slice(-2);
       clientData = {
-        phone,
+        client_phone: phone,
         client_first_name: firstName,
         client_last_name: lastName.trim() // remove leading \s
       };
