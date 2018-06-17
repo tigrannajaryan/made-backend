@@ -1,7 +1,6 @@
 import datetime
 import uuid
 
-from decimal import Decimal
 from typing import Optional, Tuple
 
 from django.conf import settings
@@ -18,7 +17,6 @@ from client.models import Client
 from core.choices import WEEKDAY
 from core.models import User
 from core.types import Weekday
-
 from .choices import INVITATION_STATUS_CHOICES
 from .types import InvitationStatus
 
@@ -377,11 +375,6 @@ class StylistService(models.Model):
     def __str__(self):
         deleted_str = '[DELETED] ' if self.deleted_at else ''
         return '{2}{0} by {1}'.format(self.name, self.stylist, deleted_str)
-
-    def calculate_price_for_client(
-            self, datetime_start_at: datetime.datetime, client=None,
-    ) -> Decimal:
-        return self.base_price
 
 
 class StylistServicePhotoSample(models.Model):

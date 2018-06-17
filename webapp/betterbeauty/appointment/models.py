@@ -8,6 +8,7 @@ from django.db.models.functions import Coalesce
 
 from client.models import Client
 from core.models import User
+from pricing import DISCOUNT_TYPE_CHOICES
 from salon.models import Stylist
 
 from .choices import APPOINTMENT_STATUS_CHOICES
@@ -112,6 +113,9 @@ class AppointmentService(models.Model):
 
     regular_price = models.DecimalField(max_digits=6, decimal_places=2)
     client_price = models.DecimalField(max_digits=6, decimal_places=2)
+
+    applied_discount = models.PositiveIntegerField(choices=DISCOUNT_TYPE_CHOICES, null=True)
+    discount_percentage = models.PositiveIntegerField(default=0)
 
     duration = models.DurationField()
 

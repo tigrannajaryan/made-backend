@@ -2,6 +2,8 @@ from datetime import date, datetime, timedelta, tzinfo
 from enum import Enum
 from typing import Dict, List, NamedTuple, Optional
 
+from model_utils import Choices
+
 from core.types import Weekday
 
 from .constants import (
@@ -17,6 +19,14 @@ class DiscountType(Enum):
     WEEKDAY = 4
 
 
+DISCOUNT_TYPE_CHOICES = Choices(
+    (DiscountType.FIRST_BOOKING.value, 'first_booking', 'First Booking'),
+    (DiscountType.REVISIT_WITHIN_1WEEK.value, 'revisit_within_1_week', 'Revisit within 1 week'),
+    (DiscountType.REVISIT_WITHIN_2WEEK.value, 'revisit_within_2_weeks', 'Revisit within 2 weeks'),
+    (DiscountType.WEEKDAY.value, 'weekday', 'Weekday')
+)
+
+
 class DiscountSettings(object):
     # Discount values are in [0..100] range, expressed as percentages
     weekday_discounts: Dict[Weekday, float]
@@ -28,6 +38,20 @@ class DiscountSettings(object):
 class CalculatedPrice(object):
     price: float
     applied_discount: Optional[DiscountType]
+    discount_percentage: int
+
+    @staticmethod
+    def build(
+        price: float,
+        applied_discount: Optional[DiscountType],
+        discount_percentage: int
+
+    ) -> 'CalculatedPrice':
+        obj = CalculatedPrice()
+        obj.price = price
+        obj.applied_discount = applied_discount
+        obj.discount_percentage = discount_percentage
+        return obj
 
 
 def calc_client_prices(
@@ -109,6 +133,7 @@ def calc_client_prices(
         if max_discount is None:
             calculated_price.price = regular_price
             calculated_price.applied_discount = None
+            calculated_price.discount_percentage = 0
         else:
             demand = current_demand[i]
 
@@ -142,8 +167,10 @@ def calc_client_prices(
 
             if discount_percentage > 0:
                 calculated_price.applied_discount = max_discount.type
+                calculated_price.discount_percentage = round(discount_percentage)
             else:
                 calculated_price.applied_discount = None
+                calculated_price.discount_percentage = 0
 
         results.append(calculated_price)
 

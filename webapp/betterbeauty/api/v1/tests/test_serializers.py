@@ -1,5 +1,6 @@
 import datetime
 
+import mock
 import pytest
 import pytz
 
@@ -26,6 +27,7 @@ from core.choices import USER_ROLE
 from core.models import User
 from core.types import UserRole, Weekday
 from core.utils import calculate_card_fee, calculate_tax
+from pricing import CalculatedPrice
 from salon.models import (
     Salon,
     ServiceCategory,
@@ -34,7 +36,9 @@ from salon.models import (
     StylistService,
 )
 from salon.tests.test_models import stylist_appointments_data
-from salon.utils import create_stylist_profile_for_user
+from salon.utils import (
+    create_stylist_profile_for_user,
+)
 
 
 @pytest.fixture
@@ -628,7 +632,14 @@ class TestAppointmentSerializer(object):
 
     @freeze_time('2018-05-17 15:30:00 UTC')
     @pytest.mark.django_db
-    def test_create_without_client(self, stylist_data: Stylist):
+    def test_create_without_client(self, stylist_data: Stylist, mocker):
+        calculate_mock = mocker.patch(
+            'api.v1.stylist.serializers.calculate_price_and_discount_for_client_on_date',
+            mock.Mock()
+        )
+        calculate_mock.return_value = CalculatedPrice.build(
+            price=30, applied_discount=None, discount_percentage=0
+        )
         service: StylistService = G(
             StylistService,
             stylist=stylist_data, duration=datetime.timedelta(minutes=30),
@@ -656,9 +667,7 @@ class TestAppointmentSerializer(object):
         assert(serializer.is_valid() is True)
         appointment: Appointment = serializer.save()
 
-        assert(appointment.total_client_price_before_tax == service.calculate_price_for_client(
-            available_time
-        ))
+        assert(appointment.total_client_price_before_tax == 30)
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == 'Fred')
         assert(appointment.client is None)
@@ -666,12 +675,13 @@ class TestAppointmentSerializer(object):
         original_service: AppointmentService = appointment.services.first()
         assert(original_service.is_original is True)
         assert(original_service.regular_price == service.base_price)
+        assert(original_service.client_price == 30)
         assert(original_service.service_uuid == service.uuid)
         assert(original_service.service_name == service.name)
 
     @freeze_time('2018-05-17 15:30:00 UTC')
     @pytest.mark.django_db
-    def test_create_with_client(self, stylist_data: Stylist):
+    def test_create_with_client(self, stylist_data: Stylist, mocker):
         service: StylistService = G(
             StylistService,
             stylist=stylist_data, duration=datetime.timedelta(minutes=30),
@@ -681,6 +691,13 @@ class TestAppointmentSerializer(object):
             is_available=True,
             work_start_at=datetime.time(8, 0),
             work_end_at=datetime.time(17, 0)
+        )
+        calculate_mock = mocker.patch(
+            'api.v1.stylist.serializers.calculate_price_and_discount_for_client_on_date',
+            mock.Mock()
+        )
+        calculate_mock.return_value = CalculatedPrice.build(
+            price=30, applied_discount=None, discount_percentage=0
         )
         available_time: datetime.datetime = datetime.datetime(
             2018, 5, 17, 16, 00, tzinfo=pytz.utc)
@@ -698,9 +715,9 @@ class TestAppointmentSerializer(object):
         assert(serializer.is_valid() is True)
         appointment: Appointment = serializer.save()
 
-        assert (appointment.total_client_price_before_tax == service.calculate_price_for_client(
-            available_time
-        ))
+        assert (
+            appointment.total_client_price_before_tax == 30
+        )
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == client.user.first_name)
         assert(appointment.client == client)
@@ -709,6 +726,7 @@ class TestAppointmentSerializer(object):
         original_service: AppointmentService = appointment.services.first()
         assert (original_service.is_original is True)
         assert (original_service.regular_price == service.base_price)
+        assert (original_service.client_price == 30)
         assert (original_service.service_uuid == service.uuid)
         assert (original_service.service_name == service.name)
 
@@ -818,9 +836,12 @@ class TestAppointmentUpdateSerializer(object):
         )
 
     @pytest.mark.django_db
-    def save_non_checked_out_status(self):
+    def test_save_non_checked_out_status(self):
+        salon = G(Salon, timezone=pytz.utc)
+        stylist = G(Stylist, salon=salon)
         appointment = G(
             Appointment,
+            stylist=stylist,
             duration=datetime.timedelta(minutes=30)
         )
         context = {
@@ -836,9 +857,20 @@ class TestAppointmentUpdateSerializer(object):
         appointment = serializer.save()
         assert(appointment.status == AppointmentStatus.CANCELLED_BY_STYLIST)
 
-    def save_checked_out_status(self):
+    @pytest.mark.django_db
+    def test_save_checked_out_status(self, mocker):
+        calculate_mock = mocker.patch(
+            'api.v1.stylist.serializers.calculate_price_and_discount_for_client_on_date',
+            mock.Mock()
+        )
+        calculate_mock.return_value = CalculatedPrice.build(
+            price=30, applied_discount=None, discount_percentage=0
+        )
+        salon = G(Salon, timezone=pytz.utc)
+        stylist = G(Stylist, salon=salon)
         appointment = G(
             Appointment,
+            stylist=stylist,
             duration=datetime.timedelta(minutes=30)
         )
         context = {
@@ -848,16 +880,19 @@ class TestAppointmentUpdateSerializer(object):
         original_service: StylistService = G(
             StylistService, stylist=appointment.stylist,
             duration=datetime.timedelta(30),
+            base_price=20
         )
         G(
             AppointmentService, appointment=appointment,
             service_uuid=original_service.uuid, service_name=original_service.name,
-            duration=original_service.duration, is_original=True
+            duration=original_service.duration, is_original=True,
+            regular_price=20, client_price=18
         )
 
         new_service: StylistService = G(
             StylistService, stylist=appointment.stylist,
             duration=datetime.timedelta(30),
+            base_price=40
         )
 
         assert(appointment.services.count() == 1)
@@ -882,14 +917,20 @@ class TestAppointmentUpdateSerializer(object):
         assert(serializer.is_valid() is True)
         saved_appointment = serializer.save()
         assert(saved_appointment.services.count() == 2)
-        assert(
-            saved_appointment.services.filter(is_original=True).first().service_uuid ==
-            original_service.uuid
+        original_appointment_service: AppointmentService = saved_appointment.services.get(
+            is_original=True
         )
-        assert (
-            saved_appointment.services.filter(is_original=False).first().service_uuid ==
-            new_service.uuid
+        assert(original_appointment_service.service_uuid == original_service.uuid)
+        assert(original_appointment_service.client_price == 18)
+        assert(original_appointment_service.regular_price == 20)
+
+        added_appointment_service: AppointmentService = saved_appointment.services.get(
+            is_original=False
         )
+        assert(added_appointment_service.service_uuid == new_service.uuid)
+        assert(added_appointment_service.client_price == 40)
+        assert(added_appointment_service.regular_price == 40)
+
         assert(saved_appointment.has_card_fee_included is False)
         assert(saved_appointment.has_tax_included is False)
         total_services_cost = sum([s.client_price for s in saved_appointment.services.all()], 0)

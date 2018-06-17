@@ -1442,19 +1442,24 @@ curl -X POST \
 ### Change appointment status
 **POST/PATCH /api/v1/appointments/{appointment_uuid}**
 
+- **status** (required): status eligible for use by a stylist; must be
+one of: `new`, `no_show`, `cancelled_by_stylist`,
+- **services** (optional): only required if status is `checked_out` - final list of
+services that are ultimately saved to the appointment. Services will be saved to the
+appointment, preserving `is_original` flag and original price for services which were
+added on appointment creation.
+- **has_tax_included** (optional): only required if status is `checked_out` - whether
+or not grand total should contain tax
+- **has_card_fee_included** (optional): only required if status is `checked_out` - should
+card fee be applied on top
+
 ```
 curl -X POST http://apiserver/api/v1/stylist/appointments/8cdc4851-62a6-4f91-9ff1-dba9d346f0a1 \
   -H 'Authorization: Token jwt_token' \
   -H 'Content-Type: application/json' \
-  -d '{"status": "new"}'
+  -d '{"status": "cancelled_by_stylist"}'
 ```
 
-Statuses available for stylists to set on appointments:
-
-`new`, `no_show`, `cancelled_by_stylist`, `checked_out`.
-
-In case if the status is `checked_out` (checkout), client application must pass final list of
-services that are ultimately saved to the appointment:
 
 ```
 curl -X POST \
@@ -1470,12 +1475,13 @@ curl -X POST \
         {
           "service_uuid": "c037f7be-2d29-4c52-94c1-c3e328ec202b"
         }
-
-    ]
+    ],
+    "has_tax_included": false,
+    "has_card_fee_included" false
 }'
 ```
 
-Services will be saved to the appointment, preserving `is_original` flag.
+
 
 **Response 200 OK**
 

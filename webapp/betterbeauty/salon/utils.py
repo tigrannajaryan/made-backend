@@ -1,6 +1,6 @@
 import datetime
 from itertools import compress
-from typing import Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 from django.db import transaction
 
@@ -145,6 +145,23 @@ def generate_prices_for_stylist_service(
         return compress(prices_on_dates, demand_filter)
 
     return prices_on_dates
+
+
+def calculate_price_and_discount_for_client_on_date(
+        service: StylistService, client: Optional[Client], date: datetime.date
+) -> CalculatedPrice:
+    prices: Dict[datetime.date, CalculatedPrice] = dict(
+        generate_prices_for_stylist_service(
+            service=service, client=client, exclude_fully_booked=True
+        )
+    )
+    if date in prices:
+        return prices[date]
+    # Return base price if day does not appear to be available for booking
+    calculated_price = CalculatedPrice.build(
+        price=float(service.base_price), applied_discount=None, discount_percentage=0
+    )
+    return calculated_price
 
 
 def create_stylist_profile_for_user(user: User, **kwargs) -> Stylist:

@@ -23,6 +23,7 @@ from core.types import AppointmentPrices, Weekday
 from core.utils import (
     calculate_appointment_prices,
 )
+from pricing import CalculatedPrice
 from salon.models import (
     Invitation,
     Salon,
@@ -36,6 +37,7 @@ from salon.models import (
     StylistWeekdayDiscount,
 )
 from salon.utils import (
+    calculate_price_and_discount_for_client_on_date,
     create_stylist_profile_for_user,
     generate_prices_for_stylist_service,
 )
@@ -708,20 +710,25 @@ class AppointmentSerializer(AppointmentValidationMixin, serializers.ModelSeriali
                     uuid=appointment_service['service_uuid']
                 )
                 # regular price copied from service, client's price is calculated
-                client_price = int(service.calculate_price_for_client(
-                    datetime_start_at=datetime_start_at,
-                    client=client
-                ))
+
+                client_price: CalculatedPrice = calculate_price_and_discount_for_client_on_date(
+                    service=service, client=client, date=datetime_start_at.date()
+                )
                 AppointmentService.objects.create(
                     appointment=appointment,
                     service_name=service.name,
                     service_uuid=service.uuid,
                     duration=service.duration,
                     regular_price=service.base_price,
-                    client_price=client_price,
+                    client_price=client_price.price,
+                    applied_discount=(
+                        client_price.applied_discount.value
+                        if client_price.applied_discount else None
+                    ),
+                    discount_percentage=client_price.discount_percentage,
                     is_original=True
                 )
-                total_client_price_before_tax += client_price
+                total_client_price_before_tax += Decimal(client_price.price)
 
             # set initial price settings
             appointment_prices: AppointmentPrices = calculate_appointment_prices(
@@ -855,18 +862,33 @@ class AppointmentUpdateSerializer(
         return status
 
     @staticmethod
+    @transaction.atomic
     def _update_appointment_services(
             appointment: Appointment, service_records: List[Dict[str, uuid.UUID]]
     ) -> None:
-        """Replace existing appointment services preserving `is_original` field"""
+        """Replace existing appointment services preserving added on appointment creation"""
         stylist_services = appointment.stylist.services
+        services_to_keep: List[uuid.UUID] = [
+            service_record['service_uuid'] for service_record in service_records
+        ]
         original_services_uuids: List[uuid.UUID] = [
             service.service_uuid
             for service in appointment.services.filter(is_original=True)
         ]
-        appointment.services.all().delete()
+        # Delete services which may have been added during appointment creation,
+        # but are removed during the checkout. E.g. client had decided to change the
+        # service.
+        appointment.services.all().exclude(service_uuid__in=services_to_keep).delete()
+
+        # Add new services supplied during the checkout. These are new services, so
+        # no discounts will be applied (discount applies only during appointment's
+        # initial creation
+
         for service_record in service_records:
             service_uuid: uuid.UUID = service_record['service_uuid']
+            if appointment.services.filter(service_uuid=service_uuid).exists():
+                # service already exists, so we will not re-write it
+                continue
             service: StylistService = stylist_services.get(uuid=service_uuid)
             AppointmentService.objects.create(
                 appointment=appointment,
@@ -874,9 +896,8 @@ class AppointmentUpdateSerializer(
                 service_name=service.name,
                 duration=service.duration,
                 regular_price=service.base_price,
-                client_price=service.calculate_price_for_client(
-                    appointment.datetime_start_at,
-                    client=appointment.client),
+                client_price=service.base_price,
+                applied_discount=None,
                 is_original=service.uuid in original_services_uuids
             )
 
@@ -890,22 +911,23 @@ class AppointmentUpdateSerializer(
                 self._update_appointment_services(
                     appointment, self.validated_data['services']
                 )
+                total_client_price_before_tax: Decimal = appointment.services.aggregate(
+                    total_before_tax=Coalesce(Sum('client_price'), 0)
+                )['total_before_tax']
+
+                # update final prices and save appointment
+
+                appointment_prices: AppointmentPrices = calculate_appointment_prices(
+                    price_before_tax=total_client_price_before_tax,
+                    include_card_fee=self.validated_data['has_card_fee_included'],
+                    include_tax=self.validated_data['has_tax_included']
+                )
+
+                for k, v in appointment_prices._asdict().items():
+                    setattr(appointment, k, v)
+                appointment.save()
+
             appointment.set_status(status, user)
-            total_client_price_before_tax: Decimal = appointment.services.aggregate(
-                total_before_tax=Coalesce(Sum('client_price'), 0)
-            )['total_before_tax']
-
-            # update final prices and save appointment
-
-            appointment_prices: AppointmentPrices = calculate_appointment_prices(
-                price_before_tax=total_client_price_before_tax,
-                include_card_fee=self.validated_data['has_card_fee_included'],
-                include_tax=self.validated_data['has_tax_included']
-            )
-
-            for k, v in appointment_prices._asdict().items():
-                setattr(appointment, k, v)
-            appointment.save()
 
         return appointment
 

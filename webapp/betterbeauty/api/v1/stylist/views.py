@@ -23,6 +23,7 @@ from core.utils import (
     post_or_get,
 )
 from salon.models import ServiceTemplateSet, Stylist, StylistService
+from salon.utils import calculate_price_and_discount_for_client_on_date
 from .constants import MAX_APPOINTMENTS_PER_REQUEST
 from .serializers import (
     AppointmentPreviewRequestSerializer,
@@ -268,20 +269,25 @@ class StylistAppointmentPreviewView(views.APIView):
                     is_original=appointment_service.is_original
                 )
             else:
-                # service doesn't exist in appointment yet, and is to be added, so we
-                # need to calculate the price for it
+                # appointment service doesn't exist in appointment yet, and is to be added, so we
+                # need to calculate the price for it. If appointment itself doesn't exist yet -
+                # we will calculate price with discounts. If appointment already exists -
+                # this is an addition, so no discount will apply
                 service: StylistService = stylist.services.get(
                     uuid=service_request_item['service_uuid']
                 )
+                client_price: Decimal = service.base_price
+                if not appointment:
+                    client_price = Decimal(calculate_price_and_discount_for_client_on_date(
+                        service=service, client=client,
+                        date=preview_request.datetime_start_at.date()
+                    ).price)
                 service_item = AppointmentServicePreview(
                     uuid=None,
                     service_uuid=service.uuid,
                     service_name=service.name,
                     regular_price=service.base_price,
-                    client_price=service.calculate_price_for_client(
-                        datetime_start_at=preview_request.datetime_start_at,
-                        client=client
-                    ),
+                    client_price=client_price,
                     duration=service.duration,
                     is_original=False
                 )
