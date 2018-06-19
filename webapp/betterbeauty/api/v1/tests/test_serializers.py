@@ -457,12 +457,6 @@ class TestStylistTodaySerializer(object):
         client = G(Client)
         appointments.update(
             {
-                'past_unpaid_appointment': G(
-                    Appointment, client=client, stylist=stylist_data,
-                    datetime_start_at=stylist_data.salon.timezone.localize(
-                        datetime.datetime(2018, 5, 14, 10, 20)),
-                    status=AppointmentStatus.NEW,
-                ),
                 'cancelled_by_client_past': G(
                     Appointment, client=client, stylist=stylist_data,
                     datetime_start_at=stylist_data.salon.timezone.localize(
@@ -499,17 +493,16 @@ class TestStylistTodaySerializer(object):
         data = serializer.data
         today_appointments = data['today_appointments']
         assert(frozenset([a['uuid'] for a in today_appointments]) == frozenset([
-            str(appointments['past_unpaid_appointment'].uuid),
             str(appointments['cancelled_by_client_future'].uuid),
             str(appointments['cancelled_by_client_past'].uuid),
             str(appointments['current_appointment'].uuid),
-            str(appointments['past_appointment'].uuid),
+            str(appointments['past_appointment'].uuid),  # unpaid yet
             str(appointments['future_appointment'].uuid),
             str(appointments['late_night_appointment'].uuid),
         ]))
-        assert(data['today_visits_count'] == 7)
-        assert(data['week_visits_count'] == 8)
-        assert(data['past_visits_count'] == 5)
+        assert(data['today_visits_count'] == 3)
+        assert(data['week_visits_count'] == 4)
+        assert(data['past_visits_count'] == 4)
 
 
 class TestAppointmentSerializer(object):

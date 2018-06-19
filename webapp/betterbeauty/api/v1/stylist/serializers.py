@@ -974,11 +974,11 @@ class StylistTodaySerializer(serializers.ModelSerializer):
         """Return today's appointments that are still meaningful for the stylist"""
         next_appointments = stylist.get_today_appointments(
             upcoming_only=False,
-            include_cancelled=True
+            include_cancelled=True,
+            include_checked_out=False
         ).exclude(
             status__in=[
                 AppointmentStatus.CANCELLED_BY_STYLIST,
-                AppointmentStatus.CHECKED_OUT,
                 AppointmentStatus.NO_SHOW,
             ]
         )
@@ -987,14 +987,21 @@ class StylistTodaySerializer(serializers.ModelSerializer):
         ).data
 
     def get_today_visits_count(self, stylist: Stylist):
-        return stylist.get_today_appointments(upcoming_only=False).count()
+        """Return non-cancelled appointments till end of today"""
+        return stylist.get_today_appointments(
+            upcoming_only=True,
+            include_cancelled=False,
+            include_checked_out=False
+        ).count()
 
     def get_week_visits_count(self, stylist: Stylist):
+        """Return non-cancelled appointments till end of week"""
         week_start, week_end = stylist.get_current_week_bounds()
         return stylist.get_appointments_in_datetime_range(
-            datetime_from=week_start,
+            datetime_from=stylist.get_current_now(),
             datetime_to=week_end,
-            include_cancelled=False
+            include_cancelled=False,
+            include_checked_out=False
         ).count()
 
     def get_past_visits_count(self, stylist: Stylist):
