@@ -516,6 +516,8 @@ class TestAppointmentSerializer(object):
     @freeze_time('2018-05-17 15:30:00 UTC')
     @pytest.mark.django_db
     def test_validate_start_time(self, stylist_data: Stylist):
+        stylist_data.service_time_gap = datetime.timedelta(minutes=30)
+        stylist_data.save(update_fields=['service_time_gap'])
         service: StylistService = G(
             StylistService,
             stylist=stylist_data, duration=datetime.timedelta(minutes=30),
@@ -590,10 +592,7 @@ class TestAppointmentSerializer(object):
             datetime_start_at=datetime.datetime(2018, 5, 17, 15, 50, tzinfo=pytz.utc),
             status=AppointmentStatus.NEW
         )
-        G(
-            AppointmentService,
-            appointment=previous_appointment, duration=datetime.timedelta(minutes=30)
-        )
+
         serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
         assert (serializer.is_valid(raise_exception=False) is False)
         assert (
@@ -605,7 +604,7 @@ class TestAppointmentSerializer(object):
         next_appointment = G(
             Appointment, stylist=stylist_data,
             datetime_start_at=datetime.datetime(2018, 5, 17, 16, 20, tzinfo=pytz.utc),
-            status=AppointmentStatus.NEW, duration=datetime.timedelta(minutes=30)
+            status=AppointmentStatus.NEW,
         )
         serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
         assert (serializer.is_valid(raise_exception=False) is False)
@@ -618,7 +617,7 @@ class TestAppointmentSerializer(object):
         G(
             Appointment, stylist=stylist_data,
             datetime_start_at=datetime.datetime(2018, 5, 17, 16, 10, tzinfo=pytz.utc),
-            status=AppointmentStatus.NEW, duration=datetime.timedelta(minutes=10)
+            status=AppointmentStatus.NEW
         )
         serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
         assert (serializer.is_valid(raise_exception=False) is False)
@@ -966,7 +965,9 @@ class TestStylistAvailableWeekDayWithBookedTimeSerializer(object):
     def test_get_booked_time_and_count(self):
         user = G(User, role=UserRole.STYLIST)
         salon = G(Salon, timezone=pytz.utc)
-        stylist = create_stylist_profile_for_user(user, salon=salon)
+        stylist = create_stylist_profile_for_user(
+            user, salon=salon, service_time_gap=datetime.timedelta(minutes=30)
+        )
         stylist_appointments_data(stylist)
         monday = stylist.available_days.get(weekday=Weekday.MONDAY)
         serializer = StylistAvailableWeekDayWithBookedTimeSerializer(
@@ -991,7 +992,8 @@ class TestStylistSettingsRetrieveSerializer(object):
     def test_get_total_booked_time_and_count(self):
         user = G(User, role=UserRole.STYLIST)
         salon = G(Salon, timezone=pytz.utc)
-        stylist = create_stylist_profile_for_user(user, salon=salon)
+        stylist = create_stylist_profile_for_user(
+            user, salon=salon, service_time_gap=datetime.timedelta(minutes=30))
         stylist_appointments_data(stylist)
         serializer = StylistSettingsRetrieveSerializer(stylist)
         data = serializer.data

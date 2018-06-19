@@ -304,10 +304,11 @@ class StylistAppointmentPreviewView(views.APIView):
             [s.duration for s in service_items], datetime.timedelta(0)
         )
 
-        # TODO: rework along with time gap check implementation
         conflicts_with = stylist.get_appointments_in_datetime_range(
             preview_request.datetime_start_at,
-            preview_request.datetime_start_at + duration
+            preview_request.datetime_start_at,
+            including_to=True,
+            include_cancelled=False,
         )
         return AppointmentPreviewResponse(
             duration=duration,
@@ -448,7 +449,6 @@ class StylistServicePricingView(views.APIView):
             client = Client.objects.get(uuid=client_uuid)
         service_uuid = serializer.validated_data['service_uuid']
 
-        print('uuid was', service_uuid)
         service = self.get_queryset().filter(uuid=service_uuid).last()
 
         return Response(

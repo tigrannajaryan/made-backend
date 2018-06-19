@@ -39,6 +39,7 @@ def stylist_data() -> Stylist:
         Stylist,
         salon=salon, user=stylist_user,
         work_start_at=datetime.time(8, 0), work_end_at=datetime.time(15, 0),
+        service_time_gap=datetime.timedelta(minutes=30)
     )
 
     G(
@@ -107,7 +108,7 @@ def stylist_appointments_data(stylist: Stylist) -> Dict[str, Appointment]:
         'last_week_appointment': last_week_appointment,
         'next_week_appointment': next_week_appointment,
     }
-    service = G(StylistService, stylist=stylist, duration=datetime.timedelta(minutes=30))
+    service = G(StylistService, stylist=stylist, duration=datetime.timedelta(minutes=60))
     for appointment in appointments.values():
         G(
             AppointmentService,
@@ -148,14 +149,17 @@ class TestStylist(object):
             self, stylist_data: Stylist,
     ):
         appointments: Dict[str, Appointment] = stylist_appointments_data(stylist_data)
-        today_appointments = [a.id for a in stylist_data.get_today_appointments()]
+        today_appointments = [a.id for a in stylist_data.get_today_appointments(
+            upcoming_only=True,
+            include_cancelled=False
+        )]
 
         assert(len(today_appointments) == 3)
         assert(appointments['current_appointment'].id in today_appointments)
-        assert(appointments['past_appointment'].id not in today_appointments)
         assert(appointments['future_appointment'].id in today_appointments)
         assert(appointments['late_night_appointment'].id in today_appointments)
         assert(appointments['next_day_appointment'].id not in today_appointments)
+        assert(appointments['past_appointment'].id not in today_appointments)
 
         today_appointments = [
             a.id for a in stylist_data.get_today_appointments(upcoming_only=False)
@@ -174,13 +178,13 @@ class TestStylist(object):
             self, stylist_data: Stylist,
     ):
         appointments: Dict[str, Appointment] = stylist_appointments_data(stylist_data)
-        print(appointments)
         all_appointments = stylist_data.get_appointments_in_datetime_range()
 
         assert(all_appointments.count() == 7)
         appointments_from_start = stylist_data.get_appointments_in_datetime_range(
             datetime_from=None,
-            datetime_to=stylist_data.get_current_now()
+            datetime_to=stylist_data.get_current_now(),
+            including_to=True
         )
         assert(frozenset([a.id for a in appointments_from_start]) == frozenset([
             appointments['past_appointment'].id,

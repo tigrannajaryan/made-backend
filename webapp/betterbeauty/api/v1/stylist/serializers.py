@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.db import transaction
-from django.db.models import F, Sum
+from django.db.models import Sum
 from django.db.models.functions import Coalesce, ExtractWeekDay
 from django.shortcuts import get_object_or_404
 
@@ -451,21 +451,18 @@ class StylistAvailableWeekDayWithBookedTimeSerializer(serializers.ModelSerialize
     def get_booked_time_minutes(self, weekday: StylistAvailableWeekDay) -> int:
         """Return duration of appointments on this weekday during current week"""
         stylist: Stylist = weekday.stylist
+        service_gap_minutes: int = int(stylist.service_time_gap.total_seconds() / 60)
         # ExtractWeekDay returns non-iso weekday, e.g. Sunday == 1, so need to cast
         current_non_iso_week_day = (weekday.weekday % 7) + 1
-        total_week_duration: datetime.timedelta = stylist.get_current_week_appointments(
+        total_day_duration: int = stylist.get_current_week_appointments(
             include_cancelled=False
         ).annotate(
             weekday=ExtractWeekDay('datetime_start_at')
         ).filter(
             weekday=current_non_iso_week_day
-        ).annotate(
-            services_duration=Coalesce(Sum('services__duration'), datetime.timedelta(0))
-        ).aggregate(
-            total_duration=Coalesce(Sum('services_duration'), datetime.timedelta(0))
-        )['total_duration']
+        ).count() * service_gap_minutes
 
-        return int(total_week_duration.total_seconds() / 60)
+        return total_day_duration
 
     def get_booked_appointments_count(self, weekday: StylistAvailableWeekDay) -> int:
         stylist: Stylist = weekday.stylist
@@ -548,7 +545,6 @@ class AppointmentValidationMixin(object):
 
     def validate_datetime_start_at(self, datetime_start_at: datetime.datetime):
         context: Dict = getattr(self, 'context', {})
-        initial_data: Dict = getattr(self, 'initial_data', {})
         if context.get('force_start', False):
             return datetime_start_at
 
@@ -559,19 +555,15 @@ class AppointmentValidationMixin(object):
                 appointment_errors.ERR_APPOINTMENT_IN_THE_PAST
             )
         # check if appointment doesn't fit working hours
-        duration: datetime.timedelta = sum(
-            [StylistService.objects.get(uuid=service['service_uuid']).duration
-             for service in initial_data['services']], datetime.timedelta(0)
-        )
 
-        if not stylist.is_working_time(datetime_start_at, duration):
+        if not stylist.is_working_time(datetime_start_at):
             raise serializers.ValidationError(
                 appointment_errors.ERR_APPOINTMENT_OUTSIDE_WORKING_HOURS
             )
         # check if there are intersecting appointments
-        # TODO: rework this based on time gap
         if stylist.get_appointments_in_datetime_range(
-            datetime_start_at, datetime_start_at + duration
+            datetime_start_at, datetime_start_at + stylist.service_time_gap,
+            including_to=True
         ).exists():
             raise serializers.ValidationError(
                 appointment_errors.ERR_APPOINTMENT_INTERSECTION
@@ -1010,10 +1002,8 @@ class StylistTodaySerializer(serializers.ModelSerializer):
             datetime_from=None,
             datetime_to=stylist.get_current_now(),
             include_cancelled=False
-        ).annotate(
-            services_duration=Coalesce(Sum('services__duration'), datetime.timedelta(0))
         ).exclude(
-            datetime_start_at__gt=stylist.get_current_now() - F('services_duration')
+            datetime_start_at__gt=stylist.get_current_now() - stylist.service_time_gap
         ).count()
 
 
@@ -1049,15 +1039,12 @@ class StylistSettingsRetrieveSerializer(serializers.ModelSerializer):
         ).data
 
     def get_total_week_booked_minutes(self, stylist: Stylist) -> int:
-        total_week_duration: datetime.timedelta = stylist.get_current_week_appointments(
+        service_gap_minutes: int = int(stylist.service_time_gap.total_seconds() / 60)
+        total_week_duration: int = stylist.get_current_week_appointments(
             include_cancelled=False
-        ).annotate(
-            services_duration=Coalesce(Sum('services__duration'), datetime.timedelta(0))
-        ).aggregate(
-            total_duration=Coalesce(Sum('services_duration'), datetime.timedelta(0))
-        )['total_duration']
+        ).count() * service_gap_minutes
 
-        return int(total_week_duration.total_seconds() / 60)
+        return total_week_duration
 
     def get_total_week_appointments_count(self, stylist: Stylist) -> int:
         return stylist.get_current_week_appointments(

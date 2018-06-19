@@ -7,8 +7,6 @@ from django.conf import settings
 from django.contrib.postgres.fields import DateRangeField
 from django.core.validators import MaxValueValidator
 from django.db import models
-from django.db.models import F, Sum
-from django.db.models.functions import Coalesce
 
 from timezone_field import TimeZoneField
 
@@ -229,20 +227,21 @@ class Stylist(models.Model):
         ).order_by('datetime_start_at')
 
         if datetime_from is not None:
-            appointments = appointments.annotate(
-                services_duration=Coalesce(Sum('services__duration'), datetime.timedelta(0))
-            ).filter(
-                datetime_start_at__gte=datetime_from - F('services_duration')
+            appointments = appointments.filter(
+                datetime_start_at__gte=datetime_from - self.service_time_gap
             )
 
         if datetime_to is not None:
             if including_to:
+                # must start before datetime_to
                 appointments = appointments.filter(
                     datetime_start_at__lt=datetime_to
                 )
-            appointments = appointments.filter(
-                datetime_start_at__lt=datetime_to
-            )
+            else:
+                # must finish before datetime_to
+                appointments = appointments.filter(
+                    datetime_start_at__lt=datetime_to - self.service_time_gap
+                )
 
         if not include_cancelled:
             return appointments.exclude(status__in=[
@@ -266,7 +265,8 @@ class Stylist(models.Model):
         ).replace(hour=0, minute=0, second=0)
 
         return self.get_appointments_in_datetime_range(
-            datetime_from, next_midnight, include_cancelled=include_cancelled
+            datetime_from, next_midnight, include_cancelled=include_cancelled,
+            including_to=True
         )
 
     def get_current_week_appointments(
@@ -281,14 +281,12 @@ class Stylist(models.Model):
         )
 
     def is_working_time(
-            self, date_time: datetime.datetime, duration: Optional[datetime.timedelta]=None
+            self, date_time: datetime.datetime
     ) -> bool:
-        if duration is None:
-            duration = datetime.timedelta(0)
         # FIXME: There should be extra logic to check if start and end time fall to
         # FIXME: different dates. But I guess it should be an extremely rare case for now.
         date_time = self.with_salon_tz(date_time)
-        end_time = (date_time + duration).time()
+        end_time = (date_time + self.service_time_gap).time()
         return self.available_days.filter(
             weekday=date_time.isoweekday(),
             work_start_at__lte=date_time.time(),
