@@ -1,3 +1,5 @@
+from typing import List
+
 from .defaults import *  # noqa
 
 LEVEL = 'staging'
@@ -17,3 +19,17 @@ AWS_LOCATION = 'uploads-staging'
 
 FB_APP_ID = '1332946860139961'
 FB_APP_SECRET = 'a2013eb7dc891c5534bcad9ee69bae98'
+
+RAVEN_CONFIG = {
+    'dsn': 'https://173df1e01f014501a9bed56a6998fb63:'
+           'c22c5f14518a441c93cdc631f7d474df@sentry.io/1228912',
+    'processors': (
+        'raven.processors.SanitizePasswordsProcessor',
+        'raven.processors.RemovePostDataProcessor',
+    )
+}
+MIDDLEWARE: List = [
+    'raven.contrib.django.raven_compat.middleware.SentryResponseErrorIdMiddleware',
+] + MIDDLEWARE  # noqa
+
+INSTALLED_APPS += ['raven.contrib.django.raven_compat', ]  # noqa
