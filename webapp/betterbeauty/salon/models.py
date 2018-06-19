@@ -16,6 +16,7 @@ from core.choices import WEEKDAY
 from core.models import User
 from core.types import Weekday
 from .choices import INVITATION_STATUS_CHOICES
+from .contstants import DEFAULT_SERVICE_GAP_TIME_MINUTES
 from .types import InvitationStatus
 
 
@@ -120,7 +121,9 @@ class Stylist(models.Model):
     is_discount_configured = models.BooleanField(default=False)
     has_invited_clients = models.BooleanField(default=False)
 
-    service_time_gap = models.DurationField(default=datetime.timedelta(minutes=15))
+    service_time_gap = models.DurationField(
+        default=datetime.timedelta(minutes=DEFAULT_SERVICE_GAP_TIME_MINUTES)
+    )
 
     class Meta:
         db_table = 'stylist'
@@ -211,7 +214,9 @@ class Stylist(models.Model):
             datetime_from: Optional[datetime.datetime]=None,
             datetime_to: Optional[datetime.datetime]=None,
             including_to: Optional[bool]=False,
-            include_cancelled=False, **kwargs
+            include_cancelled=False,
+            include_checked_out=True,
+            **kwargs
     ) -> models.QuerySet:
         """
         Return appointments present in given datetime range.
@@ -219,6 +224,7 @@ class Stylist(models.Model):
         :param datetime_to: datetime by which last appointment starts
         :param including_to: whether or not end datetime should be inclusive
         :param include_cancelled: whether or not cancelled appointments are included
+        :param include_checked_out: whether or not checked out appointments are included
         :param kwargs: any optional filter kwargs to be applied
         :return: Resulting Appointment queryset
         """
@@ -244,14 +250,18 @@ class Stylist(models.Model):
                 )
 
         if not include_cancelled:
-            return appointments.exclude(status__in=[
+            appointments = appointments.exclude(status__in=[
                 AppointmentStatus.CANCELLED_BY_CLIENT,
                 AppointmentStatus.CANCELLED_BY_STYLIST
             ])
+
+        if not include_checked_out:
+            appointments = appointments.exclude(status=AppointmentStatus.CHECKED_OUT)
+
         return appointments
 
     def get_today_appointments(
-            self, upcoming_only=True, include_cancelled=False
+            self, upcoming_only=True, include_cancelled=False, include_checked_out=True
     ) -> models.QuerySet:
         """Return today's appointments, aware of stylist's timezone"""
         current_now: datetime.datetime = self.get_current_now()
@@ -266,6 +276,7 @@ class Stylist(models.Model):
 
         return self.get_appointments_in_datetime_range(
             datetime_from, next_midnight, include_cancelled=include_cancelled,
+            include_checked_out=include_checked_out,
             including_to=True
         )
 
