@@ -1,5 +1,3 @@
-import { ServiceUuid } from '~/core/stylist-service/stylist-models';
-
 export enum AppointmentStatuses {
   new = 'new',
   no_show = 'no_show',
@@ -42,10 +40,14 @@ export interface AppointmentService {
   isChecked?: boolean;
 }
 
-export interface NewAppointment {
+export interface AppointmentServiceUuid {
+  service_uuid: string;
+}
+
+export interface NewAppointmentRequest {
   client_first_name: string;
   client_last_name: string;
-  services: ServiceUuid[];
+  services: AppointmentServiceUuid[];
   datetime_start_at: string; // ISO 8601: 2018-05-20T18:00:00-04:00
 }
 
@@ -63,6 +65,11 @@ export interface Appointment {
   duration_minutes: number;
   status: AppointmentStatuses;
   services: AppointmentService[];
+}
+
+export interface AppointmentDateOffer {
+  date: string; // ISO 8601 date
+  price: number;
 }
 
 export interface Today {

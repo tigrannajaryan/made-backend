@@ -10,6 +10,7 @@ export enum PageNames {
   AddServicesComponent = 'AddServicesComponent',
   AppointmentAdd = 'AppointmentAddComponent',
   AppointmentService = 'AppointmentServicesComponent',
+  AppointmentDate = 'AppointmentDateComponent',
   AppointmentCheckout = 'AppointmentCheckoutComponent',
   ChangePercent = 'ChangePercentComponent',
   ConfirmCheckoutComponent = 'ConfirmCheckoutComponent',

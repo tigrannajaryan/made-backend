@@ -1,3 +1,5 @@
+import * as moment from 'moment';
+
 import { Store } from '@ngrx/store';
 import { Component } from '@angular/core';
 import { AlertController, IonicPage, NavController } from 'ionic-angular';
@@ -10,12 +12,15 @@ import { ServiceItem } from '~/core/stylist-service/stylist-models';
 
 import { Client } from '~/appointment/appointment-add/clients-models';
 import { TodayService as AppointmentService } from '~/today/today.service';
+import { AppointmentDateOffer } from '~/today/today.models';
 
 import {
   ClearClientsAction,
   ClientsState,
   SearchAction,
-  selectFoundClients
+  SelectClientAction,
+  selectFoundClients,
+  selectSelectedClient
 } from '~/appointment/appointment-add/clients.reducer';
 
 import {
@@ -23,6 +28,10 @@ import {
   selectSelectedService,
   ServicesState
 } from '~/appointment/appointment-services/services.reducer';
+
+import {
+  selectSelectedDate
+} from '~/appointment/appointment-date/appointment-dates.reducer';
 
 @IonicPage()
 @Component({
@@ -32,7 +41,12 @@ import {
 export class AppointmentAddComponent {
   form: FormGroup;
   selectedClient?: Client;
+  selectedDate?: AppointmentDateOffer;
   selectedService?: ServiceItem;
+
+  // labels
+  protected selectServiceLabel = 'Select from service list';
+  protected selectDateLabel = 'Choose date';
 
   protected clientsList?: Client[];
   protected minuteValues = Array(12).fill(undefined).map((_, idx) => idx * 5).toString(); // every 5 minutes
@@ -52,10 +66,11 @@ export class AppointmentAddComponent {
     this.store
       .select(selectSelectedService)
       .takeUntil(componentUnloaded(this))
-      .subscribe(service => {
-        if (service !== undefined) {
-          this.selectedService = service;
-        }
+      .subscribe(selectedService => {
+        this.selectedService = selectedService;
+        this.form.patchValue({
+          service: selectedService ? selectedService.name : this.selectServiceLabel
+        });
       });
 
     this.store
@@ -63,6 +78,23 @@ export class AppointmentAddComponent {
       .takeUntil(componentUnloaded(this))
       .subscribe(clients => {
         this.clientsList = clients;
+      });
+
+    this.store
+      .select(selectSelectedClient)
+      .takeUntil(componentUnloaded(this))
+      .subscribe(client => {
+        this.selectedClient = client;
+      });
+
+    this.store
+      .select(selectSelectedDate)
+      .takeUntil(componentUnloaded(this))
+      .subscribe(selectedDate => {
+        this.selectedDate = selectedDate;
+        this.form.patchValue({
+          date: selectedDate ? moment(selectedDate.date).format('D MMMM, YYYY') : this.selectDateLabel
+        });
       });
   }
 
@@ -92,7 +124,7 @@ export class AppointmentAddComponent {
   }
 
   selectClient(client: Client): void {
-    this.selectedClient = client;
+    this.store.dispatch(new SelectClientAction(client));
     this.form.patchValue({
       client: this.getClientFullName(client),
       phone: client.phone
@@ -105,8 +137,14 @@ export class AppointmentAddComponent {
     event.preventDefault(); // prevents submit
   }
 
+  selectDate(event): void {
+    this.navCtrl.push(PageNames.AppointmentDate);
+    event.preventDefault(); // prevents submit
+  }
+
   async submit(forced = false): Promise<void> {
-    const { client, phone, date, time } = this.form.value;
+    const { client, phone, time } = this.form.value;
+    const date = moment(this.selectedDate.date).format('YYYY-MM-DD');
 
     let clientData;
     if (this.selectedClient) {
@@ -174,7 +212,8 @@ export class AppointmentAddComponent {
     this.form = this.formBuilder.group({
       client: ['', [Validators.required]],
       phone: ['', [Validators.required]],
-      date: ['', [Validators.required]],
+      service: [this.selectServiceLabel, [Validators.required]],
+      date: [this.selectDateLabel, [Validators.required]],
       time: ['', [Validators.required]]
     });
   }
