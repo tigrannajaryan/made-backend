@@ -12,7 +12,6 @@ import {
   LoadAction,
   LoadErrorAction,
   LoadSuccessAction,
-  selectService,
   servicesActionTypes,
   ServicesState
 } from './services.reducer';
@@ -22,8 +21,7 @@ export class ServicesEffects {
 
   @Effect() load = this.actions
     .ofType(servicesActionTypes.LOAD)
-    .withLatestFrom(this.store.select(selectService))
-    .filter(([action, { loaded }]) => !loaded)
+    .map((action: LoadAction) => action)
     .switchMap(() => Observable.defer(withLoader(async () => {
       try {
         const { categories } = await this.stylistService.getStylistServices();
