@@ -742,6 +742,57 @@ class TestAppointmentSerializer(object):
         assert (original_service.service_uuid == service.uuid)
         assert (original_service.service_name == service.name)
 
+    @freeze_time('2018-05-17 15:30:00 UTC')
+    @pytest.mark.django_db
+    def test_create_pricing(self, stylist_data: Stylist):
+        from salon.models import StylistAvailableWeekDay
+        from salon.utils import calculate_price_and_discount_for_client_on_date
+        service: StylistService = G(
+            StylistService,
+            stylist=stylist_data,
+            regular_price=200,
+            duration=datetime.timedelta()
+        )
+        appointment_start: datetime.datetime = stylist_data.with_salon_tz(
+            datetime.datetime(2018, 5, 17, 15, 00)
+        )
+        client = G(Client)
+
+        # associate client with stylist
+        G(Appointment, stylist=stylist_data, client=client,
+          datetime_start_at=stylist_data.with_salon_tz(
+              datetime.datetime(2018, 5, 10, 15, 00)
+          ))
+        stylist_data.available_days.filter(weekday=Weekday.THURSDAY).delete()
+        G(StylistAvailableWeekDay, weekday=Weekday.THURSDAY,
+          work_start_at=datetime.time(8, 0), work_end_at=datetime.time(12, 00),
+          is_available=True, stylist=stylist_data
+          )
+
+        for i in range(0, 9):
+            appointment_data = {
+                'client_uuid': client.uuid,
+                'services': [
+                    {
+                        'service_uuid': service.uuid,
+                    },
+                ],
+                'datetime_start_at': (
+                    appointment_start
+                ).isoformat()
+            }
+
+            calculated_price: CalculatedPrice = calculate_price_and_discount_for_client_on_date(
+                service=service, client=client, date=appointment_start.date()
+            )
+            appointment_serializer = AppointmentSerializer(
+                data=appointment_data, context={'stylist': stylist_data, 'force_start': True}
+            )
+            assert(appointment_serializer.is_valid(raise_exception=False) is True)
+            appointment: Appointment = appointment_serializer.save()
+            appointment_service: AppointmentService = appointment.services.first()
+            assert(calculated_price.price == appointment_service.client_price)
+
 
 class TestAppointmentUpdateSerializer(object):
 

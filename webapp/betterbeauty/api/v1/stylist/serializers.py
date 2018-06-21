@@ -1,8 +1,8 @@
 import datetime
-
 import uuid
 from decimal import Decimal
-from typing import Dict, List, Optional
+from math import trunc
+from typing import Dict, List, Optional, Tuple
 
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -715,17 +715,23 @@ class AppointmentSerializer(AppointmentValidationMixin, serializers.ModelSeriali
             data['client'] = client
 
             appointment_services = data.pop('services', [])
-            appointment: Appointment = super(AppointmentSerializer, self).create(data)
-            total_client_price_before_tax: Decimal = 0
+
+            # pre-calculate client services before adding the appointment; otherwise
+            # appointment presence will affect the price calculation
+
+            services_with_client_prices: List[Tuple[StylistService, CalculatedPrice]] = []
             for appointment_service in appointment_services:
                 service: StylistService = stylist.services.get(
                     uuid=appointment_service['service_uuid']
                 )
-                # regular price copied from service, client's price is calculated
-
                 client_price: CalculatedPrice = calculate_price_and_discount_for_client_on_date(
                     service=service, client=client, date=datetime_start_at.date()
                 )
+                services_with_client_prices.append((service, client_price))
+
+            appointment: Appointment = super(AppointmentSerializer, self).create(data)
+            total_client_price_before_tax: Decimal = 0
+            for (service, client_price) in services_with_client_prices:
                 AppointmentService.objects.create(
                     appointment=appointment,
                     service_name=service.name,
@@ -1071,9 +1077,7 @@ class ClientSerializer(serializers.ModelSerializer):
 
 class StylistServicePriceSerializer(serializers.Serializer):
     date = serializers.DateField()
-    price = serializers.DecimalField(
-        coerce_to_string=False, max_digits=6, decimal_places=2
-    )
+    price = serializers.IntegerField()
 
 
 class StylistServicePricingRequestSerializer(
@@ -1098,6 +1102,6 @@ class StylistServicePricingSerializer(serializers.ModelSerializer):
             stylist_service, client, exclude_fully_booked=True
         )
         return StylistServicePriceSerializer(
-            map(lambda m: {'date': m[0], 'price': m[1].price}, prices_and_dates),
+            map(lambda m: {'date': m[0], 'price': trunc(m[1].price)}, prices_and_dates),
             many=True
         ).data

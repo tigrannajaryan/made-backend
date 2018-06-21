@@ -1,5 +1,6 @@
 import datetime
 from itertools import compress
+from math import trunc
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from django.db import transaction
@@ -159,7 +160,7 @@ def calculate_price_and_discount_for_client_on_date(
         return prices[date]
     # Return base price if day does not appear to be available for booking
     calculated_price = CalculatedPrice.build(
-        price=float(service.regular_price), applied_discount=None, discount_percentage=0
+        price=trunc(service.regular_price), applied_discount=None, discount_percentage=0
     )
     return calculated_price
 
