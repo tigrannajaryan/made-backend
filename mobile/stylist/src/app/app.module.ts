@@ -6,6 +6,7 @@ import { ErrorHandler, Injector, NgModule } from '@angular/core';
 import { META_REDUCERS, StoreModule } from '@ngrx/store';
 import { EffectsModule } from '@ngrx/effects';
 import { IonicApp, IonicModule } from 'ionic-angular';
+import { GoogleAnalytics } from '@ionic-native/google-analytics';
 
 import { MyAppComponent } from './app.component';
 import { Logger } from './shared/logger';
@@ -59,6 +60,7 @@ initSentry();
     AuthApiService,
     StylistServiceProvider,
     httpInterceptorProviders,
+    GoogleAnalytics,
 
     {
       // Our custom handler for unhandled exceptions
