@@ -7,7 +7,7 @@ from rest_framework import status
 
 from api.v1.stylist.views import ClientSearchView
 from appointment.models import Appointment
-from client.models import Client
+from client.models import ClientOfStylist
 from core.models import User
 from core.types import UserRole
 from salon.models import Stylist
@@ -59,40 +59,46 @@ class TestClientSearchView(object):
 
     @pytest.mark.django_db
     def test_search_clients(self):
-        stylist = G(Stylist)
+        stylist_1 = G(Stylist)
         # stray_client
-        user_1 = G(
-            User,
+        G(
+            ClientOfStylist,
+            first_name='Jenny',
+            last_name='McDonald',
+            phone='123456',
+            stylist=stylist_1,
+        )
+
+        our_stylist = G(Stylist)
+        # client that our stylist has appointments with
+        our_client = G(
+            ClientOfStylist,
             first_name='Fred',
             last_name='McBob',
-            phone='123456',
-            role=UserRole.CLIENT
-        )
-        G(
-            Client,
-            user=user_1
+            phone='123457',
+            stylist=our_stylist,
         )
 
-        # client that our stylist has appointments with
-        user_2 = G(
-            User,
-            first_name='Fred_ours',
-            last_name='McBob_ours',
-            phone='123457',
-            role=UserRole.CLIENT
-        )
-        our_client = G(
-            Client,
-            user=user_2
-        )
-        G(Appointment, stylist=stylist, client=our_client)
+        G(Appointment, stylist=our_stylist, client=our_client)
 
         no_results = ClientSearchView()._search_clients(
-            stylist, 'Gemma'
+            our_stylist, 'Jenny'
         )
         assert(no_results.count() == 0)
         results = ClientSearchView()._search_clients(
-            stylist, 'Fred'
+            our_stylist, 'Fred'
         )
         assert(results.count() == 1)
         assert(results.last() == our_client)
+
+        results = ClientSearchView()._search_clients(our_stylist, 'Fred mc')
+        assert (results.count() == 1)
+        assert (results.last() == our_client)
+
+        results = ClientSearchView()._search_clients(our_stylist, 'mcbob fr')
+        assert (results.count() == 1)
+        assert (results.last() == our_client)
+
+        results = ClientSearchView()._search_clients(our_stylist, '12345')
+        assert (results.count() == 1)
+        assert (results.last() == our_client)
