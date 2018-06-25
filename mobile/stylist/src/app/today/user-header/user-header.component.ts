@@ -1,14 +1,12 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { NavController, PopoverController } from 'ionic-angular';
 import { Store } from '@ngrx/store';
 
 import { PageNames } from '~/core/page-names';
-import { StylistServiceProvider } from '~/core/stylist-service/stylist-service';
 import { StylistProfile } from '~/core/stylist-service/stylist-models';
 
 import { TodayComponent } from '~/today/today.component';
 import { UserHeaderMenuActions, UserHeaderMenuComponent } from './user-header-menu/user-header-menu.component';
-import { showAlert } from '~/core/utils/alert';
 import { AuthApiService } from '~/core/auth-api-service/auth-api-service';
 import { LogoutAction } from '~/app.reducers';
 
@@ -16,25 +14,23 @@ import { LogoutAction } from '~/app.reducers';
   selector: '[madeUserHeader]',
   templateUrl: 'user-header.component.html'
 })
-export class UserHeaderComponent implements OnInit {
+export class UserHeaderComponent {
   @Input() hasBackButton: boolean;
   @Input() hasShadow: boolean;
+  @Input() profile: StylistProfile;
 
-  protected profile: StylistProfile;
   protected PageNames = PageNames;
-  protected today = new Date();
 
   constructor(
     public popoverCtrl: PopoverController,
     protected navCtrl: NavController,
-    private apiService: StylistServiceProvider,
     private authApiService: AuthApiService,
     private store: Store<any>
   ) {
   }
 
-  ngOnInit(): void {
-    this.loadUserData();
+  getToday(): Date {
+    return new Date();
   }
 
   goToHome(): void {
@@ -44,15 +40,6 @@ export class UserHeaderComponent implements OnInit {
       this.navCtrl.pop();
     } else {
       this.navCtrl.push(PageNames.Today);
-    }
-  }
-
-  async loadUserData(): Promise<void> {
-    try {
-      this.profile = await this.apiService.getProfile();
-      this.profile.profile_photo_url = `url(${this.profile.profile_photo_url})`;
-    } catch (e) {
-      showAlert('Loading profile failed', e.message);
     }
   }
 
