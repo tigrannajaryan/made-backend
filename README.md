@@ -1,22 +1,9 @@
 # Introduction
-MadeBeauty source code monorepo. This repo contains all source code for all our applications.
-
-# Directory Structure
-
-The repository has the following structure:
-```
-/mobile  - mobile apps.
-/webapp  - application backend API and admin.
-/website - madebeauty.com public web site.
-```
-
+MadeBeauty backend source code.
 
 # Contributing
-
 Below are general guidelines that you need to follow
-when contributing to this repo. See also additional guideance
-on specific apps in `/mobile/README.md` and
-`/webapp/README.md` files.
+when contributing to this repo.
 
 Use supplied `/.gitcommit` commit message template. You can enable
 it this way:
@@ -24,19 +11,17 @@ it this way:
 
 ## Branching Model
 
-We practice Continuous Deployment with 2 mainline branches:
-`develop` and `master`.
+We practice Continuous Deployment with 1 mainline branch `develop`.
 
 Commiting to `develop` branch will trigger automatic build
-and deployment of staging enviroment. Commiting to `master`
-branch will trigger automatic build and deployment of
-production enviroment.
+and deployment of staging enviroment; successful deployment will
+trigger automatic deployment of production enviroment.
 
-We keep linear commit history on `develop` and `master` branches.
-Don't use merge commits on these branches. Always use rebase and
+We keep linear commit history on `develop` branch.
+Don't use merge commits on this branch. Always use rebase and
 fast-forward when merging.
 
-Commits on `develop` and `master` branches should be the smalest
+Commits on `develop` branch should be the smallest
 possible logical change that makes sense but not smaller. It should
 be single cohesive idea, like "Added ability to upload a photo on
 profile page". There should be one-to-one mapping between ideas
@@ -51,9 +36,9 @@ Do not keep long-lasting feature branches, otherwise you
 risk facing merge conflicts which are never fun.
 
 Feel free to make as many commits as you want on your feature
-branch as you make progress on the work. These intermedidate
+branch as you make progress on the work. These intermediate
 commits are a convenient savepoints and it is up to you
-how many intermedidate commits you want to do and what to
+how many intermediate commits you want to do and what to
 include in each. However before merging your work to develop
 branch make sure your commits are squashed into one logical commit
 (an exception to this rule when you can have more than one logical
@@ -81,15 +66,7 @@ and deliver each to `develop` as you make progress.
 
 However make sure that partially implemented feature is not
 exposed to end users. To achieve it disable the feature in production
-using feature flags. For mobile app the easiest way would be
-to do something like this:
-
-```
-if (!ENV.ffEnableIncomplete) {
-  // code for your new feature that should not be
-  // exposed to for the particular environment
-}
-```
+using feature flags.
 
 ## Pull Requests and Code Reviews
 
@@ -120,3 +97,40 @@ Add your tests for any new feature you create or for any bug you fix.
 The final commit that you merge to the develop branch must include
 the automated tests for the new feature.
 
+
+# Installation and local setup
+## Prerequisites
+
+- Python 3.6
+- PostgreSQL >= 9.6
+
+
+## Local setup and installation
+
+- add following line to your `/etc/hosts` file:
+
+`127.0.0.1 betterbeauty.local`
+- go to `/betterbeauty` folder and run `make setup-db`. It will set up local postgres db and
+will add default user.
+
+Note: admin priviliges will be required, since command uses `sudo`.
+Alternatively, you may execute `install_scripts/local_setup.sh`.
+
+For OSX setup, please use `install_scripts/local_osx_setup.sh`
+
+- run `make run`. This command will create virtual environment, will set up Python modules
+and will start development server at `http://betterbeauty.local:8000`
+
+
+## Overriding default django settings
+
+In `core/settings` there’s `local.py.def` file. If renamed to `local.py`, it will be
+excluded from git tracking (it is is .gitignore` and will allow to override default
+django settings. It’s useful to set some api keys for local testing,
+or override some default settings.
+
+## Other commands
+
+- `make clean` - clean up cached python files
+- `COMMAND=your_command make manage` - passes `your_command` to `manage.py`
+- `make test` - run tests

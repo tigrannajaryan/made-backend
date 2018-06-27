@@ -1,0 +1,29 @@
+dist: trusty
+sudo: false
+
+language: python
+python:
+- '3.6'
+
+services:
+- postgresql
+
+before_script: make setup-db
+
+script:
+- make build
+- make test
+
+deploy:
+  provider: elasticbeanstalk
+  access_key_id: $AWS_ACCESS_KEY
+  secret_access_key:
+    secure: "$AWS_SECURE_KEY"
+  region: us-east-1
+  app: betterbeauty_django_backend
+  env: betterbeauty-django-backend-dev
+  bucket_name: "betterbeauty-eb-upload-bucket"
+  bucket_path: "staging"
+  on:
+    repo: madebeauty/backend
+    branch: develop
