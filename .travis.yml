@@ -15,15 +15,27 @@ script:
 - make test
 
 deploy:
-  provider: elasticbeanstalk
-  access_key_id: $AWS_ACCESS_KEY
-  secret_access_key:
-    secure: "$AWS_SECURE_KEY"
-  region: us-east-1
-  app: betterbeauty_django_backend
-  env: betterbeauty-django-backend-dev
-  bucket_name: "betterbeauty-eb-upload-bucket"
-  bucket_path: "staging"
-  on:
-    repo: madebeauty/backend
-    branch: develop
+  - provider: elasticbeanstalk
+    access_key_id: $AWS_ACCESS_KEY
+    secret_access_key:
+      secure: "$AWS_SECURE_KEY"
+    region: us-east-1
+    app: betterbeauty_django_backend
+    env: betterbeauty-django-backend-dev
+    bucket_name: "betterbeauty-eb-upload-bucket"
+    bucket_path: "staging"
+    on:
+      repo: madebeauty/backend
+      branch: develop
+  - provider: elasticbeanstalk
+    access_key_id: $AWS_ACCESS_KEY
+    secret_access_key:
+      secure: "$AWS_SECURE_KEY"
+    region: us-east-1
+    app: madebeauty-django-backend-prod
+    env: MadebeautyDjangoBackendProd-env
+    bucket_name: "betterbeauty-eb-upload-bucket"
+    bucket_path: "production"
+    on:
+      repo: madebeauty/backend
+      branch: develop
