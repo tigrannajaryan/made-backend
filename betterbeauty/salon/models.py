@@ -356,6 +356,7 @@ class ServiceTemplate(models.Model):
     description = models.TextField(blank=True)
     regular_price = models.DecimalField(max_digits=6, decimal_places=2)
     duration = models.DurationField()
+    is_addon = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'service_template'
@@ -377,6 +378,7 @@ class StylistService(models.Model):
     regular_price = models.DecimalField(max_digits=6, decimal_places=2)
     duration = models.DurationField()
     is_enabled = models.BooleanField(default=False)
+    is_addon = models.BooleanField(default=False)
 
     deleted_at = models.DateTimeField(null=True, default=None)
 
