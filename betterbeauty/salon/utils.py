@@ -102,9 +102,9 @@ def get_last_visit_date_for_client(
 ) -> Optional[datetime.date]:
     """Return last checked out appointment between stylist and client"""
     last_appointment: Optional[Appointment] = Appointment.objects.filter(
+        status__in=[AppointmentStatus.CHECKED_OUT, AppointmentStatus.NEW],
         stylist=stylist,
-        client=client,
-        status=AppointmentStatus.CHECKED_OUT
+        client=client
     ).order_by('datetime_start_at').last()
 
     if last_appointment:
