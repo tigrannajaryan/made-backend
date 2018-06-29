@@ -1115,6 +1115,7 @@ class ClientSerializer(serializers.ModelSerializer):
 class StylistServicePriceSerializer(serializers.Serializer):
     date = serializers.DateField()
     price = serializers.IntegerField()
+    discount_type = serializers.CharField()
     is_fully_booked = serializers.BooleanField()
     is_working_day = serializers.BooleanField()
 
@@ -1145,7 +1146,9 @@ class StylistServicePricingSerializer(serializers.ModelSerializer):
             map(lambda m: {'date': m.date,
                            'price': trunc(m.calculated_price.price),
                            'is_fully_booked': m.is_fully_booked,
-                           'is_working_day': m.is_working_day
+                           'is_working_day': m.is_working_day,
+                           'discount_type': m.calculated_price.applied_discount.value
+                           if m.calculated_price.applied_discount else None,
                            }, prices_and_dates),
             many=True
         ).data
