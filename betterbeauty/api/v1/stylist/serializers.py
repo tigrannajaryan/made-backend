@@ -91,6 +91,7 @@ class StylistServiceSerializer(serializers.ModelSerializer):
     base_price = serializers.DecimalField(
         coerce_to_string=False, max_digits=6, decimal_places=2, source='regular_price'
     )
+    is_addon = serializers.BooleanField(default=False, required=False)
     uuid = serializers.UUIDField(required=False, allow_null=True)
     category_uuid = serializers.UUIDField(source='category.uuid')
     category_name = serializers.CharField(source='category.name', read_only=True)
@@ -139,7 +140,7 @@ class StylistServiceSerializer(serializers.ModelSerializer):
         model = StylistService
         fields = [
             'name', 'description', 'base_price', 'duration_minutes',
-            'is_enabled', 'photo_samples', 'category_uuid', 'category_name',
+            'is_enabled', 'is_addon', 'photo_samples', 'category_uuid', 'category_name',
             'uuid'
         ]
 
@@ -256,10 +257,11 @@ class ServiceTemplateDetailsSerializer(serializers.ModelSerializer):
     duration_minutes = DurationMinuteField(source='duration')
     base_price = serializers.DecimalField(
         coerce_to_string=False, max_digits=6, decimal_places=2, source='regular_price')
+    is_addon = serializers.BooleanField(default=False)
 
     class Meta:
         model = ServiceTemplate
-        fields = ['name', 'description', 'base_price', 'duration_minutes', ]
+        fields = ['name', 'description', 'base_price', 'duration_minutes', 'is_addon']
 
 
 class ServiceTemplateSetListSerializer(serializers.ModelSerializer):

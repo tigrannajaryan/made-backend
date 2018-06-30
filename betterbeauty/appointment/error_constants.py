@@ -6,6 +6,7 @@ ERR_APPOINTMENT_OUTSIDE_WORKING_HOURS = 'Cannot add appointment outside working 
 ERR_APPOINTMENT_NON_WORKING_DAY = 'Cannot add appointment on non-working day'
 ERR_SERVICE_DOES_NOT_EXIST = 'No such service'
 ERR_SERVICE_REQUIRED = 'At least one service must be supplied'
+ERR_NON_ADDON_SERVICE_REQUIRED = 'At least one non-addon service must be supplied'
 ERR_CLIENT_DOES_NOT_EXIST = 'No such client'
 ERR_STATUS_NOT_ALLOWED = 'Setting this status is not allowed'
 ERR_NO_SECOND_CHECKOUT = 'Appointment can only be checked out once'
