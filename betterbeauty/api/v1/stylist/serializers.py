@@ -505,10 +505,15 @@ class StylistWeekdayDiscountSerializer(serializers.ModelSerializer):
         min_value=0, max_value=100
     )
     weekday_verbose = serializers.CharField(source='get_weekday_display', read_only=True)
+    is_working_day = serializers.SerializerMethodField()
 
     class Meta:
         model = StylistWeekdayDiscount
-        fields = ['weekday', 'weekday_verbose', 'discount_percent']
+        fields = ['weekday', 'weekday_verbose', 'discount_percent', 'is_working_day']
+
+    def get_is_working_day(self, stylist_weekday_discount: StylistWeekdayDiscount):
+        return stylist_weekday_discount.stylist.available_days.filter(
+            weekday=stylist_weekday_discount.weekday, is_available=True).exists()
 
 
 class StylistDiscountsSerializer(serializers.ModelSerializer):
