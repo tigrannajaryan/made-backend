@@ -13,10 +13,10 @@ from .constants import (
 
 
 class DiscountType(Enum):
-    FIRST_BOOKING = 1
-    REVISIT_WITHIN_1WEEK = 2
-    REVISIT_WITHIN_2WEEK = 3
-    WEEKDAY = 4
+    FIRST_BOOKING = 'first_booking'
+    REVISIT_WITHIN_1WEEK = 'revisit_within_1_week'
+    REVISIT_WITHIN_2WEEK = 'revisit_within_2_weeks'
+    WEEKDAY = 'weekday'
 
 
 DISCOUNT_TYPE_CHOICES = Choices(

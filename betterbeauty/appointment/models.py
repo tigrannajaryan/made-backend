@@ -129,7 +129,7 @@ class AppointmentService(models.Model):
     calculated_price = models.DecimalField(max_digits=6, decimal_places=2)
     client_price = models.DecimalField(max_digits=6, decimal_places=2)
 
-    applied_discount = models.PositiveIntegerField(choices=DISCOUNT_TYPE_CHOICES, null=True)
+    applied_discount = models.CharField(choices=DISCOUNT_TYPE_CHOICES, null=True, max_length=30)
     is_price_edited = models.BooleanField(default=False)
     discount_percentage = models.PositiveIntegerField(default=0)
 
