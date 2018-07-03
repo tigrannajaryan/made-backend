@@ -15,6 +15,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
 import appointment.error_constants as appointment_errors
+from api.common.fields import PhoneNumberField
 from appointment.constants import APPOINTMENT_STYLIST_SETTABLE_STATUSES
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
@@ -49,7 +50,7 @@ from .fields import DurationMinuteField
 
 class StylistUserSerializer(serializers.ModelSerializer):
 
-    phone = serializers.CharField(
+    phone = PhoneNumberField(
         validators=[UniqueValidator(
             queryset=User.objects.all(),
             message=ErrorMessages.UNIQUE_STYLIST_PHONE)])
@@ -164,7 +165,7 @@ class StylistSerializer(serializers.ModelSerializer):
 
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
-    phone = serializers.CharField(source='user.phone',)
+    phone = PhoneNumberField(source='user.phone',)
 
     class Meta:
         model = Stylist
@@ -654,7 +655,7 @@ class AppointmentSerializer(AppointmentValidationMixin, serializers.ModelSeriali
     client_last_name = serializers.CharField(
         allow_null=True, allow_blank=True, required=False
     )
-    client_phone = serializers.CharField(required=False,)
+    client_phone = PhoneNumberField(required=False,)
 
     total_client_price_before_tax = serializers.DecimalField(
         max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
@@ -1059,7 +1060,7 @@ class StylistTodaySerializer(serializers.ModelSerializer):
 
 class InvitationSerializer(serializers.ModelSerializer):
 
-    phone = serializers.CharField(required=True)
+    phone = PhoneNumberField(required=True)
 
     class Meta:
         model = Invitation
@@ -1105,7 +1106,7 @@ class StylistSettingsRetrieveSerializer(serializers.ModelSerializer):
 class ClientSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(read_only=True)
     last_name = serializers.CharField(read_only=True)
-    phone = serializers.CharField(read_only=True)
+    phone = PhoneNumberField(read_only=True)
 
     class Meta:
         model = ClientOfStylist
