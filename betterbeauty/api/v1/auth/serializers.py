@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django.db import transaction
 from django.utils.translation import ugettext_lazy as _
 
@@ -7,10 +9,12 @@ from rest_framework.exceptions import ValidationError
 from api.v1.auth.constants import ROLES_WITH_ALLOWED_LOGIN
 from api.v1.client.serializers import ClientSerializer
 from api.v1.stylist.serializers import StylistProfileStatusSerializer, StylistSerializer
+from client.models import PhoneSMSCodes, Client, ClientOfStylist
 from core.choices import USER_ROLE
 from core.models import User
 from core.types import FBAccessToken, FBUserID, UserRole
 from core.utils.facebook import get_or_create_facebook_user
+from salon.models import Invitation
 from salon.utils import create_stylist_profile_for_user
 
 
@@ -102,3 +106,17 @@ class FacebookAuthTokenSerializer(CreateProfileMixin, serializers.Serializer):
             if created:
                 self.create_profile_for_user(user=user, role=role)
             return user
+
+
+class PhoneSerializer(serializers.Serializer):
+    phone = serializers.CharField()
+
+
+class  PhoneSMSCodeSerializer(serializers.Serializer):
+
+    phone = serializers.CharField()
+    code = serializers.CharField(write_only=True)
+
+    class Meta:
+        model=PhoneSMSCodes
+        fields=['phone', 'code']

@@ -1,11 +1,15 @@
-from rest_framework import status
+from rest_framework import status, views
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_jwt.settings import api_settings
 
+from api.v1.auth.serializers import PhoneSerializer, PhoneSMSCodeSerializer
+from api.v1.auth.utils import create_client_profile_from_phone
+from client.models import PhoneSMSCodes
+
 from core.models import User
-from core.types import FBAccessToken, FBUserID
+from core.types import FBAccessToken, FBUserID, UserRole
 from core.utils.facebook import verify_fb_token
 
 from .serializers import FacebookAuthTokenSerializer, UserRegistrationSerializer
@@ -62,3 +66,51 @@ class FBRegisterLoginView(APIView):
         return Response(jwt_response_payload_handler(
             token, user, self.request
         ))
+
+
+class SendCodeView(views.APIView):
+
+    def post(self, request):
+        serializer = PhoneSerializer(
+            data=request.data,
+        )
+        serializer.is_valid(raise_exception=True)
+        data = serializer.data
+        phone_sms_code = PhoneSMSCodes.create_or_update_phone_sms_code(data['phone'])
+        return Response(
+            {}
+        )
+
+
+class VerifyCodeView(views.APIView):
+
+    def post(self, request):
+        serializer = PhoneSMSCodeSerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        is_valid_code = PhoneSMSCodes.is_valid_sms_code(data['phone'], data['code'])
+        if is_valid_code:
+            try:
+                user = User.objects.get(phone=data['phone'])
+                if not UserRole.CLIENT in user.role:
+                    # Existing stylist, create client profile
+                    user = create_client_profile_from_phone(data['phone'], user)
+            except User.DoesNotExist:
+                # New user. Create login
+                user = create_client_profile_from_phone(data['phone'])
+
+            jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
+            jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
+
+            jwt_response_payload_handler = api_settings.JWT_RESPONSE_PAYLOAD_HANDLER
+
+            payload = jwt_payload_handler(user)
+            token = jwt_encode_handler(payload)
+            return Response(jwt_response_payload_handler(
+                token, user, self.request
+            ))
+        else:
+            # Invalid code
+            pass
