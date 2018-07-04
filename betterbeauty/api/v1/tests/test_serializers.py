@@ -252,7 +252,7 @@ class TestStylistProfileCompletenessSerializer(object):
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_personal_data'] is False
         )
-        user.phone = '12345'
+        user.phone = '+15417543010'
         user.save()
         assert (
             StylistProfileStatusSerializer(
@@ -526,7 +526,7 @@ class TestAppointmentSerializer(object):
         data = {
             'client_first_name': 'Fred',
             'client_last_name': 'McBob',
-            'client_phone': '12345',
+            'client_phone': '(541)-754-3010',
             'services': [
                 {
                     'service_uuid': service.uuid,
@@ -547,7 +547,7 @@ class TestAppointmentSerializer(object):
         data = {
             'client_first_name': 'Fred',
             'client_last_name': 'McBob',
-            'client_phone': '12345',
+            'client_phone': '+1-541-754-3010',
             'services': [
                 {
                     'service_uuid': service.uuid,
@@ -568,7 +568,7 @@ class TestAppointmentSerializer(object):
         data = {
             'client_first_name': 'Fred',
             'client_last_name': 'McBob',
-            'client_phone': '12345',
+            'client_phone': '15417543010',
             'services': [
                 {
                     'service_uuid': service.uuid,
@@ -651,7 +651,7 @@ class TestAppointmentSerializer(object):
         data = {
             'client_first_name': 'Fred',
             'client_last_name': 'McBob',
-            'client_phone': '12345',
+            'client_phone': ' (541)-754-3010',
             'services': [
                 {
                     'service_uuid': service.uuid,
@@ -669,7 +669,7 @@ class TestAppointmentSerializer(object):
         assert(appointment.client is not None)
         client: ClientOfStylist = appointment.client
         assert(client.first_name == 'Fred')
-        assert(client.phone == '12345')
+        assert(client.phone == '+15417543010')
         assert(appointment.services.count() == 1)
         original_service: AppointmentService = appointment.services.first()
         assert(original_service.is_original is True)
