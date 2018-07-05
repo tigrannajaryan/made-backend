@@ -28,7 +28,7 @@ class TestRegisterUserView(object):
         assert(data['profile'] is not None)
         user = User.objects.last()
         assert(user and user.email == 'user@example.com')
-        assert(user.role == UserRole.STYLIST)
+        assert(UserRole.STYLIST in user.role)
         assert(user.stylist is not None)
 
     @pytest.mark.django_db
@@ -61,7 +61,7 @@ class TestFBRegisterLoginView(object):
     @pytest.mark.django_db
     def test_login_existing_user(self, client):
         fb_login_url = reverse('api:v1:auth:get_fb_token')
-        user = G(User, facebook_id='12345', role=UserRole.STYLIST)
+        user = G(User, facebook_id='12345', role=[UserRole.STYLIST])
         stylist = G(Stylist, user=user)
         data = {
             'fbAccessToken': 'abcd12345',
@@ -100,4 +100,4 @@ class TestFBRegisterLoginView(object):
         user = created_stylist.user
         assert(user.first_name == 'Jane')
         assert(user.last_name == 'McBob')
-        assert(user.role == UserRole.STYLIST)
+        assert(UserRole.STYLIST in user.role)

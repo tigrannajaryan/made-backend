@@ -50,7 +50,7 @@ def get_or_create_facebook_user(
         user, created = User.objects.get_or_create(defaults={
             'first_name': first_name,
             'last_name': last_name,
-            'role': role,
+            'role': [role],
         }, facebook_id=fb_user_id, email=email
         )
         if created and picture_url:
