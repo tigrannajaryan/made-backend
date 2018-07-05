@@ -1058,6 +1058,52 @@ class StylistTodaySerializer(serializers.ModelSerializer):
         ).count()
 
 
+class StylistHomeSerializer(serializers.ModelSerializer):
+    appointments = serializers.SerializerMethodField()
+    today_visits_count = serializers.SerializerMethodField()
+    upcoming_visits_count = serializers.SerializerMethodField()
+    past_visits_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Stylist
+        fields = [
+            'appointments', 'today_visits_count', 'upcoming_visits_count', 'past_visits_count',
+        ]
+
+    def get_appointments(self, stylist: Stylist):
+        """Return today's appointments that are still meaningful for the stylist"""
+        query = self.context['query']
+        if query == "upcoming":
+            appointments = stylist.get_upcoming_visits()
+        elif query == "past":
+            appointments = stylist.get_past_visits()
+        elif query == "today":
+            appointments = stylist.get_today_appointments(
+                upcoming_only=False,
+                include_cancelled=True,
+                include_checked_out=False
+            )
+        else:
+            raise serializers.ValidationError({
+                "detail": ErrorMessages.INVALID_QUERY_FOR_HOME})
+        return AppointmentSerializer(
+            appointments, many=True
+        ).data
+
+    def get_today_visits_count(self, stylist: Stylist):
+        return stylist.get_today_appointments(
+            upcoming_only=False,
+            include_cancelled=True,
+            include_checked_out=False
+        ).count()
+
+    def get_upcoming_visits_count(self, stylist: Stylist):
+        return stylist.get_upcoming_visits().count()
+
+    def get_past_visits_count(self, stylist: Stylist):
+        return stylist.get_past_visits().count()
+
+
 class InvitationSerializer(serializers.ModelSerializer):
 
     phone = PhoneNumberField(required=True)

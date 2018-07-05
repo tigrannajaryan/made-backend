@@ -7,6 +7,7 @@ from django.conf import settings
 from django.contrib.postgres.fields import DateRangeField
 from django.core.validators import MaxValueValidator
 from django.db import models
+from django.db.models import Q
 
 from timezone_field import TimeZoneField
 
@@ -216,6 +217,7 @@ class Stylist(models.Model):
             including_to: Optional[bool]=False,
             include_cancelled=False,
             include_checked_out=True,
+            q_filter=None,
             **kwargs
     ) -> models.QuerySet:
         """
@@ -228,9 +230,13 @@ class Stylist(models.Model):
         :param kwargs: any optional filter kwargs to be applied
         :return: Resulting Appointment queryset
         """
-        appointments = self.appointments.filter(
-            **kwargs
-        ).order_by('datetime_start_at')
+        if q_filter:
+            appointments = self.appointments.filter(
+                q_filter, **kwargs).order_by('datetime_start_at')
+        else:
+            appointments = self.appointments.filter(
+                **kwargs
+            ).order_by('datetime_start_at')
 
         if datetime_from is not None:
             appointments = appointments.filter(
@@ -307,6 +313,36 @@ class Stylist(models.Model):
     def is_working_day(self, date_time: datetime.datetime):
         return self.available_days.filter(
             weekday=date_time.isoweekday(), is_available=True).exists()
+
+    def get_upcoming_visits(self):
+
+        current_now: datetime.datetime = self.get_current_now()
+        next_midnight = (
+            current_now + datetime.timedelta(days=1)
+        ).replace(hour=0, minute=0, second=0)
+
+        return self.get_appointments_in_datetime_range(
+            datetime_from=next_midnight,
+            datetime_to=None,
+            include_cancelled=True
+        )
+
+    def get_past_visits(self):
+
+        current_now: datetime.datetime = self.get_current_now()
+        last_midnight = (current_now).replace(hour=0, minute=0, second=0)
+        next_midnight = (
+            current_now + datetime.timedelta(days=1)
+        ).replace(hour=0, minute=0, second=0)
+
+        return self.get_appointments_in_datetime_range(
+            datetime_from=None,
+            include_cancelled=True,
+            q_filter=(Q(datetime_start_at__lt=last_midnight) | Q(
+                datetime_start_at__gte=last_midnight,
+                datetime_start_at__lt=next_midnight,
+                status=AppointmentStatus.CHECKED_OUT)),
+        )
 
 
 class ServiceCategory(models.Model):
