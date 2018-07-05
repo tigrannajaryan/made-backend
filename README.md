@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/madebeauty/backend.svg?token=E27wTPpcxaCRjQW243pX&branch=develop)](https://travis-ci.com/madebeauty/backend)
+
 # Introduction
 MadeBeauty backend source code.
 
