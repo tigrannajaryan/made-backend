@@ -15,9 +15,9 @@ from salon.utils import create_stylist_profile_for_user
 
 
 class CreateProfileMixin(object):
-    def create_profile_for_user(self, user: User) -> None:
-        assert user.role in ROLES_WITH_ALLOWED_LOGIN
-        if user.role == UserRole.STYLIST:
+    def create_profile_for_user(self, user: User, role: UserRole) -> None:
+        assert role in ROLES_WITH_ALLOWED_LOGIN
+        if role == UserRole.STYLIST:
             create_stylist_profile_for_user(user=user)
         # TODO: Implement creating a client profile similar to stylist
 
@@ -47,8 +47,8 @@ class UserRegistrationSerializer(CreateProfileMixin, serializers.Serializer):
         password = self.validated_data['password']
         role = self.validated_data['role']
         with transaction.atomic():
-            user = User.objects.create_user(email=email, password=password, role=role)
-            self.create_profile_for_user(user=user)
+            user = User.objects.create_user(email=email, password=password, role=[role])
+            self.create_profile_for_user(user=user, role=role)
         return user
 
 
@@ -61,15 +61,15 @@ class AuthTokenSerializer(serializers.Serializer):
 
     def get_profile(self, data):
         user = self.context['user']
-        if user.role == UserRole.STYLIST:
+        if UserRole.STYLIST in user.role:
             return StylistSerializer(getattr(user, 'stylist', None)).data
-        elif user.role == UserRole.CLIENT:
+        elif UserRole.CLIENT in user.role:
             return ClientSerializer(getattr(user, 'client', None)).data
         return []
 
     def get_profile_status(self, data):
         user = self.context['user']
-        if user.role == UserRole.STYLIST:
+        if UserRole.STYLIST in user.role:
             return StylistProfileStatusSerializer(getattr(user, 'stylist', None)).data
         return []
 
@@ -100,5 +100,5 @@ class FacebookAuthTokenSerializer(CreateProfileMixin, serializers.Serializer):
                 fb_access_token, fb_user_id, role
             )
             if created:
-                self.create_profile_for_user(user=user)
+                self.create_profile_for_user(user=user, role=role)
             return user

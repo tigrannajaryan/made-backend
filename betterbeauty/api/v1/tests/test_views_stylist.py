@@ -18,7 +18,7 @@ class TestStylistView(object):
     def _create_and_authorize_user(self, client):
         user = G(
             User, email='email@example.com', first_name='Jane', last_name='McBob',
-            role=UserRole.STYLIST
+            role=[UserRole.STYLIST]
         )
         user.set_password('password')
         user.save()

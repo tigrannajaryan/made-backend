@@ -3,6 +3,7 @@ from typing import List
 
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -77,7 +78,7 @@ class BaseEmailUser(AbstractBaseUser, PermissionsMixin):
 
 
 class User(BaseEmailUser):
-    role = models.CharField(max_length=10, choices=USER_ROLE)
+    role = ArrayField(models.CharField(max_length=10, choices=USER_ROLE))
 
     phone = models.CharField(max_length=20, unique=True, null=True, default=None)
     photo = models.ImageField(blank=True, null=True)
@@ -93,10 +94,10 @@ class User(BaseEmailUser):
     REQUIRED_FIELDS: List[str] = []
 
     def is_client(self) -> bool:
-        return self.role == USER_ROLE.client
+        return USER_ROLE.client in self.role
 
     def is_stylist(self) -> bool:
-        return self.role == USER_ROLE.stylist
+        return USER_ROLE.stylist in self.role
 
     class Meta:
         db_table = 'user'

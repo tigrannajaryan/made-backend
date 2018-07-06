@@ -53,7 +53,7 @@ def stylist_data() -> Stylist:
         User,
         is_staff=False, is_superuser=False, email='test_stylist@example.com',
         first_name='Fred', last_name='McBob', phone='(650) 350-1111',
-        role=USER_ROLE.stylist,
+        role=[USER_ROLE.stylist],
     )
 
     stylist = create_stylist_profile_for_user(
@@ -103,7 +103,7 @@ class TestStylistSerializer(object):
         user: User = G(
             User,
             email='stylist@example.com',
-            role=USER_ROLE.stylist,
+            role=[USER_ROLE.stylist],
         )
         assert(user.is_stylist() is True)
         data = {
@@ -134,7 +134,7 @@ class TestStylistSerializer(object):
         user: User = G(
             User,
             email='stylist@example.com',
-            role=USER_ROLE.stylist,
+            role=[USER_ROLE.stylist],
         )
         assert (user.is_stylist() is True)
         data = {
@@ -1005,7 +1005,7 @@ class TestStylistAvailableWeekDayWithBookedTimeSerializer(object):
     @freeze_time('2018-05-14 13:30:00 UTC')
     @pytest.mark.django_db
     def test_get_booked_time_and_count(self):
-        user = G(User, role=UserRole.STYLIST)
+        user = G(User, role=[UserRole.STYLIST])
         salon = G(Salon, timezone=pytz.utc)
         stylist = create_stylist_profile_for_user(
             user, salon=salon, service_time_gap=datetime.timedelta(minutes=30)
@@ -1032,7 +1032,7 @@ class TestStylistSettingsRetrieveSerializer(object):
     @freeze_time('2018-05-14 13:30:00 UTC')
     @pytest.mark.django_db
     def test_get_total_booked_time_and_count(self):
-        user = G(User, role=UserRole.STYLIST)
+        user = G(User, role=[UserRole.STYLIST])
         salon = G(Salon, timezone=pytz.utc)
         stylist = create_stylist_profile_for_user(
             user, salon=salon, service_time_gap=datetime.timedelta(minutes=30))
