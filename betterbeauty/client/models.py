@@ -68,7 +68,7 @@ class PhoneSMSCodes(models.Model):
         return code
 
     @staticmethod
-    def is_valid_sms_code(self, phone, code):
+    def is_valid_sms_code(phone, code):
         try:
             phone_sms_code = PhoneSMSCodes.objects.get(phone=phone,code=code, expires_at__gte=datetime.now())
             phone_sms_code.redeemed_at = datetime.now()

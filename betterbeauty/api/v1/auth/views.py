@@ -1,4 +1,4 @@
-from rest_framework import status, views
+from rest_framework import status, views, exceptions
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -90,7 +90,7 @@ class VerifyCodeView(views.APIView):
         )
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        is_valid_code = PhoneSMSCodes.is_valid_sms_code(data['phone'], data['code'])
+        is_valid_code = PhoneSMSCodes.is_valid_sms_code(phone=data['phone'], code=data['code'])
         if is_valid_code:
             try:
                 user = User.objects.get(phone=data['phone'])
@@ -112,5 +112,4 @@ class VerifyCodeView(views.APIView):
                 token, user, self.request
             ))
         else:
-            # Invalid code
-            pass
+            raise exceptions.AuthenticationFailed()

@@ -18,7 +18,7 @@ def create_client_profile_from_phone(phone, user=None):
             last_name="",
             phone=phone,
             is_active=True,
-            role=UserRole.CLIENT
+            role=[UserRole.CLIENT]
         )
         user.set_unusable_password()
 
