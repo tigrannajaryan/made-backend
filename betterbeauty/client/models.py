@@ -5,15 +5,16 @@ from uuid import uuid4
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from utils.models import SmartModel
 
 from core.models import User
-from utils.models import SmartModel
 
 
 class Client(models.Model):
     uuid = models.UUIDField(unique=True, default=uuid4, editable=False)
-    user =  models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'client'
@@ -70,19 +71,19 @@ class PhoneSMSCodes(models.Model):
     @staticmethod
     def is_valid_sms_code(phone, code):
         try:
-            phone_sms_code = PhoneSMSCodes.objects.get(phone=phone,code=code, expires_at__gte=datetime.now())
+            phone_sms_code = PhoneSMSCodes.objects.get(
+                phone=phone, code=code, expires_at__gte=datetime.now())
             phone_sms_code.redeemed_at = datetime.now()
             phone_sms_code.save(update_fields=['redeemed_at'])
             return True
         except PhoneSMSCodes.DoesNotExist:
             return False
 
-
     def update_phone_sms_code(self):
-        if (datetime.now()-self.generated_at) > timedelta(minutes=2):
+        if (timezone.now() - self.generated_at) > timedelta(minutes=2):
             self.code = self.generate_code()
             self.generated_at = datetime.now()
-            self.expires_at = datetime.now()+timedelta(minutes=30)
+            self.expires_at = datetime.now() + timedelta(minutes=30)
             self.redeemed_at = None
             self.save(update_fields=['code', 'generated_at', 'expires_at', 'redeemed_at'])
             return self
@@ -92,10 +93,10 @@ class PhoneSMSCodes(models.Model):
     @classmethod
     def create_or_update_phone_sms_code(cls, phone):
         code = cls.generate_code()
-        phone_sms_code,created = cls.objects.get_or_create(phone=phone, defaults={
+        phone_sms_code, created = cls.objects.get_or_create(phone=phone, defaults={
             'code': code,
             'generated_at': datetime.now(),
-            'expires_at': datetime.now()+timedelta(minutes=30),
+            'expires_at': datetime.now() + timedelta(minutes=30),
             'redeemed_at': None,
         })
         if not created:

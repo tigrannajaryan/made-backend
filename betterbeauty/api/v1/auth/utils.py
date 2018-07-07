@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from client.models import ClientOfStylist, Client
+from client.models import Client, ClientOfStylist
 from core.models import User
 from core.types import UserRole
 from salon.models import Invitation
@@ -9,7 +9,7 @@ from salon.models import Invitation
 def create_client_profile_from_phone(phone, user=None):
     if user and UserRole.CLIENT not in user.role:
         user.role.append(UserRole.CLIENT)
-        user.save('role')
+        user.save(update_fields=['role'])
     else:
         bogus_email = 'client-{0}@madebeauty.com'.format(uuid4())
         user = User.objects.create_user(

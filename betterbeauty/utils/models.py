@@ -9,8 +9,10 @@ class IgnoreDeletedManager(models.Manager):
             deleted_at__isnull=True
         )
 
+
 class IncludeDeletedManager(models.Manager):
     use_in_migrations = True
+
 
 class SmartModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
