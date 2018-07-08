@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from random import randint
 from uuid import uuid4
 
@@ -72,8 +72,8 @@ class PhoneSMSCodes(models.Model):
     def is_valid_sms_code(cls, phone: str, code: str)-> bool:
         try:
             phone_sms_code = cls.objects.get(
-                phone=phone, code=code, expires_at__gte=datetime.now())
-            phone_sms_code.redeemed_at = datetime.now()
+                phone=phone, code=code, expires_at__gte=timezone.now(), redeemed_at=None)
+            phone_sms_code.redeemed_at = timezone.now()
             phone_sms_code.save(update_fields=['redeemed_at'])
             return True
         except PhoneSMSCodes.DoesNotExist:
@@ -82,8 +82,8 @@ class PhoneSMSCodes(models.Model):
     def update_phone_sms_code(self):
         if (timezone.now() - self.generated_at) > timedelta(minutes=2):
             self.code = self.generate_code()
-            self.generated_at = datetime.now()
-            self.expires_at = datetime.now() + timedelta(minutes=30)
+            self.generated_at = timezone.now()
+            self.expires_at = timezone.now() + timedelta(minutes=30)
             self.redeemed_at = None
             self.save(update_fields=['code', 'generated_at', 'expires_at', 'redeemed_at'])
             return self
@@ -95,8 +95,8 @@ class PhoneSMSCodes(models.Model):
         code = cls.generate_code()
         phone_sms_code, created = cls.objects.get_or_create(phone=phone, defaults={
             'code': code,
-            'generated_at': datetime.now(),
-            'expires_at': datetime.now() + timedelta(minutes=30),
+            'generated_at': timezone.now(),
+            'expires_at': timezone.now() + timedelta(minutes=30),
             'redeemed_at': None,
         })
         if not created:
