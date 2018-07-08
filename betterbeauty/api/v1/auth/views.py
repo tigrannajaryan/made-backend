@@ -93,10 +93,11 @@ class VerifyCodeView(views.APIView):
         )
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        is_valid_code = PhoneSMSCodes.is_valid_sms_code(phone=data['phone'], code=data['code'])
+        is_valid_code: bool = PhoneSMSCodes.is_valid_sms_code(
+            phone=data['phone'], code=data['code'])
         if is_valid_code:
             try:
-                user = User.objects.get(phone=data['phone'])
+                user: User = User.objects.get(phone=data['phone'])
                 if not user.is_client():
                     # Existing stylist, create client profile
                     user = create_client_profile_from_phone(data['phone'], user)

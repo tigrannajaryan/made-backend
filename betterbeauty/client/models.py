@@ -68,10 +68,10 @@ class PhoneSMSCodes(models.Model):
             code = str(randint(100000, 999999))
         return code
 
-    @staticmethod
-    def is_valid_sms_code(phone, code):
+    @classmethod
+    def is_valid_sms_code(cls, phone: str, code: str)-> bool:
         try:
-            phone_sms_code = PhoneSMSCodes.objects.get(
+            phone_sms_code = cls.objects.get(
                 phone=phone, code=code, expires_at__gte=datetime.now())
             phone_sms_code.redeemed_at = datetime.now()
             phone_sms_code.save(update_fields=['redeemed_at'])
@@ -91,7 +91,7 @@ class PhoneSMSCodes(models.Model):
             raise ValidationError("You should wait for 2min before re-requesting a code.")
 
     @classmethod
-    def create_or_update_phone_sms_code(cls, phone):
+    def create_or_update_phone_sms_code(cls, phone: str):
         code = cls.generate_code()
         phone_sms_code, created = cls.objects.get_or_create(phone=phone, defaults={
             'code': code,
