@@ -1070,22 +1070,25 @@ class StylistHomeSerializer(serializers.ModelSerializer):
             'appointments', 'today_visits_count', 'upcoming_visits_count', 'past_visits_count',
         ]
 
+    def validate(self, attrs):
+        query = self.context['query']
+        if query not in ['upcoming', 'past', 'today']:
+            raise serializers.ValidationError({
+                "detail": ErrorMessages.INVALID_QUERY_FOR_HOME})
+        return attrs
+
     def get_appointments(self, stylist: Stylist):
-        """Return today's appointments that are still meaningful for the stylist"""
         query = self.context['query']
         if query == "upcoming":
             appointments = stylist.get_upcoming_visits()
-        elif query == "past":
+        if query == "past":
             appointments = stylist.get_past_visits()
-        elif query == "today":
+        if query == "today":
             appointments = stylist.get_today_appointments(
                 upcoming_only=False,
                 include_cancelled=True,
                 include_checked_out=False
             )
-        else:
-            raise serializers.ValidationError({
-                "detail": ErrorMessages.INVALID_QUERY_FOR_HOME})
         return AppointmentSerializer(
             appointments, many=True
         ).data

@@ -192,8 +192,11 @@ class StylistHomeView(views.APIView):
 
     def get(self, request):
         query = request.query_params['query']
-        return Response(StylistHomeSerializer(self.get_object(),
-                                              context={'query': query}).data)
+        serializer = StylistHomeSerializer(self.get_object(),
+                                           context={'query': query},
+                                           data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data)
 
     def get_object(self):
         return getattr(self.request.user, 'stylist', None)
