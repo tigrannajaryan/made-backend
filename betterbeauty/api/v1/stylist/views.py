@@ -39,6 +39,7 @@ from .serializers import (
     StylistAvailableWeekDayListSerializer,
     StylistAvailableWeekDaySerializer,
     StylistDiscountsSerializer,
+    StylistHomeSerializer,
     StylistSerializer,
     StylistServiceListSerializer,
     StylistServicePricingRequestSerializer,
@@ -181,6 +182,21 @@ class StylistTodayView(views.APIView):
 
     def get(self, request):
         return Response(StylistTodaySerializer(self.get_object()).data)
+
+    def get_object(self):
+        return getattr(self.request.user, 'stylist', None)
+
+
+class StylistHomeView(views.APIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+
+    def get(self, request):
+        query = request.query_params['query']
+        serializer = StylistHomeSerializer(self.get_object(),
+                                           context={'query': query},
+                                           data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data)
 
     def get_object(self):
         return getattr(self.request.user, 'stylist', None)

@@ -8,3 +8,4 @@ class ErrorMessages:
                             'Please contact us if you have any questions')
     UNIQUE_CLIENT_PHONE = 'The phone number belongs to existing client'
     UNIQUE_CLIENT_NAME = 'A client with the name already exists'
+    INVALID_QUERY_FOR_HOME = "Query should be one of 'upcoming', 'past' or 'today'"
