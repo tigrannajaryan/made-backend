@@ -10,7 +10,7 @@ from rest_framework.exceptions import ValidationError
 
 from utils.models import SmartModel
 
-from client.constants import MINUTES_BEFORE_REQUESTING_NEW_CODE, SMS_CODE_EXPIRY_TIME
+from client.constants import MINUTES_BEFORE_REQUESTING_NEW_CODE, SMS_CODE_EXPIRY_TIME_MINUTES
 from core.models import User
 
 
@@ -84,19 +84,26 @@ class PhoneSMSCodes(models.Model):
         except PhoneSMSCodes.DoesNotExist:
             return False
 
-    def update_phone_sms_code(self):
+    def can_update_sms_code(self):
+        """
+        If the existing code is generated in less than 'MINUTES_BEFORE_REQUESTING_NEW_CODE'
+        minutes, we raise validation error,
+        """
         if (timezone.now() - self.generated_at) > timedelta(
                 minutes=MINUTES_BEFORE_REQUESTING_NEW_CODE):
-            self.code = self.generate_code()
-            self.generated_at = timezone.now()
-            self.expires_at = timezone.now() + timedelta(minutes=SMS_CODE_EXPIRY_TIME)
-            self.redeemed_at = None
-            self.save(update_fields=['code', 'generated_at', 'expires_at', 'redeemed_at'])
-            return self
+            return True
         else:
             raise ValidationError(
                 {"detail": "You should wait for {0}min before re-requesting a code.".format(
                     MINUTES_BEFORE_REQUESTING_NEW_CODE)})
+
+    def update_phone_sms_code(self):
+        self.code = self.generate_code()
+        self.generated_at = timezone.now()
+        self.expires_at = timezone.now() + timedelta(minutes=SMS_CODE_EXPIRY_TIME_MINUTES)
+        self.redeemed_at = None
+        self.save(update_fields=['code', 'generated_at', 'expires_at', 'redeemed_at'])
+        return self
 
     @classmethod
     @transaction.atomic
@@ -105,10 +112,10 @@ class PhoneSMSCodes(models.Model):
         phone_sms_code, created = cls.objects.get_or_create(phone=phone, defaults={
             'code': code,
             'generated_at': timezone.now(),
-            'expires_at': timezone.now() + timedelta(minutes=SMS_CODE_EXPIRY_TIME),
+            'expires_at': timezone.now() + timedelta(minutes=SMS_CODE_EXPIRY_TIME_MINUTES),
             'redeemed_at': None,
         })
-        if not created:
+        if not created and phone_sms_code.can_update_sms_code():
             phone_sms_code = phone_sms_code.update_phone_sms_code()
         return phone_sms_code
 
