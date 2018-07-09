@@ -73,13 +73,16 @@ class PhoneSMSCodes(models.Model):
             code = str(randint(100000, 999999))
         return code
 
+    def redeem_sms_code(self):
+        self.redeemed_at = timezone.now()
+        self.save(update_fields=['redeemed_at'])
+
     @classmethod
     def validate_sms_code(cls, phone: str, code: str)-> bool:
         try:
             phone_sms_code = cls.objects.get(
                 phone=phone, code=code, expires_at__gte=timezone.now(), redeemed_at=None)
-            phone_sms_code.redeemed_at = timezone.now()
-            phone_sms_code.save(update_fields=['redeemed_at'])
+            phone_sms_code.redeem_sms_code()
             return True
         except PhoneSMSCodes.DoesNotExist:
             return False
