@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from utils.models import SmartModel
@@ -91,6 +91,7 @@ class PhoneSMSCodes(models.Model):
             raise ValidationError("You should wait for 2min before re-requesting a code.")
 
     @classmethod
+    @transaction.atomic
     def create_or_update_phone_sms_code(cls, phone: str):
         code = cls.generate_code()
         phone_sms_code, created = cls.objects.get_or_create(phone=phone, defaults={

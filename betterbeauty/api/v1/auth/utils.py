@@ -1,12 +1,15 @@
 from typing import Optional
 from uuid import uuid4
 
+from django.db import transaction
+
 from client.models import Client, ClientOfStylist
 from core.models import User
 from core.types import UserRole
 from salon.models import Invitation
 
 
+@transaction.atomic
 def create_client_profile_from_phone(phone: str, user: Optional[User]=None)-> User:
     if user and UserRole.CLIENT not in user.role:
         user.role.append(UserRole.CLIENT)

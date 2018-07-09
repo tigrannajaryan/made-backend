@@ -65,8 +65,6 @@ class AuthTokenSerializer(serializers.Serializer):
         user = self.context['user']
         if user.is_stylist():
             return StylistSerializer(getattr(user, 'stylist', None)).data
-        # elif UserRole.CLIENT in user.role:
-        #     return ClientSerializer(getattr(user, 'client', None)).data
         return []
 
     def get_profile_status(self, data):

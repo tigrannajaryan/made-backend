@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.db import transaction
 from rest_framework import exceptions, status, views
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
@@ -87,6 +88,7 @@ class SendCodeView(views.APIView):
 
 class VerifyCodeView(views.APIView):
 
+    @transaction.atomic
     def post(self, request):
         serializer = PhoneSMSCodeSerializer(
             data=request.data
