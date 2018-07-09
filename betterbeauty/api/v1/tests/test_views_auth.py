@@ -12,7 +12,7 @@ from rest_framework import status
 from client.models import PhoneSMSCodes
 from core.models import User
 from core.types import UserRole
-from salon.models import Stylist
+from salon.models import Invitation, Stylist
 
 
 def get_code(expired=False, redeemed=False):
@@ -74,6 +74,26 @@ class TestVerifyCodeView(object):
         sendcode_url = reverse('api:v1:auth:verify-code')
         response = client.post(sendcode_url, data=data)
         assert (response.status_code == status.HTTP_200_OK)
+        user = User.objects.last()
+        assert (user.client is not None)
+
+    @pytest.mark.django_db
+    def test_verify_client_of_stylist_creation(self, client, stylist_data: Stylist):
+        code = get_code()
+        G(Invitation, stylist=stylist_data, phone=code.phone)
+        data = {
+            'phone': code.phone,
+            'code': code.code
+        }
+        sendcode_url = reverse('api:v1:auth:verify-code')
+        response = client.post(sendcode_url, data=data)
+        assert (response.status_code == status.HTTP_200_OK)
+        user = User.objects.last()
+        client = user.client
+        assert (client is not None)
+        client_of_stylist = client.clientofstylist_set.last()
+        assert (client_of_stylist.phone == code.phone)
+        assert (client_of_stylist.stylist == stylist_data)
 
     @pytest.mark.django_db
     def test_verify_incorrect_code(self, client):
