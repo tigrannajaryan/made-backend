@@ -95,7 +95,7 @@ class VerifyCodeView(views.APIView):
         )
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        is_valid_code: bool = PhoneSMSCodes.is_valid_sms_code(
+        is_valid_code: bool = PhoneSMSCodes.validate_sms_code(
             phone=data['phone'], code=data['code'])
         if is_valid_code:
             try:

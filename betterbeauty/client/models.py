@@ -3,12 +3,14 @@ from random import randint
 from uuid import uuid4
 
 from django.conf import settings
-from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from rest_framework.exceptions import ValidationError
+
 from utils.models import SmartModel
 
+from client.constants import MINUTES_BEFORE_REQUESTING_NEW_CODE, SMS_CODE_EXPIRY_TIME
 from core.models import User
 
 
@@ -31,7 +33,9 @@ class ClientOfStylist(models.Model):
 
     class Meta:
         db_table = 'client_of_stylist'
-        unique_together = (("stylist", "phone"), ("stylist", "first_name", "last_name"))
+        unique_together = (("stylist", "phone"),
+                           ("stylist", "first_name", "last_name"),
+                           ("stylist", "client"),)
 
     def get_full_name(self):
         full_name = '{0} {1}'.format(self.first_name, self.last_name)
@@ -48,6 +52,7 @@ class PreferredStylist(SmartModel):
 
     class Meta:
         db_table = 'preferred_stylist'
+        unique_together = (("stylist", "client"),)
 
 
 class PhoneSMSCodes(models.Model):
@@ -69,7 +74,7 @@ class PhoneSMSCodes(models.Model):
         return code
 
     @classmethod
-    def is_valid_sms_code(cls, phone: str, code: str)-> bool:
+    def validate_sms_code(cls, phone: str, code: str)-> bool:
         try:
             phone_sms_code = cls.objects.get(
                 phone=phone, code=code, expires_at__gte=timezone.now(), redeemed_at=None)
@@ -80,15 +85,18 @@ class PhoneSMSCodes(models.Model):
             return False
 
     def update_phone_sms_code(self):
-        if (timezone.now() - self.generated_at) > timedelta(minutes=2):
+        if (timezone.now() - self.generated_at) > timedelta(
+                minutes=MINUTES_BEFORE_REQUESTING_NEW_CODE):
             self.code = self.generate_code()
             self.generated_at = timezone.now()
-            self.expires_at = timezone.now() + timedelta(minutes=30)
+            self.expires_at = timezone.now() + timedelta(minutes=SMS_CODE_EXPIRY_TIME)
             self.redeemed_at = None
             self.save(update_fields=['code', 'generated_at', 'expires_at', 'redeemed_at'])
             return self
         else:
-            raise ValidationError("You should wait for 2min before re-requesting a code.")
+            raise ValidationError(
+                {"detail": "You should wait for {0}min before re-requesting a code.".format(
+                    MINUTES_BEFORE_REQUESTING_NEW_CODE)})
 
     @classmethod
     @transaction.atomic
@@ -97,7 +105,7 @@ class PhoneSMSCodes(models.Model):
         phone_sms_code, created = cls.objects.get_or_create(phone=phone, defaults={
             'code': code,
             'generated_at': timezone.now(),
-            'expires_at': timezone.now() + timedelta(minutes=30),
+            'expires_at': timezone.now() + timedelta(minutes=SMS_CODE_EXPIRY_TIME),
             'redeemed_at': None,
         })
         if not created:
