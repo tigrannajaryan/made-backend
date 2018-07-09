@@ -4,8 +4,8 @@ MAX_APPOINTMENTS_PER_REQUEST = 100
 
 
 class ErrorMessages:
-    UNIQUE_STYLIST_PHONE = ('The phone number is registered to another stylist.'
-                            'Please contact us if you have any questions')
-    UNIQUE_CLIENT_PHONE = 'The phone number belongs to existing client'
-    UNIQUE_CLIENT_NAME = 'A client with the name already exists'
-    INVALID_QUERY_FOR_HOME = "Query should be one of 'upcoming', 'past' or 'today'"
+    ERR_UNIQUE_STYLIST_PHONE = 'err_unique_stylist_phone'
+    ERR_UNIQUE_CLIENT_PHONE = 'err_unique_client_phone'
+    ERR_UNIQUE_CLIENT_NAME = 'err_unique_client_name'
+    ERR_INVALID_QUERY_FOR_HOME = 'err_invalid_query_for_home'
+    ERR_AVAILABLE_TIME_NOT_SET = 'err_available_time_not_set'

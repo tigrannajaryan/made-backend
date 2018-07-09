@@ -159,7 +159,7 @@ class TestRegisterUserView(object):
         register_url = reverse('api:v1:auth:register')
         response = client.post(register_url, data=data)
         assert(response.status_code == status.HTTP_400_BAD_REQUEST)
-        assert('email' in response.data)
+        assert('email' in response.data['field_errors'])
 
     @pytest.mark.django_db
     def test_register_forbidden_role(self, client):

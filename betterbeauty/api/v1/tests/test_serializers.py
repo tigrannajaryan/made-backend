@@ -7,7 +7,6 @@ import pytz
 from django_dynamic_fixture import G
 from freezegun import freeze_time
 
-import appointment.error_constants as appointment_errors
 from api.v1.stylist.serializers import (
     AppointmentSerializer,
     AppointmentUpdateSerializer,
@@ -20,6 +19,7 @@ from api.v1.stylist.serializers import (
     StylistSettingsRetrieveSerializer,
     StylistTodaySerializer,
 )
+from appointment.constants import ErrorMessages as appointment_errors
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.models import ClientOfStylist
@@ -515,8 +515,8 @@ class TestAppointmentSerializer(object):
         serializer.is_valid()
         assert(serializer.is_valid(raise_exception=False) is False)
         assert(
-            appointment_errors.ERR_APPOINTMENT_IN_THE_PAST in
-            serializer.errors.get('datetime_start_at')
+            {'code': appointment_errors.ERR_APPOINTMENT_IN_THE_PAST} in
+            serializer.errors['field_errors'].get('datetime_start_at')
         )
 
         outside_working_hours: datetime.datetime = datetime.datetime(
@@ -535,8 +535,8 @@ class TestAppointmentSerializer(object):
         serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
         assert (serializer.is_valid(raise_exception=False) is False)
         assert (
-            appointment_errors.ERR_APPOINTMENT_OUTSIDE_WORKING_HOURS in
-            serializer.errors.get('datetime_start_at')
+            {'code': appointment_errors.ERR_APPOINTMENT_OUTSIDE_WORKING_HOURS} in
+            serializer.errors['field_errors'].get('datetime_start_at')
         )
 
         available_time: datetime.datetime = datetime.datetime(
@@ -566,8 +566,8 @@ class TestAppointmentSerializer(object):
         serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
         assert (serializer.is_valid(raise_exception=False) is False)
         assert (
-            appointment_errors.ERR_APPOINTMENT_INTERSECTION in
-            serializer.errors.get('datetime_start_at')
+            {'code': appointment_errors.ERR_APPOINTMENT_INTERSECTION} in
+            serializer.errors['field_errors'].get('datetime_start_at')
         )
         previous_appointment.delete()
         # check next appointment
@@ -579,8 +579,8 @@ class TestAppointmentSerializer(object):
         serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
         assert (serializer.is_valid(raise_exception=False) is False)
         assert (
-            appointment_errors.ERR_APPOINTMENT_INTERSECTION in
-            serializer.errors.get('datetime_start_at')
+            {'code': appointment_errors.ERR_APPOINTMENT_INTERSECTION} in
+            serializer.errors['field_errors'].get('datetime_start_at')
         )
         next_appointment.delete()
         # try inner appointment
@@ -592,8 +592,8 @@ class TestAppointmentSerializer(object):
         serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
         assert (serializer.is_valid(raise_exception=False) is False)
         assert (
-            appointment_errors.ERR_APPOINTMENT_INTERSECTION in
-            serializer.errors.get('datetime_start_at')
+            {'code': appointment_errors.ERR_APPOINTMENT_INTERSECTION} in
+            serializer.errors['field_errors'].get('datetime_start_at')
         )
         # force it!
         serializer = AppointmentSerializer(
@@ -690,7 +690,7 @@ class TestAppointmentSerializer(object):
         # check client which is not related to stylist, i.e. no prior appointments
         serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
         assert(serializer.is_valid() is False)
-        assert('client_uuid' in serializer.errors)
+        assert('client_uuid' in serializer.errors['field_errors'])
 
         G(
             Appointment,
@@ -783,8 +783,8 @@ class TestAppointmentUpdateSerializer(object):
         serializer = AppointmentUpdateSerializer(instance=appointment, data=data)
         assert(serializer.is_valid() is False)
         assert(
-            appointment_errors.ERR_STATUS_NOT_ALLOWED in
-            serializer.errors['status']
+            {'code': appointment_errors.ERR_STATUS_NOT_ALLOWED} in
+            serializer.errors['field_errors']['status']
         )
         data = {
             'status': AppointmentStatus.CANCELLED_BY_STYLIST.value
@@ -797,8 +797,8 @@ class TestAppointmentUpdateSerializer(object):
         serializer = AppointmentUpdateSerializer(instance=appointment, data=data)
         assert (serializer.is_valid() is False)
         assert (
-            appointment_errors.ERR_SERVICE_REQUIRED in
-            serializer.errors['services']
+            {'code': appointment_errors.ERR_SERVICE_REQUIRED} in
+            serializer.errors['field_errors']['services']
         )
 
     @pytest.mark.django_db
@@ -852,8 +852,8 @@ class TestAppointmentUpdateSerializer(object):
         serializer = AppointmentUpdateSerializer(instance=appointment, data=data, context=context)
         assert (serializer.is_valid() is False)
         assert (
-            appointment_errors.ERR_SERVICE_DOES_NOT_EXIST in
-            serializer.errors['services']
+            {'code': appointment_errors.ERR_SERVICE_DOES_NOT_EXIST} in
+            serializer.errors['field_errors']['services']
         )
         appointment.status = AppointmentStatus.CHECKED_OUT
         appointment.save()
@@ -869,8 +869,8 @@ class TestAppointmentUpdateSerializer(object):
         serializer = AppointmentUpdateSerializer(instance=appointment, data=data, context=context)
         assert (serializer.is_valid() is False)
         assert (
-            appointment_errors.ERR_NO_SECOND_CHECKOUT in
-            serializer.errors['status']
+            {'code': appointment_errors.ERR_NO_SECOND_CHECKOUT} in
+            serializer.errors['field_errors']['status']
         )
 
     @pytest.mark.django_db

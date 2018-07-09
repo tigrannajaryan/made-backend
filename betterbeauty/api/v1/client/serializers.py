@@ -1,10 +1,11 @@
 from rest_framework import serializers
 
 from api.common.fields import PhoneNumberField
+from api.common.mixins import FormattedErrorMessageMixin
 from client.models import ClientOfStylist
 
 
-class ClientSerializer(serializers.ModelSerializer):
+class ClientSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
     uuid = serializers.UUIDField(read_only=True)
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
