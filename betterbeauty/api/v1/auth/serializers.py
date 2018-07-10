@@ -4,6 +4,7 @@ from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from api.common.fields import PhoneNumberField
 from api.v1.auth.constants import ROLES_WITH_ALLOWED_LOGIN
 from api.v1.stylist.serializers import StylistProfileStatusSerializer, StylistSerializer
 from client.models import PhoneSMSCodes
@@ -119,12 +120,12 @@ class FacebookAuthTokenSerializer(CreateProfileMixin, serializers.Serializer):
 
 
 class PhoneSerializer(serializers.Serializer):
-    phone = serializers.CharField()
+    phone = PhoneNumberField()
 
 
 class PhoneSMSCodeSerializer(serializers.Serializer):
 
-    phone = serializers.CharField()
+    phone = PhoneNumberField()
     code = serializers.CharField(write_only=True)
 
     class Meta:
