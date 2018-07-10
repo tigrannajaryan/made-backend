@@ -104,7 +104,8 @@ the automated tests for the new feature.
 ## Prerequisites
 
 - Python 3.6
-- PostgreSQL >= 9.6
+- PostgreSQL 10.x
+- PostGIS
 
 
 ## Local setup and installation
@@ -112,13 +113,24 @@ the automated tests for the new feature.
 - add following line to your `/etc/hosts` file:
 
 `127.0.0.1 betterbeauty.local`
-- go to `/betterbeauty` folder and run `make setup-db`. It will set up local postgres db and
-will add default user.
+
+- install PostgreSQL 10.x and PostGIS extension corresponding to your
+PostgreSQL version.
+
+  - Ubuntu users: `sudo apt-get install postgresql-10 postgresql-client-10 postgis* postgresql-10-postgis*`
+  - OS X users:
+    - either with `brew`: `brew install posgresql@10 postgis`
+    - or download a graphic installer from https://www.openscg.com/bigsql/ or https://postgresapp.com/.
+ Both these distributives include PostGIS.
+
+- go to `/betterbeauty` folder and run `make setup-db` if you're running Ubuntu,
+or `make setup-db-osx` if you're running OS X.
+
+It will set up local postgres db and will add default user.
 
 Note: admin priviliges will be required, since command uses `sudo`.
-Alternatively, you may execute `install_scripts/local_setup.sh`.
-
-For OSX setup, please use `install_scripts/local_osx_setup.sh`
+Alternatively, you may execute `install_scripts/local_setup.sh` or
+`install_scripts/local_osx_setup.sh` respectively on Ubuntu and OS X.
 
 - run `make run`. This command will create virtual environment, will set up Python modules
 and will start development server at `http://betterbeauty.local:8000`

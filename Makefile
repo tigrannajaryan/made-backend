@@ -29,10 +29,13 @@ manage:
 setup-db:
 	. install_scripts/local_setup.sh
 
+setup-db-osx:
+	. install_scripts/local_osx_setup.sh
+
 install-py: .install-py
 .install-py: $(PROJECT)/requirements/common.txt $(PROJECT)/requirements/$(LEVEL).txt
 	[ ! -d "$(ENV)/" ] && virtualenv -p python3.6 $(ENV)/ || :
-	$(ENV)/bin/pip install --exists-action w $(requirements)
+	$(PYTHON) -m pip install --exists-action w $(requirements)
 	touch $@
 
 clean:
