@@ -1395,7 +1395,7 @@ curl -X POST \
 
 ```
 curl -X POST \
-  http://betterbeauty.local:8000/api/v1/stylist/appointments \
+  http://apiserver/api/v1/stylist/appointments \
   -H 'Authorization: Token jwt_token' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -1588,8 +1588,8 @@ curl -X POST \
 
 ```
 curl -X GET \
-  'http://betterbeauty.local:8000/api/v1/stylist/home?query=today' \
-  -H 'authorization: Token jwt_token
+  'http://apiserver/api/v1/stylist/home?query=today' \
+  -H 'authorization: Token jwt_token'
 ```
 
 **Response 200 OK**
@@ -1619,7 +1619,7 @@ curl -X GET \
             "grand_total": 200,
             "has_tax_included": false,
             "has_card_fee_included": false
-        },],
+        }],
     "today_visits_count": 1,
     "upcoming_visits_count": 0,
     "past_visits_count": 41
@@ -1875,7 +1875,7 @@ curl -X POST \
 
 ```
 curl -X POST \
-  http://betterbeauty.local:8000/api/v1/auth/get-code \
+  http://apiserver/api/v1/auth/get-code \
   -H 'content-type: application/json' \
   -d '{
 	"phone": "+12525858484"
@@ -1905,7 +1905,7 @@ curl -X POST \
 **POST /api/v1/client/auth/code/confirm**
 ```
 curl -X POST \
-  http://betterbeauty.local:8000/api/v1/auth/code/confirm \
+  http://apiserver/api/v1/auth/code/confirm \
   -H 'content-type: application/json' \
   -d '{
 	"phone": "+11234567890",
@@ -1915,7 +1915,7 @@ curl -X POST \
 
 ```json
 {
-    "token": "Token jwt_token",
+    "token": "jwt_token",
     "created_at": 1531204345,
     "role": [
         "client"
