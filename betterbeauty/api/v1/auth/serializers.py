@@ -4,13 +4,16 @@ from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from api.common.fields import PhoneNumberField
 from api.v1.auth.constants import ROLES_WITH_ALLOWED_LOGIN
-from api.v1.client.serializers import ClientSerializer
 from api.v1.stylist.serializers import StylistProfileStatusSerializer, StylistSerializer
+from client.models import PhoneSMSCodes
 from core.choices import USER_ROLE
 from core.models import User
 from core.types import FBAccessToken, FBUserID, UserRole
 from core.utils.facebook import get_or_create_facebook_user
+from salon.models import Stylist
+from salon.types import InvitationStatus
 from salon.utils import create_stylist_profile_for_user
 
 
@@ -61,17 +64,29 @@ class AuthTokenSerializer(serializers.Serializer):
 
     def get_profile(self, data):
         user = self.context['user']
-        if UserRole.STYLIST in user.role:
+        if user.is_stylist():
             return StylistSerializer(getattr(user, 'stylist', None)).data
-        elif UserRole.CLIENT in user.role:
-            return ClientSerializer(getattr(user, 'client', None)).data
         return []
 
     def get_profile_status(self, data):
         user = self.context['user']
-        if UserRole.STYLIST in user.role:
+        if user.is_stylist():
             return StylistProfileStatusSerializer(getattr(user, 'stylist', None)).data
         return []
+
+
+class ClientAuthTokenSerializer(serializers.Serializer):
+    token = serializers.CharField(read_only=True)
+    created_at = serializers.IntegerField(read_only=True)
+    role = serializers.ChoiceField(read_only=True, choices=USER_ROLE)
+    stylist_invitation = serializers.SerializerMethodField()
+
+    def get_stylist_invitation(self, data):
+        user = self.context['user']
+        if user.is_client():
+            stylists = Stylist.objects.filter(
+                invites__phone=user.phone).exclude(invites__status=InvitationStatus.ACCEPTED)
+            return StylistSerializer(stylists, many=True).data
 
 
 class FacebookAuthTokenSerializer(CreateProfileMixin, serializers.Serializer):
@@ -102,3 +117,17 @@ class FacebookAuthTokenSerializer(CreateProfileMixin, serializers.Serializer):
             if created:
                 self.create_profile_for_user(user=user, role=role)
             return user
+
+
+class PhoneSerializer(serializers.Serializer):
+    phone = PhoneNumberField()
+
+
+class PhoneSMSCodeSerializer(serializers.Serializer):
+
+    phone = PhoneNumberField()
+    code = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = PhoneSMSCodes
+        fields = ['phone', 'code']

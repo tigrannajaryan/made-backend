@@ -41,29 +41,6 @@ from salon.utils import (
 )
 
 
-@pytest.fixture
-def stylist_data() -> Stylist:
-    salon = G(
-        Salon,
-        name='Test salon', address='2000 Rilma Lane', city='Los Altos', state='CA',
-        zip_code='94022', latitude=37.4009997, longitude=-122.1185007, timezone=pytz.utc
-    )
-
-    stylist_user = G(
-        User,
-        is_staff=False, is_superuser=False, email='test_stylist@example.com',
-        first_name='Fred', last_name='McBob', phone='(650) 350-1111',
-        role=[USER_ROLE.stylist],
-    )
-
-    stylist = create_stylist_profile_for_user(
-        stylist_user,
-        salon=salon,
-    )
-
-    return stylist
-
-
 class TestStylistSerializer(object):
     @pytest.mark.django_db
     def test_stylist_serializer_representation(self, stylist_data: Stylist):

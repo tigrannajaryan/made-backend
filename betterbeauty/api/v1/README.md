@@ -41,11 +41,15 @@
       - [Change appointment status](#user-content-change-appointment-status)
       - [Client search](#client-search)
     - **Screens**
+      - [Home](#user-content-home-screen)
       - [Today](#user-content-today-screen)
       - [Settings](#user-content-settings-screen)
     - **Uploads**
       - [Files](#user-content-files-upload)
       - [Images](#user-content-image-upload)
+- [**Client API**](#stylistsalon-api)
+    - [Get Code](#get-code)
+    - [Confirm Code](#confirm-code)
 
 # Authorization
 ## Getting auth token with email/password credentials
@@ -1391,7 +1395,7 @@ curl -X POST \
 
 ```
 curl -X POST \
-  http://betterbeauty.local:8000/api/v1/stylist/appointments \
+  http://apiserver/api/v1/stylist/appointments \
   -H 'Authorization: Token jwt_token' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -1574,6 +1578,60 @@ curl -X POST \
 {
     "status": [
         "Setting this status is not allowed"
+    ]
+}
+```
+
+## Home Screen
+**/api/v1/stylist/home?query=today**
+
+
+```
+curl -X GET \
+  'http://apiserver/api/v1/stylist/home?query=today' \
+  -H 'authorization: Token jwt_token'
+```
+
+**Response 200 OK**
+```json
+{
+    "appointments": [{
+            "uuid": "81119985-ce2d-49a4-b9ae-8ceba289b9f7",
+            "client_uuid": "09e4adbb-c02d-489e-90ab-1b5997754d93",
+            "client_first_name": "John",
+            "client_last_name": "Doe",
+            "datetime_start_at": "2018-06-26T23:00:00-04:00",
+            "duration_minutes": 150,
+            "status": "new",
+            "total_tax": 17.75,
+            "total_card_fee": 5.5,
+            "total_client_price_before_tax": 200,
+            "services": [
+                {
+                    "uuid": "ddeacb57-cdcd-4f2c-982a-bfad05702327",
+                    "service_name": "Faux locs",
+                    "service_uuid": "f16a4d14-d176-4691-8488-3a7d4685413f",
+                    "client_price": 200,
+                    "regular_price": 200,
+                    "is_original": true
+                }
+            ],
+            "grand_total": 200,
+            "has_tax_included": false,
+            "has_card_fee_included": false
+        }],
+    "today_visits_count": 1,
+    "upcoming_visits_count": 0,
+    "past_visits_count": 41
+}
+
+```
+
+**Response 400 Bad Request**
+```json
+{
+    "detail": [
+        "Query should be one of 'upcoming', 'past' or 'today'"
     ]
 }
 ```
@@ -1805,5 +1863,89 @@ curl -X POST \
     "file": [
         "File is too big, max. size 5242880 bytes"
     ]
+}
+```
+
+
+#Client API
+
+## Get Code
+
+**POST /api/v1/client/auth/get-code**
+
+```
+curl -X POST \
+  http://apiserver/api/v1/auth/get-code \
+  -H 'content-type: application/json' \
+  -d '{
+	"phone": "+12525858484"
+}'
+```
+
+**Response 200 OK**
+```json
+{}
+```
+
+**Response 400 Bad Request**
+```json
+{
+  "phone":["Enter a valid phone number"]
+}
+```
+**Response 400 Bad Request**
+```json
+{
+  "detail":"You should wait for 2min before re-requesting a code."
+}
+```
+
+## Confirm Code
+
+**POST /api/v1/client/auth/code/confirm**
+```
+curl -X POST \
+  http://apiserver/api/v1/auth/code/confirm \
+  -H 'content-type: application/json' \
+  -d '{
+	"phone": "+11234567890",
+	"code": "123456"
+}'
+```
+
+```json
+{
+    "token": "jwt_token",
+    "created_at": 1531204345,
+    "role": [
+        "client"
+    ],
+    "stylist_invitation": [
+        {
+            "id": 1,
+            "first_name": "John",
+            "last_name": "Doe",
+            "phone": "+19876543210",
+            "profile_photo_url": null,
+            "salon_name": "John Salon",
+            "salon_address": "111 Front Street"
+        },
+        {
+            "id": 13,
+            "first_name": "Mark",
+            "last_name": "Zuck",
+            "phone": "+11131131131",
+            "profile_photo_url": null,
+            "salon_name": "Mark Salon",
+            "salon_address": "1234 Back Street"
+        }
+    ]
+}
+```
+
+**Response 401 Unauthorized**
+```json
+{
+    "detail": "Incorrect authentication credentials."
 }
 ```
