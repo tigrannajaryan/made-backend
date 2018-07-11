@@ -6,11 +6,10 @@ from django.conf import settings
 from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from rest_framework.exceptions import ValidationError
 
 from utils.models import SmartModel
 
-from client.constants import MINUTES_BEFORE_REQUESTING_NEW_CODE, SMS_CODE_EXPIRY_TIME_MINUTES
+from client.constants import SMS_CODE_EXPIRY_TIME_MINUTES
 from core.models import User
 
 
@@ -47,7 +46,7 @@ class ClientOfStylist(models.Model):
 
 class PreferredStylist(SmartModel):
     uuid = models.UUIDField(unique=True, default=uuid4, editable=False)
-    client = models.ForeignKey(Client, on_delete=models.CASCADE)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='preferred_stylists')
     stylist = models.ForeignKey('salon.Stylist', on_delete=models.PROTECT)
 
     class Meta:
@@ -87,19 +86,6 @@ class PhoneSMSCodes(models.Model):
         except PhoneSMSCodes.DoesNotExist:
             return False
 
-    def can_update_sms_code(self):
-        """
-        If the existing code is generated in less than 'MINUTES_BEFORE_REQUESTING_NEW_CODE'
-        minutes, we raise validation error,
-        """
-        if (timezone.now() - self.generated_at) > timedelta(
-                minutes=MINUTES_BEFORE_REQUESTING_NEW_CODE):
-            return True
-        else:
-            raise ValidationError(
-                {"detail": "You should wait for {0}min before re-requesting a code.".format(
-                    MINUTES_BEFORE_REQUESTING_NEW_CODE)})
-
     def update_phone_sms_code(self):
         self.code = self.generate_code()
         self.generated_at = timezone.now()
@@ -118,7 +104,7 @@ class PhoneSMSCodes(models.Model):
             'expires_at': timezone.now() + timedelta(minutes=SMS_CODE_EXPIRY_TIME_MINUTES),
             'redeemed_at': None,
         })
-        if not created and phone_sms_code.can_update_sms_code():
+        if not created:
             phone_sms_code = phone_sms_code.update_phone_sms_code()
         return phone_sms_code
 
