@@ -25,6 +25,7 @@ class ServiceTemplateAdmin(admin.ModelAdmin):
 
 class ServiceTemplateSetAdmin(admin.ModelAdmin):
     search_fields = ['name', 'description', 'templates__name', 'templates__description', ]
+    list_display = ['name', 'sort_weight', ]
 
 
 class SalonAdmin(admin.ModelAdmin):
