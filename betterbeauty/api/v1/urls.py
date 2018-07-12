@@ -7,7 +7,7 @@ from .stylist import urls as stylist_urls
 app_name = 'v1'
 
 urlpatterns = [
-    url('auth/', include(auth_urls, namespace='auth')),
-    url('common/', include(common_urls, namespace='common')),
-    url('stylist/', include(stylist_urls, namespace='stylist')),
+    url('^auth/', include(auth_urls, namespace='auth')),
+    url('^common/', include(common_urls, namespace='common')),
+    url('^stylist/', include(stylist_urls, namespace='stylist')),
 ]
