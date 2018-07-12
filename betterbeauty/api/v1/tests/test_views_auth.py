@@ -194,7 +194,7 @@ class TestFBRegisterLoginView(object):
         data = response.data
         assert('token' in data)
         profile_data = data['profile']
-        assert(profile_data['id'] == stylist.id)
+        assert(profile_data['uuid'] == str(stylist.uuid))
 
     @mock.patch('api.v1.auth.views.verify_fb_token', lambda a, b: True)
     @mock.patch('core.utils.facebook.get_profile_data', lambda a, user_id: {
@@ -216,7 +216,7 @@ class TestFBRegisterLoginView(object):
         assert ('token' in data)
         profile_data = data['profile']
         created_stylist = Stylist.objects.last()
-        assert (profile_data['id'] == created_stylist.id)
+        assert (profile_data['uuid'] == str(created_stylist.uuid))
         assert (created_stylist.available_days.count() == 7)
         user = created_stylist.user
         assert(user.first_name == 'Jane')

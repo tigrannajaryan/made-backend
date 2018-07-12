@@ -48,7 +48,7 @@ class TestStylistSerializer(object):
         data = serializer.data
         assert(data['first_name'] == 'Fred' and data['last_name'] == 'McBob')
         assert(data['salon_name'] == 'Test salon')
-        assert(data['id'] == stylist_data.id)
+        assert(data['uuid'] == str(stylist_data.uuid))
 
     @pytest.mark.django_db
     def test_stylist_serializer_update(self, stylist_data: Stylist):

@@ -51,8 +51,10 @@
 - [**Client API**](#client-api)
     - [Get Code](#get-code)
     - [Confirm Code](#confirm-code)
-    - [Profile](#profile)
+    - [Profile](#client-profile)
+    - [Search Stylists](#search-stylists)
     - [Preferred Stylist](#preferred-stylists)
+    - [Search Stylists](#search-stylists)
 
 
 # Error handling
@@ -2157,7 +2159,7 @@ curl -X POST \
     "field_errors": {
         "code": [
             {
-                "code": "err_invalid_sms_code",
+                "code": "err_invalid_sms_code"
             }
         ]
     },
@@ -2166,7 +2168,7 @@ curl -X POST \
 ```
 
 
-## PROFILE
+## Client Profile
 
 **GET /api/v1/client/profile**
 ```
@@ -2279,6 +2281,40 @@ curl -X DELETE \
 **Response 204 No Content**
 
 
+## Search Stylists
+**POST /api/v1/client/search-stylists**
+
+Length of `search_like` param should either be 0 or greater than 2.
+Passing empty `search_like` parameter will return all the results. 
+
+```
+curl -X POST \
+  http://apiserver/api/v1/client/search-stylists \
+  -H 'authorization: Token jwt_token' \
+  -d '{
+	"search_like":"jane"
+}'
+```
+
+**Response 200 OK**
+
+```json
+{
+    "stylists": [
+        {
+            "uuid": "d5a2e88f-68f1-4ed5-95d2-e4e2a51f13e4",
+            "first_name": "Mark",
+            "last_name": "Zuck",
+            "phone": "+19876543210",
+            "profile_photo_url": null,
+            "salon_name": "Jane Salon",
+            "salon_address": "111"
+        }
+    ]
+}
+```
+
+
 ## Services
 
 ### Stylist Services
@@ -2337,8 +2373,7 @@ curl -X POST \
 **Response 200 OK**
 
 ```json
-{
-    "service_uuid": "11a37320-c320-4d43-8d9d-b8f03147e54f",
+{"service_uuid": "11a37320-c320-4d43-8d9d-b8f03147e54f",
     "service_name": "Crochet braids",
     "prices": [
         {

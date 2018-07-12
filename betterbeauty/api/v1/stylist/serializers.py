@@ -155,7 +155,7 @@ class StylistSerializer(
     FormattedErrorMessageMixin,
     serializers.ModelSerializer
 ):
-    id = serializers.IntegerField(read_only=True)
+    uuid = serializers.UUIDField(read_only=True)
 
     salon_name = serializers.CharField(
         source='salon.name', allow_null=True, required=False
@@ -178,7 +178,7 @@ class StylistSerializer(
     class Meta:
         model = Stylist
         fields = [
-            'id', 'first_name', 'last_name', 'phone', 'profile_photo_url',
+            'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url',
             'salon_name', 'salon_address', 'profile_photo_id',
         ]
 

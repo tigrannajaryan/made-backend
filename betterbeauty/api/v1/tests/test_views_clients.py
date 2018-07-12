@@ -2,9 +2,11 @@ import json
 
 import pytest
 from django.urls import reverse
+from django_dynamic_fixture import G
 from rest_framework import status
 
 from api.v1.auth.utils import create_client_profile_from_phone
+from api.v1.client.views import SearchStylistView
 from client.models import PhoneSMSCodes
 from salon.models import Stylist
 
@@ -114,3 +116,26 @@ class TestPreferredStylist:
         assert (response.status_code == status.HTTP_200_OK)
         data = response.data
         assert (len(data['stylists']) == 0)
+
+
+class TestSearchStylist:
+    @pytest.mark.django_db
+    def test_add_preferred_stylists(self, client, stylist_data: Stylist):
+
+        stylist_data_2 = G(Stylist)
+
+        results = SearchStylistView._search_stylists('')
+        assert (results.count() == 2)
+
+        results = SearchStylistView._search_stylists('Fred')
+        assert (results.count() == 1)
+        assert (results.last() == stylist_data)
+        results = SearchStylistView._search_stylists('mcbob fr')
+        assert (results.count() == 1)
+        assert (results.last() == stylist_data)
+        results = SearchStylistView._search_stylists(stylist_data_2.get_full_name())
+        assert (results.count() == 1)
+        assert (results.last() == stylist_data_2)
+
+        results = SearchStylistView._search_stylists('some-junk-text')
+        assert (results.count() == 0)

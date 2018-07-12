@@ -41,7 +41,7 @@ class TestStylistView(object):
         assert(response.status_code == status.HTTP_200_OK)
         data = response.data
         assert(data['first_name'] == 'Jane')
-        assert(data['id'] == stylist.id)
+        assert(data['uuid'] == str(stylist.uuid))
 
     @pytest.mark.django_db
     def test_stylist_get_without_existing_stylist(self, client):
