@@ -2261,3 +2261,77 @@ curl -X DELETE \
 ```
 
 **Response 204 No Content**
+
+
+## Services
+
+### Stylist Services
+
+**GET api/v1/client/stylists/:stylist_uuid/services**
+
+```
+curl -X GET \
+  http://apiserver/api/v1/client/stylists/d5a2e88f-68f1-4ed5-95d2-e4e2a51f13e4/services \
+  -H 'Authorization: Token jwt_token'
+```
+
+**Response 200 OK**
+
+```json
+{
+    "stylist_uuid": "d5a2e88f-68f1-4ed5-95d2-e4e2a51f13e4",
+    "categories": [
+        {
+            "name": "Braids and Locs",
+            "uuid": "1b040c66-a74a-4383-8ab4-f48171e65fb3",
+            "services": [
+                {
+                    "name": "Crochet braids",
+                    "description": "",
+                    "base_price": 201,
+                    "duration_minutes": 150,
+                    "is_enabled": true,
+                    "is_addon": false,
+                    "photo_samples": [],
+                    "category_uuid": "1b040c66-a74a-4383-8ab4-f48171e65fb3",
+                    "category_name": "Braids and Locs",
+                    "uuid": "11a37320-c320-4d43-8d9d-b8f03147e54f"
+                }
+            ]
+        }
+                
+    ]
+}
+```
+
+### Service Pricing
+
+**POST /api/v1/client/services/pricing**
+
+```
+curl -X POST \
+  http://apiserver/api/v1/client/services/pricing \
+  -H 'Authorization: Token jwt_token' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "service_uuid": "11a37320-c320-4d43-8d9d-b8f03147e54f"
+}'
+```
+
+**Response 200 OK**
+
+```json
+{
+    "service_uuid": "11a37320-c320-4d43-8d9d-b8f03147e54f",
+    "service_name": "Crochet braids",
+    "prices": [
+        {
+            "date": "2018-07-19",
+            "price": 150,
+            "discount_type": "revisit_within_2_weeks",
+            "is_fully_booked": false,
+            "is_working_day": true
+        }
+    ]
+}
+```
