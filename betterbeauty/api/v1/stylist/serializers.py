@@ -1062,12 +1062,11 @@ class StylistHomeSerializer(serializers.ModelSerializer):
     appointments = serializers.SerializerMethodField()
     today_visits_count = serializers.SerializerMethodField()
     upcoming_visits_count = serializers.SerializerMethodField()
-    past_visits_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Stylist
         fields = [
-            'appointments', 'today_visits_count', 'upcoming_visits_count', 'past_visits_count',
+            'appointments', 'today_visits_count', 'upcoming_visits_count',
         ]
 
     def validate(self, attrs):
@@ -1102,9 +1101,6 @@ class StylistHomeSerializer(serializers.ModelSerializer):
 
     def get_upcoming_visits_count(self, stylist: Stylist):
         return stylist.get_upcoming_visits().count()
-
-    def get_past_visits_count(self, stylist: Stylist):
-        return stylist.get_past_visits().count()
 
 
 class InvitationSerializer(serializers.ModelSerializer):
