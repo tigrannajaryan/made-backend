@@ -113,6 +113,8 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
     ),
+    'EXCEPTION_HANDLER':
+        'api.common.handlers.formatted_exception_handler',
 }
 
 AUTH_USER_MODEL = 'core.User'
@@ -150,3 +152,5 @@ MAX_FILE_UPLOAD_SIZE = 1024 * 1024 * 5  # 5MB
 AWS_S3_FILE_OVERWRITE = False
 
 DEBUG = False
+
+CATCH_ALL_EXCEPTIONS = False

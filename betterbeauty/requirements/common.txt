@@ -20,6 +20,7 @@ django-timezone-field==2.1
 djangorestframework==3.7.7
 djangorestframework-jwt==1.11.0
 docutils==0.14
+drf-friendly-errors==0.13
 facebook-sdk==2.0.0
 flake8==3.5.0
 flake8-import-order==0.17.1

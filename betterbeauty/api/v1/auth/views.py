@@ -6,6 +6,7 @@ from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_jwt.settings import api_settings
+from rest_framework_jwt.views import JSONWebTokenAPIView
 
 from api.v1.auth.serializers import PhoneSerializer, PhoneSMSCodeSerializer
 from api.v1.auth.utils import create_client_profile_from_phone
@@ -16,7 +17,20 @@ from core.types import FBAccessToken, FBUserID
 from core.utils.auth import client_jwt_response_payload_handler
 from core.utils.facebook import verify_fb_token
 
-from .serializers import FacebookAuthTokenSerializer, UserRegistrationSerializer
+from .serializers import (
+    CustomJSONWebTokenSerializer,
+    CustomRefreshJSONWebTokenSerializer,
+    FacebookAuthTokenSerializer,
+    UserRegistrationSerializer,
+)
+
+
+class CustomRefreshJSONWebToken(JSONWebTokenAPIView):
+    serializer_class = CustomRefreshJSONWebTokenSerializer
+
+
+class CustomObtainJWTToken(JSONWebTokenAPIView):
+    serializer_class = CustomJSONWebTokenSerializer
 
 
 class RegisterUserView(CreateAPIView):

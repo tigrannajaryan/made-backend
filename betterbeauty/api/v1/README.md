@@ -51,6 +51,159 @@
     - [Get Code](#get-code)
     - [Confirm Code](#confirm-code)
 
+
+# Error handling
+
+Initially discussed in https://github.com/madebeauty/monorepo/issues/35, from now
+on upon 4xx error server will respond with unified http error status and JSON payload.
+
+From JS perspective it will be:
+
+```
+interface ErrorItem {
+    code: string;
+}
+
+interface ServerError {
+    code: string; //e.g. "form_is_invalid", "client_not_authorized", "no_such_service", "fb_token_invalid"
+    field_errors: Map<string, Array<ErrorItem>>;
+    non_field_errors: Array<ErrorItem>;
+}
+```
+
+Which will essentially resolve to the following JSON format:
+
+```
+{
+    "code": "high_level_code_string",
+    "field_errors": {
+        "field_name_1": [
+            {
+                "code": "field1_level_code_string_1",
+            },
+            {
+                "code": "field1_level_code_string_2",
+            }
+        ],
+        "field_name_2": [
+            {
+                "code": "field2_level_code_string_1",
+            }
+        ],
+        "field_of_nested_serializer": {
+            "code": "err_api_exception",
+            "field_errors": {
+                "nested_field_name_1": [
+                    {
+                        "code": "field1_level_code_string_1",
+                    },
+                    {
+                        "code": "field1_level_code_string_2",
+                    }
+                ]
+             }
+            "non_field_errors": [
+                {
+                    "code": "nested_non_field_code_string_1",
+                }
+            ]
+        }
+    },
+    "non_field_errors": [
+        {
+            "code": "non_field_code_string_1",
+        },
+        {
+            "code": "non_field_code_string_2",
+        }
+    ]
+}
+```
+
+Note, that if a field is a nested field (i.e. it resolves to a nested
+serializer), it will contain nested error structure. These fields are
+relatively rare case, but should be handled appropriately.
+
+## High level errors
+
+Each error response always contains a high-level error code, usually
+directly corresponding to the http error code. High-level errors are
+limited to the following list:
+
+| Error code                | Meaning                               |
+--------------------------- | --------------------------------------|
+| err_api_exception         | General validation error              |
+| err_authentication_failed | Missing or incorrect JWT Token        |
+| err_unauthorized          | Permission error                      |
+| err_not_found             | Object not found, 404                 |
+| err_method_not_allowed    | Should not happen in runtime          |
+
+
+## Low-level (field-level) errors
+
+Low level errors can be related to particular field, or to the payload
+in general. Respectively, such errors will be inside `field_errors` or
+`non_field_errors` keys of error response payload.
+
+### Generic field errors
+
+Django Rest Framework provides a set of generic validation errors which
+can be similarly applied to virtually any field (e.g. `required`, `invalid`,
+`min_value`, etc.). Frontend should be capable of handling such errors and
+displaying them on a form (or any other frontend representation of user's
+input) as needed.
+
+| error_code | meaning|
+|------------|--------|
+|required| Field is required|
+|invalid| Invalid data format|
+|null| Field cannot be null |
+|blank| Field cannot be blank |
+|min_length| Value is too short|
+|max_length| Value is too long|
+|max_value| Value is too small|
+|min_value| Values is too large|
+|invalid_choice| Value does not belong to predefined list of choices|
+|empty| Field cannot be empty|
+|invalid_image| Supplied image is invalid|
+|date| Date is in wrong format|
+|datetime| DateTime is in wrong format|
+
+
+### Special field errors
+
+Our application and some other modules (such as `jwt_rest_framework` supply
+specific validation field-level errors. Frontend must be capable of handling
+such specific errors in particular API calls.
+
+|error_code| Meaning| Endpoint| field|
+|----------|--------|---------|------|
+|err_signature_expired| Signature has expired| all|non-field|
+|err_invalid_access_token| JWT token is malformed|all|non-field|
+|err_auth_account_disabled| User account is disabled| /api/v1/auth/get-token| non-field|
+|err_auth_unable_to_login_with_credentials| Email/password mismatch or no such user| /api/v1/auth/get-token|non-field|
+|err_refresh_expired| Token is expired and cannot be refreshed| /api/v1/auth/refresh-token|non-field|
+|err_orig_iat_is_required| Indicates malformed token, should not normally happen|all|non-field|
+|err_email_already_taken| Email is already taken| /api/v1/auth/register| email|
+|err_incorrect_user_role| No such user role | auth/register, /api/v1/auth/get-token-fb| role|
+|err_unique_stylist_phone| The phone number is registered to another stylist. Please contact us if you have any questions|/api/v1/stylist/profile|phone|
+|err_unique_client_phone| The phone number belongs to existing client| /api/v1/stylist/appointments| client_phone|
+|err_unique_client_name| A client with the name already exists| /api/v1/stylist/appointments| client_first_name|
+|err_invalid_query_for_home| Query should be one of 'upcoming', 'past' or 'today'|/api/v1/stylist/home|`query` url param|
+|err_available_time_not_set| Day marked as available, but time is not set|/api/v1/stylist/availability/weekdays|non-field|
+|err_appointment_in_the_past|Cannot add appointment for a past date and time|/api/v1/stylist/appointments|datetime_start_at|
+|err_appointment_intersection|Cannot add appointment intersecting with another|/api/v1/stylist/appointments|datetime_start_at|
+|err_appointment_outside_working_hours| Cannot add appointment outside working hours|/api/v1/stylist/appointments|datetime_start_at|
+|err_appointment_non_working_day| Cannot add appointment on non-working day|/api/v1/stylist/appointments|datetime_start_at|
+|err_service_does_not_exist| Stylist does not have such service|/api/v1/stylist/appointments|service_uuid|
+|err_service_required| At least one service must be supplied when creating an appointment|/api/v1/stylist/appointments, /api/v1/stylist/appointments/preview, /api/v1/stylist/appointments/{uuid}|services|
+|err_non_addon_service_required| At least one non-addon service must be supplied when creating an appointment|--|--|
+|err_client_does_not_exist| This client either does not exist or not related to the stylist|/api/v1/stylist/appointments, /api/v1/stylist/appointments/preview, /api/v1/stylist/appointments/{uuid}|client_uuid|
+|err_status_not_allowed| This status cannot be set for appointment|/api/v1/stylist/appointments/{uuid}|status|
+|err_no_second_checkout| Appointment can only be checked out once|/api/v1/stylist/appointments/{uuid}|status|
+|err_appointment_does_not_exist| The appointment either does not exists or does not belong to current stylist|--|--|
+
+
 # Authorization
 ## Getting auth token with email/password credentials
 In order to make requests to the API, client needs a JWT token. There are 2 ways to obtain

@@ -1,11 +1,14 @@
 from django.db import transaction
-from django.utils.translation import ugettext_lazy as _
 
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework_jwt.serializers import (
+    JSONWebTokenSerializer,
+    RefreshJSONWebTokenSerializer,
+)
 
 from api.common.fields import PhoneNumberField
-from api.v1.auth.constants import ROLES_WITH_ALLOWED_LOGIN
+from api.common.mixins import FormattedErrorMessageMixin
 from api.v1.stylist.serializers import StylistProfileStatusSerializer, StylistSerializer
 from client.models import PhoneSMSCodes
 from core.choices import USER_ROLE
@@ -16,6 +19,44 @@ from salon.models import Stylist
 from salon.types import InvitationStatus
 from salon.utils import create_stylist_profile_for_user
 
+from .constants import ErrorMessages, ROLES_WITH_ALLOWED_LOGIN
+
+
+class AuthMessageTranslationMixin(object):
+    def validate(self, attrs):
+        try:
+            attrs = super(AuthMessageTranslationMixin, self).validate(attrs)
+        except serializers.ValidationError as err:
+            details = err.detail
+            translated_details = [self.configured_messages.get(d) for d in details]
+            raise ValidationError(translated_details)
+        return attrs
+
+
+class CustomJSONWebTokenSerializer(
+    AuthMessageTranslationMixin,
+    FormattedErrorMessageMixin,
+    JSONWebTokenSerializer
+):
+    configured_messages = {
+        'User account is disabled.': ErrorMessages.ERR_ACCOUNT_DISABLED,
+        'Unable to log in with provided credentials.':
+            ErrorMessages.ERR_UNABLE_TO_LOGIN_WITH_CREDENTIALS,
+        'Must include "email" and "password".':
+            ErrorMessages.ERR_MUST_INCLUDE_EMAIL_AND_PASSWORD
+    }
+
+
+class CustomRefreshJSONWebTokenSerializer(
+    AuthMessageTranslationMixin,
+    FormattedErrorMessageMixin,
+    RefreshJSONWebTokenSerializer
+):
+    configured_messages = {
+        'Refresh has expired.': ErrorMessages.ERR_REFRESH_HAS_EXPIRED,
+        'orig_iat field is required.': ErrorMessages.ERR_ORIG_IAT_IS_REQUIRED
+    }
+
 
 class CreateProfileMixin(object):
     def create_profile_for_user(self, user: User, role: UserRole) -> None:
@@ -25,7 +66,11 @@ class CreateProfileMixin(object):
         # TODO: Implement creating a client profile similar to stylist
 
 
-class UserRegistrationSerializer(CreateProfileMixin, serializers.Serializer):
+class UserRegistrationSerializer(
+    FormattedErrorMessageMixin,
+    CreateProfileMixin,
+    serializers.Serializer
+):
     email = serializers.EmailField(required=True, write_only=True)
     password = serializers.CharField(required=True, write_only=True)
     role = serializers.ChoiceField(required=True, write_only=True, choices=USER_ROLE)
@@ -35,14 +80,14 @@ class UserRegistrationSerializer(CreateProfileMixin, serializers.Serializer):
 
     def validate_email(self, email: str):
         if User.objects.filter(email__iexact=email.strip()).exists():
-            raise ValidationError(_(
-                'This email is already taken'
-            ))
+            raise ValidationError(
+                ErrorMessages.ERR_EMAIL_ALREADY_TAKEN
+            )
         return email
 
     def validate_role(self, role: UserRole) -> UserRole:
         if role not in ROLES_WITH_ALLOWED_LOGIN:
-            raise ValidationError('Incorrect user role')
+            raise ValidationError(ErrorMessages.ERR_INCORRECT_USER_ROLE)
         return role
 
     def save(self, **kwargs) -> User:
@@ -75,7 +120,7 @@ class AuthTokenSerializer(serializers.Serializer):
         return []
 
 
-class ClientAuthTokenSerializer(serializers.Serializer):
+class ClientAuthTokenSerializer(FormattedErrorMessageMixin, serializers.Serializer):
     token = serializers.CharField(read_only=True)
     created_at = serializers.IntegerField(read_only=True)
     role = serializers.ChoiceField(read_only=True, choices=USER_ROLE)
@@ -89,7 +134,11 @@ class ClientAuthTokenSerializer(serializers.Serializer):
             return StylistSerializer(stylists, many=True).data
 
 
-class FacebookAuthTokenSerializer(CreateProfileMixin, serializers.Serializer):
+class FacebookAuthTokenSerializer(
+    FormattedErrorMessageMixin,
+    CreateProfileMixin,
+    serializers.Serializer
+):
     fb_access_token = serializers.CharField(required=True)
     fb_user_id = serializers.CharField(required=True)
     role = serializers.ChoiceField(required=True, write_only=True, choices=USER_ROLE)
@@ -103,7 +152,7 @@ class FacebookAuthTokenSerializer(CreateProfileMixin, serializers.Serializer):
 
     def validate_role(self, role: UserRole) -> UserRole:
         if role not in ROLES_WITH_ALLOWED_LOGIN:
-            raise ValidationError('Incorrect user role')
+            raise ValidationError(ErrorMessages.ERR_INCORRECT_USER_ROLE)
         return role
 
     def save(self, **kwargs) -> User:
@@ -119,11 +168,11 @@ class FacebookAuthTokenSerializer(CreateProfileMixin, serializers.Serializer):
             return user
 
 
-class PhoneSerializer(serializers.Serializer):
+class PhoneSerializer(FormattedErrorMessageMixin, serializers.Serializer):
     phone = PhoneNumberField()
 
 
-class PhoneSMSCodeSerializer(serializers.Serializer):
+class PhoneSMSCodeSerializer(FormattedErrorMessageMixin, serializers.Serializer):
 
     phone = PhoneNumberField()
     code = serializers.CharField(write_only=True)

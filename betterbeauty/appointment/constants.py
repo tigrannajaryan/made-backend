@@ -11,3 +11,17 @@ APPOINTMENT_CLIENT_SETTABLE_STATUSES = [
     AppointmentStatus.NEW,
     AppointmentStatus.CANCELLED_BY_CLIENT,
 ]
+
+
+class ErrorMessages(object):
+    ERR_APPOINTMENT_IN_THE_PAST = 'err_appointment_in_the_past'
+    ERR_APPOINTMENT_INTERSECTION = 'err_appointment_intersection'
+    ERR_APPOINTMENT_OUTSIDE_WORKING_HOURS = 'err_appointment_outside_working_hours'
+    ERR_APPOINTMENT_NON_WORKING_DAY = 'err_appointment_non_working_day'
+    ERR_SERVICE_DOES_NOT_EXIST = 'err_service_does_not_exist'
+    ERR_SERVICE_REQUIRED = 'err_service_required'
+    ERR_NON_ADDON_SERVICE_REQUIRED = 'err_non_addon_service_required'
+    ERR_CLIENT_DOES_NOT_EXIST = 'err_client_does_not_exist'
+    ERR_STATUS_NOT_ALLOWED = 'err_status_not_allowed'
+    ERR_NO_SECOND_CHECKOUT = 'err_no_second_checkout'
+    ERR_APPOINTMENT_DOESNT_EXIST = 'err_appointment_does_not_exist'

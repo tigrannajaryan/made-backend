@@ -14,9 +14,12 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
-import appointment.error_constants as appointment_errors
 from api.common.fields import PhoneNumberField
-from appointment.constants import APPOINTMENT_STYLIST_SETTABLE_STATUSES
+from api.common.mixins import FormattedErrorMessageMixin
+from appointment.constants import (
+    APPOINTMENT_STYLIST_SETTABLE_STATUSES,
+    ErrorMessages as appointment_errors,
+)
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.models import ClientOfStylist
@@ -48,19 +51,19 @@ from .constants import ErrorMessages, MAX_SERVICE_TEMPLATE_PREVIEW_COUNT
 from .fields import DurationMinuteField
 
 
-class StylistUserSerializer(serializers.ModelSerializer):
+class StylistUserSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
 
     phone = PhoneNumberField(
         validators=[UniqueValidator(
             queryset=User.objects.all(),
-            message=ErrorMessages.UNIQUE_STYLIST_PHONE)])
+            message=ErrorMessages.ERR_UNIQUE_STYLIST_PHONE)])
 
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'phone', ]
 
 
-class SalonSerializer(serializers.ModelSerializer):
+class SalonSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
     profile_photo_url = serializers.CharField(source='get_photo_url', read_only=True)
     full_address = serializers.CharField(source='get_full_address', read_only=True)
 
@@ -85,7 +88,10 @@ class StylistServicePhotoSampleSerializer(serializers.ModelSerializer):
         fields = ['url', ]
 
 
-class StylistServiceSerializer(serializers.ModelSerializer):
+class StylistServiceSerializer(
+    FormattedErrorMessageMixin,
+    serializers.ModelSerializer
+):
     duration_minutes = DurationMinuteField(source='duration')
     photo_samples = StylistServicePhotoSampleSerializer(
         many=True, read_only=True)
@@ -146,7 +152,10 @@ class StylistServiceSerializer(serializers.ModelSerializer):
         ]
 
 
-class StylistSerializer(serializers.ModelSerializer):
+class StylistSerializer(
+    FormattedErrorMessageMixin,
+    serializers.ModelSerializer
+):
     id = serializers.IntegerField(read_only=True)
 
     salon_name = serializers.CharField(
@@ -176,7 +185,7 @@ class StylistSerializer(serializers.ModelSerializer):
 
     def validate_salon_address(self, salon_address: str) -> str:
         if not salon_address:
-            raise serializers.ValidationError('This field is required')
+            raise serializers.ValidationError(self.error_messages['required'])
         return salon_address
 
     def update(self, stylist: Stylist, validated_data) -> Stylist:
@@ -254,7 +263,10 @@ class ServiceTemplateSerializer(serializers.ModelSerializer):
         fields = ['name', ]
 
 
-class ServiceTemplateDetailsSerializer(serializers.ModelSerializer):
+class ServiceTemplateDetailsSerializer(
+    FormattedErrorMessageMixin,
+    serializers.ModelSerializer
+):
     duration_minutes = DurationMinuteField(source='duration')
     base_price = serializers.DecimalField(
         coerce_to_string=False, max_digits=6, decimal_places=2, source='regular_price')
@@ -334,7 +346,10 @@ class ServiceTemplateSetDetailsSerializer(serializers.ModelSerializer):
         )
 
 
-class StylistServiceListSerializer(serializers.ModelSerializer):
+class StylistServiceListSerializer(
+    FormattedErrorMessageMixin,
+    serializers.ModelSerializer
+):
     """Serves for convenience of packing services under dictionary key"""
     services = StylistServiceSerializer(many=True, write_only=True, required=False)
     categories = serializers.SerializerMethodField(read_only=True)
@@ -415,14 +430,17 @@ class StylistProfileStatusSerializer(serializers.ModelSerializer):
         return stylist.is_discount_configured
 
 
-class StylistAvailableWeekDaySerializer(serializers.ModelSerializer):
+class StylistAvailableWeekDaySerializer(
+    FormattedErrorMessageMixin,
+    serializers.ModelSerializer
+):
     label = serializers.CharField(read_only=True, source='get_weekday_display')
     weekday_iso = serializers.IntegerField(source='weekday')
 
     def validate(self, attrs):
         if attrs.get('is_available', False) is True:
             if not attrs.get('work_start_at', None) or not attrs.get('work_end_at', None):
-                raise serializers.ValidationError('Day marked as available, but time is not set')
+                raise serializers.ValidationError(ErrorMessages.ERR_AVAILABLE_TIME_NOT_SET)
         else:
             attrs['work_start_at'] = None
             attrs['work_end_at'] = None
@@ -501,7 +519,10 @@ class StylistAvailableWeekDayListSerializer(serializers.ModelSerializer):
         return StylistAvailableWeekDaySerializer(weekday_availability, many=True).data
 
 
-class StylistWeekdayDiscountSerializer(serializers.ModelSerializer):
+class StylistWeekdayDiscountSerializer(
+    FormattedErrorMessageMixin,
+    serializers.ModelSerializer
+):
     discount_percent = serializers.IntegerField(
         min_value=0, max_value=100
     )
@@ -517,7 +538,10 @@ class StylistWeekdayDiscountSerializer(serializers.ModelSerializer):
             weekday=stylist_weekday_discount.weekday, is_available=True).exists()
 
 
-class StylistDiscountsSerializer(serializers.ModelSerializer):
+class StylistDiscountsSerializer(
+    FormattedErrorMessageMixin,
+    serializers.ModelSerializer
+):
     weekdays = StylistWeekdayDiscountSerializer(
         source='weekday_discounts', many=True
     )
@@ -627,7 +651,10 @@ class AppointmentValidationMixin(object):
         return client_uuid
 
 
-class AppointmentServiceSerializer(serializers.ModelSerializer):
+class AppointmentServiceSerializer(
+    FormattedErrorMessageMixin,
+    serializers.ModelSerializer
+):
     uuid = serializers.UUIDField(read_only=True)
     service_name = serializers.CharField(read_only=True)
     regular_price = serializers.DecimalField(
@@ -645,7 +672,11 @@ class AppointmentServiceSerializer(serializers.ModelSerializer):
         ]
 
 
-class AppointmentSerializer(AppointmentValidationMixin, serializers.ModelSerializer):
+class AppointmentSerializer(
+    FormattedErrorMessageMixin,
+    AppointmentValidationMixin,
+    serializers.ModelSerializer
+):
     uuid = serializers.UUIDField(read_only=True)
 
     client_uuid = serializers.UUIDField(source='client.uuid', allow_null=True, required=False)
@@ -703,14 +734,14 @@ class AppointmentSerializer(AppointmentValidationMixin, serializers.ModelSeriali
                     phone=attrs['client_phone'],
                     stylist=self.context['stylist']).exists():
                 errors.update({
-                    'client_phone': ErrorMessages.UNIQUE_CLIENT_PHONE
+                    'client_phone': ErrorMessages.ERR_UNIQUE_CLIENT_PHONE
                 })
             if ClientOfStylist.objects.filter(
                     first_name=attrs['client_first_name'],
                     last_name=attrs['client_last_name'],
                     stylist=self.context['stylist']).exists():
                 errors.update({
-                    'client_first_name': ErrorMessages.UNIQUE_CLIENT_NAME
+                    'client_first_name': ErrorMessages.ERR_UNIQUE_CLIENT_NAME
                 })
             if errors:
                 raise serializers.ValidationError(errors)
@@ -811,7 +842,11 @@ class AppointmentPreviewSerializer(serializers.ModelSerializer):
         return serializers.DateTimeField().to_representation(datetime_end_at)
 
 
-class AppointmentPreviewRequestSerializer(AppointmentValidationMixin, serializers.Serializer):
+class AppointmentPreviewRequestSerializer(
+    FormattedErrorMessageMixin,
+    AppointmentValidationMixin,
+    serializers.Serializer
+):
     client_uuid = serializers.UUIDField(
         allow_null=True, required=False
     )
@@ -860,7 +895,9 @@ class AppointmentPreviewResponseSerializer(serializers.Serializer):
 
 
 class AppointmentUpdateSerializer(
-    AppointmentValidationMixin, serializers.ModelSerializer
+    FormattedErrorMessageMixin,
+    AppointmentValidationMixin,
+    serializers.ModelSerializer
 ):
 
     services = AppointmentServiceSerializer(many=True, required=False)
@@ -1073,7 +1110,7 @@ class StylistHomeSerializer(serializers.ModelSerializer):
         query = self.context['query']
         if query not in ['upcoming', 'past', 'today']:
             raise serializers.ValidationError({
-                "detail": ErrorMessages.INVALID_QUERY_FOR_HOME})
+                "detail": ErrorMessages.ERR_INVALID_QUERY_FOR_HOME})
         return attrs
 
     def get_appointments(self, stylist: Stylist):
@@ -1103,7 +1140,7 @@ class StylistHomeSerializer(serializers.ModelSerializer):
         return stylist.get_upcoming_visits().count()
 
 
-class InvitationSerializer(serializers.ModelSerializer):
+class InvitationSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
 
     phone = PhoneNumberField(required=True)
 
@@ -1167,7 +1204,9 @@ class StylistServicePriceSerializer(serializers.Serializer):
 
 
 class StylistServicePricingRequestSerializer(
-    AppointmentValidationMixin, serializers.Serializer
+    FormattedErrorMessageMixin,
+    AppointmentValidationMixin,
+    serializers.Serializer
 ):
     service_uuid = serializers.UUIDField()
     client_uuid = serializers.UUIDField(required=False, allow_null=True)
