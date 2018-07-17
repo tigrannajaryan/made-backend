@@ -11,13 +11,13 @@ from .views import (
     StylistAvailabilityView,
     StylistDiscountsView,
     StylistHomeView,
+    StylistMaximumDiscountView,
     StylistServiceListView,
     StylistServicePricingView,
     StylistServiceView,
     StylistSettingsRetrieveView,
     StylistTodayView,
-    StylistView,
-)
+    StylistView)
 
 app_name = 'stylist'
 
@@ -33,6 +33,8 @@ urlpatterns = [
     url('^availability/weekdays$',
         StylistAvailabilityView.as_view(), name='availability_weekdays'),
     url('^discounts$', StylistDiscountsView.as_view(), name='discounts'),
+    url('^maximum-discount$',
+        StylistMaximumDiscountView.as_view(), name='maximum-discounts'),
     url('^today$', StylistTodayView.as_view(), name='today'),
     url('^home$', StylistHomeView.as_view(), name='home'),
     url('^appointments$', StylistAppointmentListCreateView.as_view()),

@@ -127,6 +127,9 @@ class Stylist(models.Model):
         default=datetime.timedelta(minutes=DEFAULT_SERVICE_GAP_TIME_MINUTES)
     )
 
+    maximum_discount = models.IntegerField(default=None, blank=True, null=True)
+    is_maximum_discount_enabled = models.BooleanField(default=False)
+
     class Meta:
         db_table = 'stylist'
 

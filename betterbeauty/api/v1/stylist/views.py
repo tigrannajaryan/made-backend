@@ -34,6 +34,7 @@ from .serializers import (
     AppointmentUpdateSerializer,
     ClientOfStylistSerializer,
     InvitationSerializer,
+    MaximumDiscountSerializer,
     ServiceTemplateSetDetailsSerializer,
     ServiceTemplateSetListSerializer,
     StylistAvailableWeekDayListSerializer,
@@ -46,8 +47,7 @@ from .serializers import (
     StylistServicePricingSerializer,
     StylistServiceSerializer,
     StylistSettingsRetrieveSerializer,
-    StylistTodaySerializer,
-)
+    StylistTodaySerializer)
 from .types import (
     AppointmentPreviewRequest,
     AppointmentPreviewResponse,
@@ -186,6 +186,20 @@ class StylistTodayView(views.APIView):
 
     def get(self, request):
         return Response(StylistTodaySerializer(self.get_object()).data)
+
+    def get_object(self):
+        return getattr(self.request.user, 'stylist', None)
+
+
+class StylistMaximumDiscountView(generics.RetrieveUpdateAPIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+    serializer_class = MaximumDiscountSerializer
+
+    def get(self, request, *args, **kwargs):
+        return Response(MaximumDiscountSerializer(self.get_object()).data)
+
+    def post(self, request, *args, **kwargs):
+        return self.update(request, args, kwargs)
 
     def get_object(self):
         return getattr(self.request.user, 'stylist', None)
