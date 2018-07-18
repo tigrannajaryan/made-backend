@@ -4,8 +4,6 @@ from decimal import Decimal
 from math import trunc
 from typing import Dict, Iterable, List, Optional, Tuple
 
-from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce, ExtractWeekDay
@@ -16,6 +14,7 @@ from rest_framework.validators import UniqueValidator
 
 from api.common.fields import PhoneNumberField
 from api.common.mixins import FormattedErrorMessageMixin
+from api.common.utils import save_profile_photo
 from appointment.constants import (
     APPOINTMENT_STYLIST_SETTABLE_STATUSES,
     ErrorMessages as appointment_errors,
@@ -23,7 +22,7 @@ from appointment.constants import (
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.models import ClientOfStylist
-from core.models import TemporaryFile, User
+from core.models import User
 from core.types import AppointmentPrices, Weekday
 from core.utils import (
     calculate_appointment_prices,
@@ -205,7 +204,7 @@ class StylistSerializer(
                 )
                 if salon_serializer.is_valid(raise_exception=True):
                     stylist.salon = salon_serializer.save()
-            self._save_profile_photo(
+            save_profile_photo(
                 stylist.user, validated_data.get('profile_photo_id', None)
             )
         return super(StylistSerializer, self).update(stylist, validated_data)
@@ -233,28 +232,10 @@ class StylistSerializer(
             salon = salon_serializer.save()
             profile_photo_id = validated_data.pop('profile_photo_id', None)
             stylist = create_stylist_profile_for_user(user, salon=salon)
-            self._save_profile_photo(
+            save_profile_photo(
                 user, profile_photo_id
             )
             return stylist
-
-    def _save_profile_photo(
-            self, user: Optional[User], photo_uuid: Optional[str]
-    ) -> None:
-        if not user or not photo_uuid:
-            return
-
-        image_file_record: TemporaryFile = get_object_or_404(
-            TemporaryFile,
-            uuid=photo_uuid,
-            uploaded_by=user
-        )
-        content_file = ContentFile(image_file_record.file.read())
-        target_file_name = image_file_record.file.name
-        user.photo.save(
-            default_storage.get_available_name(target_file_name), content_file
-        )
-        image_file_record.file.close()
 
 
 class ServiceTemplateSerializer(serializers.ModelSerializer):
@@ -1185,7 +1166,7 @@ class StylistSettingsRetrieveSerializer(serializers.ModelSerializer):
         ).count()
 
 
-class ClientSerializer(serializers.ModelSerializer):
+class ClientOfStylistSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(read_only=True)
     last_name = serializers.CharField(read_only=True)
     phone = PhoneNumberField(read_only=True)

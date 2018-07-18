@@ -1,6 +1,5 @@
-from datetime import datetime
-
 from django.db import models
+from django.utils import timezone
 
 
 class IgnoreDeletedManager(models.Manager):
@@ -26,7 +25,7 @@ class SmartModel(models.Model):
 
     def delete(self, using=None, keep_parents=False):
         if not self.deleted_at:
-            self.deleted_at = datetime.now()
+            self.deleted_at = timezone.now()
             self.save(update_fields=['deleted_at'])
         else:
             raise self.DoesNotExist

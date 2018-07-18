@@ -32,7 +32,7 @@ from .serializers import (
     AppointmentPreviewResponseSerializer,
     AppointmentSerializer,
     AppointmentUpdateSerializer,
-    ClientSerializer,
+    ClientOfStylistSerializer,
     InvitationSerializer,
     ServiceTemplateSetDetailsSerializer,
     ServiceTemplateSetListSerializer,
@@ -415,10 +415,10 @@ class StylistSettingsRetrieveView(generics.RetrieveAPIView):
 
 class ClientSearchView(views.APIView):
     permission_classes = [StylistPermission, permissions.IsAuthenticated]
-    serializer_class = ClientSerializer
+    serializer_class = ClientOfStylistSerializer
 
     def get(self, request, *args, **kwargs):
-        return Response({'clients': ClientSerializer(
+        return Response({'clients': ClientOfStylistSerializer(
             self.get_queryset(), many=True
         ).data})
 

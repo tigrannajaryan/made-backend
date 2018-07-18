@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.db import transaction
-from rest_framework import exceptions, status, views
+from rest_framework import exceptions, status
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -86,21 +86,21 @@ class FBRegisterLoginView(APIView):
         ))
 
 
-class SendCodeView(views.APIView):
+class SendCodeView(APIView):
 
     def post(self, request):
         serializer = PhoneSerializer(
             data=request.data,
         )
         serializer.is_valid(raise_exception=True)
-        data = serializer.data
+        data = serializer.validated_data
         PhoneSMSCodes.create_or_update_phone_sms_code(data['phone'])
         return Response(
             {}
         )
 
 
-class VerifyCodeView(views.APIView):
+class VerifyCodeView(APIView):
 
     @transaction.atomic
     def post(self, request):

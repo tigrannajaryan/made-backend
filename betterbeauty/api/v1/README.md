@@ -47,9 +47,11 @@
     - **Uploads**
       - [Files](#user-content-files-upload)
       - [Images](#user-content-image-upload)
-- [**Client API**](#stylistsalon-api)
+- [**Client API**](#client-api)
     - [Get Code](#get-code)
     - [Confirm Code](#confirm-code)
+    - [Profile](#profile)
+    - [Preferred Stylist](#preferred-stylists)
 
 
 # Error handling
@@ -202,7 +204,9 @@ such specific errors in particular API calls.
 |err_status_not_allowed| This status cannot be set for appointment|/api/v1/stylist/appointments/{uuid}|status|
 |err_no_second_checkout| Appointment can only be checked out once|/api/v1/stylist/appointments/{uuid}|status|
 |err_appointment_does_not_exist| The appointment either does not exists or does not belong to current stylist|--|--|
-
+|err_stylist_is_already_in_preference|The stylist is already a preference| /api/v1/client/preferred-stylists|stylist_uuid|
+|err_invalid_stylist_uuid|Invalid Stylist UUID|/api/v1/client/preferred-stylists|stylist_uuid|
+|err_wait_to_rerequest_new_code|Minimum 2 minutes wait required to re-request new code|/api/v1/client/auth/get-code|--|
 
 # Authorization
 ## Getting auth token with email/password credentials
@@ -1989,7 +1993,6 @@ will no longer be valid.
 curl -X POST \
   http://apiserver/api/v1/common/image/upload \
   -H 'Authorization: Token jwt_token' \
-  -H 'Content-Type: application/x-www-form-urlencoded' \
   -H 'content-type: multipart/form-data' \
   -F file=@path_to_your_file
 ```
@@ -2020,7 +2023,7 @@ curl -X POST \
 ```
 
 
-#Client API
+# Client API
 
 ## Get Code
 
@@ -2066,6 +2069,7 @@ curl -X POST \
 }'
 ```
 
+**Response 200 OK**
 ```json
 {
     "token": "jwt_token",
@@ -2102,3 +2106,116 @@ curl -X POST \
     "detail": "Incorrect authentication credentials."
 }
 ```
+
+
+## PROFILE
+
+**GET /api/v1/client/profile**
+```
+curl -X GET \
+   http://apiserver/api/v1/client/profile \
+   -H 'authorization: Token jwt_token'
+```
+
+**Response 200 OK**
+```json
+{
+    "first_name": "Jane",
+    "last_name": "McBob",
+    "phone": "+11234567890",
+    "profile_photo_url": "/media/user_uploads/uuid/uuid-a_NI03Ckn.jpg"
+}
+```
+
+**POST/PATCH /api/v1/client/profile**
+```
+curl -X POST \
+  http://apiserver/api/v1/client/profile \
+  -H 'authorization: Token jwt_token' \
+  -d '{
+	 "first_name": "Jane",
+    "last_name": "McBob",
+    "profile_photo_id": "a9268764-7fbe-4bea-bc28-6dfdea5a7778"
+
+}'
+```
+
+
+**Response 200 OK**
+```json
+{
+    "first_name": "Jane",
+    "last_name": "McBob",
+    "phone": "+11234567890",
+    "profile_photo_url": "/media/user_uploads/uuid/uuid-a_NI03Ckn.jpg"
+}
+```
+
+## Preferred Stylists
+
+**GET /api/v1/client/preferred-stylists**
+
+```
+curl -X GET \
+  http://apiserver/api/v1/client/preferred-stylists \
+  -H 'authorization: Token jwt_token' \
+  -d '{
+	"stylist_uuid": "32c9e3e8-d941-4156-958a-86ef5a2bdfdf"
+}'
+```
+
+**Response 200 OK**
+
+```json
+{
+    "stylists": [
+        {
+            "uuid": "32c9e3e8-d941-4156-958a-86ef5a2bdfdf",
+            "salon_name": "sdfs",
+            "salon_address": "dsfafdasd",
+            "profile_photo_url": null,
+            "first_name": "dsfa",
+            "last_name": "asdf",
+            "phone": null,
+            "preference_uuid": "37d795d6-e2a5-46d2-88e6-c1fbe01f756b"
+        }
+    ]
+}
+```
+
+**POST /api/v1/client/preferred-stylists**
+
+```
+curl -X POST \
+  http://apiserver/api/v1/client/preferred-stylists \
+  -H 'authorization: Token jwt_token' \
+  -d '{
+	"stylist_uuid": "32c9e3e8-d941-4156-958a-86ef5a2bdfdf"
+}'
+```
+
+**Response 201 CREATED**
+```json
+{
+    "preference_uuid": "37d795d6-e2a5-46d2-88e6-c1fbe01f756b"
+}
+```
+
+**Response 400 BAD REQUEST**
+
+If the stylist is already a preferred stylist and returns existing preference object   
+```json
+{
+    "preference_uuid": "37d795d6-e2a5-46d2-88e6-c1fbe01f756b"
+}
+```
+
+**DELETE api/v1/client/preferred-stylist/:preference-uuid**
+
+```
+curl -X DELETE \
+  http://apiserver/api/v1/client/preferred-stylists/37d795d6-e2a5-46d2-88e6-c1fbe01f756b \
+  -H 'Authorization: Token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxNiwidXNlcm5hbWUiOiJjbGllbnQtZTZkZGRiZjMtNDBiMi00MjA5LTlkZjMtZmQwYmY0NTljZjIyQG1hZGViZWF1dHkuY29tIiwiZXhwIjoxNTYyNzY4NzY4LCJlbWFpbCI6ImNsaWVudC1lNmRkZGJmMy00MGIyLTQyMDktOWRmMy1mZDBiZjQ1OWNmMjJAbWFkZWJlYXV0eS5jb20iLCJvcmlnX2lhdCI6MTUzMTIzMjc2OH0.4EJmWbztz8wOi6fkOtMpCVZpxAF5Th46HjEXvaSWQdk'
+```
+
+**Response 204 No Content**

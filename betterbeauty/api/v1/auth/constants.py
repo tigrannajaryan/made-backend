@@ -11,3 +11,4 @@ class ErrorMessages:
     ERR_MUST_INCLUDE_EMAIL_AND_PASSWORD = 'err_must_include_username_and_password'
     ERR_REFRESH_HAS_EXPIRED = 'err_refresh_expired'
     ERR_ORIG_IAT_IS_REQUIRED = 'err_orig_iat_is_required'
+    ERR_WAIT_TO_REREQUEST_NEW_CODE = 'err_wait_to_rerequest_new_code'

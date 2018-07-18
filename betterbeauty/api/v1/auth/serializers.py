@@ -1,4 +1,7 @@
+from datetime import timedelta
+
 from django.db import transaction
+from django.utils import timezone
 
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -10,6 +13,7 @@ from rest_framework_jwt.serializers import (
 from api.common.fields import PhoneNumberField
 from api.common.mixins import FormattedErrorMessageMixin
 from api.v1.stylist.serializers import StylistProfileStatusSerializer, StylistSerializer
+from client.constants import MINUTES_BEFORE_REQUESTING_NEW_CODE
 from client.models import PhoneSMSCodes
 from core.choices import USER_ROLE
 from core.models import User
@@ -170,6 +174,21 @@ class FacebookAuthTokenSerializer(
 
 class PhoneSerializer(FormattedErrorMessageMixin, serializers.Serializer):
     phone = PhoneNumberField()
+
+    def validate(self, attrs):
+        """
+            If the existing code is generated in less than 'MINUTES_BEFORE_REQUESTING_NEW_CODE'
+            minutes, we raise validation error,
+        """
+        phone = attrs['phone']
+        try:
+            phone_sms_code = PhoneSMSCodes.objects.get(phone=phone)
+            if not (timezone.now() - phone_sms_code.generated_at) > timedelta(
+                    minutes=MINUTES_BEFORE_REQUESTING_NEW_CODE):
+                raise ValidationError(ErrorMessages.ERR_WAIT_TO_REREQUEST_NEW_CODE)
+            return attrs
+        except PhoneSMSCodes.DoesNotExist:
+            return attrs
 
 
 class PhoneSMSCodeSerializer(FormattedErrorMessageMixin, serializers.Serializer):
