@@ -163,15 +163,19 @@ class StylistDiscountsView(views.APIView):
     def get(self, request):
         return Response(StylistDiscountsSerializer(self.get_object()).data)
 
-    def post(self, request):
+    def patch(self, request, *args, **kwargs):
         serializer = StylistDiscountsSerializer(
             instance=self.request.user.stylist,
             data=request.data,
-            context={'user': self.request.user}
+            context={'user': self.request.user},
+            partial=True
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(StylistDiscountsSerializer(self.get_object()).data)
+
+    def post(self, request, *args, **kwargs):
+        return self.patch(request, *args, **kwargs)
 
     def get_object(self):
         return getattr(self.request.user, 'stylist', None)

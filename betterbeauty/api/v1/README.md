@@ -1112,7 +1112,9 @@ curl -H 'Authorization: Token jwt_token' http://apiserver/api/v1/stylist/discoun
 ```
 
 ### Set discounts
-**POST /api/v1/stylist/discounts**
+**POST/PATCH /api/v1/stylist/discounts**
+
+Partial updates are supported (i.e. you can provide only specific fields).
 
 ```
 curl -X POST \
