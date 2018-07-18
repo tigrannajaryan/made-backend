@@ -136,6 +136,10 @@ def generate_discount_settings_for_stylist(
     discounts.revisit_within_2week_percentage = (
         stylist.rebook_within_2_weeks_discount_percent
     )
+    discounts.maximum_discount = stylist.maximum_discount
+    discounts.is_maximum_discount_enabled = (
+        stylist.is_maximum_discount_enabled
+    )
     return discounts
 
 

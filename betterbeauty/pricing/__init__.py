@@ -33,6 +33,8 @@ class DiscountSettings(object):
     first_visit_percentage: float
     revisit_within_1week_percentage: float
     revisit_within_2week_percentage: float
+    maximum_discount: float
+    is_maximum_discount_enabled: float
 
 
 class CalculatedPrice(object):
@@ -163,6 +165,10 @@ def calc_client_prices(
                 discount_percentage = 0
 
             price = regular_price * (1 - discount_percentage / 100.0)
+
+            if discounts.is_maximum_discount_enabled and discounts.maximum_discount:
+                price = max(price, (regular_price - discounts.maximum_discount))
+
             calculated_price.price = price
 
             if discount_percentage > 0:

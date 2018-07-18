@@ -19,6 +19,10 @@ from pricing import (
 )
 
 
+def _calculate_discount(regular_price, demand, discount, maximum_discount):
+    return max(regular_price * (1 - demand * discount / 100.0), regular_price - maximum_discount)
+
+
 class TestCalcClientPrices(object):
 
     tz = pytz.utc
@@ -38,6 +42,8 @@ class TestCalcClientPrices(object):
             discounts.first_visit_percentage = 0
             discounts.revisit_within_1week_percentage = 0
             discounts.revisit_within_2week_percentage = 0
+            discounts.maximum_discount = 20
+            discounts.is_maximum_discount_enabled = True
             current_demand = [2 for x in range(0, PRICE_BLOCK_SIZE)]  # Invalid
             calc_client_prices(self.tz, discounts, None, 0, current_demand)
 
@@ -48,6 +54,8 @@ class TestCalcClientPrices(object):
             discounts.first_visit_percentage = 200  # Invalid
             discounts.revisit_within_1week_percentage = 0
             discounts.revisit_within_2week_percentage = 0
+            discounts.maximum_discount = 20
+            discounts.is_maximum_discount_enabled = True
             current_demand = [0 for x in range(0, PRICE_BLOCK_SIZE)]
             calc_client_prices(self.tz, discounts, None, 0, current_demand)
 
@@ -58,6 +66,8 @@ class TestCalcClientPrices(object):
             discounts.first_visit_percentage = 0
             discounts.revisit_within_1week_percentage = 0
             discounts.revisit_within_2week_percentage = 0
+            discounts.maximum_discount = 20
+            discounts.is_maximum_discount_enabled = True
             current_demand = [0 for x in range(0, PRICE_BLOCK_SIZE)]
             calc_client_prices(self.tz, discounts, None, 0, current_demand)
 
@@ -69,6 +79,8 @@ class TestCalcClientPrices(object):
         discounts.first_visit_percentage = 0
         discounts.revisit_within_1week_percentage = 0
         discounts.revisit_within_2week_percentage = 0
+        discounts.maximum_discount = 20
+        discounts.is_maximum_discount_enabled = True
 
         regular_price = 1000 * random()
         prices = calc_client_prices(self.tz, discounts, None, regular_price, current_demand)
@@ -90,6 +102,8 @@ class TestCalcClientPrices(object):
         discounts.first_visit_percentage = DISCOUNT
         discounts.revisit_within_1week_percentage = 0
         discounts.revisit_within_2week_percentage = 0
+        discounts.maximum_discount = 20
+        discounts.is_maximum_discount_enabled = False
 
         regular_price = 1000 * random()
         prices = calc_client_prices(self.tz, discounts, None, regular_price, current_demand)
@@ -101,7 +115,7 @@ class TestCalcClientPrices(object):
             assert price.price == regular_price * (1 - DISCOUNT / 100.0)
             assert price.applied_discount == DiscountType.FIRST_BOOKING
 
-    def test_partial_demand(self):
+    def test_partial_demand_with_max_discount(self):
         current_demand = [0 for x in range(0, PRICE_BLOCK_SIZE)]
         current_demand[0] = 0.11
         current_demand[1] = 0.22
@@ -118,6 +132,8 @@ class TestCalcClientPrices(object):
         discounts.first_visit_percentage = DISCOUNT
         discounts.revisit_within_1week_percentage = 0
         discounts.revisit_within_2week_percentage = 0
+        discounts.maximum_discount = 20
+        discounts.is_maximum_discount_enabled = True
 
         regular_price = 1000 * random()
         prices = calc_client_prices(self.tz, discounts, None, regular_price, current_demand)
@@ -125,17 +141,25 @@ class TestCalcClientPrices(object):
         assert len(prices) == PRICE_BLOCK_SIZE
 
         # Verify that the discount percentages are granularized at 0.25 intervals
-        assert prices[0].price == regular_price * (1 - 1 * DISCOUNT / 100.0)
-        assert prices[1].price == regular_price * (1 - 0.75 * DISCOUNT / 100.0)
-        assert prices[2].price == regular_price * (1 - 0.75 * DISCOUNT / 100.0)
-        assert prices[3].price == regular_price * (1 - 0.5 * DISCOUNT / 100.0)
-        assert prices[4].price == regular_price * (1 - 0.5 * DISCOUNT / 100.0)
-        assert prices[5].price == regular_price * (1 - 0 * DISCOUNT / 100.0)
-        assert prices[6].price == regular_price * (1 - 0 * DISCOUNT / 100.0)
+        assert prices[0].price == _calculate_discount(regular_price, 1,
+                                                      DISCOUNT, discounts.maximum_discount)
+        assert prices[1].price == _calculate_discount(regular_price, 0.75,
+                                                      DISCOUNT, discounts.maximum_discount)
+        assert prices[2].price == _calculate_discount(regular_price, 0.75,
+                                                      DISCOUNT, discounts.maximum_discount)
+        assert prices[3].price == _calculate_discount(regular_price, 0.5,
+                                                      DISCOUNT, discounts.maximum_discount)
+        assert prices[4].price == _calculate_discount(regular_price, 0.5,
+                                                      DISCOUNT, discounts.maximum_discount)
+        assert prices[5].price == _calculate_discount(regular_price, 0,
+                                                      DISCOUNT, discounts.maximum_discount)
+        assert prices[6].price == _calculate_discount(regular_price, 0,
+                                                      DISCOUNT, discounts.maximum_discount)
 
         # Full discount on the rest of days because of zero demand
         for price in prices[7:]:
-            assert price.price == regular_price * (1 - DISCOUNT / 100.0)
+            assert price.price == _calculate_discount(regular_price, 1,
+                                                      DISCOUNT, discounts.maximum_discount)
             assert price.applied_discount == DiscountType.FIRST_BOOKING
 
     def test_first_visit_discount_full_demand(self):
@@ -147,6 +171,8 @@ class TestCalcClientPrices(object):
         discounts.first_visit_percentage = 20
         discounts.revisit_within_1week_percentage = 0
         discounts.revisit_within_2week_percentage = 0
+        discounts.maximum_discount = 20
+        discounts.is_maximum_discount_enabled = False
 
         regular_price = 1000 * random()
         prices = calc_client_prices(self.tz, discounts, None, regular_price, current_demand)
@@ -172,6 +198,8 @@ class TestCalcClientPrices(object):
         discounts.first_visit_percentage = DISCOUNT
         discounts.revisit_within_1week_percentage = 0
         discounts.revisit_within_2week_percentage = 0
+        discounts.maximum_discount = 20
+        discounts.is_maximum_discount_enabled = False
 
         regular_price = 1000 * random()
         prices = calc_client_prices(self.tz, discounts, None, regular_price, current_demand)
@@ -207,6 +235,8 @@ class TestCalcClientPrices(object):
         discounts.first_visit_percentage = DISCOUNT2
         discounts.revisit_within_1week_percentage = 0
         discounts.revisit_within_2week_percentage = 0
+        discounts.maximum_discount = 20
+        discounts.is_maximum_discount_enabled = False
 
         regular_price = 1000 * random()
         prices = calc_client_prices(self.tz, discounts, None, regular_price, current_demand)
@@ -239,6 +269,8 @@ class TestCalcClientPrices(object):
         discounts.first_visit_percentage = DISCOUNT2
         discounts.revisit_within_1week_percentage = 0
         discounts.revisit_within_2week_percentage = 0
+        discounts.maximum_discount = 20
+        discounts.is_maximum_discount_enabled = False
 
         regular_price = 1000 * random()
         prices = calc_client_prices(self.tz, discounts, None, regular_price, current_demand)
@@ -266,6 +298,8 @@ class TestCalcClientPrices(object):
         discounts.first_visit_percentage = DISCOUNT1
         discounts.revisit_within_1week_percentage = DISCOUNT3
         discounts.revisit_within_2week_percentage = DISCOUNT2
+        discounts.maximum_discount = 20
+        discounts.is_maximum_discount_enabled = False
 
         last_visit_date = date(2018, 5, 25)
         regular_price = 1000 * random()
@@ -295,6 +329,8 @@ class TestCalcClientPrices(object):
         discounts.first_visit_percentage = DISCOUNT1
         discounts.revisit_within_1week_percentage = DISCOUNT2
         discounts.revisit_within_2week_percentage = DISCOUNT3
+        discounts.maximum_discount = 20
+        discounts.is_maximum_discount_enabled = False
 
         last_visit_date = date(2018, 6, 2)
         regular_price = 1000 * random()

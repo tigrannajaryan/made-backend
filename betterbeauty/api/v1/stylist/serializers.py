@@ -560,6 +560,13 @@ class StylistDiscountsSerializer(
         ]
 
 
+class MaximumDiscountSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
+
+    class Meta:
+        model = Stylist
+        fields = ['maximum_discount', 'is_maximum_discount_enabled']
+
+
 class AppointmentValidationMixin(object):
 
     def validate_datetime_start_at(self, datetime_start_at: datetime.datetime):
