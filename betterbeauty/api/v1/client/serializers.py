@@ -29,8 +29,7 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
         return super(ClientProfileSerializer, self).update(instance, validated_data)
 
     def save(self, **kwargs):
-        profile_photo_id = self.validated_data.pop(
-            'profile_photo_id') if 'profile_photo_id' in self.validated_data else None
+        profile_photo_id = self.validated_data.pop('profile_photo_id', None)
         user = super(ClientProfileSerializer, self).save(**kwargs)
         if profile_photo_id:
             save_profile_photo(
