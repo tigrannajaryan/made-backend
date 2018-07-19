@@ -29,6 +29,7 @@
     - [**Discounts**](#user-content-discounts)
       - [Retrieve discounts](#user-content-retrieve-discounts)
       - [Set discounts](#user-content-set-discounts)
+      - [Maximum discount](#user-content-maximum-discount)
     - [**Invitations**](#user-content-invitations)
       - [Send invitation(s) to the client(s)](#user-content-send-invitations-to-the-clients)
     - [**Appointments**](#user-content-appointments)
@@ -1185,6 +1186,45 @@ curl -X POST \
 }
 
 ```
+
+### Maximum Discount
+
+**GET /api/v1/stylist/maximum-discount**
+
+```
+curl -X GET \
+  http://apiserver/api/v1/stylist/maximum-discount \
+  -H 'Authorization: Token jwt_token'
+```
+
+```json
+{
+    "maximum_discount": 45,
+    "is_maximum_discount_enabled": false
+}
+```
+
+**POST /api/v1/stylist/maximum-discount**
+
+```
+curl -X POST \
+  http://apiserver/api/v1/stylist/maximum-discount \
+  -H 'Authorization: Token jwt_token' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "maximum_discount":45,
+  "is_maximum_discount_enabled": true
+}'
+```
+
+```json
+{
+    "maximum_discount": 45,
+    "is_maximum_discount_enabled": true
+}
+```
+
+
 
 
 ## Service pricing
