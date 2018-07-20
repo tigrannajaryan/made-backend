@@ -16,6 +16,10 @@ class DiscountType(Enum):
     FIRST_BOOKING = 'first_booking'
     REVISIT_WITHIN_1WEEK = 'revisit_within_1_week'
     REVISIT_WITHIN_2WEEK = 'revisit_within_2_weeks'
+    REVISIT_WITHIN_3WEEK = 'revisit_within_3_weeks'
+    REVISIT_WITHIN_4WEEK = 'revisit_within_4_weeks'
+    REVISIT_WITHIN_5WEEK = 'revisit_within_5_weeks'
+    REVISIT_WITHIN_6WEEK = 'revisit_within_6_weeks'
     WEEKDAY = 'weekday'
 
 
@@ -23,16 +27,25 @@ DISCOUNT_TYPE_CHOICES = Choices(
     (DiscountType.FIRST_BOOKING.value, 'first_booking', 'First Booking'),
     (DiscountType.REVISIT_WITHIN_1WEEK.value, 'revisit_within_1_week', 'Revisit within 1 week'),
     (DiscountType.REVISIT_WITHIN_2WEEK.value, 'revisit_within_2_weeks', 'Revisit within 2 weeks'),
+    (DiscountType.REVISIT_WITHIN_3WEEK.value, 'revisit_within_3_weeks', 'Revisit within 3 weeks'),
+    (DiscountType.REVISIT_WITHIN_4WEEK.value, 'revisit_within_4_weeks', 'Revisit within 4 weeks'),
+    (DiscountType.REVISIT_WITHIN_5WEEK.value, 'revisit_within_5_weeks', 'Revisit within 5 weeks'),
+    (DiscountType.REVISIT_WITHIN_6WEEK.value, 'revisit_within_6_weeks', 'Revisit within 6 weeks'),
     (DiscountType.WEEKDAY.value, 'weekday', 'Weekday')
 )
 
 
 class DiscountSettings(object):
+
     # Discount values are in [0..100] range, expressed as percentages
-    weekday_discounts: Dict[Weekday, float]
-    first_visit_percentage: float
-    revisit_within_1week_percentage: float
-    revisit_within_2week_percentage: float
+    weekday_discounts: Dict[Weekday, float] = {}
+    first_visit_percentage: float = 0
+    revisit_within_1week_percentage: float = 0
+    revisit_within_2week_percentage: float = 0
+    revisit_within_3week_percentage: float = 0
+    revisit_within_4week_percentage: float = 0
+    revisit_within_5week_percentage: float = 0
+    revisit_within_6week_percentage: float = 0
     maximum_discount: float
     is_maximum_discount_enabled: float
 
@@ -107,7 +120,7 @@ def calc_client_prices(
         ValueError exception on invalid input.
     """
 
-    if (len(current_demand) != PRICE_BLOCK_SIZE):
+    if len(current_demand) != PRICE_BLOCK_SIZE:
         raise ValueError(f"current_demand must have {PRICE_BLOCK_SIZE} elements")
 
     min_demand = min(current_demand)
@@ -115,9 +128,17 @@ def calc_client_prices(
     if not (0 <= min_demand <= 1 and 0 <= max_demand <= 1):
         raise ValueError("Demand values must be in [0..1] range")
 
-    if (not is_valid_discount_percentage(discounts.first_visit_percentage) or
-            not is_valid_discount_percentage(discounts.revisit_within_1week_percentage) or
-            not is_valid_discount_percentage(discounts.revisit_within_2week_percentage)):
+    discounts_to_validate = [
+        discounts.first_visit_percentage,
+        discounts.revisit_within_1week_percentage,
+        discounts.revisit_within_2week_percentage,
+        discounts.revisit_within_3week_percentage,
+        discounts.revisit_within_4week_percentage,
+        discounts.revisit_within_5week_percentage,
+        discounts.revisit_within_6week_percentage,
+    ]
+
+    if not all(map(is_valid_discount_percentage, discounts_to_validate)):
         raise ValueError("Invalid discount value")
 
     for discount in discounts.weekday_discounts.values():
@@ -231,15 +252,35 @@ def find_applicable_discount(
     else:
         # Not the first time
         if last_visit_date + timedelta(weeks=1) >= for_date:
-            # Within one week since last visit
+            # Within 1 week since last visit
             discount_descr = DiscountDescr(DiscountType.REVISIT_WITHIN_1WEEK,
                                            discounts.revisit_within_1week_percentage)
             all_discounts.append(discount_descr)
 
         elif last_visit_date + timedelta(weeks=2) >= for_date:
-            # Within two weeks since last visit
+            # Within 2 weeks since last visit
             discount_descr = DiscountDescr(DiscountType.REVISIT_WITHIN_2WEEK,
                                            discounts.revisit_within_2week_percentage)
+            all_discounts.append(discount_descr)
+        elif last_visit_date + timedelta(weeks=3) >= for_date:
+            # Within 3 weeks since last visit
+            discount_descr = DiscountDescr(DiscountType.REVISIT_WITHIN_3WEEK,
+                                           discounts.revisit_within_3week_percentage)
+            all_discounts.append(discount_descr)
+        elif last_visit_date + timedelta(weeks=4) >= for_date:
+            # Within 4 weeks since last visit
+            discount_descr = DiscountDescr(DiscountType.REVISIT_WITHIN_4WEEK,
+                                           discounts.revisit_within_4week_percentage)
+            all_discounts.append(discount_descr)
+        elif last_visit_date + timedelta(weeks=5) >= for_date:
+            # Within 5 weeks since last visit
+            discount_descr = DiscountDescr(DiscountType.REVISIT_WITHIN_5WEEK,
+                                           discounts.revisit_within_5week_percentage)
+            all_discounts.append(discount_descr)
+        elif last_visit_date + timedelta(weeks=6) >= for_date:
+            # Within 6 weeks since last visit
+            discount_descr = DiscountDescr(DiscountType.REVISIT_WITHIN_6WEEK,
+                                           discounts.revisit_within_6week_percentage)
             all_discounts.append(discount_descr)
 
     max_discount = max(all_discounts, default=None, key=lambda d: d.discount_percentage)
