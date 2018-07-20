@@ -3,6 +3,8 @@ sudo: false
 
 env:
   global:
+  - PGPORT=5433
+  - TRAVIS_POSTGRES_USER=travis
   - secure: sHfu3VISdZimEq0npJbpH8ZQbr8uvpSv3aFQ2gdODFej/sl6BF7DXgMxSK/8+eOfHcs7EVNaHC7CqVCEmz9fsb9XrYcSl4eyOSIlq3pOug5nEdFBwDtZXS7+2fqTh2WdebKcy3JecMaaVhzX2l/5ZoaKPu6LwskU+i1JUIud1TlSLgbt/qQHM8dBG96OIMiaqgjpjl4dZhwMd9092ZlpCJyUTaRFwf//A7X8C/gt0svp9HJL9Npi58PYt7WXjUQtLH13MwWIQ4dpn+0EgGN0ZBMOTFERON87wmg+uP52BPv7cJFgxV5j4NIQPHyREY8q0BVKR9HN/cp9Ffe/2FLvVt+Sx22AyFExkhFXQc2CTeFC1Mf02QoutKk+hsVMsW32rozC/32djR1cvrWb+uExo+rxsJPm6idK9z2Zypq6H134T2FNvJjR7dgaM7IumJuforNzua/rAwCW8vSgc/2YNa68MNKHvKIi6p0uWfLvCYUGVaRyQPEggbIyZa2M7eN1trL2XgKPKLXZLW7hK+EOPW1htIuhBW6UuHRSU/bIA/EUkTfCwWsMQq8gxu1Io79/GYP06fygn5oU1hChVvQSbl/LwSCYf+MOD4tCsrLPrsC6uUPP2qttPk7vXiR3p4llYPtz/qoOG180xg0A09rVewr5A43oc0NKJ4kVvMXcj5U=
   - secure: R3bN9jjwAiIhBf/NZix6BsEsNgnyw+eaWaRMPk95s3oXH15stSIBNJg4sidc8I2eEOgbnD1Vz9CMzlx1kDZ0K79/ocavWC1cBThaTilbIbsZWsSPtQG/peqmckiXzXi1G+cUVqBlIXmCZ5hIdpP2h5uPSj7r3AONAyHM+orkP6BDkiXrpCZQicU3LqcfR56FjjGOH7Z2InIB5S4uNKqSjmAiQQ+EQM/XInVPyJGqda5QqojdugRiTaxz5+gX3zWVzlzCk2FXXt4afI6eHRy2eMeE95EFCx1aZpzy3dfKgElHxTDqTT7WJ3O5YDgGoexBIrFcbC1cwzBQOosk5oWqyZRHq63S1gGCyt3IxfB/fvusMIMkyPw3Ylbj/5Q4xmj6xbe41ff/tlzWNa0Zkw4a5TIiA7oyEiPSUFkWbli3oYuE+w2DwSyDCu/ixGuO8UDmGbPgNSPHtnMICeZTou74RsPEDqIZrSrFwGtpU3UYJzlZCEFsBBd66Padxiz2yzbrMeqfB1400NsvAvM++3eK3kJnnwVaP89IFj573HIcruLDOtU3J99NA6qByp8qxKpJXk7O8FIwFJS8QlnkdTGVKE3zFKostWDD4kiSBLHehDkrg/cHH0XyrY9BIVXo+s/1lWSNR607sWrohOatHIyxX8mN9aiRYACOMITx4UiXvfs=
 
@@ -19,11 +21,22 @@ python:
 - '3.6'
 
 services:
-- postgresql
+  - postgresql
+
+addons:
+  postgresql: "10"
+  apt:
+    packages:
+    - postgresql-10
+    - postgresql-client-10
+    - postgis*
+    - postgresql-10-postgis*
+
 
 install: make install-py
 
 before_script: make setup-db
+
 script:
 - make build
 - make test
