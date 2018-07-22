@@ -2150,10 +2150,18 @@ curl -X POST \
 }
 ```
 
-**Response 401 Unauthorized**
+**Response 400 Bad Request**
 ```json
 {
-    "detail": "Incorrect authentication credentials."
+    "code": "err_api_exception",
+    "field_errors": {
+        "code": [
+            {
+                "code": "err_invalid_sms_code",
+            }
+        ]
+    },
+    "non_field_errors": []
 }
 ```
 

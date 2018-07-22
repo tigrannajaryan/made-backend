@@ -196,6 +196,16 @@ class PhoneSMSCodeSerializer(FormattedErrorMessageMixin, serializers.Serializer)
     phone = PhoneNumberField()
     code = serializers.CharField(write_only=True)
 
+    def validate(self, attrs):
+        data = self.initial_data
+        is_valid_code: bool = PhoneSMSCodes.validate_sms_code(
+            phone=data['phone'], code=data['code'])
+        if not is_valid_code:
+            raise ValidationError({
+                'code': ErrorMessages.ERR_INVALID_SMS_CODE
+            })
+        return attrs
+
     class Meta:
         model = PhoneSMSCodes
         fields = ['phone', 'code']
