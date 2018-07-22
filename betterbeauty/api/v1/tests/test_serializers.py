@@ -415,7 +415,7 @@ class TestStylistDiscountsSerializer(object):
         }
 
         serializer = StylistDiscountsSerializer(
-            instance=stylist_data, data=data
+            instance=stylist_data, data=data, partial=True
         )
         assert(serializer.is_valid() is True)
         stylist: Stylist = serializer.save()
