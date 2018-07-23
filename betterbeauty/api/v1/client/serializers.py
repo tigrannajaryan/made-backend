@@ -124,7 +124,7 @@ class ClientOfStylistSerializer(FormattedErrorMessageMixin, serializers.ModelSer
         fields = ['first_name', 'last_name', 'phone', 'uuid', ]
 
 
-class ClientStylistServiceListSerializer(serializers.ModelSerializer):
+class StylistServiceListSerializer(serializers.ModelSerializer):
     stylist_uuid = serializers.UUIDField(read_only=True, source='uuid')
     categories = serializers.SerializerMethodField(read_only=True)
 

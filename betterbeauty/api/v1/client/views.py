@@ -6,8 +6,8 @@ from api.v1.client.serializers import (
     AddPreferredClientsSerializer,
     ClientPreferredStylistSerializer,
     ClientProfileSerializer,
-    ClientStylistServiceListSerializer,
-    ServicePricingRequestSerializer)
+    ServicePricingRequestSerializer,
+    StylistServiceListSerializer)
 
 from api.v1.stylist.serializers import StylistServicePricingSerializer
 from client.models import ClientOfStylist
@@ -67,10 +67,7 @@ class PreferredStylistDeleteView(generics.DestroyAPIView):
 
 class StylistServicesView(generics.RetrieveAPIView):
     permission_classes = [ClientPermission, permissions.IsAuthenticated]
-    serializer_class = ClientStylistServiceListSerializer
-
-    lookup_url_kwarg = 'uuid'
-    lookup_field = 'uuid'
+    serializer_class = StylistServiceListSerializer
 
     def get_object(self):
         return Stylist.objects.get(uuid=self.kwargs['uuid'])
