@@ -116,6 +116,18 @@ class Stylist(models.Model):
     rebook_within_2_weeks_discount_percent = models.PositiveIntegerField(
         default=0, validators=[MaxValueValidator(100)]
     )
+    rebook_within_3_weeks_discount_percent = models.PositiveIntegerField(
+        default=0, validators=[MaxValueValidator(100)]
+    )
+    rebook_within_4_weeks_discount_percent = models.PositiveIntegerField(
+        default=0, validators=[MaxValueValidator(100)]
+    )
+    rebook_within_5_weeks_discount_percent = models.PositiveIntegerField(
+        default=0, validators=[MaxValueValidator(100)]
+    )
+    rebook_within_6_weeks_discount_percent = models.PositiveIntegerField(
+        default=0, validators=[MaxValueValidator(100)]
+    )
     first_time_book_discount_percent = models.PositiveIntegerField(
         default=0, validators=[MaxValueValidator(100)]
     )
@@ -220,6 +232,8 @@ class Stylist(models.Model):
             datetime_to: Optional[datetime.datetime]=None,
             including_to: Optional[bool]=False,
             include_cancelled=False,
+            exclude_cancelled_by_stylist=False,
+            exclude_cancelled_by_client=False,
             include_checked_out=True,
             q_filter=None,
             **kwargs
@@ -230,6 +244,10 @@ class Stylist(models.Model):
         :param datetime_to: datetime by which last appointment starts
         :param including_to: whether or not end datetime should be inclusive
         :param include_cancelled: whether or not cancelled appointments are included
+        :param exclude_cancelled_by_stylist: whether or not cancelled appointments
+                cancelled by stylist are included(This value overrides `include_cancelled`)
+        :param exclude_cancelled_by_client: whether or not cancelled appointments
+                cancelled by client are included(This value overrides `include_cancelled`)
         :param include_checked_out: whether or not checked out appointments are included
         :param kwargs: any optional filter kwargs to be applied
         :return: Resulting Appointment queryset
@@ -258,20 +276,29 @@ class Stylist(models.Model):
                 appointments = appointments.filter(
                     datetime_start_at__lt=datetime_to - self.service_time_gap
                 )
-
-        if not include_cancelled:
+        if not include_cancelled and not (
+                exclude_cancelled_by_stylist or exclude_cancelled_by_client):
             appointments = appointments.exclude(status__in=[
                 AppointmentStatus.CANCELLED_BY_CLIENT,
                 AppointmentStatus.CANCELLED_BY_STYLIST
             ])
 
+        if exclude_cancelled_by_stylist:
+            appointments = appointments.exclude(
+                status=AppointmentStatus.CANCELLED_BY_STYLIST)
+
+        if exclude_cancelled_by_client:
+            appointments = appointments.exclude(
+                status=AppointmentStatus.CANCELLED_BY_CLIENT)
+
         if not include_checked_out:
             appointments = appointments.exclude(status=AppointmentStatus.CHECKED_OUT)
-
         return appointments
 
     def get_today_appointments(
-            self, upcoming_only=True, include_cancelled=False, include_checked_out=True
+            self, upcoming_only=True, include_cancelled=False, include_checked_out=True,
+            exclude_cancelled_by_stylist=False,
+            exclude_cancelled_by_client=False,
     ) -> models.QuerySet:
         """Return today's appointments, aware of stylist's timezone"""
         current_now: datetime.datetime = self.get_current_now()
@@ -287,6 +314,8 @@ class Stylist(models.Model):
         return self.get_appointments_in_datetime_range(
             datetime_from, next_midnight, include_cancelled=include_cancelled,
             include_checked_out=include_checked_out,
+            exclude_cancelled_by_stylist=exclude_cancelled_by_stylist,
+            exclude_cancelled_by_client=exclude_cancelled_by_client,
             including_to=True
         )
 
@@ -328,7 +357,7 @@ class Stylist(models.Model):
         return self.get_appointments_in_datetime_range(
             datetime_from=next_midnight,
             datetime_to=None,
-            include_cancelled=True
+            exclude_cancelled_by_stylist=True,
         )
 
     def get_past_visits(self):
@@ -341,7 +370,7 @@ class Stylist(models.Model):
 
         return self.get_appointments_in_datetime_range(
             datetime_from=None,
-            include_cancelled=True,
+            exclude_cancelled_by_stylist=True,
             q_filter=(Q(datetime_start_at__lt=last_midnight) | Q(
                 datetime_start_at__gte=last_midnight,
                 datetime_start_at__lt=next_midnight,

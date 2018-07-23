@@ -1108,7 +1108,11 @@ curl -H 'Authorization: Token jwt_token' http://apiserver/api/v1/stylist/discoun
     ],
     "first_booking": 0,
     "rebook_within_1_week": 0,
-    "rebook_within_2_weeks": 0
+    "rebook_within_2_weeks": 0,
+    "rebook_within_3_weeks": 0,
+    "rebook_within_4_weeks": 0,
+    "rebook_within_5_weeks": 0,
+    "rebook_within_6_weeks": 0
 }
 ```
 
@@ -1182,7 +1186,11 @@ curl -X POST \
     ],
     "first_booking": 10,
     "rebook_within_1_week": 20,
-    "rebook_within_2_weeks": 30
+    "rebook_within_2_weeks": 30,
+    "rebook_within_3_weeks": 0,
+    "rebook_within_4_weeks": 0,
+    "rebook_within_5_weeks": 0,
+    "rebook_within_6_weeks": 0
 }
 
 ```
@@ -2142,10 +2150,18 @@ curl -X POST \
 }
 ```
 
-**Response 401 Unauthorized**
+**Response 400 Bad Request**
 ```json
 {
-    "detail": "Incorrect authentication credentials."
+    "code": "err_api_exception",
+    "field_errors": {
+        "code": [
+            {
+                "code": "err_invalid_sms_code",
+            }
+        ]
+    },
+    "non_field_errors": []
 }
 ```
 

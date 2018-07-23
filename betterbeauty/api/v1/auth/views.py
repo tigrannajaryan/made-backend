@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.db import transaction
-from rest_framework import exceptions, status
+from rest_framework import status
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -109,28 +109,24 @@ class VerifyCodeView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        is_valid_code: bool = PhoneSMSCodes.validate_sms_code(
-            phone=data['phone'], code=data['code'])
-        if is_valid_code:
-            try:
-                user: User = User.objects.get(phone=data['phone'])
-                if not user.is_client():
-                    # Existing stylist, create client profile
-                    user = create_client_profile_from_phone(data['phone'], user)
-            except User.DoesNotExist:
-                # New user. Create login
-                user = create_client_profile_from_phone(data['phone'])
 
-            api_settings.user_settings['JWT_EXPIRATION_DELTA'] = timedelta(days=365)
-            jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
-            jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
+        try:
+            user: User = User.objects.get(phone=data['phone'])
+            if not user.is_client():
+                # Existing stylist, create client profile
+                user = create_client_profile_from_phone(data['phone'], user)
+        except User.DoesNotExist:
+            # New user. Create login
+            user = create_client_profile_from_phone(data['phone'])
 
-            jwt_response_payload_handler = client_jwt_response_payload_handler
+        api_settings.user_settings['JWT_EXPIRATION_DELTA'] = timedelta(days=365)
+        jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
+        jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
 
-            payload = jwt_payload_handler(user)
-            token = jwt_encode_handler(payload)
-            return Response(jwt_response_payload_handler(
-                token, user, payload['orig_iat'], self.request
-            ))
-        else:
-            raise exceptions.AuthenticationFailed()
+        jwt_response_payload_handler = client_jwt_response_payload_handler
+
+        payload = jwt_payload_handler(user)
+        token = jwt_encode_handler(payload)
+        return Response(jwt_response_payload_handler(
+            token, user, payload['orig_iat'], self.request
+        ))

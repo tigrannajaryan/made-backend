@@ -92,6 +92,10 @@ class StylistAdmin(admin.ModelAdmin):
         ('Discounts', {'fields': ('first_time_book_discount_percent',
                                   'rebook_within_1_week_discount_percent',
                                   'rebook_within_2_weeks_discount_percent',
+                                  'rebook_within_3_weeks_discount_percent',
+                                  'rebook_within_4_weeks_discount_percent',
+                                  'rebook_within_5_weeks_discount_percent',
+                                  'rebook_within_6_weeks_discount_percent',
                                   'is_discount_configured')
                        }
          ),
