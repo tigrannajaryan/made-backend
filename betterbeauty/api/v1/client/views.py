@@ -1,4 +1,4 @@
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
 
 from api.common.permissions import ClientPermission
@@ -6,7 +6,12 @@ from api.v1.client.serializers import (
     AddPreferredClientsSerializer,
     ClientPreferredStylistSerializer,
     ClientProfileSerializer,
-)
+    ServicePricingRequestSerializer,
+    StylistServiceListSerializer)
+
+from api.v1.stylist.serializers import StylistServicePricingSerializer
+from client.models import ClientOfStylist
+from salon.models import Stylist, StylistService
 
 
 class ClientProfileView(generics.CreateAPIView, generics.RetrieveUpdateAPIView):
@@ -58,3 +63,32 @@ class PreferredStylistDeleteView(generics.DestroyAPIView):
         return {
             'user': self.request.user
         }
+
+
+class StylistServicesView(generics.RetrieveAPIView):
+    permission_classes = [ClientPermission, permissions.IsAuthenticated]
+    serializer_class = StylistServiceListSerializer
+
+    def get_object(self):
+        return Stylist.objects.get(uuid=self.kwargs['uuid'])
+
+
+class StylistServicePriceView(views.APIView):
+    permission_classes = [ClientPermission, permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = ServicePricingRequestSerializer(
+            data=request.data, )
+        serializer.is_valid(raise_exception=True)\
+
+        service_uuid = serializer.validated_data.get('service_uuid')
+        service = StylistService.objects.filter(uuid=service_uuid).last()
+        client_of_stylist = ClientOfStylist.objects.get(
+            client=request.user.client, stylist=service.stylist)
+
+        return Response(
+            StylistServicePricingSerializer(service, context={'client': client_of_stylist}).data
+        )
+
+    def get_object(self):
+        return Stylist.objects.get(uuid=self.kwargs['uuid'])

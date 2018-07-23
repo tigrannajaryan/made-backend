@@ -9,9 +9,12 @@ from api.common.mixins import FormattedErrorMessageMixin
 
 from api.common.utils import save_profile_photo
 from api.v1.client.constants import ErrorMessages
+
+from api.v1.stylist.serializers import (
+    StylistServiceCategoryDetailsSerializer)
 from client.models import Client, ClientOfStylist, PreferredStylist
 from core.models import User
-from salon.models import Stylist
+from salon.models import ServiceCategory, Stylist
 
 
 class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
@@ -119,3 +122,26 @@ class ClientOfStylistSerializer(FormattedErrorMessageMixin, serializers.ModelSer
     class Meta:
         model = ClientOfStylist
         fields = ['first_name', 'last_name', 'phone', 'uuid', ]
+
+
+class StylistServiceListSerializer(serializers.ModelSerializer):
+    stylist_uuid = serializers.UUIDField(read_only=True, source='uuid')
+    categories = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        fields = ['stylist_uuid', 'categories']
+        model = Stylist
+
+    def get_categories(self, stylist: Stylist):
+        category_queryset = ServiceCategory.objects.all().order_by(
+            'name', 'uuid'
+        ).distinct('name', 'uuid')
+        return StylistServiceCategoryDetailsSerializer(
+            category_queryset,
+            context={'stylist': stylist},
+            many=True
+        ).data
+
+
+class ServicePricingRequestSerializer(serializers.Serializer):
+    service_uuid = serializers.UUIDField()
