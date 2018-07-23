@@ -1128,7 +1128,7 @@ class StylistHomeSerializer(serializers.ModelSerializer):
         if query == "today":
             appointments = stylist.get_today_appointments(
                 upcoming_only=False,
-                include_cancelled=True,
+                exclude_cancelled_by_stylist=True,
                 include_checked_out=False
             )
         return AppointmentSerializer(
@@ -1138,7 +1138,7 @@ class StylistHomeSerializer(serializers.ModelSerializer):
     def get_today_visits_count(self, stylist: Stylist):
         return stylist.get_today_appointments(
             upcoming_only=False,
-            include_cancelled=True,
+            exclude_cancelled_by_stylist=True,
             include_checked_out=False
         ).count()
 
