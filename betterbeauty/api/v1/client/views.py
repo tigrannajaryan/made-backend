@@ -1,10 +1,14 @@
 from django.db.models import F, Q, Value
 from django.db.models.functions import Concat
+import datetime
+
+from dateutil.parser import parse
 from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
 
 from api.common.permissions import ClientPermission
 from api.v1.client.serializers import (
+    AppointmentSerializer,
     AddPreferredClientsSerializer,
     ClientPreferredStylistSerializer,
     ClientProfileSerializer,
@@ -14,6 +18,9 @@ from api.v1.stylist.serializers import StylistSerializer, StylistServicePricingS
 from client.models import ClientOfStylist
 from core.utils import post_or_get_or_data
 from salon.models import Stylist, StylistService
+
+from api.v1.stylist.constants import MAX_APPOINTMENTS_PER_REQUEST
+from core.utils import post_or_get
 
 
 class ClientProfileView(generics.CreateAPIView, generics.RetrieveUpdateAPIView):
@@ -128,3 +135,39 @@ class SearchStylistView(generics.ListAPIView):
         )
 
         return stylists.filter(stylist_filter)
+
+
+class AppointmentListCreateAPIView(generics.ListCreateAPIView):
+
+    permission_classes = [ClientPermission, permissions.IsAuthenticated]
+    serializer_class = AppointmentSerializer
+
+    def get_serializer_context(self):
+        return {
+            'user': self.request.user
+        }
+
+    def get_queryset(self):
+        client = self.request.user.client
+
+        date_from_str = post_or_get(self.request, 'date_from')
+        date_to_str = post_or_get(self.request, 'date_to')
+
+        include_cancelled = post_or_get(self.request, 'include_cancelled', False) == 'true'
+        limit = int(post_or_get(self.request, 'limit', MAX_APPOINTMENTS_PER_REQUEST))
+
+        datetime_from = None
+        datetime_to = None
+
+        if date_from_str:
+            datetime_from = parse(date_from_str).replace(
+                hour=0, minute=0, second=0
+            )
+        if date_to_str:
+            datetime_to = (parse(date_to_str) + datetime.timedelta(days=1)).replace(
+                hour=0, minute=0, second=0
+            )
+
+        return client.get_appointments_in_datetime_range(
+            datetime_from, datetime_to, include_cancelled
+        )[:limit]

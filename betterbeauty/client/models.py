@@ -1,5 +1,7 @@
+import datetime
 from datetime import timedelta
 from random import randint
+from typing import Optional
 from uuid import uuid4
 
 from django.conf import settings
@@ -7,6 +9,7 @@ from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from appointment.types import AppointmentStatus
 from utils.models import SmartModel
 
 from client.constants import SMS_CODE_EXPIRY_TIME_MINUTES
@@ -43,6 +46,53 @@ class ClientOfStylist(models.Model):
 
     def __str__(self):
         return self.get_full_name()
+
+    def get_appointments_in_datetime_range(
+            self,
+            datetime_from: Optional[datetime.datetime]=None,
+            datetime_to: Optional[datetime.datetime]=None,
+            include_cancelled=False,
+            include_checked_out=True,
+            q_filter=None,
+            **kwargs
+    ) -> models.QuerySet:
+        """
+        Return appointments present in given datetime range.
+        :param datetime_from: datetime at which first appointment is present
+        :param datetime_to: datetime by which last appointment starts
+        :param include_cancelled: whether or not cancelled appointments are included
+        :param include_checked_out: whether or not checked out appointments are included
+        :param kwargs: any optional filter kwargs to be applied
+        :return: Resulting Appointment queryset
+        """
+        if q_filter:
+            appointments = self.appointments.filter(
+                q_filter, **kwargs).order_by('datetime_start_at')
+        else:
+            appointments = self.appointments.filter(
+                **kwargs
+            ).order_by('datetime_start_at')
+
+        if datetime_from is not None:
+            appointments = appointments.filter(
+                datetime_start_at__gte=datetime_from
+            )
+
+        if datetime_to is not None:
+            appointments = appointments.filter(
+                datetime_start_at__lt=datetime_to
+            )
+
+        if not include_cancelled:
+            appointments = appointments.exclude(status__in=[
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+                AppointmentStatus.CANCELLED_BY_STYLIST
+            ])
+
+        if not include_checked_out:
+            appointments = appointments.exclude(status=AppointmentStatus.CHECKED_OUT)
+
+        return appointments
 
 
 class PreferredStylist(SmartModel):
