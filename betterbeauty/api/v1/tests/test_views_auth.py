@@ -104,7 +104,8 @@ class TestVerifyCodeView(object):
         }
         sendcode_url = reverse('api:v1:auth:verify-code')
         response = client.post(sendcode_url, data=data)
-        assert (response.status_code == status.HTTP_401_UNAUTHORIZED)
+        assert (response.status_code == status.HTTP_400_BAD_REQUEST)
+        assert ('code' in response.data['field_errors'])
 
     @pytest.mark.django_db
     def test_verify_expired_code(self, client):
@@ -115,7 +116,8 @@ class TestVerifyCodeView(object):
         }
         sendcode_url = reverse('api:v1:auth:verify-code')
         response = client.post(sendcode_url, data=data)
-        assert (response.status_code == status.HTTP_401_UNAUTHORIZED)
+        assert (response.status_code == status.HTTP_400_BAD_REQUEST)
+        assert ('code' in response.data['field_errors'])
 
     @pytest.mark.django_db
     def test_verify_redeemed_code(self, client):
@@ -126,7 +128,8 @@ class TestVerifyCodeView(object):
         }
         sendcode_url = reverse('api:v1:auth:verify-code')
         response = client.post(sendcode_url, data=data)
-        assert (response.status_code == status.HTTP_401_UNAUTHORIZED)
+        assert (response.status_code == status.HTTP_400_BAD_REQUEST)
+        assert ('code' in response.data['field_errors'])
 
 
 class TestRegisterUserView(object):
