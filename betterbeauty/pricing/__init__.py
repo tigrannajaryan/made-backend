@@ -1,10 +1,9 @@
 from datetime import date, datetime, timedelta, tzinfo
-from enum import Enum
 from typing import Dict, List, NamedTuple, Optional
 
 from model_utils import Choices
 
-from core.types import Weekday
+from core.types import StrEnum, Weekday
 
 from .constants import (
     DISCOUNT_GRANULARIZATION,
@@ -12,7 +11,7 @@ from .constants import (
 )
 
 
-class DiscountType(Enum):
+class DiscountType(StrEnum):
     FIRST_BOOKING = 'first_booking'
     REVISIT_WITHIN_1WEEK = 'revisit_within_1_week'
     REVISIT_WITHIN_2WEEK = 'revisit_within_2_weeks'

@@ -6,6 +6,9 @@ from typing import NamedTuple, NewType
 class StrEnum(str, Enum):
     """Enum where members are also (and must be) strs"""
 
+    def __str__(self):
+        return self.value
+
 
 class Weekday(IntEnum):
     MONDAY = 1

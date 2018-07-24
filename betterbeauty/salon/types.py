@@ -1,11 +1,11 @@
 import datetime
-from enum import Enum
 from typing import NamedTuple
 
+from core.types import StrEnum
 from pricing import CalculatedPrice
 
 
-class InvitationStatus(str, Enum):
+class InvitationStatus(StrEnum):
     UNSENT = 'unsent'
     DELIVERED = 'delivered'
     UNDELIVERED = 'undelivered'
