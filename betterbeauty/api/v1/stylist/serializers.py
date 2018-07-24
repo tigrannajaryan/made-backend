@@ -1149,10 +1149,14 @@ class StylistHomeSerializer(serializers.ModelSerializer):
 class InvitationSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
 
     phone = PhoneNumberField(required=True)
+    status = serializers.SerializerMethodField()
 
     class Meta:
         model = Invitation
-        fields = ['phone', ]
+        fields = ['phone', 'status']
+
+    def get_status(self, object):
+        return object.status
 
 
 class StylistSettingsRetrieveSerializer(serializers.ModelSerializer):

@@ -24,7 +24,7 @@ from core.utils import (
     calculate_appointment_prices,
     post_or_get,
 )
-from salon.models import ServiceTemplateSet, Stylist, StylistService
+from salon.models import Invitation, ServiceTemplateSet, Stylist, StylistService
 from salon.utils import calculate_price_and_discount_for_client_on_date
 from .constants import MAX_APPOINTMENTS_PER_REQUEST
 from .serializers import (
@@ -403,11 +403,12 @@ class StylistAppointmentRetrieveUpdateCancelView(
         ).order_by('datetime_start_at')
 
 
-class InvitationView(views.APIView):
+class InvitationView(generics.ListCreateAPIView):
     permission_classes = [StylistPermission, permissions.IsAuthenticated]
+    serializer_class = InvitationSerializer
 
-    def post(self, request):
-        serializer = InvitationSerializer(data=request.data, many=True)
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
         stylist = self.request.user.stylist
         with transaction.atomic():
@@ -418,9 +419,12 @@ class InvitationView(views.APIView):
         if len(created_objects) > 0:
             response_status = status.HTTP_201_CREATED
         return Response(
-            InvitationSerializer(created_objects, many=True).data,
+            self.serializer_class(created_objects, many=True).data,
             status=response_status
         )
+
+    def get_queryset(self):
+        return Invitation.objects.filter(stylist=self.request.user.stylist)
 
 
 class StylistSettingsRetrieveView(generics.RetrieveAPIView):
