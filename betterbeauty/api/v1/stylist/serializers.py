@@ -179,7 +179,8 @@ class StylistSerializer(
         model = Stylist
         fields = [
             'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url',
-            'salon_name', 'salon_address', 'profile_photo_id',
+            'salon_name', 'salon_address', 'profile_photo_id', 'instagram_url',
+            'website_url',
         ]
 
     def validate_salon_address(self, salon_address: str) -> str:

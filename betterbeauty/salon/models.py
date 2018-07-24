@@ -142,6 +142,9 @@ class Stylist(models.Model):
     maximum_discount = models.IntegerField(default=None, blank=True, null=True)
     is_maximum_discount_enabled = models.BooleanField(default=False)
 
+    instagram_url = models.CharField(max_length=2084, blank=True, null=True)
+    website_url = models.CharField(max_length=2084, blank=True, null=True)
+
     class Meta:
         db_table = 'stylist'
 
