@@ -10,7 +10,7 @@ def post_or_get(request, key, default=None):
 
 def post_or_get_or_data(request, key, default=None):
     return request.POST.get(key, request.GET.get(key, (
-        request.data.get(key, default) if type(request.data) == dict else default
+        request.data.get(key, default) if isinstance(request.data, dict) else default
     )))
 
 
