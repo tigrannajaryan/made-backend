@@ -1,7 +1,7 @@
 import datetime
 import uuid
 
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from django.conf import settings
 from django.contrib.postgres.fields import DateRangeField
@@ -231,10 +231,7 @@ class Stylist(models.Model):
             datetime_from: Optional[datetime.datetime]=None,
             datetime_to: Optional[datetime.datetime]=None,
             including_to: Optional[bool]=False,
-            include_cancelled=False,
-            exclude_cancelled_by_stylist=False,
-            exclude_cancelled_by_client=False,
-            include_checked_out=True,
+            exclude_statuses: Optional[List[AppointmentStatus]]=None,
             q_filter=None,
             **kwargs
     ) -> models.QuerySet:
@@ -242,6 +239,7 @@ class Stylist(models.Model):
         Return appointments present in given datetime range.
         :param datetime_from: datetime at which first appointment is present
         :param datetime_to: datetime by which last appointment starts
+        :param exclude_statuses: list of statuses to be excluded from the resulting query
         :param including_to: whether or not end datetime should be inclusive
         :param include_cancelled: whether or not cancelled appointments are included
         :param exclude_cancelled_by_stylist: whether or not cancelled appointments
@@ -276,29 +274,17 @@ class Stylist(models.Model):
                 appointments = appointments.filter(
                     datetime_start_at__lt=datetime_to - self.service_time_gap
                 )
-        if not include_cancelled and not (
-                exclude_cancelled_by_stylist or exclude_cancelled_by_client):
-            appointments = appointments.exclude(status__in=[
-                AppointmentStatus.CANCELLED_BY_CLIENT,
-                AppointmentStatus.CANCELLED_BY_STYLIST
-            ])
 
-        if exclude_cancelled_by_stylist:
+        if exclude_statuses:
+            assert isinstance(exclude_statuses, list)
             appointments = appointments.exclude(
-                status=AppointmentStatus.CANCELLED_BY_STYLIST)
-
-        if exclude_cancelled_by_client:
-            appointments = appointments.exclude(
-                status=AppointmentStatus.CANCELLED_BY_CLIENT)
-
-        if not include_checked_out:
-            appointments = appointments.exclude(status=AppointmentStatus.CHECKED_OUT)
+                status__in=exclude_statuses
+            )
         return appointments
 
     def get_today_appointments(
-            self, upcoming_only=True, include_cancelled=False, include_checked_out=True,
-            exclude_cancelled_by_stylist=False,
-            exclude_cancelled_by_client=False,
+            self, upcoming_only=True,
+            exclude_statuses=Optional[List[AppointmentStatus]]
     ) -> models.QuerySet:
         """Return today's appointments, aware of stylist's timezone"""
         current_now: datetime.datetime = self.get_current_now()
@@ -310,24 +296,21 @@ class Stylist(models.Model):
         next_midnight = (
             current_now + datetime.timedelta(days=1)
         ).replace(hour=0, minute=0, second=0)
-
         return self.get_appointments_in_datetime_range(
-            datetime_from, next_midnight, include_cancelled=include_cancelled,
-            include_checked_out=include_checked_out,
-            exclude_cancelled_by_stylist=exclude_cancelled_by_stylist,
-            exclude_cancelled_by_client=exclude_cancelled_by_client,
-            including_to=True
+            datetime_from, next_midnight,
+            including_to=True,
+            exclude_statuses=exclude_statuses
         )
 
     def get_current_week_appointments(
-            self, include_cancelled=False
+            self, exclude_statuses=None
     ) -> models.QuerySet:
         """Return appointments in timezone-aware bounds of stylist's current week"""
         week_start, week_end = self.get_current_week_bounds()
         return self.get_appointments_in_datetime_range(
             datetime_from=week_start,
             datetime_to=week_end,
-            include_cancelled=include_cancelled
+            exclude_statuses=exclude_statuses
         )
 
     def is_working_time(
@@ -357,7 +340,9 @@ class Stylist(models.Model):
         return self.get_appointments_in_datetime_range(
             datetime_from=next_midnight,
             datetime_to=None,
-            exclude_cancelled_by_stylist=True,
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_STYLIST,
+            ]
         )
 
     def get_past_visits(self):
@@ -370,7 +355,7 @@ class Stylist(models.Model):
 
         return self.get_appointments_in_datetime_range(
             datetime_from=None,
-            exclude_cancelled_by_stylist=True,
+            exclude_statuses=[AppointmentStatus.CANCELLED_BY_STYLIST, ],
             q_filter=(Q(datetime_start_at__lt=last_midnight) | Q(
                 datetime_start_at__gte=last_midnight,
                 datetime_start_at__lt=next_midnight,
