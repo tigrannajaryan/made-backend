@@ -1,3 +1,5 @@
+from django.db.models import F, Q, Value
+from django.db.models.functions import Concat
 from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
 
@@ -8,9 +10,9 @@ from api.v1.client.serializers import (
     ClientProfileSerializer,
     ServicePricingRequestSerializer,
     StylistServiceListSerializer)
-
-from api.v1.stylist.serializers import StylistServicePricingSerializer
+from api.v1.stylist.serializers import StylistSerializer, StylistServicePricingSerializer
 from client.models import ClientOfStylist
+from core.utils import post_or_get_or_data
 from salon.models import Stylist, StylistService
 
 
@@ -92,3 +94,37 @@ class StylistServicePriceView(views.APIView):
 
     def get_object(self):
         return Stylist.objects.get(uuid=self.kwargs['uuid'])
+
+
+class SearchStylistView(generics.ListAPIView):
+    permission_classes = [ClientPermission, permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = StylistSerializer(self.get_queryset(), many=True)
+        response_dict = {
+            'stylists': serializer.data
+        }
+        return Response(response_dict, status=status.HTTP_200_OK)
+
+    def get_queryset(self):
+        query = post_or_get_or_data(self.request, 'search_like', '')
+        return self._search_stylists(query)
+
+    @staticmethod
+    def _search_stylists(query):
+
+        if 1 <= len(query) < 3:
+            return ClientOfStylist.objects.none()
+
+        stylists = Stylist.objects.annotate(
+            full_name=Concat(F('user__first_name'), Value(' '), F('user__last_name')),
+            reverse_full_name=Concat(F('user__last_name'), Value(' '), F('user__first_name')),
+        ).distinct('id')
+
+        stylist_filter = (
+            Q(full_name__icontains=query) |
+            Q(salon__name__icontains=query) |
+            Q(reverse_full_name__icontains=query)
+        )
+
+        return stylists.filter(stylist_filter)

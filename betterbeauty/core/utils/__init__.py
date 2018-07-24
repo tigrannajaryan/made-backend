@@ -8,6 +8,12 @@ def post_or_get(request, key, default=None):
     return request.POST.get(key, request.GET.get(key, default))
 
 
+def post_or_get_or_data(request, key, default=None):
+    return request.POST.get(key, request.GET.get(key, (
+        request.data.get(key, default) if isinstance(request.data, dict) else default
+    )))
+
+
 def calculate_tax(original_cost: Decimal) -> Decimal:
     return original_cost * DEFAULT_TAX_RATE
 
