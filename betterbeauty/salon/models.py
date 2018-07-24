@@ -4,6 +4,7 @@ import uuid
 from typing import List, Optional, Tuple
 
 from django.conf import settings
+from django.contrib.gis.db.models.fields import PointField
 from django.contrib.postgres.fields import DateRangeField
 from django.core.validators import MaxValueValidator
 from django.db import models
@@ -41,8 +42,7 @@ class Salon(models.Model):
     city = models.CharField(max_length=64, null=True, blank=True)
     state = models.CharField(max_length=2, null=True, blank=True)
     zip_code = models.CharField(max_length=5, null=True, blank=True)
-    latitude = models.DecimalField(decimal_places=8, max_digits=10, null=True, blank=True)
-    longitude = models.DecimalField(decimal_places=8, max_digits=11, null=True, blank=True)
+    location = PointField(geography=True, null=True)
 
     class Meta:
         db_table = 'salon'
