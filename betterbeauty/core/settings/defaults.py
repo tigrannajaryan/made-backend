@@ -122,7 +122,7 @@ AUTH_USER_MODEL = 'core.User'
 JWT_AUTH = {
     'JWT_ALLOW_REFRESH': True,
     'JWT_AUTH_HEADER_PREFIX': 'Token',  # add header Authentication: Token <jwt_token>
-    'JWT_EXPIRATION_DELTA': datetime.timedelta(hours=24),  # set expiration for 1 day
+    'JWT_EXPIRATION_DELTA': datetime.timedelta(days=30),  # set expiration for 1 month
     'JWT_RESPONSE_PAYLOAD_HANDLER': 'core.utils.auth.jwt_response_payload_handler',
 }
 
