@@ -28,3 +28,7 @@ MIDDLEWARE: List = [
 ] + MIDDLEWARE  # noqa
 
 INSTALLED_APPS += ['raven.contrib.django.raven_compat', ]  # noqa
+
+# Twilio
+TWILIO_SMS_ENABLED = True
+TWILIO_SLACK_MOCK_ENABLED = False

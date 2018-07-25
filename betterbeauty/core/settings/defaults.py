@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'appointment',
     'client',
     'core',
+    'integrations',
     'salon',
 ]
 
@@ -154,3 +155,11 @@ AWS_S3_FILE_OVERWRITE = False
 DEBUG = False
 
 CATCH_ALL_EXCEPTIONS = False
+
+# Twilio
+TWILLIO_SLACK_HOOK = (
+    'https://hooks.slack.com/services/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'
+)
+TWILIO_SMS_ENABLED = False
+TWILIO_SLACK_MOCK_ENABLED = False
+TWILIO_FROM_TEL = '+19293771047'
