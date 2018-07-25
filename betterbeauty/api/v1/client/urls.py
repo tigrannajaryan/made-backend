@@ -7,7 +7,7 @@ from api.v1.client.views import (
     PreferredStylistListCreateView,
     SearchStylistView,
     StylistServicePriceView,
-    StylistServicesView)
+    StylistServicesView, AppointmentRetriveUpdateView)
 
 
 app_name = 'client'
@@ -24,5 +24,7 @@ urlpatterns = [
     url('^services/pricing', StylistServicePriceView.as_view(), name='services-pricing'),
 
     url('^appointments$',
-        AppointmentListCreateAPIView.as_view(), name='appointment')
+        AppointmentListCreateAPIView.as_view(), name='appointments'),
+    url('^appointments/(?P<uuid>[0-9a-f\-]+)$',
+        AppointmentRetriveUpdateView.as_view(), name='appointment')
 ]

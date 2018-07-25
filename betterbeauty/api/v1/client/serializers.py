@@ -1,8 +1,11 @@
 import datetime
+import uuid
 from decimal import Decimal
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict
 
 from django.db import transaction
+from django.db.models import Sum
+from django.db.models.functions import Coalesce
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -17,6 +20,7 @@ from api.v1.stylist.serializers import (
 
 from api.v1.stylist.fields import DurationMinuteField
 from appointment.models import AppointmentService, Appointment
+from appointment.types import AppointmentStatus
 from client.models import Client, ClientOfStylist, PreferredStylist
 from core.models import User
 from core.types import AppointmentPrices
@@ -271,5 +275,88 @@ class AppointmentSerializer(FormattedErrorMessageMixin, serializers.ModelSeriali
                 setattr(appointment, k, v)
             appointment.save()
             appointment.append_status_history(updated_by=stylist.user)
+
+        return appointment
+
+
+class AppointmentUpdateSerializer(AppointmentSerializer):
+    stylist_uuid = serializers.UUIDField(source='stylist.uuid', read_only=True)
+    status = serializers.CharField(read_only=False, required=False)
+
+    @staticmethod
+    @transaction.atomic
+    def _update_appointment_services(
+            appointment: Appointment, service_records: List[Dict]
+    ) -> None:
+        """Replace existing appointment services preserving added on appointment creation"""
+        stylist_services = appointment.stylist.services
+        services_to_keep: List[uuid.UUID] = [
+            service_record['service_uuid'] for service_record in service_records
+        ]
+        # Delete services which may have been added during appointment creation,
+        # but are removed during the checkout. E.g. client had decided to change the
+        # service.
+        appointment.services.all().exclude(service_uuid__in=services_to_keep).delete()
+
+        # Add new services supplied during the checkout. These are new services, so
+        # no discounts will be applied (discount applies only during appointment's
+        # initial creation
+
+        for service_record in service_records:
+            service_uuid: uuid.UUID = service_record['service_uuid']
+            service_client_price: Optional[Decimal] = (
+                service_record['client_price'] if 'client_price' in service_record else None)
+            try:
+                appointment_service: AppointmentService = (
+                    appointment.services.get(service_uuid=service_uuid))
+                # service already exists, so we will not re-write it
+                if service_client_price:
+                    appointment_service.set_client_price(service_client_price)
+                continue
+            except AppointmentService.DoesNotExist:
+                service: StylistService = stylist_services.get(uuid=service_uuid)
+                AppointmentService.objects.create(
+                    appointment=appointment,
+                    service_uuid=service.uuid,
+                    service_name=service.name,
+                    duration=service.duration,
+                    regular_price=service.regular_price,
+                    calculated_price=service.regular_price,
+                    client_price=service_client_price if service_client_price
+                    else service.regular_price,
+                    is_price_edited=True if service_client_price else False,
+                    applied_discount=None,
+                    is_original=False
+                )
+
+    def save(self, **kwargs):
+
+        status = self.validated_data.get('status', self.instance.status)
+        user: User = self.context['user']
+        appointment: Appointment = self.instance
+        with transaction.atomic():
+            self._update_appointment_services(
+                appointment, self.validated_data['services']
+            )
+            total_client_price_before_tax: Decimal = appointment.services.aggregate(
+                total_before_tax=Coalesce(Sum('client_price'), 0)
+            )['total_before_tax']
+
+            # update final prices and save appointment
+
+            appointment_prices: AppointmentPrices = calculate_appointment_prices(
+                price_before_tax=total_client_price_before_tax,
+                include_card_fee=self.instance.has_card_fee_included,
+                include_tax=self.instance.has_tax_included
+            )
+
+            for k, v in appointment_prices._asdict().items():
+                setattr(appointment, k, v)
+
+            if appointment.status != status:
+                appointment.status = status
+                appointment.append_status_history(updated_by=user)
+
+            appointment.save(**kwargs)
 
         return appointment

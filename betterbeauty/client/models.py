@@ -4,6 +4,7 @@ from random import randint
 from typing import Optional
 from uuid import uuid4
 
+from django.apps import apps
 from django.conf import settings
 from django.db import models, transaction
 from django.utils import timezone
@@ -24,6 +25,78 @@ class Client(models.Model):
     class Meta:
         db_table = 'client'
 
+    def get_appointments_in_datetime_range(
+            self,
+            datetime_from: Optional[datetime.datetime]=None,
+            datetime_to: Optional[datetime.datetime]=None,
+            including_to: Optional[bool]=False,
+            include_cancelled=False,
+            exclude_cancelled_by_stylist=False,
+            exclude_cancelled_by_client=False,
+            include_checked_out=True,
+            q_filter=None,
+            **kwargs
+    ) -> models.QuerySet:
+        """
+        Return appointments present in given datetime range.
+        :param datetime_from: datetime at which first appointment is present
+        :param datetime_to: datetime by which last appointment starts
+        :param including_to: whether or not end datetime should be inclusive
+        :param include_cancelled: whether or not cancelled appointments are included
+        :param exclude_cancelled_by_stylist: whether or not cancelled appointments
+                cancelled by stylist are included(This value overrides `include_cancelled`)
+        :param exclude_cancelled_by_client: whether or not cancelled appointments
+                cancelled by client are included(This value overrides `include_cancelled`)
+        :param include_checked_out: whether or not checked out appointments are included
+        :param kwargs: any optional filter kwargs to be applied
+        :return: Resulting Appointment queryset
+        """
+        Appointment = apps.get_model('appointment', 'Appointment')
+        appointments = Appointment.objects.all()
+        if q_filter:
+            appointments = appointments.filter(
+                q_filter,client__client=self, **kwargs).order_by('datetime_start_at')
+        else:
+            appointments = appointments.filter(
+                **kwargs
+            ).order_by('datetime_start_at')
+
+        if datetime_from is not None:
+            appointments = appointments.filter(
+                datetime_start_at__gte=datetime_from
+            )
+
+        if datetime_to is not None:
+            if including_to:
+                # must start before datetime_to
+                appointments = appointments.filter(
+                    datetime_start_at__lt=datetime_to
+                )
+            else:
+                # must finish before datetime_to
+                appointments = appointments.filter(
+                    datetime_start_at__lt=datetime_to
+                )
+        if not include_cancelled and not (
+                exclude_cancelled_by_stylist or exclude_cancelled_by_client):
+            appointments = appointments.exclude(status__in=[
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+                AppointmentStatus.CANCELLED_BY_STYLIST
+            ])
+
+        if exclude_cancelled_by_stylist:
+            appointments = appointments.exclude(
+                status=AppointmentStatus.CANCELLED_BY_STYLIST)
+
+        if exclude_cancelled_by_client:
+            appointments = appointments.exclude(
+                status=AppointmentStatus.CANCELLED_BY_CLIENT)
+
+        if not include_checked_out:
+            appointments = appointments.exclude(status=AppointmentStatus.CHECKED_OUT)
+        return appointments
+
+
 
 class ClientOfStylist(models.Model):
     uuid = models.UUIDField(unique=True, default=uuid4, editable=False)
@@ -32,7 +105,7 @@ class ClientOfStylist(models.Model):
     first_name = models.CharField(_('first name'), max_length=30, blank=True, null=True)
     last_name = models.CharField(_('last name'), max_length=30, blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True, null=True, default=None)
-    client = models.ForeignKey(Client, on_delete=models.PROTECT, blank=True, null=True)
+    client = models.ForeignKey(Client, on_delete=models.PROTECT, blank=True, null=True, related_name='client_of_stylists')
 
     class Meta:
         db_table = 'client_of_stylist'

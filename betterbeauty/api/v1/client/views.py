@@ -13,8 +13,9 @@ from api.v1.client.serializers import (
     ClientPreferredStylistSerializer,
     ClientProfileSerializer,
     ServicePricingRequestSerializer,
-    StylistServiceListSerializer)
+    StylistServiceListSerializer, AppointmentUpdateSerializer)
 from api.v1.stylist.serializers import StylistSerializer, StylistServicePricingSerializer
+from appointment.models import Appointment
 from client.models import ClientOfStylist
 from core.utils import post_or_get_or_data
 from salon.models import Stylist, StylistService
@@ -171,3 +172,16 @@ class AppointmentListCreateAPIView(generics.ListCreateAPIView):
         return client.get_appointments_in_datetime_range(
             datetime_from, datetime_to, include_cancelled
         )[:limit]
+
+class AppointmentRetriveUpdateView(generics.RetrieveUpdateAPIView):
+
+    permission_classes = [ClientPermission, permissions.IsAuthenticated]
+    serializer_class = AppointmentUpdateSerializer
+
+    def get_serializer_context(self):
+        return {
+            'user': self.request.user
+        }
+
+    def get_object(self):
+        return Appointment.objects.get(uuid=self.kwargs['uuid'])
