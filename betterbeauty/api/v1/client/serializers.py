@@ -6,6 +6,7 @@ from typing import Optional, List, Tuple, Dict
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -19,8 +20,10 @@ from api.v1.stylist.serializers import (
     StylistServiceCategoryDetailsSerializer)
 
 from api.v1.stylist.fields import DurationMinuteField
+from appointment.constants import (
+    ErrorMessages as appointment_errors
+)
 from appointment.models import AppointmentService, Appointment
-from appointment.types import AppointmentStatus
 from client.models import Client, ClientOfStylist, PreferredStylist
 from core.models import User
 from core.types import AppointmentPrices
@@ -179,7 +182,77 @@ class AppointmentServiceSerializer(FormattedErrorMessageMixin, serializers.Model
         ]
 
 
-class AppointmentSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
+class AppointmentValidationMixin(object):
+
+    def validate_datetime_start_at(self, datetime_start_at: datetime.datetime):
+        context: Dict = getattr(self, 'context', {})
+        if context.get('force_start', False):
+            return datetime_start_at
+
+        stylist: Stylist = context['stylist']
+        # check if appointment start is in the past
+        if datetime_start_at < timezone.now():
+            raise serializers.ValidationError(
+                appointment_errors.ERR_APPOINTMENT_IN_THE_PAST
+            )
+
+        if not stylist.is_working_day(datetime_start_at):
+            raise serializers.ValidationError(
+                appointment_errors.ERR_APPOINTMENT_NON_WORKING_DAY
+            )
+
+        # check if appointment doesn't fit working hours
+        if not stylist.is_working_time(datetime_start_at):
+            raise serializers.ValidationError(
+                appointment_errors.ERR_APPOINTMENT_OUTSIDE_WORKING_HOURS
+            )
+
+        # check if there are intersecting appointments
+        if stylist.get_appointments_in_datetime_range(
+            datetime_start_at, datetime_start_at + stylist.service_time_gap,
+            including_to=True
+        ).exists():
+            raise serializers.ValidationError(
+                appointment_errors.ERR_APPOINTMENT_INTERSECTION
+            )
+        return datetime_start_at
+
+    def validate_service_uuid(self, service_uuid: str):
+        context: Dict = getattr(self, 'context', {})
+        stylist: Stylist = context['stylist']
+        if not stylist.services.filter(
+            uuid=service_uuid
+        ).exists():
+            raise serializers.ValidationError(
+                appointment_errors.ERR_SERVICE_DOES_NOT_EXIST
+            )
+        return service_uuid
+
+    def validate_services(self, services):
+        if len(services) == 0:
+            raise serializers.ValidationError(
+                appointment_errors.ERR_SERVICE_REQUIRED
+            )
+        for service in services:
+            self.validate_service_uuid(
+                str(service['service_uuid'])
+            )
+        return services
+
+    def validate_stylist_uuid(self, stylist_uuid: Optional[str]):
+
+        if stylist_uuid:
+            if not Stylist.objects.filter(
+                    uuid=stylist_uuid,
+            ).exists():
+                raise serializers.ValidationError(
+                    appointment_errors.ERR_STYLIST_DOES_NOT_EXIST
+                )
+        return stylist_uuid
+
+
+class AppointmentSerializer(FormattedErrorMessageMixin,
+    AppointmentValidationMixin, serializers.ModelSerializer):
 
     uuid = serializers.UUIDField(read_only=True)
     stylist_uuid = serializers.UUIDField(required=True, source='stylist.uuid')

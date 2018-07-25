@@ -144,8 +144,13 @@ class AppointmentListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = AppointmentSerializer
 
     def get_serializer_context(self):
+        stylist_uuid = post_or_get_or_data(self.request, 'stylist_uuid', None)
+        stylist = None
+        if stylist_uuid:
+            stylist = Stylist.objects.get(uuid=stylist_uuid)
         return {
-            'user': self.request.user
+            'user': self.request.user,
+            'stylist': stylist
         }
 
     def get_queryset(self):
@@ -179,8 +184,10 @@ class AppointmentRetriveUpdateView(generics.RetrieveUpdateAPIView):
     serializer_class = AppointmentUpdateSerializer
 
     def get_serializer_context(self):
+        stylist = self.get_object().stylist
         return {
-            'user': self.request.user
+            'user': self.request.user,
+            'stylist': stylist
         }
 
     def get_object(self):

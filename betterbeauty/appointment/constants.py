@@ -22,6 +22,7 @@ class ErrorMessages(object):
     ERR_SERVICE_REQUIRED = 'err_service_required'
     ERR_NON_ADDON_SERVICE_REQUIRED = 'err_non_addon_service_required'
     ERR_CLIENT_DOES_NOT_EXIST = 'err_client_does_not_exist'
+    ERR_STYLIST_DOES_NOT_EXIST = 'err_stylist_does_not_exist'
     ERR_STATUS_NOT_ALLOWED = 'err_status_not_allowed'
     ERR_NO_SECOND_CHECKOUT = 'err_no_second_checkout'
     ERR_APPOINTMENT_DOESNT_EXIST = 'err_appointment_does_not_exist'
