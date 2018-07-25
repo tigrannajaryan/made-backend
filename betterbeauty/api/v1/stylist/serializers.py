@@ -1149,10 +1149,11 @@ class StylistHomeSerializer(serializers.ModelSerializer):
 class InvitationSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
 
     phone = PhoneNumberField(required=True)
+    status = serializers.CharField(read_only=True)
 
     class Meta:
         model = Invitation
-        fields = ['phone', ]
+        fields = ['phone', 'status']
 
 
 class StylistSettingsRetrieveSerializer(serializers.ModelSerializer):
