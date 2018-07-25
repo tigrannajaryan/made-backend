@@ -463,7 +463,10 @@ class StylistAvailableWeekDayWithBookedTimeSerializer(serializers.ModelSerialize
         # ExtractWeekDay returns non-iso weekday, e.g. Sunday == 1, so need to cast
         current_non_iso_week_day = (weekday.weekday % 7) + 1
         total_day_duration: int = stylist.get_current_week_appointments(
-            include_cancelled=False
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_STYLIST,
+                AppointmentStatus.CANCELLED_BY_CLIENT
+            ]
         ).annotate(
             weekday=ExtractWeekDay('datetime_start_at')
         ).filter(
@@ -477,7 +480,10 @@ class StylistAvailableWeekDayWithBookedTimeSerializer(serializers.ModelSerialize
         # ExtractWeekDay returns non-iso weekday, e.g. Sunday == 1, so need to cast
         current_non_iso_week_day = (weekday.weekday % 7) + 1
         return stylist.get_current_week_appointments(
-            include_cancelled=False
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+                AppointmentStatus.CANCELLED_BY_STYLIST
+            ]
         ).annotate(
             weekday=ExtractWeekDay('datetime_start_at')
         ).filter(
@@ -613,7 +619,11 @@ class AppointmentValidationMixin(object):
         # check if there are intersecting appointments
         if stylist.get_appointments_in_datetime_range(
             datetime_start_at, datetime_start_at + stylist.service_time_gap,
-            including_to=True
+            including_to=True,
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_STYLIST,
+                AppointmentStatus.CANCELLED_BY_CLIENT
+            ]
         ).exists():
             raise serializers.ValidationError(
                 appointment_errors.ERR_APPOINTMENT_INTERSECTION
@@ -1062,10 +1072,8 @@ class StylistTodaySerializer(serializers.ModelSerializer):
         """Return today's appointments that are still meaningful for the stylist"""
         next_appointments = stylist.get_today_appointments(
             upcoming_only=False,
-            include_cancelled=True,
-            include_checked_out=False
-        ).exclude(
-            status__in=[
+            exclude_statuses=[
+                AppointmentStatus.CHECKED_OUT,
                 AppointmentStatus.CANCELLED_BY_STYLIST,
                 AppointmentStatus.NO_SHOW,
             ]
@@ -1078,8 +1086,11 @@ class StylistTodaySerializer(serializers.ModelSerializer):
         """Return non-cancelled appointments till end of today"""
         return stylist.get_today_appointments(
             upcoming_only=True,
-            include_cancelled=False,
-            include_checked_out=False
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_STYLIST,
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+                AppointmentStatus.CHECKED_OUT,
+            ]
         ).count()
 
     def get_week_visits_count(self, stylist: Stylist):
@@ -1088,14 +1099,20 @@ class StylistTodaySerializer(serializers.ModelSerializer):
         return stylist.get_appointments_in_datetime_range(
             datetime_from=week_start,
             datetime_to=week_end,
-            include_cancelled=False
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_STYLIST,
+                AppointmentStatus.CANCELLED_BY_CLIENT
+            ]
         ).count()
 
     def get_past_visits_count(self, stylist: Stylist):
         return stylist.get_appointments_in_datetime_range(
             datetime_from=None,
             datetime_to=stylist.get_current_now(),
-            include_cancelled=False
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+                AppointmentStatus.CANCELLED_BY_STYLIST
+            ]
         ).exclude(
             datetime_start_at__gt=stylist.get_current_now() - stylist.service_time_gap
         ).count()
@@ -1128,8 +1145,10 @@ class StylistHomeSerializer(serializers.ModelSerializer):
         if query == "today":
             appointments = stylist.get_today_appointments(
                 upcoming_only=False,
-                exclude_cancelled_by_stylist=True,
-                include_checked_out=False
+                exclude_statuses=[
+                    AppointmentStatus.CANCELLED_BY_STYLIST,
+                    AppointmentStatus.CHECKED_OUT
+                ]
             )
         return AppointmentSerializer(
             appointments, many=True
@@ -1138,8 +1157,10 @@ class StylistHomeSerializer(serializers.ModelSerializer):
     def get_today_visits_count(self, stylist: Stylist):
         return stylist.get_today_appointments(
             upcoming_only=False,
-            exclude_cancelled_by_stylist=True,
-            include_checked_out=False
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_STYLIST,
+                AppointmentStatus.CHECKED_OUT
+            ]
         ).count()
 
     def get_upcoming_visits_count(self, stylist: Stylist):
@@ -1181,14 +1202,20 @@ class StylistSettingsRetrieveSerializer(serializers.ModelSerializer):
     def get_total_week_booked_minutes(self, stylist: Stylist) -> int:
         service_gap_minutes: int = int(stylist.service_time_gap.total_seconds() / 60)
         total_week_duration: int = stylist.get_current_week_appointments(
-            include_cancelled=False
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_STYLIST,
+                AppointmentStatus.CANCELLED_BY_CLIENT
+            ]
         ).count() * service_gap_minutes
 
         return total_week_duration
 
     def get_total_week_appointments_count(self, stylist: Stylist) -> int:
         return stylist.get_current_week_appointments(
-            include_cancelled=False
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+                AppointmentStatus.CANCELLED_BY_STYLIST
+            ]
         ).count()
 
 

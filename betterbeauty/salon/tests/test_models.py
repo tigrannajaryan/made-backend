@@ -151,7 +151,10 @@ class TestStylist(object):
         appointments: Dict[str, Appointment] = stylist_appointments_data(stylist_data)
         today_appointments = [a.id for a in stylist_data.get_today_appointments(
             upcoming_only=True,
-            include_cancelled=False
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+                AppointmentStatus.CANCELLED_BY_STYLIST,
+            ]
         )]
 
         assert(len(today_appointments) == 3)
@@ -162,7 +165,13 @@ class TestStylist(object):
         assert(appointments['past_appointment'].id not in today_appointments)
 
         today_appointments = [
-            a.id for a in stylist_data.get_today_appointments(upcoming_only=False)
+            a.id for a in stylist_data.get_today_appointments(
+                upcoming_only=False,
+                exclude_statuses=[
+                    AppointmentStatus.CANCELLED_BY_CLIENT,
+                    AppointmentStatus.CANCELLED_BY_STYLIST
+                ]
+            )
         ]
 
         assert (len(today_appointments) == 4)
@@ -184,7 +193,11 @@ class TestStylist(object):
         appointments_from_start = stylist_data.get_appointments_in_datetime_range(
             datetime_from=None,
             datetime_to=stylist_data.get_current_now(),
-            including_to=True
+            including_to=True,
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+                AppointmentStatus.CANCELLED_BY_STYLIST
+            ]
         )
         assert(frozenset([a.id for a in appointments_from_start]) == frozenset([
             appointments['past_appointment'].id,
@@ -194,7 +207,11 @@ class TestStylist(object):
 
         apppointmens_to_end = stylist_data.get_appointments_in_datetime_range(
             datetime_from=stylist_data.get_current_now(),
-            datetime_to=None
+            datetime_to=None,
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+                AppointmentStatus.CANCELLED_BY_STYLIST
+            ]
         )
         assert (frozenset([a.id for a in apppointmens_to_end]) == frozenset([
             appointments['current_appointment'].id,
@@ -211,6 +228,10 @@ class TestStylist(object):
             datetime_to=pytz.timezone('UTC').localize(datetime.datetime(
                 2018, 5, 15, 23, 59, 59
             )),
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+                AppointmentStatus.CANCELLED_BY_STYLIST
+            ]
         )
         assert (frozenset([a.id for a in appointments_between]) == frozenset([
             appointments['past_appointment'].id,

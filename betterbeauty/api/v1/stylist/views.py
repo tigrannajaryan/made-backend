@@ -236,7 +236,12 @@ class StylistAppointmentListCreateView(generics.ListCreateAPIView):
         date_from_str = post_or_get(self.request, 'date_from')
         date_to_str = post_or_get(self.request, 'date_to')
 
-        include_cancelled = post_or_get(self.request, 'include_cancelled', False) == 'true'
+        exclude_statuses = None
+        if post_or_get(self.request, 'include_cancelled', False) == 'true':
+            exclude_statuses = [
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+                AppointmentStatus.CANCELLED_BY_STYLIST
+            ]
         limit = int(post_or_get(self.request, 'limit', MAX_APPOINTMENTS_PER_REQUEST))
 
         datetime_from = None
@@ -250,9 +255,9 @@ class StylistAppointmentListCreateView(generics.ListCreateAPIView):
             datetime_to = (parse(date_to_str) + datetime.timedelta(days=1)).replace(
                 hour=0, minute=0, second=0
             )
-
         return stylist.get_appointments_in_datetime_range(
-            datetime_from, datetime_to, include_cancelled
+            datetime_from, datetime_to,
+            exclude_statuses=exclude_statuses
         )[:limit]
 
 
@@ -348,7 +353,10 @@ class StylistAppointmentPreviewView(views.APIView):
             preview_request.datetime_start_at,
             preview_request.datetime_start_at,
             including_to=True,
-            include_cancelled=False,
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_STYLIST,
+                AppointmentStatus.CANCELLED_BY_CLIENT
+            ]
         )
         return AppointmentPreviewResponse(
             duration=duration,
