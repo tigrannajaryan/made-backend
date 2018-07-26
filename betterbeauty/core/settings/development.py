@@ -7,7 +7,7 @@ LEVEL = 'development'
 PG_PORT = os.environ.get('PGPORT', 5432)
 
 DATABASE_URL = (
-    'postgres://betterbeauty:W8zSrpqUkFzReUqT@127.0.0.1:{0}/betterbeauty'.format(
+    'postgis://betterbeauty:W8zSrpqUkFzReUqT@127.0.0.1:{0}/betterbeauty'.format(
         PG_PORT
     )
 )
