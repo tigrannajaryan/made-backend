@@ -415,6 +415,11 @@ class InvitationView(generics.ListCreateAPIView):
     permission_classes = [StylistPermission, permissions.IsAuthenticated]
     serializer_class = InvitationSerializer
 
+    def get(self, request, *args, **kwargs):
+        return Response({'invitations': self.get_serializer(
+            self.get_queryset(), many=True
+        ).data})
+
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data, many=True)
         serializer.is_valid(raise_exception=True)
@@ -426,10 +431,9 @@ class InvitationView(generics.ListCreateAPIView):
         response_status = status.HTTP_200_OK
         if len(created_objects) > 0:
             response_status = status.HTTP_201_CREATED
-        return Response(
-            self.serializer_class(created_objects, many=True).data,
-            status=response_status
-        )
+        return Response({'invitations':
+                        self.serializer_class(created_objects, many=True).data
+                         }, status=response_status)
 
     def get_queryset(self):
         return Invitation.objects.filter(stylist=self.request.user.stylist)
