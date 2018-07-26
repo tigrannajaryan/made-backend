@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def send_sms_message(to_phone: str, body: str, status_callback=None):
     # TODO: implement status callback handler
     if settings.TWILIO_SMS_ENABLED:
-        client = Client(settings.TWILIO_SID, settings.TWILIO_SECRET)
+        client = Client()
         try:
             result = client.messages.create(
                 to=to_phone,
