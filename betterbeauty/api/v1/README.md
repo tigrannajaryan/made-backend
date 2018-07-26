@@ -320,7 +320,9 @@ curl -X POST http://apiserver/api/v1/auth/get-token-fb \
         "phone": "",
         "profile_photo_url": "http://profile_photo_url",
         "salon_name": null,
-        "salon_address": null
+        "salon_address": null,
+        "instagram_url": null,
+        "website_url": "https://example.com",
     },
     "profile_status": {
         "has_personal_data": true,
@@ -421,7 +423,9 @@ Note: all fields listed above are required.
     "phone": "(650) 350-1234",
     "profile_photo_url": null,
     "salon_name": "Jane salon",
-    "salon_address": "1234 Front Street"
+    "salon_address": "1234 Front Street",
+    "instagram_url": null,
+    "website_url": "https://example.com"
 }
 ```
 
@@ -460,7 +464,9 @@ Note: all fields listed above are required.
     "phone": "(650) 350-1234",
     "profile_photo_url": null,
     "salon_name": "Jane salon",
-    "salon_address": "1234 Front Street"
+    "salon_address": "1234 Front Street",
+    "instagram_url": null,
+    "website_url": "https://example.com"
 }
 ```
 
@@ -496,7 +502,9 @@ Note: you can patch individual fields with PATCH.
     "phone": "(650) 350-1234",
     "profile_photo_url": null,
     "salon_name": "Jane salon",
-    "salon_address": "1234 Front Street"
+    "salon_address": "1234 Front Street",
+    "instagram_url": null,
+    "website_url": "https://example.com"
 }
 ```
 
@@ -525,7 +533,9 @@ curl -X PATCH \
     "phone": "(650) 350-1234",
     "profile_photo_url": "http://example.com/your_image.jpg",
     "salon_name": "Jane salon",
-    "salon_address": "1234 Front Street"
+    "salon_address": "1234 Front Street",
+    "instagram_url": null,
+    "website_url": "https://example.com"
 }
 ```
 
@@ -557,7 +567,9 @@ Note: all fields listed above are required.
     "phone": "(650) 350-1234",
     "profile_photo_url": "http://example.com/your_image.jpg",
     "salon_name": "Jane salon",
-    "salon_address": "1234 Front Street"
+    "salon_address": "1234 Front Street",
+    "instagram_url": null,
+    "website_url": "https://example.com"
 }
 ```
 
@@ -2137,7 +2149,9 @@ curl -X POST \
             "phone": "+19876543210",
             "profile_photo_url": null,
             "salon_name": "John Salon",
-            "salon_address": "111 Front Street"
+            "salon_address": "111 Front Street",
+            "instagram_url": null,
+            "website_url": "https://example.com"
         },
         {
             "id": 13,
@@ -2146,7 +2160,9 @@ curl -X POST \
             "phone": "+11131131131",
             "profile_photo_url": null,
             "salon_name": "Mark Salon",
-            "salon_address": "1234 Back Street"
+            "salon_address": "1234 Back Street",
+            "instagram_url": null,
+            "website_url": "https://example.com"
         }
     ]
 }
