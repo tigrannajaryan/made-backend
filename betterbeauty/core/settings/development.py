@@ -21,3 +21,7 @@ DEBUG = True
 
 FB_APP_ID = '<override in local settings>'
 FB_APP_SECRET = '<override in local settings>'
+
+# Twilio
+TWILIO_SMS_ENABLED = False
+TWILIO_SLACK_MOCK_ENABLED = True

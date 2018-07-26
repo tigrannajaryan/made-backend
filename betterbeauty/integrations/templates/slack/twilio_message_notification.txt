@@ -1,0 +1,4 @@
+*From*: {{ from_phone }}
+*To*: {{ to_phone }}
+
+*Text*: {{ message }}

@@ -63,6 +63,7 @@ pytest:
 		--cov-report html:test-reports/coverage-html $(TEST_ARGS) $(PROJECT)
 
 test: clean lint pytest
+	LEVEL=tests
 
 flake8:
 	$(FLAKE8) --statistics ./$(PROJECT)/
