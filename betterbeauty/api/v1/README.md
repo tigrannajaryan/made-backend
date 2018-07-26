@@ -1475,7 +1475,7 @@ to preview resulting price and conflicting appointments (if any).
 
 **POST /api/v1/stylist/appointments/preview**
 
-- **service_uuid** (required) - uuid of a service to create appointment for
+- **services** (optional) - list of uuids of services to create appointment for
 - **client_price** (optional) - custom price for the service that stylist wants to 
 have only for this appointment
 - **datetime_start_at** (required) - datetime when appointment is to start
@@ -1580,10 +1580,13 @@ client's name.
 
 - client is not in the system yet, so uuid is unknown. In this case
 frontend must omit the `client_uuid` param and instead supply
-`client_first_name` and `client_last_name`
+`client_first_name`,  `client_last_name` and `client_phone`
 
 This API does not allow directly setting `status` field of an appointment;
 for freshly created appointment status will be set to `new`.
+
+**services** parameter is optional; if it's omitted or empty list is
+passed - no services will be added to the appointment.
 
 To set status of an appointment, use the separate
 [Change appointment status](#change-appointment-status) API.
