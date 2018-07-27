@@ -643,10 +643,8 @@ class TestAppointmentSerializer(object):
         assert(appointment.total_client_price_before_tax == 30)
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == 'Fred')
-        assert(appointment.client is not None)
-        client: ClientOfStylist = appointment.client
-        assert(client.first_name == 'Fred')
-        assert(client.phone == '+15417543010')
+        assert(appointment.client is None)
+        assert(appointment.client_phone == '(541)-754-3010')
         assert(appointment.services.count() == 1)
         original_service: AppointmentService = appointment.services.first()
         assert(original_service.is_original is True)
@@ -677,7 +675,10 @@ class TestAppointmentSerializer(object):
         )
         available_time: datetime.datetime = datetime.datetime(
             2018, 5, 17, 16, 00, tzinfo=pytz.utc)
-        client: ClientOfStylist = G(ClientOfStylist)
+        client: ClientOfStylist = G(
+            ClientOfStylist,
+            phone='123456',
+        )
         data = {
             'client_uuid': client.uuid,
             'services': [
@@ -708,6 +709,7 @@ class TestAppointmentSerializer(object):
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == client.first_name)
         assert(appointment.client == client)
+        assert(appointment.client_phone == client.phone)
 
         assert (appointment.services.count() == 1)
         original_service: AppointmentService = appointment.services.first()

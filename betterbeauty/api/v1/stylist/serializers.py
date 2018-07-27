@@ -703,7 +703,7 @@ class AppointmentSerializer(
     client_last_name = serializers.CharField(
         allow_null=True, allow_blank=True, required=False
     )
-    client_phone = PhoneNumberField(required=False,)
+    client_phone = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     total_client_price_before_tax = serializers.DecimalField(
         max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
@@ -747,22 +747,14 @@ class AppointmentSerializer(
                     errors.update({
                         field: serializers.Field.default_error_messages['required']
                     })
-            if ClientOfStylist.objects.filter(
-                    phone=attrs['client_phone'],
-                    stylist=self.context['stylist']).exists():
-                errors.update({
-                    'client_phone': ErrorMessages.ERR_UNIQUE_CLIENT_PHONE
-                })
-            if ClientOfStylist.objects.filter(
-                    first_name=attrs['client_first_name'],
-                    last_name=attrs['client_last_name'],
-                    stylist=self.context['stylist']).exists():
-                errors.update({
-                    'client_first_name': ErrorMessages.ERR_UNIQUE_CLIENT_NAME
-                })
             if errors:
                 raise serializers.ValidationError(errors)
         return super(AppointmentSerializer, self).validate(attrs)
+
+    def validate_services(self, services):
+        if not services:
+            return []
+        return super(AppointmentSerializer, self).validate_services(services)
 
     def create(self, validated_data):
         data = validated_data.copy()
@@ -782,15 +774,10 @@ class AppointmentSerializer(
 
         # create first AppointmentService
         with transaction.atomic():
-            if not client:
-                client = ClientOfStylist.objects.create(
-                    first_name=data['client_first_name'],
-                    last_name=data['client_last_name'],
-                    phone=data.pop('client_phone'),
-                    stylist=stylist
-                )
-            data['client_last_name'] = client.last_name
-            data['client_first_name'] = client.first_name
+            if client:
+                data['client_last_name'] = client.last_name
+                data['client_first_name'] = client.first_name
+                data['client_phone'] = client.phone
             data['client'] = client
 
             appointment_services = data.pop('services', [])
@@ -872,6 +859,11 @@ class AppointmentPreviewRequestSerializer(
     has_tax_included = serializers.BooleanField()
     has_card_fee_included = serializers.BooleanField()
     appointment_uuid = serializers.UUIDField(required=False, allow_null=True)
+
+    def validate_services(self, services):
+        if not services:
+            return []
+        return super(AppointmentPreviewRequestSerializer, self).validate_services(services)
 
     def validate_appointment_uuid(
             self, appointment_uuid: Optional[uuid.UUID]

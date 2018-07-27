@@ -40,6 +40,7 @@ class Appointment(models.Model):
     )
     client_first_name = models.CharField(max_length=255, null=True, blank=True)
     client_last_name = models.CharField(max_length=255, null=True, blank=True)
+    client_phone = models.CharField(max_length=255, null=True, blank=True)
 
     datetime_start_at = models.DateTimeField()
 
