@@ -10,9 +10,9 @@ from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from appointment.types import AppointmentStatus
 from utils.models import SmartModel
 
+from appointment.types import AppointmentStatus
 from client.constants import SMS_CODE_EXPIRY_TIME_MINUTES
 from core.models import User
 from integrations.twilio import render_one_time_sms_for_phone, send_sms_message
@@ -55,7 +55,7 @@ class Client(models.Model):
         appointments = Appointment.objects.all()
         if q_filter:
             appointments = appointments.filter(
-                q_filter,client__client=self, **kwargs).order_by('datetime_start_at')
+                q_filter, client__client=self, **kwargs).order_by('datetime_start_at')
         else:
             appointments = appointments.filter(
                 **kwargs
@@ -97,7 +97,6 @@ class Client(models.Model):
         return appointments
 
 
-
 class ClientOfStylist(models.Model):
     uuid = models.UUIDField(unique=True, default=uuid4, editable=False)
     stylist = models.ForeignKey(
@@ -105,7 +104,8 @@ class ClientOfStylist(models.Model):
     first_name = models.CharField(_('first name'), max_length=30, blank=True, null=True)
     last_name = models.CharField(_('last name'), max_length=30, blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True, null=True, default=None)
-    client = models.ForeignKey(Client, on_delete=models.PROTECT, blank=True, null=True, related_name='client_of_stylists')
+    client = models.ForeignKey(
+        Client, on_delete=models.PROTECT, blank=True, null=True, related_name='client_of_stylists')
 
     class Meta:
         db_table = 'client_of_stylist'
@@ -119,53 +119,6 @@ class ClientOfStylist(models.Model):
 
     def __str__(self):
         return self.get_full_name()
-
-    def get_appointments_in_datetime_range(
-            self,
-            datetime_from: Optional[datetime.datetime]=None,
-            datetime_to: Optional[datetime.datetime]=None,
-            include_cancelled=False,
-            include_checked_out=True,
-            q_filter=None,
-            **kwargs
-    ) -> models.QuerySet:
-        """
-        Return appointments present in given datetime range.
-        :param datetime_from: datetime at which first appointment is present
-        :param datetime_to: datetime by which last appointment starts
-        :param include_cancelled: whether or not cancelled appointments are included
-        :param include_checked_out: whether or not checked out appointments are included
-        :param kwargs: any optional filter kwargs to be applied
-        :return: Resulting Appointment queryset
-        """
-        if q_filter:
-            appointments = self.appointments.filter(
-                q_filter, **kwargs).order_by('datetime_start_at')
-        else:
-            appointments = self.appointments.filter(
-                **kwargs
-            ).order_by('datetime_start_at')
-
-        if datetime_from is not None:
-            appointments = appointments.filter(
-                datetime_start_at__gte=datetime_from
-            )
-
-        if datetime_to is not None:
-            appointments = appointments.filter(
-                datetime_start_at__lt=datetime_to
-            )
-
-        if not include_cancelled:
-            appointments = appointments.exclude(status__in=[
-                AppointmentStatus.CANCELLED_BY_CLIENT,
-                AppointmentStatus.CANCELLED_BY_STYLIST
-            ])
-
-        if not include_checked_out:
-            appointments = appointments.exclude(status=AppointmentStatus.CHECKED_OUT)
-
-        return appointments
 
 
 class PreferredStylist(SmartModel):

@@ -26,3 +26,5 @@ class ErrorMessages(object):
     ERR_STATUS_NOT_ALLOWED = 'err_status_not_allowed'
     ERR_NO_SECOND_CHECKOUT = 'err_no_second_checkout'
     ERR_APPOINTMENT_DOESNT_EXIST = 'err_appointment_does_not_exist'
+    ERR_NOT_A_PREFERRED_STYLIST = 'err_not_a_preferred_stylist'
+    ERR_CANNOT_MODIFY_APPOINTMENT = 'err_cannot_modify_appointment'

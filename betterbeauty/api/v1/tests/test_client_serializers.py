@@ -14,7 +14,7 @@ from api.v1.client.serializers import (
 from appointment.constants import ErrorMessages as appointment_errors
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
-from client.models import ClientOfStylist
+from client.models import Client, ClientOfStylist, PreferredStylist
 from core.types import Weekday
 from core.utils import calculate_card_fee, calculate_tax
 from pricing import CalculatedPrice
@@ -28,7 +28,7 @@ from salon.models import (
 class TestAppointmentSerializer(object):
     @freeze_time('2018-05-17 15:30:00 UTC')
     @pytest.mark.django_db
-    def test_validate_start_time(self, stylist_data: Stylist):
+    def test_validate_start_time(self, stylist_data: Stylist, client_data: Client):
         stylist_data.service_time_gap = datetime.timedelta(minutes=30)
         stylist_data.save(update_fields=['service_time_gap'])
         service: StylistService = G(
@@ -44,9 +44,7 @@ class TestAppointmentSerializer(object):
         past_datetime: datetime.datetime = datetime.datetime(
             2018, 5, 17, 14, 00, tzinfo=pytz.utc)
         data = {
-            'client_first_name': 'Fred',
-            'client_last_name': 'McBob',
-            'client_phone': '(541)-754-3010',
+            'stylist_uuid': stylist_data.uuid,
             'services': [
                 {
                     'service_uuid': service.uuid,
@@ -54,7 +52,8 @@ class TestAppointmentSerializer(object):
             ],
             'datetime_start_at': past_datetime.isoformat()
         }
-        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        serializer = AppointmentSerializer(data=data, context={
+            'stylist': stylist_data, 'user': client_data.user})
         serializer.is_valid()
         assert(serializer.is_valid(raise_exception=False) is False)
         assert(
@@ -65,9 +64,7 @@ class TestAppointmentSerializer(object):
         outside_working_hours: datetime.datetime = datetime.datetime(
             2018, 5, 17, 19, 00, tzinfo=pytz.utc)
         data = {
-            'client_first_name': 'Fred',
-            'client_last_name': 'McBob',
-            'client_phone': '+1-541-754-3010',
+            'stylist_uuid': stylist_data.uuid,
             'services': [
                 {
                     'service_uuid': service.uuid,
@@ -75,20 +72,19 @@ class TestAppointmentSerializer(object):
             ],
             'datetime_start_at': outside_working_hours.isoformat()
         }
-        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        serializer = AppointmentSerializer(
+            data=data, context={'stylist': stylist_data, 'user': client_data.user})
         assert (serializer.is_valid(raise_exception=False) is False)
         assert (
             {'code': appointment_errors.ERR_APPOINTMENT_OUTSIDE_WORKING_HOURS} in
             serializer.errors['field_errors'].get('datetime_start_at')
         )
 
-        available_time: datetime.datetime = datetime.datetime(
-            2018, 5, 17, 16, 00, tzinfo=pytz.utc)
+        available_time: datetime.datetime = stylist_data.with_salon_tz(datetime.datetime(
+            2018, 5, 17, 16, 00, tzinfo=pytz.utc))
 
         data = {
-            'client_first_name': 'Fred',
-            'client_last_name': 'McBob',
-            'client_phone': '15417543010',
+            'stylist_uuid': stylist_data.uuid,
             'services': [
                 {
                     'service_uuid': service.uuid,
@@ -96,7 +92,11 @@ class TestAppointmentSerializer(object):
             ],
             'datetime_start_at': available_time.isoformat()
         }
-        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        G(
+            PreferredStylist, client=client_data, stylist=stylist_data
+        )
+        serializer = AppointmentSerializer(
+            data=data, context={'stylist': stylist_data, 'user': client_data.user})
         assert (serializer.is_valid(raise_exception=False) is True)
 
         # add another appointment to check intersection
@@ -106,7 +106,8 @@ class TestAppointmentSerializer(object):
             status=AppointmentStatus.NEW
         )
 
-        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        serializer = AppointmentSerializer(
+            data=data, context={'stylist': stylist_data, 'user': client_data.user})
         assert (serializer.is_valid(raise_exception=False) is False)
         assert (
             {'code': appointment_errors.ERR_APPOINTMENT_INTERSECTION} in
@@ -119,7 +120,8 @@ class TestAppointmentSerializer(object):
             datetime_start_at=datetime.datetime(2018, 5, 17, 16, 20, tzinfo=pytz.utc),
             status=AppointmentStatus.NEW,
         )
-        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        serializer = AppointmentSerializer(
+            data=data, context={'stylist': stylist_data, 'user': client_data.user})
         assert (serializer.is_valid(raise_exception=False) is False)
         assert (
             {'code': appointment_errors.ERR_APPOINTMENT_INTERSECTION} in
@@ -132,22 +134,17 @@ class TestAppointmentSerializer(object):
             datetime_start_at=datetime.datetime(2018, 5, 17, 16, 10, tzinfo=pytz.utc),
             status=AppointmentStatus.NEW
         )
-        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        serializer = AppointmentSerializer(
+            data=data, context={'stylist': stylist_data, 'user': client_data.user})
         assert (serializer.is_valid(raise_exception=False) is False)
         assert (
             {'code': appointment_errors.ERR_APPOINTMENT_INTERSECTION} in
             serializer.errors['field_errors'].get('datetime_start_at')
         )
-        # force it!
-        serializer = AppointmentSerializer(
-            data=data, context={'stylist': stylist_data, 'force_start': True}
-        )
-        serializer.is_valid()
-        assert (serializer.is_valid(raise_exception=False) is True)
 
     @freeze_time('2018-05-17 15:30:00 UTC')
     @pytest.mark.django_db
-    def test_create_without_client(self, stylist_data: Stylist, mocker):
+    def test_create_without_client(self, stylist_data: Stylist, client_data: Client, mocker):
         calculate_mock = mocker.patch(
             'api.v1.stylist.serializers.calculate_price_and_discount_for_client_on_date',
             mock.Mock()
@@ -169,9 +166,7 @@ class TestAppointmentSerializer(object):
             2018, 5, 17, 16, 00, tzinfo=pytz.utc)
 
         data = {
-            'client_first_name': 'Fred',
-            'client_last_name': 'McBob',
-            'client_phone': ' (541)-754-3010',
+            'stylist_uuid': stylist_data.uuid,
             'services': [
                 {
                     'service_uuid': service.uuid,
@@ -179,28 +174,32 @@ class TestAppointmentSerializer(object):
             ],
             'datetime_start_at': available_time.isoformat()
         }
-        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        G(
+            PreferredStylist, client=client_data, stylist=stylist_data
+        )
+        serializer = AppointmentSerializer(
+            data=data, context={'stylist': stylist_data, 'user': client_data.user})
         assert(serializer.is_valid() is True)
         appointment: Appointment = serializer.save()
 
-        assert(appointment.total_client_price_before_tax == 30)
+        assert(appointment.total_client_price_before_tax == 40)
         assert(appointment.duration == service.duration)
-        assert(appointment.client_first_name == 'Fred')
+        assert(appointment.client_first_name == client_data.user.first_name)
         assert(appointment.client is not None)
         client: ClientOfStylist = appointment.client
-        assert(client.first_name == 'Fred')
-        assert(client.phone == '+15417543010')
+        assert(client.first_name == client_data.user.first_name)
+        assert(client.phone == client_data.user.phone)
         assert(appointment.services.count() == 1)
         original_service: AppointmentService = appointment.services.first()
         assert(original_service.is_original is True)
         assert(original_service.regular_price == service.regular_price)
-        assert(original_service.client_price == 30)
+        assert(original_service.client_price == 40)
         assert(original_service.service_uuid == service.uuid)
         assert(original_service.service_name == service.name)
 
     @freeze_time('2018-05-17 15:30:00 UTC')
     @pytest.mark.django_db
-    def test_create_with_client(self, stylist_data: Stylist, mocker):
+    def test_create_with_client(self, stylist_data: Stylist, client_data: Client, mocker):
         service: StylistService = G(
             StylistService,
             stylist=stylist_data, duration=datetime.timedelta(minutes=30),
@@ -220,9 +219,13 @@ class TestAppointmentSerializer(object):
         )
         available_time: datetime.datetime = datetime.datetime(
             2018, 5, 17, 16, 00, tzinfo=pytz.utc)
-        client: ClientOfStylist = G(ClientOfStylist)
+        client: ClientOfStylist = G(ClientOfStylist, stylist=stylist_data, client=client_data,
+                                    first_name=client_data.user.first_name,
+                                    last_name=client_data.user.last_name,
+                                    phone=client_data.user.phone,
+                                    )
         data = {
-            'client_uuid': client.uuid,
+            'stylist_uuid': stylist_data.uuid,
             'services': [
                 {
                     'service_uuid': service.uuid,
@@ -231,22 +234,26 @@ class TestAppointmentSerializer(object):
             'datetime_start_at': available_time.isoformat()
         }
         # check client which is not related to stylist, i.e. no prior appointments
-        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        serializer = AppointmentSerializer(
+            data=data, context={'stylist': stylist_data, 'user': client_data.user})
         assert(serializer.is_valid() is False)
-        assert('client_uuid' in serializer.errors['field_errors'])
+        assert('stylist_uuid' in serializer.errors['field_errors'])
 
         G(
             Appointment,
             client=client, stylist=stylist_data, created_by=stylist_data.user,
             datetime_start_at=stylist_data.with_salon_tz(datetime.datetime(2018, 5, 15, 15, 30))
         )
-
-        serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
+        G(
+            PreferredStylist, client=client_data, stylist=stylist_data
+        )
+        serializer = AppointmentSerializer(
+            data=data, context={'stylist': stylist_data, 'user': client_data.user})
         assert (serializer.is_valid() is True)
         appointment: Appointment = serializer.save()
 
         assert (
-            appointment.total_client_price_before_tax == 30
+            appointment.total_client_price_before_tax == 32.5
         )
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == client.first_name)
@@ -256,13 +263,13 @@ class TestAppointmentSerializer(object):
         original_service: AppointmentService = appointment.services.first()
         assert (original_service.is_original is True)
         assert (original_service.regular_price == service.regular_price)
-        assert (original_service.client_price == 30)
+        assert (original_service.client_price == 32.5)
         assert (original_service.service_uuid == service.uuid)
         assert (original_service.service_name == service.name)
 
-    @freeze_time('2018-05-17 15:30:00 UTC')
+    @freeze_time('2018-05-17 10:30:00 UTC')
     @pytest.mark.django_db
-    def test_create_pricing(self, stylist_data: Stylist):
+    def test_create_pricing(self, stylist_data: Stylist, client_data: Client):
         from salon.models import StylistAvailableWeekDay
         from salon.utils import calculate_price_and_discount_for_client_on_date
         service: StylistService = G(
@@ -271,40 +278,74 @@ class TestAppointmentSerializer(object):
             regular_price=200,
             duration=datetime.timedelta()
         )
-        appointment_start: datetime.datetime = stylist_data.with_salon_tz(
-            datetime.datetime(2018, 5, 17, 15, 00)
-        )
-        client = G(ClientOfStylist)
+        appointment_dates = [
+            stylist_data.with_salon_tz(
+                datetime.datetime(2018, 5, 17, 8, 00)
+            ),
+            stylist_data.with_salon_tz(
+                datetime.datetime(2018, 5, 17, 9, 00)
+            ),
+            stylist_data.with_salon_tz(
+                datetime.datetime(2018, 5, 17, 10, 00)
+            ),
+            stylist_data.with_salon_tz(
+                datetime.datetime(2018, 5, 17, 11, 00)
+            ),
+            stylist_data.with_salon_tz(
+                datetime.datetime(2018, 5, 17, 12, 00)
+            ),
+            stylist_data.with_salon_tz(
+                datetime.datetime(2018, 5, 17, 13, 00)
+            ),
+            stylist_data.with_salon_tz(
+                datetime.datetime(2018, 5, 17, 14, 00)
+            ),
+            stylist_data.with_salon_tz(
+                datetime.datetime(2018, 5, 17, 15, 00)
+            ),
+            stylist_data.with_salon_tz(
+                datetime.datetime(2018, 5, 17, 16, 00)
+            ),
+            stylist_data.with_salon_tz(
+                datetime.datetime(2018, 5, 17, 17, 00)
+            ),
 
+
+        ]
+        client: ClientOfStylist = G(ClientOfStylist, stylist=stylist_data, client=client_data,
+                                    first_name=client_data.user.first_name,
+                                    last_name=client_data.user.last_name,
+                                    phone=client_data.user.phone,
+                                    )
         # associate client with stylist
         G(Appointment, stylist=stylist_data, client=client,
           datetime_start_at=stylist_data.with_salon_tz(
-              datetime.datetime(2018, 5, 10, 15, 00)
+              datetime.datetime(2018, 5, 10, 10, 00)
           ))
         stylist_data.available_days.filter(weekday=Weekday.THURSDAY).delete()
         G(StylistAvailableWeekDay, weekday=Weekday.THURSDAY,
-          work_start_at=datetime.time(8, 0), work_end_at=datetime.time(12, 00),
+          work_start_at=datetime.time(8, 0), work_end_at=datetime.time(22, 00),
           is_available=True, stylist=stylist_data
           )
-
-        for i in range(0, 9):
+        G(PreferredStylist, client=client_data, stylist=stylist_data)
+        for appointment_date in appointment_dates:
             appointment_data = {
-                'client_uuid': client.uuid,
+                'stylist_uuid': stylist_data.uuid,
                 'services': [
                     {
                         'service_uuid': service.uuid,
                     },
                 ],
                 'datetime_start_at': (
-                    appointment_start
+                    appointment_date
                 ).isoformat()
             }
 
             calculated_price: CalculatedPrice = calculate_price_and_discount_for_client_on_date(
-                service=service, client=client, date=appointment_start.date()
+                service=service, client=client, date=appointment_date.date()
             )
             appointment_serializer = AppointmentSerializer(
-                data=appointment_data, context={'stylist': stylist_data, 'force_start': True}
+                data=appointment_data, context={'stylist': stylist_data, 'user': client_data.user}
             )
             assert(appointment_serializer.is_valid(raise_exception=False) is True)
             appointment: Appointment = appointment_serializer.save()
@@ -315,43 +356,44 @@ class TestAppointmentSerializer(object):
 class TestAppointmentUpdateSerializer(object):
 
     @pytest.mark.django_db
-    def test_validate_status(self):
+    def test_validate_status(self, stylist_data: Stylist, client_data: Client):
         appointment = G(
             Appointment,
             duration=datetime.timedelta(minutes=30)
         )
         data = {
-            'status': AppointmentStatus.CANCELLED_BY_CLIENT.value
+            'status': AppointmentStatus.CANCELLED_BY_STYLIST.value
         }
-        serializer = AppointmentUpdateSerializer(instance=appointment, data=data)
+        serializer = AppointmentUpdateSerializer(instance=appointment, data=data, partial=True)
         assert(serializer.is_valid() is False)
         assert(
             {'code': appointment_errors.ERR_STATUS_NOT_ALLOWED} in
             serializer.errors['field_errors']['status']
         )
         data = {
-            'status': AppointmentStatus.CANCELLED_BY_STYLIST.value
-        }
-        serializer = AppointmentUpdateSerializer(instance=appointment, data=data)
-        assert(serializer.is_valid() is True)
-        data = {
             'status': AppointmentStatus.CHECKED_OUT.value
         }
-        serializer = AppointmentUpdateSerializer(instance=appointment, data=data)
+        serializer = AppointmentUpdateSerializer(instance=appointment, data=data, partial=True)
         assert (serializer.is_valid() is False)
         assert (
-            {'code': appointment_errors.ERR_SERVICE_REQUIRED} in
-            serializer.errors['field_errors']['services']
+            {'code': appointment_errors.ERR_STATUS_NOT_ALLOWED} in
+            serializer.errors['field_errors']['status']
         )
+        data = {
+            'status': AppointmentStatus.CANCELLED_BY_CLIENT.value
+        }
+        serializer = AppointmentUpdateSerializer(instance=appointment, data=data, partial=True)
+        assert(serializer.is_valid() is True)
 
     @pytest.mark.django_db
-    def test_validate_services(self):
+    def test_validate_services(self, stylist_data: Stylist, client_data: Client):
         appointment = G(
             Appointment,
             duration=datetime.timedelta(minutes=30)
         )
         stylist_service = G(
             StylistService,
+
             stylist=appointment.stylist,
             duration=datetime.timedelta(minutes=30)
         )
@@ -366,33 +408,33 @@ class TestAppointmentUpdateSerializer(object):
         )
         context = {
             'stylist': stylist_service.stylist,
-            'user': stylist_service.stylist.user
+            'user': client_data.user
         }
 
         data = {
-            'status': AppointmentStatus.CHECKED_OUT.value
+            'status': AppointmentStatus.CANCELLED_BY_CLIENT.value
         }
-        serializer = AppointmentUpdateSerializer(instance=appointment, data=data)
-        assert (serializer.is_valid() is False)
-
-        data = {
-            'status': AppointmentStatus.CHECKED_OUT.value,
-            'services': [
-                {'service_uuid': appointment_service_valid.service_uuid}
-            ],
-            'has_tax_included': False,
-            'has_card_fee_included': False
-        }
-        serializer = AppointmentUpdateSerializer(instance=appointment, data=data, context=context)
+        G(PreferredStylist, client=client_data, stylist=stylist_data)
+        serializer = AppointmentUpdateSerializer(
+            instance=appointment, data=data, context=context, partial=True)
         assert (serializer.is_valid() is True)
 
         data = {
-            'status': AppointmentStatus.CHECKED_OUT.value,
+            'services': [
+                {'service_uuid': appointment_service_valid.service_uuid}
+            ]
+        }
+        serializer = AppointmentUpdateSerializer(
+            instance=appointment, data=data, context=context, partial=True)
+        assert (serializer.is_valid() is True)
+
+        data = {
             'services': [
                 {'service_uuid': appointment_service_invalid.service_uuid}
             ]
         }
-        serializer = AppointmentUpdateSerializer(instance=appointment, data=data, context=context)
+        serializer = AppointmentUpdateSerializer(
+            instance=appointment, data=data, context=context, partial=True)
         assert (serializer.is_valid() is False)
         assert (
             {'code': appointment_errors.ERR_SERVICE_DOES_NOT_EXIST} in
@@ -401,23 +443,8 @@ class TestAppointmentUpdateSerializer(object):
         appointment.status = AppointmentStatus.CHECKED_OUT
         appointment.save()
 
-        data = {
-            'status': AppointmentStatus.CHECKED_OUT.value,
-            'services': [
-                {'service_uuid': appointment_service_valid.service_uuid}
-            ],
-            'has_tax_included': False,
-            'has_card_fee_included': False
-        }
-        serializer = AppointmentUpdateSerializer(instance=appointment, data=data, context=context)
-        assert (serializer.is_valid() is False)
-        assert (
-            {'code': appointment_errors.ERR_NO_SECOND_CHECKOUT} in
-            serializer.errors['field_errors']['status']
-        )
-
     @pytest.mark.django_db
-    def test_save_non_checked_out_status(self):
+    def test_save_non_checked_out_status(self, stylist_data: Stylist, client_data: Client):
         salon = G(Salon, timezone=pytz.utc)
         stylist = G(Stylist, salon=salon)
         appointment = G(
@@ -427,19 +454,21 @@ class TestAppointmentUpdateSerializer(object):
         )
         context = {
             'stylist': appointment.stylist,
-            'user': appointment.stylist.user
+            'user': client_data.user
         }
         assert(appointment.status == AppointmentStatus.NEW)
         data = {
-            'status': AppointmentStatus.CANCELLED_BY_STYLIST.value
+            'status': AppointmentStatus.CANCELLED_BY_CLIENT.value
         }
-        serializer = AppointmentUpdateSerializer(instance=appointment, data=data, context=context)
+        G(PreferredStylist, client=client_data, stylist=stylist)
+        serializer = AppointmentUpdateSerializer(
+            instance=appointment, data=data, context=context, partial=True)
         assert(serializer.is_valid())
         appointment = serializer.save()
-        assert(appointment.status == AppointmentStatus.CANCELLED_BY_STYLIST)
+        assert(appointment.status == AppointmentStatus.CANCELLED_BY_CLIENT)
 
     @pytest.mark.django_db
-    def test_save_checked_out_status(self, mocker):
+    def test_save_checked_out_status(self, mocker, stylist_data: Stylist, client_data: Client):
         calculate_mock = mocker.patch(
             'api.v1.stylist.serializers.calculate_price_and_discount_for_client_on_date',
             mock.Mock()
@@ -456,7 +485,7 @@ class TestAppointmentUpdateSerializer(object):
         )
         context = {
             'stylist': appointment.stylist,
-            'user': appointment.stylist.user
+            'user': client_data.user
         }
         original_service: StylistService = G(
             StylistService, stylist=appointment.stylist,
@@ -479,7 +508,6 @@ class TestAppointmentUpdateSerializer(object):
         assert(appointment.services.count() == 1)
 
         data = {
-            'status': AppointmentStatus.CHECKED_OUT.value,
             'services': [
                 {
                     'service_uuid': original_service.uuid
@@ -491,10 +519,11 @@ class TestAppointmentUpdateSerializer(object):
             'has_tax_included': False,
             'has_card_fee_included': False
         }
-
+        G(PreferredStylist, client=client_data, stylist=stylist)
         serializer = AppointmentUpdateSerializer(
-            instance=appointment, data=data, context=context
+            instance=appointment, data=data, context=context, partial=True
         )
+
         assert(serializer.is_valid() is True)
         saved_appointment = serializer.save()
         assert(saved_appointment.services.count() == 2)
@@ -512,8 +541,6 @@ class TestAppointmentUpdateSerializer(object):
         assert(added_appointment_service.client_price == 40)
         assert(added_appointment_service.regular_price == 40)
 
-        assert(saved_appointment.has_card_fee_included is False)
-        assert(saved_appointment.has_tax_included is False)
         total_services_cost = sum([s.client_price for s in saved_appointment.services.all()], 0)
         assert(saved_appointment.total_client_price_before_tax == total_services_cost)
         assert(saved_appointment.grand_total == total_services_cost)

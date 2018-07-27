@@ -1,7 +1,7 @@
 import datetime
 import uuid
 from decimal import Decimal
-from typing import Optional, List, Tuple, Dict
+from typing import Dict, List, Optional, Tuple
 
 from django.db import transaction
 from django.db.models import Sum
@@ -16,14 +16,15 @@ from api.common.mixins import FormattedErrorMessageMixin
 from api.common.utils import save_profile_photo
 from api.v1.client.constants import ErrorMessages
 
-from api.v1.stylist.serializers import (
-    StylistServiceCategoryDetailsSerializer)
-
 from api.v1.stylist.fields import DurationMinuteField
+from api.v1.stylist.serializers import (
+    AppointmentServiceSerializer, StylistServiceCategoryDetailsSerializer)
+
 from appointment.constants import (
-    ErrorMessages as appointment_errors
-)
-from appointment.models import AppointmentService, Appointment
+    APPOINTMENT_CLIENT_SETTABLE_STATUSES,
+    ErrorMessages as appointment_errors)
+from appointment.models import Appointment, AppointmentService
+from appointment.types import AppointmentStatus
 from client.models import Client, ClientOfStylist, PreferredStylist
 from core.models import User
 from core.types import AppointmentPrices
@@ -163,31 +164,10 @@ class ServicePricingRequestSerializer(serializers.Serializer):
     service_uuid = serializers.UUIDField()
 
 
-class AppointmentServiceSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
-
-    uuid = serializers.UUIDField(read_only=True)
-    service_name = serializers.CharField(read_only=True)
-    regular_price = serializers.DecimalField(
-        max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
-    )
-    client_price = serializers.DecimalField(
-        max_digits=6, decimal_places=2, coerce_to_string=False, required=False
-    )
-
-    class Meta:
-        model = AppointmentService
-        fields = [
-            'uuid', 'service_name', 'service_uuid', 'client_price', 'regular_price',
-            'is_original',
-        ]
-
-
 class AppointmentValidationMixin(object):
 
     def validate_datetime_start_at(self, datetime_start_at: datetime.datetime):
         context: Dict = getattr(self, 'context', {})
-        if context.get('force_start', False):
-            return datetime_start_at
 
         stylist: Stylist = context['stylist']
         # check if appointment start is in the past
@@ -240,7 +220,9 @@ class AppointmentValidationMixin(object):
         return services
 
     def validate_stylist_uuid(self, stylist_uuid: Optional[str]):
-
+        context: Dict = getattr(self, 'context', {})
+        user: User = context['user']
+        user.client.preferred_stylists.filter(stylist__uuid=stylist_uuid).exists()
         if stylist_uuid:
             if not Stylist.objects.filter(
                     uuid=stylist_uuid,
@@ -248,11 +230,18 @@ class AppointmentValidationMixin(object):
                 raise serializers.ValidationError(
                     appointment_errors.ERR_STYLIST_DOES_NOT_EXIST
                 )
+            if not user.client.preferred_stylists.filter(
+                    stylist__uuid=stylist_uuid
+            ).exists():
+                raise serializers.ValidationError(
+                    appointment_errors.ERR_NOT_A_PREFERRED_STYLIST
+                )
+
         return stylist_uuid
 
 
 class AppointmentSerializer(FormattedErrorMessageMixin,
-    AppointmentValidationMixin, serializers.ModelSerializer):
+                            AppointmentValidationMixin, serializers.ModelSerializer):
 
     uuid = serializers.UUIDField(read_only=True)
     stylist_uuid = serializers.UUIDField(required=True, source='stylist.uuid')
@@ -303,11 +292,18 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
         client: Client = self.context['user'].client
 
         with transaction.atomic():
-            client_of_stylist, created = ClientOfStylist.objects.get_or_create(stylist=stylist, client=client)
+            client_of_stylist, created = ClientOfStylist.objects.get_or_create(
+                stylist=stylist, client=client, defaults={
+                    'first_name': client.user.first_name,
+                    'last_name': client.user.last_name,
+                    'phone': client.user.phone
+                })
 
             data['client'] = client_of_stylist
             data['stylist'] = stylist
             data['created_by'] = client.user
+            data['client_first_name'] = client.user.first_name
+            data['client_last_name'] = client.user.last_name
 
             services_with_client_prices: List[Tuple[StylistService, CalculatedPrice]] = []
             for appointment_service in appointment_services:
@@ -408,9 +404,10 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
         user: User = self.context['user']
         appointment: Appointment = self.instance
         with transaction.atomic():
-            self._update_appointment_services(
-                appointment, self.validated_data['services']
-            )
+            if 'services' in self.validated_data:
+                self._update_appointment_services(
+                    appointment, self.validated_data['services']
+                )
             total_client_price_before_tax: Decimal = appointment.services.aggregate(
                 total_before_tax=Coalesce(Sum('client_price'), 0)
             )['total_before_tax']
@@ -433,3 +430,16 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
             appointment.save(**kwargs)
 
         return appointment
+
+    def validate_status(self, status: AppointmentStatus) -> AppointmentStatus:
+        if status not in APPOINTMENT_CLIENT_SETTABLE_STATUSES:
+            raise serializers.ValidationError(
+                appointment_errors.ERR_STATUS_NOT_ALLOWED
+            )
+        return status
+
+    def validate(self, attrs):
+        status = self.instance.status
+        if status != AppointmentStatus.NEW:
+            raise serializers.ValidationError(appointment_errors.ERR_CANNOT_MODIFY_APPOINTMENT)
+        return attrs

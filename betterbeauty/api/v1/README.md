@@ -52,9 +52,10 @@
     - [Get Code](#get-code)
     - [Confirm Code](#confirm-code)
     - [Profile](#client-profile)
-    - [Search Stylists](#search-stylists)
     - [Preferred Stylist](#preferred-stylists)
     - [Search Stylists](#search-stylists)
+    - [Services](#services)
+    - [Appointment](#appointment)
 
 
 # Error handling
@@ -2406,7 +2407,7 @@ curl -X POST \
 }
 ```
 
-## Appointments
+## Appointment
 
 
 **GET /api/v1/client/appointments**

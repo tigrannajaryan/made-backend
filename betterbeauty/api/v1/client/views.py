@@ -1,27 +1,29 @@
-from django.db.models import F, Q, Value
-from django.db.models.functions import Concat
 import datetime
 
 from dateutil.parser import parse
+
+from django.db.models import F, Q, Value
+from django.db.models.functions import Concat
+
 from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
 
 from api.common.permissions import ClientPermission
 from api.v1.client.serializers import (
-    AppointmentSerializer,
     AddPreferredClientsSerializer,
+    AppointmentSerializer,
+    AppointmentUpdateSerializer,
     ClientPreferredStylistSerializer,
     ClientProfileSerializer,
     ServicePricingRequestSerializer,
-    StylistServiceListSerializer, AppointmentUpdateSerializer)
+    StylistServiceListSerializer)
+from api.v1.stylist.constants import MAX_APPOINTMENTS_PER_REQUEST
 from api.v1.stylist.serializers import StylistSerializer, StylistServicePricingSerializer
 from appointment.models import Appointment
 from client.models import ClientOfStylist
+from core.utils import post_or_get
 from core.utils import post_or_get_or_data
 from salon.models import Stylist, StylistService
-
-from api.v1.stylist.constants import MAX_APPOINTMENTS_PER_REQUEST
-from core.utils import post_or_get
 
 
 class ClientProfileView(generics.CreateAPIView, generics.RetrieveUpdateAPIView):
@@ -177,6 +179,7 @@ class AppointmentListCreateAPIView(generics.ListCreateAPIView):
         return client.get_appointments_in_datetime_range(
             datetime_from, datetime_to, include_cancelled
         )[:limit]
+
 
 class AppointmentRetriveUpdateView(generics.RetrieveUpdateAPIView):
 

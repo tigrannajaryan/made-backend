@@ -2,12 +2,13 @@ from django.conf.urls import url
 
 from api.v1.client.views import (
     AppointmentListCreateAPIView,
+    AppointmentRetriveUpdateView,
     ClientProfileView,
     PreferredStylistDeleteView,
     PreferredStylistListCreateView,
     SearchStylistView,
     StylistServicePriceView,
-    StylistServicesView, AppointmentRetriveUpdateView)
+    StylistServicesView)
 
 
 app_name = 'client'
