@@ -12,6 +12,7 @@ from rest_framework import status
 from client.models import PhoneSMSCodes
 from core.models import User
 from core.types import UserRole
+from integrations.twilio import render_one_time_sms_for_phone
 from salon.models import Invitation, Stylist
 
 
@@ -34,13 +35,20 @@ def get_code(expired=False, redeemed=False):
 class TestSendCodeView(object):
 
     @pytest.mark.django_db
-    def test_send_code_for_new_number(self, client):
+    def test_send_code_for_new_number(self, client, mocker):
+        sms_mock = mocker.patch('client.models.send_sms_message')
         data = {
-            'phone': +19876543210
+            'phone': '+19876543210'
         }
         sendcode_url = reverse('api:v1:auth:send-code')
         response = client.post(sendcode_url, data=data)
         assert (response.status_code == status.HTTP_200_OK)
+        code = PhoneSMSCodes.objects.last()
+        message = render_one_time_sms_for_phone(code.code)
+        sms_mock.assert_called_once_with(
+            to_phone=data['phone'],
+            body=message
+        )
 
     @pytest.mark.django_db
     def test_send_code_for_existing_number(self, client):

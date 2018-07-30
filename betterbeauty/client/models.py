@@ -11,6 +11,7 @@ from utils.models import SmartModel
 
 from client.constants import SMS_CODE_EXPIRY_TIME_MINUTES
 from core.models import User
+from integrations.twilio import render_one_time_sms_for_phone, send_sms_message
 
 
 class Client(models.Model):
@@ -107,6 +108,15 @@ class PhoneSMSCodes(models.Model):
         if not created:
             phone_sms_code = phone_sms_code.update_phone_sms_code()
         return phone_sms_code
+
+    def send(self):
+        to_phone: str = self.phone
+        code = self.code
+        message = render_one_time_sms_for_phone(code)
+        send_sms_message(
+            to_phone=to_phone,
+            body=message
+        )
 
 
 class StylistSearchRequest(models.Model):
