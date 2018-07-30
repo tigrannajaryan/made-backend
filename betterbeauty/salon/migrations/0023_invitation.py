@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('phone', models.CharField(max_length=15)),
-                ('status', models.CharField(choices=[('unsent', 'Not Sent Yet'), ('delivered', 'Delivered'), ('undelivered', 'Undelivered'), ('accepted', 'Accepted')], default=salon.types.InvitationStatus('unsent'), max_length=15)),
+                ('status', models.CharField(choices=[('unsent', 'Not Sent Yet'), ('delivered', 'Delivered'), ('undelivered', 'Undelivered'), ('accepted', 'Accepted')], default='unsent', max_length=15)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('delivered_at', models.DateTimeField(default=None, null=True)),
                 ('accepted_at', models.DateTimeField(default=None, null=True)),

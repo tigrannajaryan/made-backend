@@ -6,9 +6,7 @@ from pricing import CalculatedPrice
 
 
 class InvitationStatus(StrEnum):
-    UNSENT = 'unsent'
-    DELIVERED = 'delivered'
-    UNDELIVERED = 'undelivered'
+    INVITED = 'invited'
     ACCEPTED = 'accepted'
 
 
