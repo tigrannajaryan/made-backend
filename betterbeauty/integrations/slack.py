@@ -19,6 +19,6 @@ def send_slack_twilio_message_notification(from_phone, to_phone, message):
         })
     slack.notify(
         text=message,
-        channel='#auto-twilio',
+        channel=settings.TWILLIO_SLACK_CHANNEL,
         username='twilio-bot',
     )

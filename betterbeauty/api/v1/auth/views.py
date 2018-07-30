@@ -94,7 +94,8 @@ class SendCodeView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        PhoneSMSCodes.create_or_update_phone_sms_code(data['phone'])
+        phone_code: PhoneSMSCodes = PhoneSMSCodes.create_or_update_phone_sms_code(data['phone'])
+        phone_code.send()
         return Response(
             {}
         )
