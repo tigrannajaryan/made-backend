@@ -479,7 +479,7 @@ class Invitation(models.Model):
     stylist = models.ForeignKey(Stylist, on_delete=models.CASCADE, related_name='invites')
     phone = models.CharField(max_length=15)
     status = models.CharField(
-        max_length=15, choices=INVITATION_STATUS_CHOICES, default=InvitationStatus.UNSENT
+        max_length=15, choices=INVITATION_STATUS_CHOICES, default=InvitationStatus.INVITED
     )
     created_at = models.DateTimeField(auto_now_add=True)
     delivered_at = models.DateTimeField(null=True, default=None)
