@@ -5,13 +5,13 @@ LEVEL ?= development
 PROJECT = betterbeauty
 PYTHON = $(VIRTUAL_ENV)/bin/python3.6
 PYTEST = $(VIRTUAL_ENV)/bin/pytest
-ENV ?= venv
+VIRTUAL_ENV ?= venv
 
 requirements = -r $(PROJECT)/requirements/$(LEVEL).txt
 
 MYPYPATH=mypy
-FLAKE8 = $(ENV)/bin/flake8
-MYPY = $(ENV)/bin/mypy
+FLAKE8 = $(VIRTUAL_ENV)/bin/flake8
+MYPY = $(VIRTUAL_ENV)/bin/mypy
 
 DJANGO_SERVER ?= runserver
 DJANGO_SHELL ?= shell_plus
