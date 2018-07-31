@@ -3,8 +3,8 @@
 # Project settings
 LEVEL ?= development
 PROJECT = betterbeauty
-PYTHON = $(ENV)/bin/python3.6
-PYTEST = $(ENV)/bin/pytest
+PYTHON = $(VIRTUAL_ENV)/bin/python3.6
+PYTEST = $(VIRTUAL_ENV)/bin/pytest
 ENV ?= venv
 
 requirements = -r $(PROJECT)/requirements/$(LEVEL).txt
@@ -34,9 +34,8 @@ setup-db-osx:
 
 install-py: .install-py
 .install-py: $(PROJECT)/requirements/common.txt $(PROJECT)/requirements/$(LEVEL).txt
-	[ ! -d "$(ENV)/" ] && virtualenv -p python3.6 $(ENV)/ || :
+	[ ! -d "$(VIRTUAL_ENV)/" ] && virtualenv -p python3.6 $(VIRTUAL_ENV)/ || :
 	$(PYTHON) -m pip install --exists-action w $(requirements)
-	touch $@
 
 clean:
 	@echo "cleaning compiled files..."
