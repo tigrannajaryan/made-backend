@@ -2314,7 +2314,10 @@ curl -X POST \
   http://apiserver/api/v1/client/search-stylists \
   -H 'authorization: Token jwt_token' \
   -d '{
-	"search_like":"jane"
+	"search_like":"jane",
+	"latitude": 13.0643,
+	"longitude": 80.2853,
+	"accuracy": 150000
 }'
 ```
 

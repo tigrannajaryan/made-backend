@@ -2,9 +2,13 @@ import datetime
 
 from dateutil.parser import parse
 
+from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.geos import Point
+from django.contrib.gis.measure import D
+from django.db import models
 from django.db.models import F, Q, Value
 from django.db.models.functions import Concat
-
+from ipware import get_client_ip
 from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
 
@@ -20,7 +24,7 @@ from api.v1.client.serializers import (
 from api.v1.stylist.constants import MAX_APPOINTMENTS_PER_REQUEST
 from api.v1.stylist.serializers import StylistSerializer, StylistServicePricingSerializer
 from appointment.models import Appointment
-from client.models import ClientOfStylist
+from client.models import ClientOfStylist, StylistSearchRequest
 from core.utils import post_or_get
 from core.utils import post_or_get_or_data
 from salon.models import Stylist, StylistService
@@ -116,12 +120,25 @@ class SearchStylistView(generics.ListAPIView):
         }
         return Response(response_dict, status=status.HTTP_200_OK)
 
+    def save_search_request(self, location):
+        ip, is_routable = get_client_ip(self.request)
+        StylistSearchRequest.objects.create(
+            requested_by=self.request.user,
+            user_ip_addr=ip,
+            user_location=location
+        )
+
     def get_queryset(self):
         query = post_or_get_or_data(self.request, 'search_like', '')
-        return self._search_stylists(query)
+        latitude = post_or_get_or_data(self.request, 'latitude', 40.7128)
+        longitude = post_or_get_or_data(self.request, 'longitude', 74.0060)
+        accuracy = post_or_get_or_data(self.request, 'accuracy', 50000)
+        location = Point(longitude, latitude)
+        self.save_search_request(location)
+        return self._search_stylists(query, location, accuracy)
 
     @staticmethod
-    def _search_stylists(query):
+    def _search_stylists(query: str, location: Point, accuracy: int) -> models.QuerySet:
 
         if 1 <= len(query) < 3:
             return ClientOfStylist.objects.none()
@@ -131,13 +148,15 @@ class SearchStylistView(generics.ListAPIView):
             reverse_full_name=Concat(F('user__last_name'), Value(' '), F('user__first_name')),
         ).distinct('id')
 
-        stylist_filter = (
+        query_filter = (
             Q(full_name__icontains=query) |
             Q(salon__name__icontains=query) |
             Q(reverse_full_name__icontains=query)
         )
 
-        return stylists.filter(stylist_filter)
+        return stylists.filter(query_filter, salon__location__distance_lte=(
+            location, D(m=accuracy))).annotate(distance=Distance('salon__location', location)
+                                               ).order_by('distance').distinct('distance')
 
 
 class AppointmentListCreateAPIView(generics.ListCreateAPIView):
