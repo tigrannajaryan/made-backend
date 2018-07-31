@@ -239,6 +239,33 @@ class StylistSerializer(
             return stylist
 
 
+class StylistSerializerWithInvitation(
+    FormattedErrorMessageMixin,
+    serializers.ModelSerializer
+):
+
+    invitation_created_at = serializers.DateTimeField(
+        source='created_at', read_only=True)
+    uuid = serializers.UUIDField(read_only=True, source='stylist.uuid')
+    salon_name = serializers.CharField(
+        source='stylist.salon.name', allow_null=True, required=False
+    )
+    salon_address = serializers.CharField(source='stylist.salon.address', allow_null=True)
+    profile_photo_url = serializers.CharField(
+        read_only=True, source='stylist.get_profile_photo_url')
+    first_name = serializers.CharField(source='stylist.user.first_name')
+    last_name = serializers.CharField(source='stylist.user.last_name')
+    phone = PhoneNumberField(source='stylist.user.phone', )
+
+    class Meta:
+        model = Stylist
+        fields = [
+            'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url',
+            'salon_name', 'salon_address', 'instagram_url',
+            'website_url', 'invitation_created_at'
+        ]
+
+
 class ServiceTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceTemplate
