@@ -2155,7 +2155,8 @@ curl -X POST \
             "salon_name": "John Salon",
             "salon_address": "111 Front Street",
             "instagram_url": null,
-            "website_url": "https://example.com"
+            "website_url": "https://example.com",
+            "invitation_created_at": "2018-07-09T11:35:39.441844-04:00"
         },
         {
             "id": 13,
@@ -2166,7 +2167,8 @@ curl -X POST \
             "salon_name": "Mark Salon",
             "salon_address": "1234 Back Street",
             "instagram_url": null,
-            "website_url": "https://example.com"
+            "website_url": "https://example.com",
+            "invitation_created_at": "2018-07-09T11:35:39.441844-04:00"
         }
     ]
 }

@@ -12,14 +12,18 @@ from rest_framework_jwt.serializers import (
 
 from api.common.fields import PhoneNumberField
 from api.common.mixins import FormattedErrorMessageMixin
-from api.v1.stylist.serializers import StylistProfileStatusSerializer, StylistSerializer
+from api.v1.stylist.serializers import (
+    StylistProfileStatusSerializer,
+    StylistSerializer,
+    StylistSerializerWithInvitation
+)
 from client.constants import MINUTES_BEFORE_REQUESTING_NEW_CODE
 from client.models import PhoneSMSCodes
 from core.choices import USER_ROLE
 from core.models import User
 from core.types import FBAccessToken, FBUserID, UserRole
 from core.utils.facebook import get_or_create_facebook_user
-from salon.models import Stylist
+from salon.models import Invitation
 from salon.types import InvitationStatus
 from salon.utils import create_stylist_profile_for_user
 
@@ -133,9 +137,10 @@ class ClientAuthTokenSerializer(FormattedErrorMessageMixin, serializers.Serializ
     def get_stylist_invitation(self, data):
         user = self.context['user']
         if user.is_client():
-            stylists = Stylist.objects.filter(
-                invites__phone=user.phone).exclude(invites__status=InvitationStatus.ACCEPTED)
-            return StylistSerializer(stylists, many=True).data
+            stylists = Invitation.objects.filter(
+                phone=user.phone).exclude(
+                status=InvitationStatus.ACCEPTED).order_by('-created_at')[:5]
+            return StylistSerializerWithInvitation(stylists, many=True).data
 
 
 class FacebookAuthTokenSerializer(
