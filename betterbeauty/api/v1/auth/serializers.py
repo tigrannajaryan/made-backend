@@ -12,8 +12,11 @@ from rest_framework_jwt.serializers import (
 
 from api.common.fields import PhoneNumberField
 from api.common.mixins import FormattedErrorMessageMixin
-from api.v1.stylist.serializers import StylistProfileStatusSerializer, StylistSerializer, \
+from api.v1.stylist.serializers import (
+    StylistProfileStatusSerializer,
+    StylistSerializer,
     StylistSerializerWithInvitation
+)
 from client.constants import MINUTES_BEFORE_REQUESTING_NEW_CODE
 from client.models import PhoneSMSCodes
 from core.choices import USER_ROLE
