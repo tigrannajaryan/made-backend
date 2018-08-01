@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from django.apps import apps
 from django.conf import settings
+from django.contrib.gis.db.models import PointField
 from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -199,7 +200,8 @@ class StylistSearchRequest(models.Model):
 
     requested_by = models.ForeignKey(User, on_delete=models.CASCADE)
     requested_at = models.DateTimeField(auto_now_add=True)
-    user_ip_addr = models.GenericIPAddressField()
+    user_location = PointField(srid=4326, null=True)
+    user_ip_addr = models.GenericIPAddressField(null=True)
 
     class Meta:
         db_table = 'stylist_search_request'
