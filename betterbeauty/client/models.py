@@ -1,4 +1,5 @@
 import datetime
+import logging
 from datetime import timedelta
 from random import randint
 from typing import Optional
@@ -17,6 +18,8 @@ from appointment.types import AppointmentStatus
 from client.constants import SMS_CODE_EXPIRY_TIME_MINUTES
 from core.models import User
 from integrations.twilio import render_one_time_sms_for_phone, send_sms_message
+
+logger = logging.getLogger(__name__)
 
 
 class Client(models.Model):
@@ -144,9 +147,11 @@ class PhoneSMSCodes(models.Model):
         db_table = 'phone_sms_codes'
 
     @classmethod
-    def generate_code(self):
-        code = '123456'
-        if not settings.DEBUG:
+    def generate_code(cls) -> str:
+        if settings.LEVEL in ['development', 'tests', ]:
+            code = '123456'
+            logging.info('Generated SMS code: {0}'.format(code))
+        else:
             code = str(randint(100000, 999999))
         return code
 
