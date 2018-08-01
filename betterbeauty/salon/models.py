@@ -369,6 +369,7 @@ class Stylist(models.Model):
 class ServiceCategory(models.Model):
     name = models.CharField(max_length=255, unique=True)
     uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    category_code = models.CharField(max_length=25, blank=True, null=True)
 
     class Meta:
         db_table = 'service_category'

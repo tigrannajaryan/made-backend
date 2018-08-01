@@ -76,7 +76,7 @@ class SalonSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
 class ServiceCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceCategory
-        fields = ['name', 'uuid', ]
+        fields = ['name', 'uuid', 'category_code']
 
 
 class StylistServicePhotoSampleSerializer(serializers.ModelSerializer):
@@ -288,14 +288,18 @@ class ServiceTemplateDetailsSerializer(
 
 class ServiceTemplateSetListSerializer(serializers.ModelSerializer):
     image_url = serializers.CharField(read_only=True, source='get_image_url')
+    services_count = serializers.SerializerMethodField()
 
     class Meta:
         model = ServiceTemplateSet
-        fields = ['uuid', 'name', 'description', 'image_url', ]
+        fields = ['uuid', 'name', 'image_url', 'description', 'services_count']
 
     def get_services(self, template_set: ServiceTemplateSet):
         templates = template_set.templates.all()[:MAX_SERVICE_TEMPLATE_PREVIEW_COUNT]
         return ServiceTemplateSerializer(templates, many=True).data
+
+    def get_services_count(self, template_set: ServiceTemplateSet):
+        return template_set.templates.count()
 
 
 class ServiceTemplateCategoryDetailsSerializer(serializers.ModelSerializer):
@@ -304,7 +308,7 @@ class ServiceTemplateCategoryDetailsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ServiceCategory
-        fields = ['name', 'uuid', 'services']
+        fields = ['name', 'uuid', 'services', 'category_code']
 
     def get_services(self, service_category: ServiceCategory):
         templates = service_category.templates.order_by('-regular_price')
@@ -319,7 +323,7 @@ class StylistServiceCategoryDetailsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ServiceCategory
-        fields = ['name', 'uuid', 'services']
+        fields = ['name', 'uuid', 'services', 'category_code']
 
     def get_services(self, service_category: ServiceCategory):
         stylist: Stylist = self.context['stylist']
