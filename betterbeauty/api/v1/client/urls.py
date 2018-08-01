@@ -1,6 +1,8 @@
 from django.conf.urls import url
 
 from api.v1.client.views import (
+    AppointmentListCreateAPIView,
+    AppointmentRetriveUpdateView,
     ClientProfileView,
     PreferredStylistDeleteView,
     PreferredStylistListCreateView,
@@ -21,4 +23,9 @@ urlpatterns = [
     url('^stylists/(?P<uuid>[0-9a-f\-]+)/services',
         StylistServicesView.as_view(), name='stylist-services'),
     url('^services/pricing', StylistServicePriceView.as_view(), name='services-pricing'),
+
+    url('^appointments$',
+        AppointmentListCreateAPIView.as_view(), name='appointments'),
+    url('^appointments/(?P<uuid>[0-9a-f\-]+)$',
+        AppointmentRetriveUpdateView.as_view(), name='appointment')
 ]

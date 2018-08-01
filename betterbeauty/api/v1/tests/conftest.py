@@ -2,6 +2,8 @@ import pytest
 import pytz
 from django_dynamic_fixture import G
 
+from api.v1.auth.utils import create_client_profile_from_phone
+from client.models import Client
 from core.choices import USER_ROLE
 from core.models import User
 from salon.models import Salon, Stylist
@@ -29,3 +31,16 @@ def stylist_data(db) -> Stylist:
     )
 
     return stylist
+
+
+@pytest.fixture()
+def client_data(db) -> Client:
+    user = G(
+        User,
+        is_staff=False, is_superuser=False, email='test_client@example.com',
+        first_name='Fred', last_name='McBob', phone='+11234567890',
+        role=[USER_ROLE.client],
+    )
+    client_user = create_client_profile_from_phone(phone='+11234567890', user=user)
+
+    return client_user.client

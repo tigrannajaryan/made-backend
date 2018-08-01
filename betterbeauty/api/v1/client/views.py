@@ -1,17 +1,27 @@
+import datetime
+
+from dateutil.parser import parse
+
 from django.db.models import F, Q, Value
 from django.db.models.functions import Concat
+
 from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
 
 from api.common.permissions import ClientPermission
 from api.v1.client.serializers import (
     AddPreferredClientsSerializer,
+    AppointmentSerializer,
+    AppointmentUpdateSerializer,
     ClientPreferredStylistSerializer,
     ClientProfileSerializer,
     ServicePricingRequestSerializer,
     StylistServiceListSerializer)
+from api.v1.stylist.constants import MAX_APPOINTMENTS_PER_REQUEST
 from api.v1.stylist.serializers import StylistSerializer, StylistServicePricingSerializer
+from appointment.models import Appointment
 from client.models import ClientOfStylist
+from core.utils import post_or_get
 from core.utils import post_or_get_or_data
 from salon.models import Stylist, StylistService
 
@@ -128,3 +138,60 @@ class SearchStylistView(generics.ListAPIView):
         )
 
         return stylists.filter(stylist_filter)
+
+
+class AppointmentListCreateAPIView(generics.ListCreateAPIView):
+
+    permission_classes = [ClientPermission, permissions.IsAuthenticated]
+    serializer_class = AppointmentSerializer
+
+    def get_serializer_context(self):
+        stylist_uuid = post_or_get_or_data(self.request, 'stylist_uuid', None)
+        stylist = None
+        if stylist_uuid:
+            stylist = Stylist.objects.get(uuid=stylist_uuid)
+        return {
+            'user': self.request.user,
+            'stylist': stylist
+        }
+
+    def get_queryset(self):
+        client = self.request.user.client
+
+        date_from_str = post_or_get(self.request, 'date_from')
+        date_to_str = post_or_get(self.request, 'date_to')
+
+        include_cancelled = post_or_get(self.request, 'include_cancelled', False) == 'true'
+        limit = int(post_or_get(self.request, 'limit', MAX_APPOINTMENTS_PER_REQUEST))
+
+        datetime_from = None
+        datetime_to = None
+
+        if date_from_str:
+            datetime_from = parse(date_from_str).replace(
+                hour=0, minute=0, second=0
+            )
+        if date_to_str:
+            datetime_to = (parse(date_to_str) + datetime.timedelta(days=1)).replace(
+                hour=0, minute=0, second=0
+            )
+
+        return client.get_appointments_in_datetime_range(
+            datetime_from, datetime_to, include_cancelled
+        )[:limit]
+
+
+class AppointmentRetriveUpdateView(generics.RetrieveUpdateAPIView):
+
+    permission_classes = [ClientPermission, permissions.IsAuthenticated]
+    serializer_class = AppointmentUpdateSerializer
+
+    def get_serializer_context(self):
+        stylist = self.get_object().stylist
+        return {
+            'user': self.request.user,
+            'stylist': stylist
+        }
+
+    def get_object(self):
+        return Appointment.objects.get(uuid=self.kwargs['uuid'])
