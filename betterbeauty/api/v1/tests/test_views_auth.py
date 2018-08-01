@@ -99,7 +99,7 @@ class TestVerifyCodeView(object):
         user = User.objects.last()
         client = user.client
         assert (client is not None)
-        client_of_stylist = client.clientofstylist_set.last()
+        client_of_stylist = client.client_of_stylists.last()
         assert (client_of_stylist.phone == code.phone)
         assert (client_of_stylist.stylist == stylist_data)
 
