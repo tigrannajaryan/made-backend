@@ -15,7 +15,7 @@ class IncludeDeletedManager(models.Manager):
 
 class SmartModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
-    deleted_at = models.DateTimeField(blank=True, null=True)
+    deleted_at = models.DateTimeField(blank=True, null=True, default=None)
 
     objects = IgnoreDeletedManager()
     all_objects = IncludeDeletedManager()

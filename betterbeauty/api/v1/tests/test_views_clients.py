@@ -120,22 +120,31 @@ class TestPreferredStylist:
 
 class TestSearchStylist:
     @pytest.mark.django_db
-    def test_add_preferred_stylists(self, client, stylist_data: Stylist):
+    def test_search_stylists(self, client, stylist_data: Stylist):
 
         stylist_data_2 = G(Stylist)
+        location = stylist_data.salon.location
+        accuracy = 50000
+        results = SearchStylistView._search_stylists(
+            '', location=location, accuracy=accuracy)
+        assert (results.count() == 1)
 
-        results = SearchStylistView._search_stylists('')
-        assert (results.count() == 2)
-
-        results = SearchStylistView._search_stylists('Fred')
+        results = SearchStylistView._search_stylists(
+            'Fred', location=location, accuracy=accuracy)
         assert (results.count() == 1)
         assert (results.last() == stylist_data)
-        results = SearchStylistView._search_stylists('mcbob fr')
+        results = SearchStylistView._search_stylists(
+            'mcbob fr', location=location, accuracy=accuracy)
         assert (results.count() == 1)
         assert (results.last() == stylist_data)
-        results = SearchStylistView._search_stylists(stylist_data_2.get_full_name())
+        salon = stylist_data_2.salon
+        salon.location = location
+        salon.save()
+        results = SearchStylistView._search_stylists(
+            stylist_data_2.get_full_name(), location=location, accuracy=accuracy)
         assert (results.count() == 1)
         assert (results.last() == stylist_data_2)
 
-        results = SearchStylistView._search_stylists('some-junk-text')
+        results = SearchStylistView._search_stylists(
+            'some-junk-text', location=location, accuracy=accuracy)
         assert (results.count() == 0)

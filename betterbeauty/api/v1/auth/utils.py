@@ -14,7 +14,7 @@ def create_client_profile_from_phone(phone: str, user: Optional[User]=None)-> Us
     if user and UserRole.CLIENT not in user.role:
         user.role.append(UserRole.CLIENT)
         user.save(update_fields=['role'])
-    else:
+    if not user:
         bogus_email = 'client-{0}@madebeauty.com'.format(uuid4())
         user = User.objects.create_user(
             email=bogus_email,
