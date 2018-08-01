@@ -34,7 +34,8 @@ class TestClientProfile:
         data = {
             'phone': user.phone,
             'first_name': "Tom",
-            'last_name': "Cruise"
+            'last_name': "Cruise",
+            "email": 'test@example.com'
         }
         profile_url = reverse('api:v1:client:client-profile')
         response = client.post(profile_url, data=data, HTTP_AUTHORIZATION=auth_token)
@@ -48,7 +49,8 @@ class TestClientProfile:
         user, auth_token = _create_and_authorize_user(client)
         data = {
             'first_name': "Tom",
-            'last_name': "Cruise"
+            'last_name': "Cruise",
+            "email": 'test@example.com'
         }
         profile_url = reverse('api:v1:client:client-profile')
 

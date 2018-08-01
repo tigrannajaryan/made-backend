@@ -2205,7 +2205,10 @@ curl -X GET \
     "first_name": "Jane",
     "last_name": "McBob",
     "phone": "+11234567890",
-    "profile_photo_url": "/media/user_uploads/uuid/uuid-a_NI03Ckn.jpg"
+    "profile_photo_url": "https://mediaserver/media/user_uploads/uuid/uuid-a_NI03Ckn.jpg",
+    "birthday": "1988-09-08",
+    "zip_code":12345,
+    "email": "test@example.com"
 }
 ```
 
@@ -2217,7 +2220,10 @@ curl -X POST \
   -d '{
 	 "first_name": "Jane",
     "last_name": "McBob",
-    "profile_photo_id": "a9268764-7fbe-4bea-bc28-6dfdea5a7778"
+    "profile_photo_id": "a9268764-7fbe-4bea-bc28-6dfdea5a7778",
+    "birthday": "1988-09-08",
+    "zip_code":12345,
+    "email": "test@example.com"
 
 }'
 ```
@@ -2229,7 +2235,10 @@ curl -X POST \
     "first_name": "Jane",
     "last_name": "McBob",
     "phone": "+11234567890",
-    "profile_photo_url": "/media/user_uploads/uuid/uuid-a_NI03Ckn.jpg"
+    "profile_photo_url": "https://mediaserver/media/user_uploads/uuid/uuid-a_NI03Ckn.jpg",
+    "birthday": "1988-09-08",
+    "zip_code":12345,
+    "email": "test@example.com"
 }
 ```
 
