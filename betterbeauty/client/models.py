@@ -14,7 +14,7 @@ from django.utils.translation import gettext_lazy as _
 
 from utils.models import SmartModel
 
-from appointment.types import AppointmentStatus
+from appointment.utils import get_appointments_in_datetime_range
 from client.constants import SMS_CODE_EXPIRY_TIME_MINUTES
 from core.models import User
 from integrations.twilio import render_one_time_sms_for_phone, send_sms_message
@@ -33,72 +33,35 @@ class Client(models.Model):
             self,
             datetime_from: Optional[datetime.datetime]=None,
             datetime_to: Optional[datetime.datetime]=None,
-            including_to: Optional[bool]=False,
-            include_cancelled=False,
-            exclude_cancelled_by_stylist=False,
-            exclude_cancelled_by_client=False,
-            include_checked_out=True,
-            q_filter=None,
+            exclude_statuses=None,
+            q_filter: Optional[models.Q]=None,
             **kwargs
     ) -> models.QuerySet:
         """
         Return appointments present in given datetime range.
         :param datetime_from: datetime at which first appointment is present
         :param datetime_to: datetime by which last appointment starts
-        :param including_to: whether or not end datetime should be inclusive
-        :param include_cancelled: whether or not cancelled appointments are included
-        :param exclude_cancelled_by_stylist: whether or not cancelled appointments
-                cancelled by stylist are included(This value overrides `include_cancelled`)
-        :param exclude_cancelled_by_client: whether or not cancelled appointments
-                cancelled by client are included(This value overrides `include_cancelled`)
-        :param include_checked_out: whether or not checked out appointments are included
+        :param exclude_statuses: (optional) list of statuses to exclude
         :param kwargs: any optional filter kwargs to be applied
+        :param q_filter: optional list of filters to apply
         :return: Resulting Appointment queryset
         """
-        Appointment = apps.get_model('appointment', 'Appointment')
-        appointments = Appointment.objects.all()
+        queryset = apps.get_model('appointment', 'Appointment').objects.filter(
+            client__client=self
+        )
+
+        appointments = get_appointments_in_datetime_range(
+            queryset=queryset,
+            datetime_from=datetime_from,
+            datetime_to=datetime_to,
+            exclude_statuses=exclude_statuses,
+            **kwargs
+        )
+
         if q_filter:
-            appointments = appointments.filter(
-                q_filter, client__client=self, **kwargs).order_by('datetime_start_at')
-        else:
-            appointments = appointments.filter(
-                **kwargs
-            ).order_by('datetime_start_at')
+            appointments = appointments.filter(q_filter)
 
-        if datetime_from is not None:
-            appointments = appointments.filter(
-                datetime_start_at__gte=datetime_from
-            )
-
-        if datetime_to is not None:
-            if including_to:
-                # must start before datetime_to
-                appointments = appointments.filter(
-                    datetime_start_at__lt=datetime_to
-                )
-            else:
-                # must finish before datetime_to
-                appointments = appointments.filter(
-                    datetime_start_at__lt=datetime_to
-                )
-        if not include_cancelled and not (
-                exclude_cancelled_by_stylist or exclude_cancelled_by_client):
-            appointments = appointments.exclude(status__in=[
-                AppointmentStatus.CANCELLED_BY_CLIENT,
-                AppointmentStatus.CANCELLED_BY_STYLIST
-            ])
-
-        if exclude_cancelled_by_stylist:
-            appointments = appointments.exclude(
-                status=AppointmentStatus.CANCELLED_BY_STYLIST)
-
-        if exclude_cancelled_by_client:
-            appointments = appointments.exclude(
-                status=AppointmentStatus.CANCELLED_BY_CLIENT)
-
-        if not include_checked_out:
-            appointments = appointments.exclude(status=AppointmentStatus.CHECKED_OUT)
-        return appointments
+        return appointments.order_by('datetime_start_at')
 
 
 class ClientOfStylist(models.Model):

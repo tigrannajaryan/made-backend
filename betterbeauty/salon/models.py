@@ -13,6 +13,7 @@ from django.db.models import Q
 from timezone_field import TimeZoneField
 
 from appointment.types import AppointmentStatus
+from appointment.utils import get_appointments_in_datetime_range
 from client.models import ClientOfStylist
 from core.choices import WEEKDAY
 from core.models import User
@@ -235,55 +236,37 @@ class Stylist(models.Model):
             datetime_to: Optional[datetime.datetime]=None,
             including_to: Optional[bool]=False,
             exclude_statuses: Optional[List[AppointmentStatus]]=None,
-            q_filter=None,
+            q_filter: Optional[models.Q]=None,
             **kwargs
     ) -> models.QuerySet:
         """
         Return appointments present in given datetime range.
         :param datetime_from: datetime at which first appointment is present
         :param datetime_to: datetime by which last appointment starts
-        :param exclude_statuses: list of statuses to be excluded from the resulting query
         :param including_to: whether or not end datetime should be inclusive
-        :param include_cancelled: whether or not cancelled appointments are included
-        :param exclude_cancelled_by_stylist: whether or not cancelled appointments
-                cancelled by stylist are included(This value overrides `include_cancelled`)
-        :param exclude_cancelled_by_client: whether or not cancelled appointments
-                cancelled by client are included(This value overrides `include_cancelled`)
-        :param include_checked_out: whether or not checked out appointments are included
+        :param exclude_statuses: list of statuses to be excluded from the resulting query
+        :param q_filter: optional list of filters to apply
         :param kwargs: any optional filter kwargs to be applied
         :return: Resulting Appointment queryset
         """
+
+        if datetime_to and not including_to:
+            datetime_to = datetime_to - self.service_time_gap
+        if datetime_from:
+            datetime_from = datetime_from - self.service_time_gap
+
+        appointments = get_appointments_in_datetime_range(
+            queryset=self.appointments,
+            datetime_from=datetime_from,
+            datetime_to=datetime_to,
+            exclude_statuses=exclude_statuses,
+            **kwargs
+        )
+
         if q_filter:
-            appointments = self.appointments.filter(
-                q_filter, **kwargs).order_by('datetime_start_at')
-        else:
-            appointments = self.appointments.filter(
-                **kwargs
-            ).order_by('datetime_start_at')
+            appointments = appointments.filter(q_filter)
 
-        if datetime_from is not None:
-            appointments = appointments.filter(
-                datetime_start_at__gte=datetime_from - self.service_time_gap
-            )
-
-        if datetime_to is not None:
-            if including_to:
-                # must start before datetime_to
-                appointments = appointments.filter(
-                    datetime_start_at__lt=datetime_to
-                )
-            else:
-                # must finish before datetime_to
-                appointments = appointments.filter(
-                    datetime_start_at__lt=datetime_to - self.service_time_gap
-                )
-
-        if exclude_statuses:
-            assert isinstance(exclude_statuses, list)
-            appointments = appointments.exclude(
-                status__in=exclude_statuses
-            )
-        return appointments
+        return appointments.order_by('datetime_start_at')
 
     def get_today_appointments(
             self, upcoming_only=True,
