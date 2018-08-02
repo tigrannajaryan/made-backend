@@ -252,8 +252,6 @@ class Stylist(models.Model):
 
         if datetime_to and not including_to:
             datetime_to = datetime_to - self.service_time_gap
-        if datetime_from:
-            datetime_from = datetime_from - self.service_time_gap
 
         appointments = get_appointments_in_datetime_range(
             queryset=self.appointments,
