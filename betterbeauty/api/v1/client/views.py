@@ -24,6 +24,7 @@ from api.v1.client.serializers import (
 from api.v1.stylist.constants import MAX_APPOINTMENTS_PER_REQUEST
 from api.v1.stylist.serializers import StylistSerializer, StylistServicePricingSerializer
 from appointment.models import Appointment
+from appointment.types import AppointmentStatus
 from client.models import ClientOfStylist, StylistSearchRequest
 from core.utils import post_or_get
 from core.utils import post_or_get_or_data
@@ -180,7 +181,14 @@ class AppointmentListCreateAPIView(generics.ListCreateAPIView):
         date_from_str = post_or_get(self.request, 'date_from')
         date_to_str = post_or_get(self.request, 'date_to')
 
+        exclude_statuses = [
+            AppointmentStatus.CANCELLED_BY_CLIENT,
+            AppointmentStatus.CANCELLED_BY_STYLIST
+        ]
         include_cancelled = post_or_get(self.request, 'include_cancelled', False) == 'true'
+        if include_cancelled:
+            exclude_statuses = None
+
         limit = int(post_or_get(self.request, 'limit', MAX_APPOINTMENTS_PER_REQUEST))
 
         datetime_from = None
@@ -196,7 +204,7 @@ class AppointmentListCreateAPIView(generics.ListCreateAPIView):
             )
 
         return client.get_appointments_in_datetime_range(
-            datetime_from, datetime_to, include_cancelled
+            datetime_from, datetime_to, exclude_statuses=exclude_statuses
         )[:limit]
 
 
