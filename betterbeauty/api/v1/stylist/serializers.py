@@ -4,6 +4,7 @@ from decimal import Decimal
 from math import trunc
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce, ExtractWeekDay
@@ -237,6 +238,17 @@ class StylistSerializer(
                 user, profile_photo_id
             )
             return stylist
+
+
+class StylistSerializerWithGoogleAPIKey(StylistSerializer):
+    google_api_key = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Stylist
+        fields = StylistSerializer.Meta.fields + ['google_api_key', ]
+
+    def get_google_api_key(self, user: User):
+        return settings.GOOGLE_AUTOCOMPLETE_API_KEY_CLIENT
 
 
 class StylistSerializerWithInvitation(

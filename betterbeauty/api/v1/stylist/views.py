@@ -42,6 +42,7 @@ from .serializers import (
     StylistDiscountsSerializer,
     StylistHomeSerializer,
     StylistSerializer,
+    StylistSerializerWithGoogleAPIKey,
     StylistServiceListSerializer,
     StylistServicePricingRequestSerializer,
     StylistServicePricingSerializer,
@@ -60,6 +61,11 @@ class StylistView(
 ):
     serializer_class = StylistSerializer
     permission_classes = [StylistRegisterUpdatePermission, permissions.IsAuthenticated]
+    
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return StylistSerializerWithGoogleAPIKey
+        return super(StylistView, self).get_serializer_class()
 
     def get_object(self):
         return get_object_or_None(
