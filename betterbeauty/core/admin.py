@@ -33,6 +33,7 @@ class RoleListFilter(admin.SimpleListFilter):
             queryset = queryset.filter(role__contains=[lookup_value])
         return queryset
 
+
 class UserAdmin(EmailUserAdmin):
     list_display = ('__str__', 'email', 'role', 'is_superuser', 'date_joined',
                     'is_active',)
