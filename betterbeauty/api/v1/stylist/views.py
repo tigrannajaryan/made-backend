@@ -61,7 +61,7 @@ class StylistView(
 ):
     serializer_class = StylistSerializer
     permission_classes = [StylistRegisterUpdatePermission, permissions.IsAuthenticated]
-    
+
     def get_serializer_class(self):
         if self.request.method == "GET":
             return StylistSerializerWithGoogleAPIKey
