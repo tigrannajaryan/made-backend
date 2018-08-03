@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal
 
 import mock
 import pytest
@@ -525,7 +526,7 @@ class TestAppointmentUpdateSerializer(object):
         )
 
         assert(serializer.is_valid() is True)
-        saved_appointment = serializer.save()
+        saved_appointment: Appointment = serializer.save()
         assert(saved_appointment.services.count() == 2)
         original_appointment_service: AppointmentService = saved_appointment.services.get(
             is_original=True
@@ -544,5 +545,7 @@ class TestAppointmentUpdateSerializer(object):
         total_services_cost = sum([s.client_price for s in saved_appointment.services.all()], 0)
         assert(saved_appointment.total_client_price_before_tax == total_services_cost)
         assert(saved_appointment.grand_total == total_services_cost)
-        assert(saved_appointment.total_tax == calculate_tax(total_services_cost))
-        assert(saved_appointment.total_card_fee == calculate_card_fee(total_services_cost))
+        assert(saved_appointment.total_tax == calculate_tax(Decimal(total_services_cost)))
+        assert(
+            saved_appointment.total_card_fee == calculate_card_fee(Decimal(total_services_cost))
+        )

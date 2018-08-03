@@ -197,10 +197,12 @@ class Stylist(models.Model):
         return self.available_days.get_or_create(weekday=weekday)[0]
 
     def get_or_create_weekday_discount(
-            self, weekday: Weekday, discount_percent: int
+            self, weekday: Weekday
     ) -> StylistWeekdayDiscount:
         return self.weekday_discounts.get_or_create(
-            weekday=weekday, discount_percent=discount_percent
+            weekday=weekday, defaults={
+                'discount_percent': 0
+            }
         )[0]
 
     def get_current_now(self) -> datetime.datetime:

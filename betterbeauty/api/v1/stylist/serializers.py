@@ -703,7 +703,7 @@ class AppointmentValidationMixin(object):
         if client_uuid:
             if not ClientOfStylist.objects.filter(
                     uuid=client_uuid,
-                    appointments__stylist=stylist,
+                    stylist=stylist,
             ).exists():
                 raise serializers.ValidationError(
                     appointment_errors.ERR_CLIENT_DOES_NOT_EXIST
@@ -1270,7 +1270,7 @@ class StylistServicePricingSerializer(serializers.ModelSerializer):
         fields = ['service_uuid', 'service_name', 'prices', ]
 
     def get_prices(self, stylist_service):
-        client = self.context.get('client', None)
+        client: ClientOfStylist = self.context.get('client_of_stylist', None)
         prices_and_dates: Iterable[PriceOnDate] = generate_prices_for_stylist_service(
             stylist_service, client, exclude_fully_booked=False,
             exclude_unavailable_days=False

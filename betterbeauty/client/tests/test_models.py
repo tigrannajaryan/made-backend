@@ -13,7 +13,6 @@ from client.models import Client, ClientOfStylist
 from core.models import User, USER_ROLE
 from salon.tests.test_models import (
     stylist_appointments_data,
-    stylist_data as stylist_data_fixture,
 )
 
 
@@ -21,9 +20,8 @@ class TestClient(object):
     @freeze_time('2018-05-14 13:30:00 UTC')
     @pytest.mark.django_db
     def test_get_appointments_in_datetime_range(
-            self
+            self, stylist_data
     ):
-        stylist_data = stylist_data_fixture()
         user = G(
             User,
             is_staff=False, is_superuser=False, email='test_client@example.com',

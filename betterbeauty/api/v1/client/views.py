@@ -8,6 +8,7 @@ from django.contrib.gis.measure import D
 from django.db import models
 from django.db.models import F, Q, Value
 from django.db.models.functions import Concat
+from django.shortcuts import get_object_or_404
 from ipware import get_client_ip
 from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
@@ -86,8 +87,21 @@ class StylistServicesView(generics.RetrieveAPIView):
     permission_classes = [ClientPermission, permissions.IsAuthenticated]
     serializer_class = StylistServiceListSerializer
 
+    def get_queryset(self):
+        client = self.request.user.client
+        available_stylists = Q(
+            preferredstylist__client=client,
+            preferredstylist__deleted_at__isnull=True
+        ) | Q(
+            clients_of_stylist__client=client
+        )
+        return Stylist.objects.filter(available_stylists)
+
     def get_object(self):
-        return Stylist.objects.get(uuid=self.kwargs['uuid'])
+        return get_object_or_404(
+            self.get_queryset(),
+            uuid=self.kwargs['uuid'],
+        )
 
 
 class StylistServicePriceView(views.APIView):
@@ -96,19 +110,29 @@ class StylistServicePriceView(views.APIView):
     def post(self, request, *args, **kwargs):
         serializer = ServicePricingRequestSerializer(
             data=request.data, )
-        serializer.is_valid(raise_exception=True)\
-
+        serializer.is_valid(raise_exception=True)
+        client = self.request.user.client
         service_uuid = serializer.validated_data.get('service_uuid')
-        service = StylistService.objects.filter(uuid=service_uuid).last()
-        client_of_stylist = ClientOfStylist.objects.get(
-            client=request.user.client, stylist=service.stylist)
+        service_queryset = StylistService.objects.filter(
+            Q(
+                stylist__preferredstylist__client=client,
+                stylist__preferredstylist__deleted_at__isnull=True
+            ) | Q(
+                stylist__clients_of_stylist__client=client
+            )
+        ).distinct('id')
+        service = get_object_or_404(
+            service_queryset,
+            uuid=service_uuid
+        )
+
+        # client_of_stylist can as well be None here, which is OK; in such a case
+        # prices will be returned without discounts
+        client_of_stylist = client.client_of_stylists.filter(stylist=service.stylist).last()
 
         return Response(
             StylistServicePricingSerializer(service, context={'client': client_of_stylist}).data
         )
-
-    def get_object(self):
-        return Stylist.objects.get(uuid=self.kwargs['uuid'])
 
 
 class SearchStylistView(generics.ListAPIView):
@@ -213,6 +237,10 @@ class AppointmentRetriveUpdateView(generics.RetrieveUpdateAPIView):
     permission_classes = [ClientPermission, permissions.IsAuthenticated]
     serializer_class = AppointmentUpdateSerializer
 
+    def post(self, request, *args, **kwargs):
+        """Use this merely to allow using POST as PATCH"""
+        return self.partial_update(request, *args, **kwargs)
+
     def get_serializer_context(self):
         stylist = self.get_object().stylist
         return {
@@ -221,4 +249,11 @@ class AppointmentRetriveUpdateView(generics.RetrieveUpdateAPIView):
         }
 
     def get_object(self):
-        return Appointment.objects.get(uuid=self.kwargs['uuid'])
+        client = self.request.user.client
+        appointments = Appointment.objects.filter(
+            client__client=client
+        )
+        return get_object_or_404(
+            appointments,
+            uuid=self.kwargs['uuid']
+        )
