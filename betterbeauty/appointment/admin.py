@@ -1,7 +1,9 @@
 from django import forms
 from django.contrib import admin
 
+from client.models import ClientOfStylist
 from core.models import User
+from salon.models import Stylist
 
 from .models import Appointment, AppointmentService
 
@@ -56,6 +58,14 @@ class AppointmentAdminForm(forms.ModelForm):
 
 
 class AppointmentAdmin(admin.ModelAdmin):
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "stylist":
+            kwargs["queryset"] = Stylist.objects.order_by('user__email')
+        if db_field.name == "client":
+            kwargs["queryset"] = ClientOfStylist.objects.order_by('first_name', 'last_name')
+        return super(AppointmentAdmin, self).formfield_for_foreignkey(db_field, request, **kwargs)
+
     readonly_fields = [
         'deleted_at', 'deleted_by', 'created_at', 'created_by',
     ]
