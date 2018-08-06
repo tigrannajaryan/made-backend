@@ -166,5 +166,5 @@ TWILIO_SLACK_MOCK_ENABLED = False
 TWILIO_FROM_TEL = '+19293771047'
 TWILLIO_SLACK_CHANNEL = '#auto-twilio-dev'
 
-GOOGLE_AUTOCOMPLETE_API_KEY_CLIENT = os.environ.get(
-    'GOOGLE_AUTOCOMPLETE_API_KEY_CLIENT', '<override in local.py>')
+GOOGLE_AUTOCOMPLETE_API_KEY = os.environ.get(
+    'GOOGLE_AUTOCOMPLETE_API_KEY', '<override in local.py>')

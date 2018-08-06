@@ -248,7 +248,7 @@ class StylistSerializerWithGoogleAPIKey(StylistSerializer):
         fields = StylistSerializer.Meta.fields + ['google_api_key', ]
 
     def get_google_api_key(self, user: User):
-        return settings.GOOGLE_AUTOCOMPLETE_API_KEY_CLIENT
+        return settings.GOOGLE_AUTOCOMPLETE_API_KEY
 
 
 class StylistSerializerWithInvitation(
