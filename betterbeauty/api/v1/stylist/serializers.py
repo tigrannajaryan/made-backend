@@ -92,7 +92,8 @@ class StylistServiceSerializer(
     FormattedErrorMessageMixin,
     serializers.ModelSerializer
 ):
-    duration_minutes = DurationMinuteField(source='duration')
+    # duration_minutes is obsolete field. Keeping it for backwards compatability
+    duration_minutes = DurationMinuteField(source='duration', read_only=True)
     photo_samples = StylistServicePhotoSampleSerializer(
         many=True, read_only=True)
     base_price = serializers.DecimalField(
@@ -288,7 +289,8 @@ class ServiceTemplateDetailsSerializer(
     FormattedErrorMessageMixin,
     serializers.ModelSerializer
 ):
-    duration_minutes = DurationMinuteField(source='duration')
+    # duration_minutes is obsolete field. Keeping it for backwards compatability
+    duration_minutes = DurationMinuteField(source='duration', read_only=True)
     base_price = serializers.DecimalField(
         coerce_to_string=False, max_digits=6, decimal_places=2, source='regular_price')
     is_addon = serializers.BooleanField(default=False)
