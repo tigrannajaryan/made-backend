@@ -801,7 +801,6 @@ curl -X POST http://apiserver/api/v1/stylist/services \
          "name":"Gloss",
          "description":"",
          "base_price":45,
-         "duration_minutes":30,
          "is_enabled":true,
          "photo_samples":[
 
@@ -814,7 +813,6 @@ curl -X POST http://apiserver/api/v1/stylist/services \
          "name":"Conditioning treatment",
          "description":"",
          "base_price":30,
-         "duration_minutes":20,
          "is_enabled":true,
          "photo_samples":[
 

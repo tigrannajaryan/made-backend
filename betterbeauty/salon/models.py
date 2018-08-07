@@ -399,7 +399,7 @@ class ServiceTemplate(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     regular_price = models.DecimalField(max_digits=6, decimal_places=2)
-    duration = models.DurationField()
+    duration = models.DurationField(blank=True, null=True)
     is_addon = models.BooleanField(default=False)
 
     class Meta:
@@ -420,7 +420,7 @@ class StylistService(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     regular_price = models.DecimalField(max_digits=6, decimal_places=2)
-    duration = models.DurationField()
+    duration = models.DurationField(blank=True, null=True)
     is_enabled = models.BooleanField(default=False)
     is_addon = models.BooleanField(default=False)
 

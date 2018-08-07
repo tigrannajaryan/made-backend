@@ -142,7 +142,6 @@ class TestStylistServiceSerializer(object):
         data = [
             {
                 'name': 'service 1',
-                'duration_minutes': 10,
                 'base_price': 20,
                 'is_enabled': True,
                 'category_uuid': category.uuid
@@ -159,7 +158,6 @@ class TestStylistServiceSerializer(object):
         assert(StylistService.objects.count() == 1)
         service = StylistService.objects.last()
         assert(service.name == 'service 1')
-        assert(service.duration == datetime.timedelta(minutes=10))
         assert(service.regular_price == 20)
         assert(service.service_origin_uuid == template.uuid)
 
@@ -207,7 +205,6 @@ class TestStylistServiceSerializer(object):
         assert (StylistService.objects.count() == 1)
         service = StylistService.objects.last()
         assert (service.name == 'new name')
-        assert (service.duration == datetime.timedelta(minutes=10))
         assert (service.regular_price == 20)
         assert (old_service_uuid == service.uuid)
         assert (old_service_origin_uuid != service.service_origin_uuid)
