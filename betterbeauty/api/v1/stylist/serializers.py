@@ -4,6 +4,7 @@ from decimal import Decimal
 from math import trunc
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce, ExtractWeekDay
@@ -91,7 +92,8 @@ class StylistServiceSerializer(
     FormattedErrorMessageMixin,
     serializers.ModelSerializer
 ):
-    duration_minutes = DurationMinuteField(source='duration')
+    # duration_minutes is obsolete field. Keeping it for backwards compatability
+    duration_minutes = DurationMinuteField(source='duration', read_only=True)
     photo_samples = StylistServicePhotoSampleSerializer(
         many=True, read_only=True)
     base_price = serializers.DecimalField(
@@ -239,6 +241,17 @@ class StylistSerializer(
             return stylist
 
 
+class StylistSerializerWithGoogleAPIKey(StylistSerializer):
+    google_api_key = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Stylist
+        fields = StylistSerializer.Meta.fields + ['google_api_key', ]
+
+    def get_google_api_key(self, user: User):
+        return settings.GOOGLE_AUTOCOMPLETE_API_KEY
+
+
 class StylistSerializerWithInvitation(
     FormattedErrorMessageMixin,
     serializers.ModelSerializer
@@ -276,7 +289,8 @@ class ServiceTemplateDetailsSerializer(
     FormattedErrorMessageMixin,
     serializers.ModelSerializer
 ):
-    duration_minutes = DurationMinuteField(source='duration')
+    # duration_minutes is obsolete field. Keeping it for backwards compatability
+    duration_minutes = DurationMinuteField(source='duration', read_only=True)
     base_price = serializers.DecimalField(
         coerce_to_string=False, max_digits=6, decimal_places=2, source='regular_price')
     is_addon = serializers.BooleanField(default=False)

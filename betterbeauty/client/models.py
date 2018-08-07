@@ -32,6 +32,9 @@ class Client(models.Model):
     class Meta:
         db_table = 'client'
 
+    def __str__(self):
+        return '{0} ({1})'.format(self.user.get_full_name(), self.user.phone)
+
     def get_appointments_in_datetime_range(
             self,
             datetime_from: Optional[datetime.datetime]=None,
