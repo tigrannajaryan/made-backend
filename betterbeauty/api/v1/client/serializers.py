@@ -52,6 +52,7 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
         instance = self.context['user']
         return super(ClientProfileSerializer, self).update(instance, validated_data)
 
+    @transaction.atomic
     def save(self, **kwargs):
         profile_photo_id = self.validated_data.pop('profile_photo_id', None)
         client_data = self.validated_data.pop('client', None)
