@@ -25,6 +25,9 @@ logger = logging.getLogger(__name__)
 class Client(models.Model):
     uuid = models.UUIDField(unique=True, default=uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    zip_code = models.CharField(max_length=10, blank=True, null=True)
+    birthday = models.DateField(blank=True, null=True)
+    email = models.EmailField(null=True, unique=True)
 
     class Meta:
         db_table = 'client'

@@ -39,17 +39,29 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
     phone = PhoneNumberField(read_only=True)
     profile_photo_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
     profile_photo_url = serializers.SerializerMethodField()
+    birthday = serializers.DateField(source='client.birthday', required=False,)
+    zip_code = serializers.CharField(source='client.zip_code', required=False,)
+    email = serializers.CharField(source='client.email', required=True)
 
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'phone', 'profile_photo_id', 'profile_photo_url']
+        fields = ['first_name', 'last_name', 'phone', 'profile_photo_id',
+                  'profile_photo_url', 'zip_code', 'birthday', 'email']
 
     def create(self, validated_data):
         instance = self.context['user']
         return super(ClientProfileSerializer, self).update(instance, validated_data)
 
+    @transaction.atomic
     def save(self, **kwargs):
         profile_photo_id = self.validated_data.pop('profile_photo_id', None)
+        client_data = self.validated_data.pop('client', None)
+        client = self.context['user'].client
+        if client_data:
+            client.zip_code = client_data.get('zip_code', client.zip_code)
+            client.birthday = client_data.get('birthday', client.birthday)
+            client.email = client_data.get('email', client.email)
+            client.save(update_fields=['zip_code', 'birthday', 'email'])
         user = super(ClientProfileSerializer, self).save(**kwargs)
         if profile_photo_id:
             save_profile_photo(
