@@ -208,6 +208,7 @@ such specific errors in particular API calls.
 |err_status_not_allowed| This status cannot be set for appointment|/api/v1/stylist/appointments/{uuid}|status|
 |err_no_second_checkout| Appointment can only be checked out once|/api/v1/stylist/appointments/{uuid}|status|
 |err_appointment_does_not_exist| The appointment either does not exists or does not belong to current stylist|--|--|
+|err_unique_client_email|The email belongs to the existing client|/api/v1/client/profile|field|
 |err_stylist_is_already_in_preference|The stylist is already a preference| /api/v1/client/preferred-stylists|stylist_uuid|
 |err_invalid_stylist_uuid|Invalid Stylist UUID|/api/v1/client/preferred-stylists|stylist_uuid|
 |err_wait_to_rerequest_new_code|Minimum 2 minutes wait required to re-request new code|/api/v1/client/auth/get-code|--|
@@ -2237,6 +2238,21 @@ curl -X POST \
     "birthday": "1988-09-08",
     "zip_code":12345,
     "email": "test@example.com"
+}
+```
+
+**Response 400 Bad Request**
+```json
+{
+    "code": "err_api_exception",
+    "field_errors": {
+        "email": [
+            {
+                "code": "err_unique_client_email"
+            }
+        ]
+    },
+    "non_field_errors": []
 }
 ```
 

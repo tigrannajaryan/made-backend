@@ -9,6 +9,7 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.validators import UniqueValidator
 
 from api.common.fields import PhoneNumberField
 from api.common.mixins import FormattedErrorMessageMixin
@@ -39,9 +40,12 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
     phone = PhoneNumberField(read_only=True)
     profile_photo_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
     profile_photo_url = serializers.SerializerMethodField()
-    birthday = serializers.DateField(source='client.birthday', required=False,)
-    zip_code = serializers.CharField(source='client.zip_code', required=False,)
-    email = serializers.CharField(source='client.email', required=True)
+    birthday = serializers.DateField(source='client.birthday', required=False, )
+    zip_code = serializers.CharField(source='client.zip_code', required=False, )
+    email = serializers.CharField(source='client.email', required=True,
+                                  validators=[UniqueValidator(
+                                      queryset=Client.objects.all(),
+                                      message=ErrorMessages.ERR_UNIQUE_CLIENT_EMAIL)])
 
     class Meta:
         model = User
