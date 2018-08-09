@@ -54,6 +54,7 @@
     - [Search Stylists](#search-stylists)
     - [Services](#services)
     - [Appointment](#appointment)
+    - [Available Slots](#available-slots)
 
 
 # Error handling
@@ -2332,7 +2333,7 @@ If the stylist is already a preferred stylist and returns existing preference ob
 }
 ```
 
-**DELETE api/v1/client/preferred-stylist/:preference-uuid**
+**DELETE api/v1/client/preferred-stylists/:preference-uuid**
 
 ```
 curl -X DELETE \
@@ -2626,5 +2627,38 @@ curl -X PATCH \
     "grand_total": 120,
     "has_tax_included": false,
     "has_card_fee_included": false
+}
+```
+
+## Available Slots
+
+**POST /api/v1/client/available-times**
+
+```
+curl -X POST \
+  'http://apiserver/api/v1/client/available-times' \
+  -H 'Authorization: Token {{auth_token}}' \
+  -H 'Content-Type: application/json' \
+  -d '{ 
+	"date": "2018-08-16",
+	"stylist_uuid": "d5a2e88f-68f1-4ed5-95d2-e4e2a51f13e4"
+}'
+```
+
+**Response 200 OK**
+```json
+{
+    "time_slots": [
+        {
+            "start": "2018-08-16T09:00:00-04:00",
+            "end": "2018-08-16T09:30:00-04:00",
+            "is_booked": false
+        },
+        {
+            "start": "2018-08-16T09:30:00-04:00",
+            "end": "2018-08-16T10:00:00-04:00",
+            "is_booked": true
+        }
+    ]
 }
 ```

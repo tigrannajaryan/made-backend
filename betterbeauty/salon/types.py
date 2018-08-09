@@ -1,5 +1,5 @@
 import datetime
-from typing import NamedTuple
+from typing import NamedTuple, Tuple
 
 from core.types import StrEnum
 from pricing import CalculatedPrice
@@ -21,3 +21,15 @@ class PriceOnDate(NamedTuple):
     calculated_price: CalculatedPrice
     is_fully_booked: bool
     is_working_day: bool
+
+
+class TimeSlotAvailability(object):
+
+    def __init__(self, start: datetime.datetime, end: datetime.datetime,
+                 is_booked: bool = False) -> None:
+        self.start = start
+        self.end = end
+        self.is_booked = is_booked
+
+
+TimeSlot = Tuple[datetime.time, datetime.time]

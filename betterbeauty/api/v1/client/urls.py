@@ -3,6 +3,7 @@ from django.conf.urls import url
 from api.v1.client.views import (
     AppointmentListCreateAPIView,
     AppointmentRetriveUpdateView,
+    AvailableTimeSlotView,
     ClientProfileView,
     PreferredStylistDeleteView,
     PreferredStylistListCreateView,
@@ -22,7 +23,8 @@ urlpatterns = [
         PreferredStylistDeleteView.as_view(), name='preferred-stylist-delete'),
     url('^stylists/(?P<uuid>[0-9a-f\-]+)/services',
         StylistServicesView.as_view(), name='stylist-services'),
-    url('^services/pricing', StylistServicePriceView.as_view(), name='services-pricing'),
+    url('^services/pricing$', StylistServicePriceView.as_view(), name='services-pricing'),
+    url('^available-times$', AvailableTimeSlotView.as_view(), name='available-times'),
 
     url('^appointments$',
         AppointmentListCreateAPIView.as_view(), name='appointments'),
