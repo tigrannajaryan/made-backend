@@ -688,10 +688,8 @@ class AppointmentValidationMixin(object):
         return service_uuid
 
     def validate_services(self, services):
-        if len(services) == 0:
-            raise serializers.ValidationError(
-                appointment_errors.ERR_SERVICE_REQUIRED
-            )
+        if not services:
+            services = []
         for service in services:
             self.validate_service_uuid(
                 str(service['service_uuid'])
@@ -795,11 +793,6 @@ class AppointmentSerializer(
             if errors:
                 raise serializers.ValidationError(errors)
         return super(AppointmentSerializer, self).validate(attrs)
-
-    def validate_services(self, services):
-        if not services:
-            return []
-        return super(AppointmentSerializer, self).validate_services(services)
 
     def create(self, validated_data):
         data = validated_data.copy()
@@ -905,11 +898,6 @@ class AppointmentPreviewRequestSerializer(
     has_card_fee_included = serializers.BooleanField()
     appointment_uuid = serializers.UUIDField(required=False, allow_null=True)
 
-    def validate_services(self, services):
-        if not services:
-            return []
-        return super(AppointmentPreviewRequestSerializer, self).validate_services(services)
-
     def validate_appointment_uuid(
             self, appointment_uuid: Optional[uuid.UUID]
     ) -> Optional[uuid.UUID]:
@@ -984,18 +972,6 @@ class AppointmentUpdateSerializer(
                         serializers.Field.default_error_messages['required']
                 })
         return attrs
-
-    def validate_services(self, services):
-        status = self.initial_data['status']
-        if status == AppointmentStatus.CHECKED_OUT:
-            services = self.initial_data.get('services', [])
-            if len(services) == 0:
-                raise serializers.ValidationError(appointment_errors.ERR_SERVICE_REQUIRED)
-            for service in services:
-                self.validate_service_uuid(
-                    str(service['service_uuid'])
-                )
-        return services
 
     def validate_status(self, status: AppointmentStatus) -> AppointmentStatus:
         if status not in APPOINTMENT_STYLIST_SETTABLE_STATUSES:
