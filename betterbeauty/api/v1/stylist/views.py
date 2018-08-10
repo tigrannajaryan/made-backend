@@ -8,6 +8,7 @@ from django.db import transaction
 
 from django.db.models import F, Q, QuerySet, Value
 from django.db.models.functions import Concat
+from django.shortcuts import get_object_or_404
 
 from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
@@ -24,7 +25,7 @@ from core.utils import (
     calculate_appointment_prices,
     post_or_get,
 )
-from salon.models import Invitation, ServiceTemplateSet, Stylist, StylistService
+from salon.models import ServiceTemplateSet, Stylist, StylistService
 from salon.utils import calculate_price_and_discount_for_client_on_date
 from .constants import MAX_APPOINTMENTS_PER_REQUEST
 from .serializers import (
@@ -295,7 +296,10 @@ class StylistAppointmentPreviewView(views.APIView):
         service_items: List[AppointmentServicePreview] = []
         appointment: Optional[Appointment] = None
         if preview_request.appointment_uuid is not None:
-            appointment = stylist.appointments.get(uuid=preview_request.appointment_uuid)
+            appointment = get_object_or_404(
+                stylist.appointments,
+                uuid=preview_request.appointment_uuid
+            )
 
         for service_request_item in preview_request.services:
             appointment_service: Optional[AppointmentService] = None
@@ -307,7 +311,7 @@ class StylistAppointmentPreviewView(views.APIView):
                 'client_price'] if 'client_price' in service_request_item else None
             if appointment_service:
                 if client_price:
-                    appointment_service.set_client_price(client_price)
+                    appointment_service.set_client_price(client_price, commit=False)
                 # service already exists in appointment, and will not be recalculated,
                 # so we should take it's data verbatim
                 service_item = AppointmentServicePreview(
@@ -442,7 +446,8 @@ class InvitationView(generics.ListCreateAPIView):
                          }, status=response_status)
 
     def get_queryset(self):
-        return Invitation.objects.filter(stylist=self.request.user.stylist)
+        stylist: Stylist = self.request.user.stylist
+        return stylist.invites.all()
 
 
 class StylistSettingsRetrieveView(generics.RetrieveAPIView):
@@ -458,12 +463,13 @@ class ClientSearchView(views.APIView):
     serializer_class = ClientOfStylistSerializer
 
     def get(self, request, *args, **kwargs):
+        query: str = post_or_get(self.request, 'query', '').strip()
         return Response({'clients': ClientOfStylistSerializer(
-            self.get_queryset(), many=True
+            self._search_clients(self.get_queryset(), query=query), many=True
         ).data})
 
     @staticmethod
-    def _search_clients(stylist: Stylist, query: str) -> QuerySet:
+    def _search_clients(queryset: QuerySet, query: str) -> QuerySet:
         if len(query) < 3:
             return ClientOfStylist.objects.none()
 
@@ -473,9 +479,7 @@ class ClientSearchView(views.APIView):
         # TODO: Also extend this to those clients who have accepted invitations
         # TODO: from the stylist (even though had no appointments yet)
 
-        stylists_clients = ClientOfStylist.objects.filter(
-            stylist=stylist,
-        ).annotate(
+        stylists_clients = queryset.annotate(
             full_name=Concat(F('first_name'), Value(' '), F('last_name')),
             reverse_full_name=Concat(F('last_name'), Value(' '), F('first_name')),
         ).distinct('id')
@@ -491,32 +495,34 @@ class ClientSearchView(views.APIView):
         )
 
     def get_queryset(self):
-        query: str = post_or_get(self.request, 'query', '').strip()
         stylist: Stylist = self.request.user.stylist
-        return self._search_clients(
-            stylist=stylist,
-            query=query
-        )
+        return stylist.clients_of_stylist.all()
 
 
 class StylistServicePricingView(views.APIView):
     permission_classes = [StylistPermission, permissions.IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
+        stylist = request.user.stylist
         serializer = StylistServicePricingRequestSerializer(
             data=request.data, context={'stylist': request.user.stylist}
         )
         serializer.is_valid(raise_exception=True)
         client_uuid = serializer.validated_data.get('client_uuid', None)
-        client = None
+        client_of_stylist = None
         if client_uuid:
-            client = ClientOfStylist.objects.get(uuid=client_uuid)
+            client_of_stylist: ClientOfStylist = get_object_or_None(
+                stylist.clients_of_stylist,
+                uuid=client_uuid
+            )
         service_uuid = serializer.validated_data['service_uuid']
 
         service = self.get_queryset().filter(uuid=service_uuid).last()
 
         return Response(
-            StylistServicePricingSerializer(service, context={'client': client}).data
+            StylistServicePricingSerializer(
+                service, context={'client_of_stylist': client_of_stylist}
+            ).data
         )
 
     def get_queryset(self):

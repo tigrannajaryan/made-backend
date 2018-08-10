@@ -2560,7 +2560,7 @@ curl -X POST \
 }
 ```
 
-**PATCH /api/v1/client/appointments/:uuid**
+**PATCH/POST /api/v1/client/appointments/:uuid**
 ```
 curl -X PATCH \
   http://betterbeauty.local:8000/api/v1/client/appointments/1c486b16-eb44-4914-9f03-3646ed066580 \

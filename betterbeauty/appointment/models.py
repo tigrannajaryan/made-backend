@@ -143,7 +143,8 @@ class AppointmentService(models.Model):
     class Meta:
         db_table = 'appointment_service'
 
-    def set_client_price(self, client_price: Decimal):
+    def set_client_price(self, client_price: Decimal, commit: bool=True):
         self.client_price = client_price
         self.is_price_edited = True
-        self.save(update_fields=['client_price', 'is_price_edited'])
+        if commit:
+            self.save(update_fields=['client_price', 'is_price_edited'])

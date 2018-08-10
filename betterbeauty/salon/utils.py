@@ -242,7 +242,9 @@ def create_stylist_profile_for_user(user: User, **kwargs) -> Stylist:
         stylist = Stylist.objects.create(user=user, **kwargs)
         for i in range(1, 8):
             stylist.get_or_create_weekday_availability(Weekday(i))
-            stylist.get_or_create_weekday_discount(
-                Weekday(i), DEFAULT_WEEKDAY_DISCOUNT_PERCENTS[i]
+            discount = stylist.get_or_create_weekday_discount(
+                Weekday(i)
             )
+            discount.discount_percent = DEFAULT_WEEKDAY_DISCOUNT_PERCENTS[i]
+            discount.save(update_fields=['discount_percent', ])
         return stylist

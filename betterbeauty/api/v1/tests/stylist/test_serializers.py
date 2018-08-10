@@ -33,10 +33,12 @@ from salon.models import (
     ServiceCategory,
     ServiceTemplate,
     Stylist,
+    StylistAvailableWeekDay,
     StylistService,
 )
 from salon.tests.test_models import stylist_appointments_data
 from salon.utils import (
+    calculate_price_and_discount_for_client_on_date,
     create_stylist_profile_for_user,
 )
 
@@ -674,7 +676,7 @@ class TestAppointmentSerializer(object):
             2018, 5, 17, 16, 00, tzinfo=pytz.utc)
         client: ClientOfStylist = G(
             ClientOfStylist,
-            phone='123456',
+            phone='123456'
         )
         data = {
             'client_uuid': client.uuid,
@@ -685,16 +687,13 @@ class TestAppointmentSerializer(object):
             ],
             'datetime_start_at': available_time.isoformat()
         }
-        # check client which is not related to stylist, i.e. no prior appointments
+        # check client which is not related to stylist, i.e. no ClientOfStylist relation exists
         serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
         assert(serializer.is_valid() is False)
         assert('client_uuid' in serializer.errors['field_errors'])
 
-        G(
-            Appointment,
-            client=client, stylist=stylist_data, created_by=stylist_data.user,
-            datetime_start_at=stylist_data.with_salon_tz(datetime.datetime(2018, 5, 15, 15, 30))
-        )
+        client.stylist = stylist_data
+        client.save(update_fields=['stylist', ])
 
         serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
         assert (serializer.is_valid() is True)
@@ -719,8 +718,6 @@ class TestAppointmentSerializer(object):
     @freeze_time('2018-05-17 15:30:00 UTC')
     @pytest.mark.django_db
     def test_create_pricing(self, stylist_data: Stylist):
-        from salon.models import StylistAvailableWeekDay
-        from salon.utils import calculate_price_and_discount_for_client_on_date
         service: StylistService = G(
             StylistService,
             stylist=stylist_data,
@@ -730,13 +727,11 @@ class TestAppointmentSerializer(object):
         appointment_start: datetime.datetime = stylist_data.with_salon_tz(
             datetime.datetime(2018, 5, 17, 15, 00)
         )
-        client = G(ClientOfStylist)
+        client = G(
+            ClientOfStylist,
+            stylist=stylist_data,
+        )
 
-        # associate client with stylist
-        G(Appointment, stylist=stylist_data, client=client,
-          datetime_start_at=stylist_data.with_salon_tz(
-              datetime.datetime(2018, 5, 10, 15, 00)
-          ))
         stylist_data.available_days.filter(weekday=Weekday.THURSDAY).delete()
         G(StylistAvailableWeekDay, weekday=Weekday.THURSDAY,
           work_start_at=datetime.time(8, 0), work_end_at=datetime.time(12, 00),
