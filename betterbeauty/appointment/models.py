@@ -4,8 +4,6 @@ from decimal import Decimal
 from uuid import uuid4
 
 from django.db import models, transaction
-from django.db.models import Sum
-from django.db.models.functions import Coalesce
 
 from client.models import ClientOfStylist
 from core.models import User
@@ -101,9 +99,7 @@ class Appointment(models.Model):
 
     @property
     def duration(self) -> datetime.timedelta:
-        return self.services.all().aggregate(
-            total_duration=Coalesce(Sum('duration'), datetime.timedelta(0))
-        )['total_duration']
+        return self.stylist.service_time_gap
 
 
 class AppointmentStatusHistory(models.Model):
@@ -134,7 +130,7 @@ class AppointmentService(models.Model):
     is_price_edited = models.BooleanField(default=False)
     discount_percentage = models.PositiveIntegerField(default=0)
 
-    duration = models.DurationField()
+    duration = models.DurationField(blank=True, null=True)
 
     is_original = models.BooleanField(
         verbose_name='Service with which appointment was created'
