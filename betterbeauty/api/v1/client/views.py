@@ -37,6 +37,9 @@ class ClientProfileView(generics.CreateAPIView, generics.RetrieveUpdateAPIView):
     serializer_class = ClientProfileSerializer
     permission_classes = [ClientPermission, permissions.IsAuthenticated]
 
+    def post(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
     def get_object(self):
         return self.request.user
 

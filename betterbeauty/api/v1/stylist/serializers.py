@@ -73,6 +73,12 @@ class SalonSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
             'name', 'address', 'city', 'zip_code', 'state', 'full_address', 'profile_photo_url',
         ]
 
+    def update(self, instance, validated_data):
+        if self.validated_data['address'] != self.instance.address:
+            self.instance.is_address_geocoded = False
+            self.instance.last_geo_coded = None
+        return super(SalonSerializer, self).update(instance, validated_data)
+
 
 class ServiceCategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -165,11 +171,9 @@ class StylistSerializer(
     )
     salon_address = serializers.CharField(source='salon.address', allow_null=True)
 
-    # TODO: Enable address sub-fields as soon as we have proper address splitting mechanics
-
-    # salon_city = serializers.CharField(source='salon.city', required=False)
-    # salon_zipcode = serializers.CharField(source='salon.zip_code', required=False)
-    # salon_state = serializers.CharField(source='salon.state', required=False)
+    salon_city = serializers.CharField(source='salon.city', required=False)
+    salon_zipcode = serializers.CharField(source='salon.zip_code', required=False)
+    salon_state = serializers.CharField(source='salon.state', required=False)
 
     profile_photo_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
     profile_photo_url = serializers.CharField(read_only=True, source='get_profile_photo_url')
@@ -183,7 +187,7 @@ class StylistSerializer(
         fields = [
             'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url',
             'salon_name', 'salon_address', 'profile_photo_id', 'instagram_url',
-            'website_url',
+            'website_url', 'salon_city', 'salon_zipcode', 'salon_state'
         ]
 
     def validate_salon_address(self, salon_address: str) -> str:

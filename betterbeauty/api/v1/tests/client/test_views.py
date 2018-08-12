@@ -36,7 +36,7 @@ class TestClientProfileView:
         }
         profile_url = reverse('api:v1:client:client-profile')
         response = client.post(profile_url, data=data, HTTP_AUTHORIZATION=auth_token)
-        assert (response.status_code == status.HTTP_201_CREATED)
+        assert (response.status_code == status.HTTP_200_OK)
         data = response.data
         assert (data['first_name'] == 'Tom')
         assert (data['last_name'] == 'Cruise')
@@ -52,7 +52,7 @@ class TestClientProfileView:
         profile_url = reverse('api:v1:client:client-profile')
 
         response = client.post(profile_url, data=data, HTTP_AUTHORIZATION=auth_token)
-        assert (response.status_code == status.HTTP_201_CREATED)
+        assert (response.status_code == status.HTTP_200_OK)
         data = response.data
         assert (data['first_name'] == 'Tom')
         assert (data['last_name'] == 'Cruise')
