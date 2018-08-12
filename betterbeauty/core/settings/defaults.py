@@ -168,3 +168,6 @@ TWILLIO_SLACK_CHANNEL = '#auto-twilio-dev'
 
 GOOGLE_AUTOCOMPLETE_API_KEY = os.environ.get(
     'GOOGLE_AUTOCOMPLETE_API_KEY', '<override in local.py>')
+
+GOOGLE_GEOCODING_API_KEY = os.environ.get(
+    'GOOGLE_GEOCODING_API_KEY', '<override in local.py>')

@@ -9,6 +9,7 @@ from django.contrib.postgres.fields import DateRangeField
 from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 from timezone_field import TimeZoneField
 
@@ -18,6 +19,7 @@ from client.models import ClientOfStylist
 from core.choices import WEEKDAY
 from core.models import User
 from core.types import Weekday
+from integrations.gmaps import geo_code
 from .choices import INVITATION_STATUS_CHOICES
 from .contstants import DEFAULT_SERVICE_GAP_TIME_MINUTES
 from .types import InvitationStatus
@@ -38,12 +40,12 @@ class Salon(models.Model):
     name = models.CharField(max_length=255, null=True)
     timezone = TimeZoneField(default=settings.TIME_ZONE)
     address = models.CharField(max_length=255)
-    # TODO: Remove null/blank on address sub-fields as soon as we have
-    # TODO: proper address splitting mechanics in place.
     city = models.CharField(max_length=64, null=True, blank=True)
     state = models.CharField(max_length=2, null=True, blank=True)
     zip_code = models.CharField(max_length=5, null=True, blank=True)
     location = PointField(geography=True, null=True)
+    is_address_geocoded = models.BooleanField(default=False)
+    last_geo_coded = models.DateTimeField(blank=True, null=True, default=None)
 
     class Meta:
         db_table = 'salon'
@@ -56,6 +58,18 @@ class Salon(models.Model):
     def get_full_address(self) -> str:
         # TODO: change this to proper address generation
         return self.address
+
+    def geo_code_address(self):
+        geo_coded_address = geo_code(self.address)
+        if geo_coded_address:
+            self.city = geo_coded_address.city
+            self.state = geo_coded_address.state
+            self.zip_code = geo_coded_address.zip_code
+            self.location = geo_coded_address.location
+            self.is_address_geocoded = True
+        self.last_geo_coded = timezone.now()
+        self.save(update_fields=[
+            'city', 'state', 'zip_code', 'location', 'is_address_geocoded', 'last_geo_coded'])
 
 
 class StylistAvailableWeekDay(models.Model):

@@ -137,10 +137,10 @@ class ClientAuthTokenSerializer(FormattedErrorMessageMixin, serializers.Serializ
     def get_stylist_invitation(self, data):
         user = self.context['user']
         if user.is_client():
-            stylists = Invitation.objects.filter(
+            invitations = Invitation.objects.filter(
                 phone=user.phone).exclude(
                 status=InvitationStatus.ACCEPTED).order_by('-created_at')[:5]
-            return StylistSerializerWithInvitation(stylists, many=True).data
+            return StylistSerializerWithInvitation(invitations, many=True).data
 
 
 class FacebookAuthTokenSerializer(
