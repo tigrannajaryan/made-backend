@@ -37,3 +37,5 @@ INSTALLED_APPS += ['raven.contrib.django.raven_compat', ]  # noqa
 # Twilio
 TWILIO_SMS_ENABLED = False
 TWILIO_SLACK_MOCK_ENABLED = True
+
+IS_GEOCODING_ENABLED = True
