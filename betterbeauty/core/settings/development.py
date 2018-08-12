@@ -25,3 +25,5 @@ FB_APP_SECRET = '<override in local settings>'
 # Twilio
 TWILIO_SMS_ENABLED = False
 TWILIO_SLACK_MOCK_ENABLED = True
+
+IS_GEOCODING_ENABLED = False
