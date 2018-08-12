@@ -2395,7 +2395,8 @@ curl -X GET \
                     "photo_samples": [],
                     "category_uuid": "1b040c66-a74a-4383-8ab4-f48171e65fb3",
                     "category_name": "Braids and Locs",
-                    "uuid": "11a37320-c320-4d43-8d9d-b8f03147e54f"
+                    "uuid": "11a37320-c320-4d43-8d9d-b8f03147e54f",
+                     "category_code": "braids-and-locs"
                 }
             ]
         }
@@ -2461,6 +2462,8 @@ curl -X GET \
         "total_tax": 17.84,
         "total_card_fee": 5.53,
         "total_client_price_before_tax": 201,
+        "profile_photo_url":null,
+        "salon_name": "Jane Solon",
         "services": [
             {
                 "uuid": "724a442d-180b-4470-848c-44c932d1c218",
@@ -2499,6 +2502,8 @@ curl -X GET \
     "total_tax": 17.84,
     "total_card_fee": 5.53,
     "total_client_price_before_tax": 201,
+    "profile_photo_url":null,
+    "salon_name": "Jane Solon",
     "services": [
         {
             "uuid": "724a442d-180b-4470-848c-44c932d1c218",
@@ -2544,6 +2549,8 @@ curl -X POST \
     "total_tax": 17.84,
     "total_card_fee": 5.53,
     "total_client_price_before_tax": 201,
+    "profile_photo_url":null,
+    "salon_name": "Jane Solon",
     "services": [
         {
             "uuid": "724a442d-180b-4470-848c-44c932d1c218",
@@ -2587,6 +2594,8 @@ curl -X PATCH \
     "total_tax": 10.65,
     "total_card_fee": 3.3,
     "total_client_price_before_tax": 120,
+    "profile_photo_url":null,
+    "salon_name": "Jane Solon",
     "services": [
         {
             "uuid": "951f1607-e3f8-4fae-84ea-43fd07643db1",

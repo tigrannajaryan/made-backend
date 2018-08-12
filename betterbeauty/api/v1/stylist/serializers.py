@@ -109,6 +109,7 @@ class StylistServiceSerializer(
     uuid = serializers.UUIDField(required=False, allow_null=True)
     category_uuid = serializers.UUIDField(source='category.uuid')
     category_name = serializers.CharField(source='category.name', read_only=True)
+    category_code = serializers.CharField(source='category.category_code', read_only=True)
 
     def create(self, validated_data):
         stylist = self.context['stylist']
@@ -155,7 +156,7 @@ class StylistServiceSerializer(
         fields = [
             'name', 'description', 'base_price', 'duration_minutes',
             'is_enabled', 'is_addon', 'photo_samples', 'category_uuid', 'category_name',
-            'uuid'
+            'uuid', 'category_code',
         ]
 
 
@@ -270,12 +271,17 @@ class StylistSerializerWithInvitation(
     salon_address = serializers.CharField(source='stylist.salon.address', allow_null=True)
     profile_photo_url = serializers.CharField(
         read_only=True, source='stylist.get_profile_photo_url')
+    instagram_url = serializers.CharField(
+        source="stylist.instagram_url", read_only=True
+    )
     first_name = serializers.CharField(source='stylist.user.first_name')
     last_name = serializers.CharField(source='stylist.user.last_name')
     phone = PhoneNumberField(source='stylist.user.phone', )
+    website_url = serializers.DateTimeField(
+        source='stylist.created_at', read_only=True)
 
     class Meta:
-        model = Stylist
+        model = Invitation
         fields = [
             'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url',
             'salon_name', 'salon_address', 'instagram_url',

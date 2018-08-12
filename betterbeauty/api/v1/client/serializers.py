@@ -268,6 +268,11 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
     stylist_first_name = serializers.CharField(read_only=True, source='stylist.first_name')
     stylist_last_name = serializers.CharField(read_only=True, source='stylist.last_name')
     stylist_phone = serializers.CharField(read_only=True, source='stylist.phone')
+    profile_photo_url = serializers.CharField(
+        read_only=True, source='stylist.get_profile_photo_url')
+    salon_name = serializers.CharField(
+        source='stylist.salon.name', allow_null=True, required=False
+    )
 
     total_client_price_before_tax = serializers.DecimalField(
         max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
@@ -290,9 +295,9 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
     class Meta:
         model = Appointment
         fields = [
-            'uuid', 'stylist_uuid', 'stylist_first_name', 'stylist_last_name',
-            'stylist_phone', 'datetime_start_at', 'duration_minutes', 'status',
-            'total_tax', 'total_card_fee', 'total_client_price_before_tax',
+            'uuid', 'stylist_uuid', 'stylist_first_name', 'stylist_last_name', 'stylist_phone',
+            'profile_photo_url', 'salon_name', 'datetime_start_at', 'duration_minutes',
+            'status', 'total_tax', 'total_card_fee', 'total_client_price_before_tax',
             'services', 'grand_total', 'has_tax_included', 'has_card_fee_included',
         ]
 
