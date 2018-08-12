@@ -2,15 +2,72 @@ import datetime
 import os
 
 from path import Path
-from .utils import parse_database_url  # NOQA
+
+from core.settings.utils import get_handler_dict, get_logger_dict
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 PATH = Path(__file__).parent
 ROOT_PATH = PATH.parent.parent
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-LOGS_PATH = ROOT_PATH / 'logs'
+LOGS_PATH = ROOT_PATH
 LOG_MAX_FILESIZE = 10485760
+
+LOGGING = {
+    'version': 1,
+    'formatters': {
+        'django.server': {
+            '()': 'django.utils.log.ServerFormatter',
+            'format': '%(levelname)s [%(server_time)s] %(message)s',
+        },
+        'simple': {
+            'level': 'DEBUG',
+            'format': '%(levelname)s %(asctime)s %(message)s',
+        },
+        'verbose': {
+            'format': ('%(levelname)s %(asctime)s %(module)s %(process)d '
+                       '%(thread)d %(message)s'),
+        }
+    },
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'filters': ['require_debug_true', ],
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose'
+        },
+        'syslog': {
+            'filters': ['require_debug_false', ],
+            'level': 'DEBUG',
+            'class': 'logging.handlers.SysLogHandler',
+            'facility': 'local7',
+            'address': '/dev/log',
+            'formatter': 'verbose'
+        },
+        'django_log_file': get_handler_dict(LOGS_PATH, 'django', 'django.server', ),
+        'madebeauty_log_file': get_handler_dict(LOGS_PATH, 'madebeauty', 'django.server', ),
+    },
+    'loggers': {
+        'django': get_logger_dict(['console', 'syslog', 'django_log_file', ], 'INFO'),
+        'django.server': get_logger_dict(['console', 'syslog', 'django_log_file', ], 'INFO'),
+        'django.request': get_logger_dict(['console', 'syslog', 'django_log_file', ], 'INFO'),
+        'api': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
+        'appointment': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
+        'client': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
+        'core': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
+        'integrations': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
+        'pricing': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
+        'salon': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
+    }
+}
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '_8aa&jg@cd64@%2%20&6kzpu$cf8xu3hme&q&fu2gei(#7*h0r'
