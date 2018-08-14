@@ -10,9 +10,12 @@ from core.models import TemporaryFile, User
 def save_profile_photo(
         user: Optional[User], photo_uuid: Optional[str]
 ) -> None:
-    if not user or not photo_uuid:
+    if not user:
         return
-
+    if photo_uuid is None:
+        user.photo = None
+        user.save(update_fields=['photo', ])
+        return
     image_file_record: TemporaryFile = get_object_or_404(
         TemporaryFile,
         uuid=photo_uuid,
