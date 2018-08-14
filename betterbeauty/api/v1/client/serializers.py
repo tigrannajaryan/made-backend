@@ -60,7 +60,11 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
 
     @transaction.atomic
     def save(self, **kwargs):
-        profile_photo_id = self.validated_data.pop('profile_photo_id', None)
+        should_save_photo = False
+        profile_photo_id = None
+        if 'profile_photo_id' in self.validated_data:
+            should_save_photo = True
+            profile_photo_id = self.validated_data.pop('profile_photo_id')
         client_data = self.validated_data.pop('client', None)
         client = self.context['user'].client
         if client_data:
@@ -69,7 +73,7 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
             client.email = client_data.get('email', client.email)
             client.save(update_fields=['zip_code', 'birthday', 'email'])
         user = super(ClientProfileSerializer, self).save(**kwargs)
-        if profile_photo_id:
+        if should_save_photo:
             save_profile_photo(
                 user, profile_photo_id
             )
