@@ -481,3 +481,12 @@ class TimeSlotSerializer(FormattedErrorMessageMixin, serializers.Serializer):
     start = serializers.DateTimeField()
     end = serializers.DateTimeField()
     is_booked = serializers.BooleanField()
+
+
+class HomeSerializer(serializers.Serializer):
+    upcoming = AppointmentSerializer(many=True)
+    last_visited = AppointmentSerializer()
+
+
+class HistorySerializer(serializers.Serializer):
+    appointments = AppointmentSerializer(many=True)
