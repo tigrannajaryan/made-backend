@@ -733,6 +733,7 @@ class AppointmentServiceSerializer(
     client_price = serializers.DecimalField(
         max_digits=6, decimal_places=2, coerce_to_string=False, required=False
     )
+    is_original = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = AppointmentService
