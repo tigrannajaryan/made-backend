@@ -4,9 +4,11 @@ import mock
 import pytest
 import pytz
 
+from django.core.files import File
 from django_dynamic_fixture import G
 from freezegun import freeze_time
 
+from api.common.utils import save_profile_photo
 from api.v1.stylist.serializers import (
     AppointmentSerializer,
     AppointmentUpdateSerializer,
@@ -24,7 +26,7 @@ from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.models import ClientOfStylist
 from core.choices import USER_ROLE
-from core.models import User
+from core.models import TemporaryFile, User
 from core.types import UserRole, Weekday
 from core.utils import calculate_card_fee, calculate_tax
 from pricing import CalculatedPrice
@@ -76,6 +78,39 @@ class TestStylistSerializer(object):
         assert(stylist.salon is not None)
         assert(stylist.user.first_name == 'Jane')
         assert(stylist.salon.name == 'Janes beauty')
+
+    @pytest.mark.django_db
+    def test_stylist_serializer_erase_photo(self, stylist_data: Stylist):
+        photo = G(
+            TemporaryFile,
+            uploaded_by=stylist_data.user,
+        )
+        file_mock = mock.MagicMock(spec=File, name='FileMock')
+        file_mock.name = 'test1.jpg'
+        photo.file = file_mock
+        photo.save()
+        save_profile_photo(stylist_data.user, photo.uuid)
+        assert(stylist_data.get_profile_photo_url() is not None)
+        data = {'first_name': 'Barbara'}
+
+        stylist_data.refresh_from_db()
+        serializer = StylistSerializer(
+            instance=stylist_data, data=data, context={'user': stylist_data.user},
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        stylist = serializer.save()
+        assert (stylist.get_profile_photo_url() is not None)
+
+        data = {'profile_photo_id': None}
+        stylist_data.refresh_from_db()
+        serializer = StylistSerializer(
+            instance=stylist_data, data=data, context={'user': stylist_data.user},
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        stylist = serializer.save()
+        assert (stylist.get_profile_photo_url() is None)
 
     @pytest.mark.django_db
     def test_stylist_create(self):

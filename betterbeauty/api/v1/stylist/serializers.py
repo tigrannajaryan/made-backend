@@ -212,9 +212,10 @@ class StylistSerializer(
                 )
                 if salon_serializer.is_valid(raise_exception=True):
                     stylist.salon = salon_serializer.save()
-            save_profile_photo(
-                stylist.user, validated_data.get('profile_photo_id', None)
-            )
+            if 'profile_photo_id' in validated_data:
+                save_profile_photo(
+                    stylist.user, validated_data.get('profile_photo_id')
+                )
         return super(StylistSerializer, self).update(stylist, validated_data)
 
     def create(self, validated_data) -> Stylist:
@@ -238,11 +239,14 @@ class StylistSerializer(
             )
             salon_serializer.is_valid(raise_exception=True)
             salon = salon_serializer.save()
-            profile_photo_id = validated_data.pop('profile_photo_id', None)
+            should_save_photo = False
+            profile_photo_id = None
+            if 'profile_photo_id' in validated_data:
+                profile_photo_id = validated_data.pop('profile_photo_id')
+                should_save_photo = True
             stylist = create_stylist_profile_for_user(user, salon=salon)
-            save_profile_photo(
-                user, profile_photo_id
-            )
+            if should_save_photo:
+                save_profile_photo(user, profile_photo_id)
             return stylist
 
 
