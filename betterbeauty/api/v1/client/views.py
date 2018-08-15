@@ -98,7 +98,7 @@ class StylistServicesView(generics.RetrieveAPIView):
         ) | Q(
             clients_of_stylist__client=client
         )
-        return Stylist.objects.filter(available_stylists)
+        return Stylist.objects.filter(available_stylists).distinct('id')
 
     def get_object(self):
         return get_object_or_404(
@@ -159,7 +159,7 @@ class SearchStylistView(generics.ListAPIView):
     def get_queryset(self):
         query = post_or_get_or_data(self.request, 'search_like', '')
         latitude = post_or_get_or_data(self.request, 'latitude', 40.7128)
-        longitude = post_or_get_or_data(self.request, 'longitude', 74.0060)
+        longitude = post_or_get_or_data(self.request, 'longitude', -74.0060)
         accuracy = post_or_get_or_data(self.request, 'accuracy', 50000)
         location = Point(longitude, latitude)
         self.save_search_request(location)
