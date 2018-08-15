@@ -98,7 +98,7 @@ class StylistServicesView(generics.RetrieveAPIView):
         ) | Q(
             clients_of_stylist__client=client
         )
-        return Stylist.objects.filter(available_stylists)
+        return Stylist.objects.filter(available_stylists).distinct('id')
 
     def get_object(self):
         return get_object_or_404(
