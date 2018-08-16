@@ -355,9 +355,7 @@ class StylistAppointmentPreviewView(views.APIView):
             include_card_fee=preview_request.has_card_fee_included,
             include_tax=preview_request.has_tax_included
         )
-        duration = sum(
-            [s.duration for s in service_items], datetime.timedelta(0)
-        )
+        duration = stylist.service_time_gap
 
         conflicts_with = stylist.get_appointments_in_datetime_range(
             preview_request.datetime_start_at,
