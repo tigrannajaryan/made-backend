@@ -49,8 +49,6 @@
       - [Files](#user-content-files-upload)
       - [Images](#user-content-image-upload)
 - [**Client API**](#client-api)
-    - [Get Code](#get-code)
-    - [Confirm Code](#confirm-code)
     - [Profile](#client-profile)
     - [Preferred Stylist](#preferred-stylists)
     - [Search Stylists](#search-stylists)
@@ -377,6 +375,120 @@ curl -X POST http://apiserver//api/v1/auth/register \
 }
 ```
 
+## Register user using phone / SMS code verification
+User (client or stylist) can be registered using 2-step phone-based authentication.
+- Step 1: call `/api/v1/auth/get-code` supplying role and phone
+- Step 2: call `/api/v1/auth/code/confirm` to confirm received code
+
+### Get Code
+
+**POST /api/v1/auth/get-code**
+
+```
+curl -X POST \
+  http://apiserver/api/v1/auth/get-code \
+  -H 'content-type: application/json' \
+  -d '{
+	"phone": "+12525858484",
+	"role": "client"
+}'
+```
+
+**Response 200 OK**
+```json
+{}
+```
+
+**Response 400 Bad Request**
+```json
+{
+  "phone":["Enter a valid phone number"]
+}
+```
+**Response 400 Bad Request**
+```json
+{
+  "detail":"You should wait for 2min before re-requesting a code."
+}
+```
+
+## Confirm Code
+
+**POST /api/v1/auth/code/confirm**
+```
+curl -X POST \
+  http://apiserver/api/v1/auth/code/confirm \
+  -H 'content-type: application/json' \
+  -d '{
+	"phone": "+11234567890",
+	"code": "123456",
+	"role": "client"
+}'
+```
+
+**Response 200 OK** (in case of client user)
+```json
+{
+    "token": "jwt_token",
+    "created_at": 1531204345,
+    "role": [
+        "client"
+    ],
+    "stylist_invitation": [
+        {
+            "id": 1,
+            "first_name": "John",
+            "last_name": "Doe",
+            "phone": "+19876543210",
+            "profile_photo_url": null,
+            "salon_name": "John Salon",
+            "salon_address": "111 Front Street",
+            "instagram_url": null,
+            "website_url": "https://example.com",
+            "invitation_created_at": "2018-07-09T11:35:39.441844-04:00"
+        },
+        {
+            "id": 13,
+            "first_name": "Mark",
+            "last_name": "Zuck",
+            "phone": "+11131131131",
+            "profile_photo_url": null,
+            "salon_name": "Mark Salon",
+            "salon_address": "1234 Back Street",
+            "instagram_url": null,
+            "website_url": "https://example.com",
+            "invitation_created_at": "2018-07-09T11:35:39.441844-04:00"
+        }
+    ]
+}
+```
+
+**Response 200 OK** (in case of stylist user)
+
+```
+{
+    "token": "jwt_token",
+    "expires_in": 86400,
+    "role": "stylist",
+    "profile": null,
+    "profile_status": null
+}
+```
+
+**Response 400 Bad Request**
+```json
+{
+    "code": "err_api_exception",
+    "field_errors": {
+        "code": [
+            {
+                "code": "err_invalid_sms_code"
+            }
+        ]
+    },
+    "non_field_errors": []
+}
+```
 
 # Stylist/Salon API
 
@@ -2093,103 +2205,6 @@ curl -X POST \
 
 
 # Client API
-
-## Get Code
-
-**POST /api/v1/client/auth/get-code**
-
-```
-curl -X POST \
-  http://apiserver/api/v1/auth/get-code \
-  -H 'content-type: application/json' \
-  -d '{
-	"phone": "+12525858484"
-}'
-```
-
-**Response 200 OK**
-```json
-{}
-```
-
-**Response 400 Bad Request**
-```json
-{
-  "phone":["Enter a valid phone number"]
-}
-```
-**Response 400 Bad Request**
-```json
-{
-  "detail":"You should wait for 2min before re-requesting a code."
-}
-```
-
-## Confirm Code
-
-**POST /api/v1/client/auth/code/confirm**
-```
-curl -X POST \
-  http://apiserver/api/v1/auth/code/confirm \
-  -H 'content-type: application/json' \
-  -d '{
-	"phone": "+11234567890",
-	"code": "123456"
-}'
-```
-
-**Response 200 OK**
-```json
-{
-    "token": "jwt_token",
-    "created_at": 1531204345,
-    "role": [
-        "client"
-    ],
-    "stylist_invitation": [
-        {
-            "id": 1,
-            "first_name": "John",
-            "last_name": "Doe",
-            "phone": "+19876543210",
-            "profile_photo_url": null,
-            "salon_name": "John Salon",
-            "salon_address": "111 Front Street",
-            "instagram_url": null,
-            "website_url": "https://example.com",
-            "invitation_created_at": "2018-07-09T11:35:39.441844-04:00"
-        },
-        {
-            "id": 13,
-            "first_name": "Mark",
-            "last_name": "Zuck",
-            "phone": "+11131131131",
-            "profile_photo_url": null,
-            "salon_name": "Mark Salon",
-            "salon_address": "1234 Back Street",
-            "instagram_url": null,
-            "website_url": "https://example.com",
-            "invitation_created_at": "2018-07-09T11:35:39.441844-04:00"
-        }
-    ]
-}
-```
-
-**Response 400 Bad Request**
-```json
-{
-    "code": "err_api_exception",
-    "field_errors": {
-        "code": [
-            {
-                "code": "err_invalid_sms_code"
-            }
-        ]
-    },
-    "non_field_errors": []
-}
-```
-
 
 ## Client Profile
 

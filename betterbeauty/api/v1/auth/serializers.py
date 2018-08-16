@@ -18,9 +18,8 @@ from api.v1.stylist.serializers import (
     StylistSerializerWithInvitation
 )
 from client.constants import MINUTES_BEFORE_REQUESTING_NEW_CODE
-from client.models import PhoneSMSCodes
 from core.choices import USER_ROLE
-from core.models import User
+from core.models import PhoneSMSCodes, User
 from core.types import FBAccessToken, FBUserID, UserRole
 from core.utils.facebook import get_or_create_facebook_user
 from salon.models import Invitation
@@ -179,6 +178,7 @@ class FacebookAuthTokenSerializer(
 
 class PhoneSerializer(FormattedErrorMessageMixin, serializers.Serializer):
     phone = PhoneNumberField()
+    role = serializers.ChoiceField(choices=USER_ROLE, default=UserRole.CLIENT.value)
 
     def validate(self, attrs):
         """
@@ -186,8 +186,9 @@ class PhoneSerializer(FormattedErrorMessageMixin, serializers.Serializer):
             minutes, we raise validation error,
         """
         phone = attrs['phone']
+        role = attrs.get('role', UserRole.CLIENT.value)
         try:
-            phone_sms_code = PhoneSMSCodes.objects.get(phone=phone)
+            phone_sms_code = PhoneSMSCodes.objects.get(phone=phone, role=role)
             if not (timezone.now() - phone_sms_code.generated_at) > timedelta(
                     minutes=MINUTES_BEFORE_REQUESTING_NEW_CODE):
                 raise ValidationError(ErrorMessages.ERR_WAIT_TO_REREQUEST_NEW_CODE)
@@ -200,11 +201,15 @@ class PhoneSMSCodeSerializer(FormattedErrorMessageMixin, serializers.Serializer)
 
     phone = PhoneNumberField()
     code = serializers.CharField(write_only=True)
+    role = serializers.ChoiceField(
+        required=False, choices=USER_ROLE, default=UserRole.CLIENT.value
+    )
 
     def validate(self, attrs):
         data = self.initial_data
+        role = data.get('role', UserRole.CLIENT)
         is_valid_code: bool = PhoneSMSCodes.validate_sms_code(
-            phone=data['phone'], code=data['code'])
+            phone=data['phone'], code=data['code'], role=role)
         if not is_valid_code:
             raise ValidationError({
                 'code': ErrorMessages.ERR_INVALID_SMS_CODE
@@ -213,4 +218,4 @@ class PhoneSMSCodeSerializer(FormattedErrorMessageMixin, serializers.Serializer)
 
     class Meta:
         model = PhoneSMSCodes
-        fields = ['phone', 'code']
+        fields = ['phone', 'code', 'role', ]
