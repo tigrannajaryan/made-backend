@@ -26,7 +26,7 @@ from api.v1.stylist.constants import MAX_APPOINTMENTS_PER_REQUEST
 from api.v1.stylist.serializers import StylistSerializer, StylistServicePricingSerializer
 from appointment.models import Appointment
 from appointment.types import AppointmentStatus
-from client.models import ClientOfStylist, StylistSearchRequest
+from client.models import StylistSearchRequest
 from core.utils import post_or_get
 from core.utils import post_or_get_or_data
 from salon.models import Stylist, StylistService
@@ -167,9 +167,6 @@ class SearchStylistView(generics.ListAPIView):
 
     @staticmethod
     def _search_stylists(query: str, location: Point, accuracy: int) -> models.QuerySet:
-
-        if 1 <= len(query) < 3:
-            return ClientOfStylist.objects.none()
 
         stylists = Stylist.objects.annotate(
             full_name=Concat(F('user__first_name'), Value(' '), F('user__last_name')),
