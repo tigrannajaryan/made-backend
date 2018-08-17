@@ -20,7 +20,7 @@ def render_one_time_sms_for_phone(code: str):
     )
 
 
-def send_sms_message(to_phone: str, body: str, status_callback=None):
+def send_sms_message(to_phone: str, body: str, role: str, status_callback=None):
     # TODO: implement status callback handler
     if settings.TWILIO_SMS_ENABLED:
         client = Client()

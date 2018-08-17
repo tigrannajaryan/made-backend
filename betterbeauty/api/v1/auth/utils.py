@@ -7,6 +7,29 @@ from client.models import Client, ClientOfStylist
 from core.models import User
 from core.types import UserRole
 from salon.models import Invitation
+from salon.utils import create_stylist_profile_for_user
+
+
+def create_user_from_phone(phone: str, role) -> User:
+    bogus_email = 'client-{0}@madebeauty.com'.format(uuid4())
+    user = User.objects.create_user(
+        email=bogus_email,
+        first_name="",
+        last_name="",
+        phone=phone,
+        is_active=True,
+        role=[UserRole.CLIENT]
+    )
+    user.set_unusable_password()
+    return user
+
+
+@transaction.atomic
+def create_stylist_profile_from_phone(phone: str, user: Optional[User]=None)-> User:
+    if not user:
+        user = create_user_from_phone(phone, role=UserRole.STYLIST)
+    create_stylist_profile_for_user(user)
+    return user
 
 
 @transaction.atomic
@@ -15,16 +38,7 @@ def create_client_profile_from_phone(phone: str, user: Optional[User]=None)-> Us
         user.role.append(UserRole.CLIENT)
         user.save(update_fields=['role'])
     if not user:
-        bogus_email = 'client-{0}@madebeauty.com'.format(uuid4())
-        user = User.objects.create_user(
-            email=bogus_email,
-            first_name="",
-            last_name="",
-            phone=phone,
-            is_active=True,
-            role=[UserRole.CLIENT]
-        )
-        user.set_unusable_password()
+        user = create_user_from_phone(phone, UserRole.CLIENT)
 
     client = Client.objects.create(user=user)
     current_stylists = []

@@ -9,14 +9,13 @@ from django.utils import timezone
 from django_dynamic_fixture import G
 from rest_framework import status
 
-from client.models import PhoneSMSCodes
-from core.models import User
+from core.models import PhoneSMSCodes, User
 from core.types import UserRole
 from integrations.twilio import render_one_time_sms_for_phone
 from salon.models import Invitation, Stylist
 
 
-def get_code(expired=False, redeemed=False):
+def get_code(expired=False, redeemed=False, role=UserRole.CLIENT):
     generated_time = timezone.now() - timedelta(minutes=10)
     if expired:
         generated_time = timezone.now() - timedelta(days=1)
@@ -28,6 +27,7 @@ def get_code(expired=False, redeemed=False):
              generated_at=generated_time,
              redeemed_at=redeemed_time,
              expires_at=generated_time + timedelta(minutes=30),
+             role=role
              )
     return code
 
@@ -36,7 +36,7 @@ class TestSendCodeView(object):
 
     @pytest.mark.django_db
     def test_send_code_for_new_number(self, client, mocker):
-        sms_mock = mocker.patch('client.models.send_sms_message')
+        sms_mock = mocker.patch('core.models.send_sms_message')
         data = {
             'phone': '+19876543210'
         }
@@ -47,6 +47,22 @@ class TestSendCodeView(object):
         message = render_one_time_sms_for_phone(code.code)
         sms_mock.assert_called_once_with(
             to_phone=data['phone'],
+            role=UserRole.CLIENT.value,
+            body=message
+        )
+        data = {
+            'phone': '+19876543211',
+            'role': UserRole.STYLIST
+        }
+        sms_mock.reset_mock()
+        sendcode_url = reverse('api:v1:auth:send-code')
+        response = client.post(sendcode_url, data=data)
+        assert (response.status_code == status.HTTP_200_OK)
+        code = PhoneSMSCodes.objects.last()
+        message = render_one_time_sms_for_phone(code.code)
+        sms_mock.assert_called_once_with(
+            to_phone=data['phone'],
+            role=UserRole.STYLIST.value,
             body=message
         )
 
@@ -74,12 +90,22 @@ class TestVerifyCodeView(object):
 
     @pytest.mark.django_db
     def test_verify_correct_code(self, client):
-        code = get_code()
+        code = get_code(role=UserRole.CLIENT)
         data = {
             'phone': code.phone,
-            'code': code.code
+            'code': code.code,
+            'role': UserRole.STYLIST
         }
         sendcode_url = reverse('api:v1:auth:verify-code')
+        response = client.post(sendcode_url, data=data)
+        assert (response.status_code == status.HTTP_400_BAD_REQUEST)
+        user = User.objects.last()
+        assert (user is None)
+        data = {
+            'phone': code.phone,
+            'code': code.code,
+            'role': UserRole.CLIENT
+        }
         response = client.post(sendcode_url, data=data)
         assert (response.status_code == status.HTTP_200_OK)
         user = User.objects.last()
@@ -102,6 +128,24 @@ class TestVerifyCodeView(object):
         client_of_stylist = client.client_of_stylists.last()
         assert (client_of_stylist.phone == code.phone)
         assert (client_of_stylist.stylist == stylist_data)
+
+    @pytest.mark.django_db
+    def test_verify_stylist_creation(self, client):
+        code = get_code(role=UserRole.STYLIST)
+        data = {
+            'phone': code.phone,
+            'code': code.code,
+            'role': UserRole.STYLIST
+        }
+        sendcode_url = reverse('api:v1:auth:verify-code')
+        response = client.post(sendcode_url, data=data)
+        assert (response.status_code == status.HTTP_200_OK)
+        user = User.objects.last()
+        assert(user)
+        assert(user.phone == code.phone)
+        assert(user.is_stylist())
+        stylist = user.stylist
+        assert (stylist is not None)
 
     @pytest.mark.django_db
     def test_verify_incorrect_code(self, client):

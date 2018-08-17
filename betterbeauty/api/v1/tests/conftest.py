@@ -10,9 +10,9 @@ from rest_framework_jwt.settings import api_settings
 
 from api.v1.auth.utils import create_client_profile_from_phone
 
-from client.models import Client, PhoneSMSCodes
+from client.models import Client
 from core.choices import USER_ROLE
-from core.models import User
+from core.models import PhoneSMSCodes, User
 from core.types import UserRole, Weekday
 from salon.models import Salon, Stylist
 from salon.utils import create_stylist_profile_for_user

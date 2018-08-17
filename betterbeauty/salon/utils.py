@@ -15,7 +15,7 @@ from core.constants import (
     DEFAULT_WEEKDAY_DISCOUNT_PERCENTS,
 )
 from core.models import User
-from core.types import Weekday
+from core.types import UserRole, Weekday
 from pricing import (
     calc_client_prices,
     CalculatedPrice,
@@ -247,4 +247,9 @@ def create_stylist_profile_for_user(user: User, **kwargs) -> Stylist:
             )
             discount.discount_percent = DEFAULT_WEEKDAY_DISCOUNT_PERCENTS[i]
             discount.save(update_fields=['discount_percent', ])
+        if UserRole.STYLIST.value not in user.role:
+            current_roles: list = user.role if user.role else []
+            current_roles.append(UserRole.STYLIST.value)
+            user.role = current_roles
+            user.save(update_fields=['role', ])
         return stylist
