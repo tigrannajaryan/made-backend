@@ -2,6 +2,7 @@ from django.conf.urls import url
 
 from api.v1.client.views import (
     AppointmentListCreateAPIView,
+    AppointmentPreviewView,
     AppointmentRetriveUpdateView,
     AvailableTimeSlotView,
     ClientProfileView,
@@ -32,6 +33,8 @@ urlpatterns = [
 
     url('^appointments$',
         AppointmentListCreateAPIView.as_view(), name='appointments'),
+    url('^appointments/preview$',
+        AppointmentPreviewView.as_view(), name='appointments-preview'),
     url('^appointments/(?P<uuid>[0-9a-f\-]+)$',
         AppointmentRetriveUpdateView.as_view(), name='appointment')
 ]

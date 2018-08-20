@@ -2454,9 +2454,9 @@ curl -X POST \
 }
 ```
 
-## Appointment
+## Appointments
 
-
+### Retrieve list of existing appointments
 **GET /api/v1/client/appointments**
 
 ```
@@ -2499,6 +2499,9 @@ curl -X GET \
 ]
 ```
 
+
+### Get single appointment
+
 **GET /api/v1/client/appointments/:uuid**
 ```
 curl -X GET \
@@ -2537,6 +2540,9 @@ curl -X GET \
     "has_card_fee_included": false
 }
 ```
+
+
+### Create new appointment
 
 **POST /api/v1/client/appointments**
 ```
@@ -2585,6 +2591,8 @@ curl -X POST \
 }
 ```
 
+### Update existing appointment
+
 **PATCH/POST /api/v1/client/appointments/:uuid**
 ```
 curl -X PATCH \
@@ -2630,6 +2638,54 @@ curl -X PATCH \
 }
 ```
 
+### Preview appointment (without creating it)
+
+**POST /api/v1/client/appointments/preview**
+```
+curl -X POST \
+  http://apiserver/api/v1/client/appointments \
+  -H 'Authorization: Token jwt_token' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "stylist_uuid": "d5a2e88f-68f1-4ed5-95d2-e4e2a51f13e4",
+  "datetime_start_at": "2018-06-18T09:30:00-04:00",
+  "services": [{
+    "service_uuid": "11a37320-c320-4d43-8d9d-b8f03147e54f"
+  }]
+}'
+```
+
+**Response 200 OK**
+```json
+{
+    "stylist_uuid": "d5a2e88f-68f1-4ed5-95d2-e4e2a51f13e4",
+    "stylist_first_name": "Jane",
+    "stylist_last_name": "McBob",
+    "stylist_phone": "+19876543210",
+    "datetime_start_at": "2018-06-18T09:30:00-04:00",
+    "duration_minutes": 150,
+    "status": "new",
+    "total_tax": 17.84,
+    "total_card_fee": 5.53,
+    "total_client_price_before_tax": 201,
+    "profile_photo_url":null,
+    "salon_name": "Jane Solon",
+    "services": [
+        {
+            "uuid": "724a442d-180b-4470-848c-44c932d1c218",
+            "service_name": "Crochet braids",
+            "service_uuid": "11a37320-c320-4d43-8d9d-b8f03147e54f",
+            "client_price": 201,
+            "regular_price": 201,
+            "is_original": true
+        }
+    ],
+    "grand_total": 201,
+    "has_tax_included": false,
+    "has_card_fee_included": false
+}
+```
+
 ## Available Slots
 
 **POST /api/v1/client/available-times**
@@ -2639,7 +2695,7 @@ curl -X POST \
   'http://apiserver/api/v1/client/available-times' \
   -H 'Authorization: Token {{auth_token}}' \
   -H 'Content-Type: application/json' \
-  -d '{ 
+  -d '{
 	"date": "2018-08-16",
 	"stylist_uuid": "d5a2e88f-68f1-4ed5-95d2-e4e2a51f13e4"
 }'
