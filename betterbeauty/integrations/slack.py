@@ -1,8 +1,13 @@
+import logging
+
 from django.conf import settings
 from django.template.loader import render_to_string
 
-
+from requests.exceptions import HTTPError
 from slackweb import Slack
+
+
+logger = logging.getLogger(__name__)
 
 
 def send_slack_twilio_message_notification(from_phone, to_phone, message):
@@ -17,8 +22,13 @@ def send_slack_twilio_message_notification(from_phone, to_phone, message):
             'to_phone': to_phone,
             'message': message,
         })
-    slack.notify(
-        text=message,
-        channel=settings.TWILLIO_SLACK_CHANNEL,
-        username='twilio-bot',
-    )
+    try:
+        slack.notify(
+            text=message,
+            channel=settings.TWILLIO_SLACK_CHANNEL,
+            username='twilio-bot',
+        )
+    except HTTPError:
+        if settings.LEVEL != 'production':
+            raise
+        logging.exception('Failed to send Slack message', exc_info=True)
