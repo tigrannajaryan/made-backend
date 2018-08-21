@@ -18,10 +18,11 @@ from api.v1.client.serializers import (
     AddPreferredClientsSerializer,
     AppointmentSerializer,
     AppointmentUpdateSerializer,
+    AvailableDateSerializer,
     ClientPreferredStylistSerializer,
     ClientProfileSerializer,
     ServicePricingRequestSerializer,
-    StylistServiceListSerializer)
+    StylistServiceListSerializer, TimeSlotSerializer)
 from api.v1.stylist.constants import MAX_APPOINTMENTS_PER_REQUEST
 from api.v1.stylist.serializers import StylistSerializer, StylistServicePricingSerializer
 from appointment.models import Appointment
@@ -257,3 +258,20 @@ class AppointmentRetriveUpdateView(generics.RetrieveUpdateAPIView):
             appointments,
             uuid=self.kwargs['uuid']
         )
+
+
+class AvailableTimeSlotView(views.APIView):
+
+    permission_classes = [ClientPermission, permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = AvailableDateSerializer(data=request.data, )
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        stylist = get_object_or_404(
+            Stylist.objects.filter(preferredstylist__client=request.user.client).distinct('id'),
+            uuid=data['stylist_uuid'])
+        date = data['date']
+        available_slots = stylist.get_available_slots(date)
+        serializer = TimeSlotSerializer(available_slots, many=True)
+        return Response(data={'time_slots': serializer.data},)

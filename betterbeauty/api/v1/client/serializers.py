@@ -470,3 +470,14 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
         if status != AppointmentStatus.NEW:
             raise serializers.ValidationError(appointment_errors.ERR_CANNOT_MODIFY_APPOINTMENT)
         return attrs
+
+
+class AvailableDateSerializer(FormattedErrorMessageMixin, serializers.Serializer):
+    date = serializers.DateField()
+    stylist_uuid = serializers.UUIDField()
+
+
+class TimeSlotSerializer(FormattedErrorMessageMixin, serializers.Serializer):
+    start = serializers.DateTimeField()
+    end = serializers.DateTimeField()
+    is_booked = serializers.BooleanField()
