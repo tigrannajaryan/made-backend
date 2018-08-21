@@ -1,4 +1,5 @@
 import datetime
+from typing import Optional
 
 from dateutil.parser import parse
 
@@ -9,6 +10,7 @@ from django.db import models
 from django.db.models import F, Q, Value
 from django.db.models.functions import Concat
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from ipware import get_client_ip
 from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
@@ -16,18 +18,25 @@ from rest_framework.response import Response
 from api.common.permissions import ClientPermission
 from api.v1.client.serializers import (
     AddPreferredClientsSerializer,
+    AppointmentPreviewRequestSerializer,
+    AppointmentPreviewResponseSerializer,
     AppointmentSerializer,
     AppointmentUpdateSerializer,
     AvailableDateSerializer,
     ClientPreferredStylistSerializer,
     ClientProfileSerializer,
+    HistorySerializer,
+    HomeSerializer,
     ServicePricingRequestSerializer,
-    StylistServiceListSerializer, TimeSlotSerializer)
+    StylistServiceListSerializer,
+    TimeSlotSerializer
+)
 from api.v1.stylist.constants import MAX_APPOINTMENTS_PER_REQUEST
 from api.v1.stylist.serializers import StylistSerializer, StylistServicePricingSerializer
 from appointment.models import Appointment
+from appointment.preview import AppointmentPreviewRequest, build_appointment_preview_dict
 from appointment.types import AppointmentStatus
-from client.models import StylistSearchRequest
+from client.models import Client, ClientOfStylist, StylistSearchRequest
 from core.utils import post_or_get
 from core.utils import post_or_get_or_data
 from salon.models import Stylist, StylistService
@@ -113,7 +122,7 @@ class StylistServicePriceView(views.APIView):
 
     def post(self, request, *args, **kwargs):
         serializer = ServicePricingRequestSerializer(
-            data=request.data, )
+            data=request.data)
         serializer.is_valid(raise_exception=True)
         client = self.request.user.client
         service_uuid = serializer.validated_data.get('service_uuid')
@@ -260,6 +269,44 @@ class AppointmentRetriveUpdateView(generics.RetrieveUpdateAPIView):
         )
 
 
+class AppointmentPreviewView(views.APIView):
+    permission_classes = [ClientPermission, permissions.IsAuthenticated]
+
+    def get_serializer_context(self):
+        stylist_uuid = post_or_get_or_data(self.request, 'stylist_uuid', None)
+        stylist = None
+        if stylist_uuid:
+            stylist = Stylist.objects.get(uuid=stylist_uuid)
+        return {
+            'user': self.request.user,
+            'stylist': stylist,
+        }
+
+    def post(self, request):
+        client: Client = self.request.user.client
+        serializer = AppointmentPreviewRequestSerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+        stylist: Stylist = get_object_or_404(
+            Stylist,
+            uuid=serializer.validated_data.pop('stylist_uuid')
+        )
+        client_of_stylist: Optional[ClientOfStylist] = stylist.clients_of_stylist.filter(
+            client=client
+        ).last()
+        preview_request = AppointmentPreviewRequest(**serializer.validated_data)
+        response_serializer = AppointmentPreviewResponseSerializer(
+            build_appointment_preview_dict(
+                stylist=stylist,
+                client_of_stylist=client_of_stylist,
+                preview_request=preview_request
+            ),
+            context=self.get_serializer_context()
+        )
+        return Response(response_serializer.data)
+
+
 class AvailableTimeSlotView(views.APIView):
 
     permission_classes = [ClientPermission, permissions.IsAuthenticated]
@@ -275,3 +322,67 @@ class AvailableTimeSlotView(views.APIView):
         available_slots = stylist.get_available_slots(date)
         serializer = TimeSlotSerializer(available_slots, many=True)
         return Response(data={'time_slots': serializer.data},)
+
+
+class HomeView(generics.RetrieveAPIView):
+
+    permission_classes = [ClientPermission, permissions.IsAuthenticated]
+    serializer_class = HomeSerializer
+
+    def get(self, request, *args, **kwargs):
+        client = self.request.user.client
+        upcoming_appointments = self.get_upcoming_appointments(client)
+        last_visited_appointment = self.get_last_visited_object(client)
+        serializer = self.get_serializer({
+            'upcoming': upcoming_appointments,
+            'last_visited': last_visited_appointment
+        })
+        return Response(serializer.data)
+
+    @staticmethod
+    def get_upcoming_appointments(client):
+        datetime_from = timezone.now()
+        datetime_to = None
+        exclude_statuses = [
+            AppointmentStatus.CANCELLED_BY_CLIENT
+        ]
+        return client.get_appointments_in_datetime_range(
+            datetime_from, datetime_to, exclude_statuses=exclude_statuses
+        )
+
+    @staticmethod
+    def get_last_visited_object(client):
+        datetime_from = None
+        datetime_to = timezone.now()
+        exclude_statuses = [
+            AppointmentStatus.CANCELLED_BY_CLIENT,
+            AppointmentStatus.CANCELLED_BY_STYLIST
+        ]
+        return client.get_appointments_in_datetime_range(
+            datetime_from, datetime_to, exclude_statuses=exclude_statuses
+        ).order_by('datetime_start_at').last()
+
+
+class HistoryView(generics.ListAPIView):
+
+    permission_classes = [ClientPermission, permissions.IsAuthenticated]
+    serializer_class = HistorySerializer
+
+    def get(self, request, *args, **kwargs):
+        client = self.request.user.client
+        historical_appointments = list(self.get_historical_appointments(client))
+        serializer = self.get_serializer({
+            'appointments': historical_appointments,
+        })
+        return Response(serializer.data)
+
+    @staticmethod
+    def get_historical_appointments(client):
+        datetime_from = None
+        datetime_to = timezone.now()
+        exclude_statuses = [
+            AppointmentStatus.CANCELLED_BY_CLIENT
+        ]
+        return client.get_appointments_in_datetime_range(
+            datetime_from, datetime_to, exclude_statuses=exclude_statuses
+        )

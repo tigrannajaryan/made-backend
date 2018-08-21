@@ -163,7 +163,7 @@ class ClientOfStylistSerializer(FormattedErrorMessageMixin, serializers.ModelSer
         fields = ['first_name', 'last_name', 'phone', 'uuid', ]
 
 
-class StylistServiceListSerializer(serializers.ModelSerializer):
+class StylistServiceListSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
     stylist_uuid = serializers.UUIDField(read_only=True, source='uuid')
     categories = serializers.SerializerMethodField(read_only=True)
 
@@ -182,7 +182,7 @@ class StylistServiceListSerializer(serializers.ModelSerializer):
         ).data
 
 
-class ServicePricingRequestSerializer(serializers.Serializer):
+class ServicePricingRequestSerializer(FormattedErrorMessageMixin, serializers.Serializer):
     service_uuid = serializers.UUIDField()
 
 
@@ -481,3 +481,62 @@ class TimeSlotSerializer(FormattedErrorMessageMixin, serializers.Serializer):
     start = serializers.DateTimeField()
     end = serializers.DateTimeField()
     is_booked = serializers.BooleanField()
+
+
+class HomeSerializer(serializers.Serializer):
+    upcoming = AppointmentSerializer(many=True)
+    last_visited = AppointmentSerializer()
+
+
+class HistorySerializer(serializers.Serializer):
+    appointments = AppointmentSerializer(many=True)
+
+
+class AppointmentPreviewRequestSerializer(
+    FormattedErrorMessageMixin, AppointmentValidationMixin, serializers.Serializer
+):
+    stylist_uuid = serializers.UUIDField()
+    datetime_start_at = serializers.DateTimeField()
+    services = AppointmentServiceSerializer(many=True, required=True, allow_empty=False)
+
+    def to_internal_value(self, data):
+        data = super(AppointmentPreviewRequestSerializer, self).to_internal_value(data)
+        data['has_tax_included'] = True
+        data['has_card_fee_included'] = False
+        return data
+
+
+class AppointmentPreviewResponseSerializer(serializers.Serializer):
+    stylist_uuid = serializers.UUIDField(source='stylist.uuid', read_only=True)
+    stylist_first_name = serializers.CharField(source='stylist.user.first_name', read_only=True)
+    stylist_last_name = serializers.CharField(source='stylist.user.last_name', read_only=True)
+    stylist_phone = serializers.CharField(source='stylist.user.phone', read_only=True)
+    datetime_start_at = serializers.DateTimeField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    salon_name = serializers.CharField(
+        source='stylist.salon.name', required=False, allow_null=True)
+    profile_photo_url = serializers.CharField(
+        source='stylist.get_profile_photo_url', allow_null=True)
+
+    regular_price = serializers.DecimalField(
+        max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True,
+    )
+    client_price = serializers.DecimalField(
+        max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
+    )
+    duration_minutes = DurationMinuteField(source='duration', read_only=True)
+    grand_total = serializers.DecimalField(
+        max_digits=4, decimal_places=0, coerce_to_string=False, read_only=True
+    )
+    total_client_price_before_tax = serializers.DecimalField(
+        max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
+    )
+    total_tax = serializers.DecimalField(
+        max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
+    )
+    total_card_fee = serializers.DecimalField(
+        max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
+    )
+    has_tax_included = serializers.BooleanField(read_only=True)
+    has_card_fee_included = serializers.BooleanField(read_only=True)
+    services = AppointmentServiceSerializer(many=True)
