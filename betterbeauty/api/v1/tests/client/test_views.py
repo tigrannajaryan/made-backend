@@ -1,5 +1,6 @@
 import datetime
 import json
+from typing import Dict
 
 import mock
 import pytest
@@ -14,7 +15,7 @@ from rest_framework.permissions import IsAuthenticated
 from api.common.permissions import ClientPermission
 from api.v1.client.serializers import AppointmentValidationMixin
 from api.v1.client.urls import urlpatterns
-from api.v1.client.views import SearchStylistView
+from api.v1.client.views import HistoryView, HomeView, SearchStylistView
 from appointment.constants import (
     AppointmentStatus,
     ErrorMessages as appointment_errors,
@@ -499,3 +500,58 @@ class TestClientViewPermissions(object):
                     ClientPermission, IsAuthenticated
                 ])
             )
+
+
+class TestHomeAPIView(object):
+
+    @freeze_time('2018-05-14 14:10:00 UTC')
+    def test_get_upcoming_appointments(self, stylist_data, client_data):
+        client: Client = client_data
+        client_of_stylist = G(
+            ClientOfStylist,
+            client=client,
+            stylist=stylist_data
+        )
+        appointments: Dict[str, Appointment] = stylist_appointments_data(stylist_data)
+
+        for a in appointments.values():
+            a.client = client_of_stylist
+            a.save(update_fields=['client', ])
+        upcoming_appointments = HomeView.get_upcoming_appointments(client)
+
+        assert (upcoming_appointments.count() == 4)
+
+    @freeze_time('2018-05-14 13:00:00 UTC')
+    def test_get_last_visit(self, stylist_data, client_data):
+        client: Client = client_data
+        client_of_stylist = G(
+            ClientOfStylist,
+            client=client,
+            stylist=stylist_data
+        )
+        appointments: Dict[str, Appointment] = stylist_appointments_data(stylist_data)
+
+        for a in appointments.values():
+            a.client = client_of_stylist
+            a.save(update_fields=['client', ])
+        last_appointment = HomeView.get_last_visited_object(client)
+        assert (last_appointment == appointments['past_appointment'])
+
+
+class TestHistoryAPIView(object):
+
+    @freeze_time('2018-05-14 14:00:00 UTC')
+    def test_historical_appointments(self, stylist_data, client_data):
+        client: Client = client_data
+        client_of_stylist = G(
+            ClientOfStylist,
+            client=client,
+            stylist=stylist_data
+        )
+        appointments: Dict[str, Appointment] = stylist_appointments_data(stylist_data)
+
+        for a in appointments.values():
+            a.client = client_of_stylist
+            a.save(update_fields=['client', ])
+        past_appointments = HistoryView.get_historical_appointments(client)
+        assert (past_appointments.count() == 3)
