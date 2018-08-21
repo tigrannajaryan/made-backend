@@ -85,6 +85,34 @@ class TestSendCodeView(object):
         assert (new_code is not code.code)
         assert (new_code.redeemed_at is None)
 
+    @pytest.mark.django_db
+    @pytest.mark.parametrize('role', [UserRole.CLIENT, UserRole.STYLIST])
+    def test_code_successive_attempt(self, client, role):
+        phone_number = '+19876543210'
+        data = {
+            'phone': phone_number,
+            'role': role
+        }
+        sendcode_url = reverse('api:v1:auth:send-code')
+        response = client.post(sendcode_url, data=data)
+        assert (response.status_code == status.HTTP_200_OK)
+        assert (PhoneSMSCodes.objects.all().count() == 1)
+        code = PhoneSMSCodes.objects.last().code
+
+        # try sending code for the second time
+        response = client.post(sendcode_url, data=data)
+        assert (response.status_code == status.HTTP_400_BAD_REQUEST)
+        assert(PhoneSMSCodes.objects.all().count() == 1)
+
+        data = {
+            'phone': phone_number,
+            'code': code,
+            'role': role
+        }
+        sendcode_url = reverse('api:v1:auth:verify-code')
+        response = client.post(sendcode_url, data=data)
+        assert(status.is_success(response.status_code))
+
 
 class TestVerifyCodeView(object):
 
