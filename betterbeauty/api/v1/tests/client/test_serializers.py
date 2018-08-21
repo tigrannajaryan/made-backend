@@ -5,15 +5,24 @@ import mock
 import pytest
 import pytz
 
+from django.conf import settings
 from django_dynamic_fixture import G
 from freezegun import freeze_time
 
 from api.v1.client.serializers import (
+    AppointmentPreviewRequestSerializer,
+    AppointmentPreviewResponseSerializer,
     AppointmentSerializer,
-    AppointmentUpdateSerializer
+    AppointmentUpdateSerializer,
+    AppointmentValidationMixin,
 )
 from appointment.constants import ErrorMessages as appointment_errors
 from appointment.models import Appointment, AppointmentService
+from appointment.preview import (
+    AppointmentPreviewRequest,
+    AppointmentPreviewResponse,
+    AppointmentServicePreview,
+)
 from appointment.types import AppointmentStatus
 from client.models import Client, ClientOfStylist, PreferredStylist
 from core.types import Weekday
@@ -516,9 +525,7 @@ class TestAppointmentUpdateSerializer(object):
                 {
                     'service_uuid': new_service.uuid
                 }
-            ],
-            'has_tax_included': False,
-            'has_card_fee_included': False
+            ]
         }
         G(PreferredStylist, client=client_data, stylist=stylist)
         serializer = AppointmentUpdateSerializer(
@@ -549,3 +556,139 @@ class TestAppointmentUpdateSerializer(object):
         assert(
             saved_appointment.total_card_fee == calculate_card_fee(Decimal(total_services_cost))
         )
+
+
+class TestAppointmentPreviewRequestSerializer(object):
+    @pytest.mark.django_db
+    @mock.patch.object(
+        AppointmentValidationMixin, 'validate_datetime_start_at', lambda s, a: a)
+    def test_preview_request(self):
+        stylist: Stylist = G(Stylist, service_time_gap=datetime.timedelta(minutes=60))
+        service: StylistService = G(
+            StylistService, duration=datetime.timedelta(0), stylist=stylist)
+        client = G(Client)
+
+        data = {
+            'stylist_uuid': stylist.uuid,
+            'datetime_start_at': datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
+            'services': [
+                {'service_uuid': service.uuid},
+            ]
+        }
+        serializer = AppointmentPreviewRequestSerializer(
+            data=data, context={
+                'user': client.user,
+                'stylist': stylist
+            }
+        )
+        assert(not serializer.is_valid(raise_exception=False))
+
+        G(PreferredStylist, client=client, stylist=stylist)
+        serializer = AppointmentPreviewRequestSerializer(
+            data=data, context={
+                'user': client.user,
+                'stylist': stylist
+            }
+        )
+        assert (serializer.is_valid(raise_exception=False))
+
+        serializer.validated_data.pop('stylist_uuid')
+        preview_request = AppointmentPreviewRequest(**serializer.validated_data)
+
+        assert(preview_request == AppointmentPreviewRequest(
+            datetime_start_at=datetime.datetime(
+                2018, 1, 1, 0, 0, tzinfo=pytz.UTC
+            ).astimezone(pytz.timezone(settings.TIME_ZONE)),
+            has_tax_included=True,
+            has_card_fee_included=False,
+            appointment_uuid=None,
+            services=[
+                {'service_uuid': service.uuid}
+            ]
+        ))
+
+        foreign_service = G(
+            StylistService, duration=datetime.timedelta(0)
+        )
+        data = {
+            'stylist_uuid': stylist.uuid,
+            'datetime_start_at': datetime.datetime(2018, 1, 1, 0, 0),
+            'services': [
+                {'service_uuid': service.uuid},
+                {'service_uuid': foreign_service.uuid}
+            ]
+        }
+        serializer = AppointmentPreviewRequestSerializer(
+            data=data, context={
+                'user': client.user,
+                'stylist': stylist
+            }
+        )
+        assert (not serializer.is_valid(raise_exception=False))
+
+
+class TestAppointmentPreviewResponseSerializer(object):
+
+    @pytest.mark.django_db
+    def test_preview_response(self):
+        salon = G(Salon, name='some salon', timezone=pytz.UTC)
+        stylist: Stylist = G(
+            Stylist, service_time_gap=datetime.timedelta(minutes=60), salon=salon)
+        service: StylistService = G(
+            StylistService, duration=datetime.timedelta(0), stylist=stylist)
+
+        data = AppointmentPreviewResponse(
+            stylist=stylist,
+            datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
+            grand_total=15,
+            total_client_price_before_tax=10,
+            total_tax=4,
+            total_card_fee=1,
+            duration=stylist.service_time_gap,
+            conflicts_with=Appointment.objects.none(),
+            has_tax_included=True,
+            has_card_fee_included=False,
+            services=[
+                AppointmentServicePreview(
+                    service_name=service.name,
+                    service_uuid=service.uuid,
+                    client_price=15,
+                    regular_price=10,
+                    duration=service.duration,
+                    is_original=True,
+                    uuid=service.uuid
+                )
+            ],
+            status=AppointmentStatus.NEW
+        )
+        serializer = AppointmentPreviewResponseSerializer()
+        output = serializer.to_representation(instance=data)
+        assert(output == {
+            'stylist_uuid': str(stylist.uuid),
+            'stylist_first_name': stylist.user.first_name,
+            'stylist_last_name': stylist.user.last_name,
+            'stylist_phone': stylist.user.phone,
+            'datetime_start_at': datetime.datetime(
+                2018, 1, 1, 0, 0, tzinfo=pytz.UTC
+            ).astimezone(pytz.timezone(settings.TIME_ZONE)).isoformat(),
+            'duration_minutes': 60,
+            'status': AppointmentStatus.NEW,
+            'total_tax': 4,
+            'total_card_fee': 1,
+            'total_client_price_before_tax': 10,
+            'profile_photo_url': stylist.get_profile_photo_url(),
+            'salon_name': stylist.salon.name,
+            'services': [
+                {
+                    'uuid': str(service.uuid),
+                    'service_name': service.name,
+                    'service_uuid': str(service.uuid),
+                    'client_price': 15,
+                    'regular_price': 10,
+                    'is_original': True
+                }
+            ],
+            'grand_total': 15,
+            'has_tax_included': True,
+            'has_card_fee_included': False,
+        })

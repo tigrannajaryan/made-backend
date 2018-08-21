@@ -1,11 +1,9 @@
 import datetime
-from decimal import Decimal
-from typing import List, Optional
 
 from annoying.functions import get_object_or_None
 from dateutil.parser import parse
-from django.db import transaction
 
+from django.db import transaction
 from django.db.models import F, Q, QuerySet, Value
 from django.db.models.functions import Concat
 from django.shortcuts import get_object_or_404
@@ -17,16 +15,17 @@ from api.common.permissions import (
     StylistPermission,
     StylistRegisterUpdatePermission,
 )
-from appointment.models import Appointment, AppointmentService
+from appointment.models import Appointment
+from appointment.preview import (
+    AppointmentPreviewRequest,
+    build_appointment_preview_dict,
+)
 from appointment.types import AppointmentStatus
 from client.models import ClientOfStylist
-from core.types import AppointmentPrices
 from core.utils import (
-    calculate_appointment_prices,
     post_or_get,
 )
 from salon.models import ServiceTemplateSet, Stylist, StylistService
-from salon.utils import calculate_price_and_discount_for_client_on_date
 from .constants import MAX_APPOINTMENTS_PER_REQUEST
 from .serializers import (
     AppointmentPreviewRequestSerializer,
@@ -49,11 +48,7 @@ from .serializers import (
     StylistServicePricingSerializer,
     StylistServiceSerializer,
     StylistSettingsRetrieveSerializer,
-    StylistTodaySerializer)
-from .types import (
-    AppointmentPreviewRequest,
-    AppointmentPreviewResponse,
-    AppointmentServicePreview,
+    StylistTodaySerializer,
 )
 
 
@@ -277,106 +272,22 @@ class StylistAppointmentPreviewView(views.APIView):
             data=request.data, context={'stylist': stylist, 'force_start': True}
         )
         serializer.is_valid(raise_exception=True)
+        client_uuid = serializer.validated_data.pop('client_uuid', None)
+        client_of_stylist: ClientOfStylist = None
+        if client_uuid:
+            client_of_stylist = get_object_or_404(
+                stylist.clients_of_stylist.all(),
+                uuid=client_uuid
+            )
         preview_request = AppointmentPreviewRequest(**serializer.validated_data)
         response_serializer = AppointmentPreviewResponseSerializer(
-            self._get_response_dict(
-                stylist, preview_request
-            ))
-        return Response(response_serializer.data)
-
-    @staticmethod
-    def _get_response_dict(
-            stylist: Stylist,
-            preview_request: AppointmentPreviewRequest
-    ) -> AppointmentPreviewResponse:
-        client: Optional[ClientOfStylist] = ClientOfStylist.objects.filter(
-            uuid=preview_request.client_uuid
-        ) if preview_request.client_uuid else None
-
-        service_items: List[AppointmentServicePreview] = []
-        appointment: Optional[Appointment] = None
-        if preview_request.appointment_uuid is not None:
-            appointment = get_object_or_404(
-                stylist.appointments,
-                uuid=preview_request.appointment_uuid
+            build_appointment_preview_dict(
+                stylist=stylist,
+                client_of_stylist=client_of_stylist,
+                preview_request=preview_request
             )
-
-        for service_request_item in preview_request.services:
-            appointment_service: Optional[AppointmentService] = None
-            if appointment:
-                appointment_service = appointment.services.filter(
-                    service_uuid=service_request_item['service_uuid']
-                ).last()
-            client_price: Optional[Decimal] = service_request_item[
-                'client_price'] if 'client_price' in service_request_item else None
-            if appointment_service:
-                if client_price:
-                    appointment_service.set_client_price(client_price, commit=False)
-                # service already exists in appointment, and will not be recalculated,
-                # so we should take it's data verbatim
-                service_item = AppointmentServicePreview(
-                    uuid=appointment_service.uuid,
-                    service_uuid=appointment_service.service_uuid,
-                    service_name=appointment_service.service_name,
-                    regular_price=appointment_service.regular_price,
-                    client_price=appointment_service.client_price,
-                    duration=appointment_service.duration,
-                    is_original=appointment_service.is_original
-                )
-            else:
-                # appointment service doesn't exist in appointment yet, and is to be added, so we
-                # need to calculate the price for it. If appointment itself doesn't exist yet -
-                # we will calculate price with discounts. If appointment already exists -
-                # this is an addition, so no discount will apply
-                service: StylistService = stylist.services.get(
-                    uuid=service_request_item['service_uuid']
-                )
-                if not client_price:
-                    client_price = service.regular_price
-                    if not appointment:
-                        client_price = Decimal(calculate_price_and_discount_for_client_on_date(
-                            service=service, client=client,
-                            date=preview_request.datetime_start_at.date()
-                        ).price)
-                service_item = AppointmentServicePreview(
-                    uuid=None,
-                    service_uuid=service.uuid,
-                    service_name=service.name,
-                    regular_price=service.regular_price,
-                    client_price=client_price,
-                    duration=service.duration,
-                    is_original=False
-                )
-            service_items.append(service_item)
-
-        total_client_price_before_tax = sum([s.client_price for s in service_items], Decimal(0))
-        appointment_prices: AppointmentPrices = calculate_appointment_prices(
-            price_before_tax=total_client_price_before_tax,
-            include_card_fee=preview_request.has_card_fee_included,
-            include_tax=preview_request.has_tax_included
         )
-        duration = stylist.service_time_gap
-
-        conflicts_with = stylist.get_appointments_in_datetime_range(
-            preview_request.datetime_start_at,
-            preview_request.datetime_start_at,
-            including_to=True,
-            exclude_statuses=[
-                AppointmentStatus.CANCELLED_BY_STYLIST,
-                AppointmentStatus.CANCELLED_BY_CLIENT
-            ]
-        )
-        return AppointmentPreviewResponse(
-            duration=duration,
-            conflicts_with=conflicts_with,
-            total_client_price_before_tax=appointment_prices.total_client_price_before_tax,
-            grand_total=appointment_prices.grand_total,
-            total_tax=appointment_prices.total_tax,
-            total_card_fee=appointment_prices.total_card_fee,
-            has_tax_included=appointment_prices.has_tax_included,
-            has_card_fee_included=appointment_prices.has_card_fee_included,
-            services=service_items
-        )
+        return Response(response_serializer.data)
 
 
 class StylistAppointmentRetrieveUpdateCancelView(

@@ -4,14 +4,18 @@ import mock
 import pytest
 import pytz
 
+from django.conf import settings
 from django.core.files import File
 from django_dynamic_fixture import G
 from freezegun import freeze_time
 
 from api.common.utils import save_profile_photo
 from api.v1.stylist.serializers import (
+    AppointmentPreviewRequestSerializer,
+    AppointmentPreviewResponseSerializer,
     AppointmentSerializer,
     AppointmentUpdateSerializer,
+    AppointmentValidationMixin,
     StylistAvailableWeekDaySerializer,
     StylistAvailableWeekDayWithBookedTimeSerializer,
     StylistDiscountsSerializer,
@@ -24,6 +28,11 @@ from api.v1.stylist.serializers import (
 )
 from appointment.constants import ErrorMessages as appointment_errors
 from appointment.models import Appointment, AppointmentService
+from appointment.preview import (
+    AppointmentPreviewRequest,
+    AppointmentPreviewResponse,
+    AppointmentServicePreview,
+)
 from appointment.types import AppointmentStatus
 from client.models import ClientOfStylist
 from core.choices import USER_ROLE
@@ -1147,3 +1156,169 @@ class TestStylistServiceListSerializer(object):
         assert (frozenset([s.name for s in stylist.services.all()]) == frozenset(
             ['service1_updated', 'service2']
         ))
+
+
+class TestAppointmentPreviewRequestSerializer(object):
+    @pytest.mark.django_db
+    @mock.patch.object(
+        AppointmentValidationMixin, 'validate_datetime_start_at', lambda s, a: a)
+    def test_preview_request_with_client(self):
+        stylist = G(Stylist)
+        client = G(ClientOfStylist, stylist=stylist)
+        service = G(StylistService, stylist=stylist, duration=datetime.timedelta(60))
+        data = {
+            'datetime_start_at': datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
+            'client_uuid': client.uuid,
+            'services': [
+                {'service_uuid': service.uuid}
+            ],
+            'has_tax_included': False,
+            'has_card_fee_included': True,
+        }
+        serializer = AppointmentPreviewRequestSerializer(
+            data=data,
+            context={
+                'stylist': stylist
+            }
+        )
+        assert(serializer.is_valid(raise_exception=False))
+        serializer.validated_data.pop('client_uuid', None)
+        preview_request = AppointmentPreviewRequest(**serializer.validated_data)
+
+        assert (preview_request == AppointmentPreviewRequest(
+            datetime_start_at=datetime.datetime(
+                2018, 1, 1, 0, 0, tzinfo=pytz.UTC
+            ).astimezone(pytz.timezone(settings.TIME_ZONE)),
+            has_tax_included=False,
+            has_card_fee_included=True,
+            appointment_uuid=None,
+            services=[
+                {'service_uuid': service.uuid}
+            ]
+        ))
+
+    @pytest.mark.django_db
+    @mock.patch.object(
+        AppointmentValidationMixin, 'validate_datetime_start_at', lambda s, a: a)
+    def test_preview_request_without_client(self):
+        stylist = G(Stylist)
+        service = G(StylistService, stylist=stylist, duration=datetime.timedelta(60))
+        data = {
+            'datetime_start_at': datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
+            'services': [
+                {'service_uuid': service.uuid}
+            ],
+            'has_tax_included': False,
+            'has_card_fee_included': True,
+        }
+        serializer = AppointmentPreviewRequestSerializer(
+            data=data,
+            context={
+                'stylist': stylist
+            }
+        )
+        assert (serializer.is_valid(raise_exception=False))
+        serializer.validated_data.pop('client_uuid', None)
+        preview_request = AppointmentPreviewRequest(**serializer.validated_data)
+
+        assert (preview_request == AppointmentPreviewRequest(
+            datetime_start_at=datetime.datetime(
+                2018, 1, 1, 0, 0, tzinfo=pytz.UTC
+            ).astimezone(pytz.timezone(settings.TIME_ZONE)),
+            has_tax_included=False,
+            has_card_fee_included=True,
+            appointment_uuid=None,
+            services=[
+                {'service_uuid': service.uuid}
+            ]
+        ))
+
+    @pytest.mark.django_db
+    @mock.patch.object(
+        AppointmentValidationMixin, 'validate_datetime_start_at', lambda s, a: a)
+    def test_preview_request_with_existing_appointment(self):
+        stylist = G(Stylist)
+        appointment = G(Appointment, stylist=stylist)
+        data = {
+            'datetime_start_at': datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
+            'services': [],
+            'has_tax_included': False,
+            'has_card_fee_included': True,
+            'appointment_uuid': appointment.uuid
+        }
+        serializer = AppointmentPreviewRequestSerializer(
+            data=data,
+            context={
+                'stylist': stylist
+            }
+        )
+        assert (serializer.is_valid(raise_exception=False))
+        serializer.validated_data.pop('client_uuid', None)
+        preview_request = AppointmentPreviewRequest(**serializer.validated_data)
+
+        assert (preview_request == AppointmentPreviewRequest(
+            datetime_start_at=datetime.datetime(
+                2018, 1, 1, 0, 0, tzinfo=pytz.UTC
+            ).astimezone(pytz.timezone(settings.TIME_ZONE)),
+            has_tax_included=False,
+            has_card_fee_included=True,
+            appointment_uuid=appointment.uuid,
+            services=[]
+        ))
+
+
+class TestAppointmentPreviewResponseSerializer(object):
+    @pytest.mark.django_db
+    def test_preview_response(self):
+        salon = G(Salon, name='some salon', timezone=pytz.UTC)
+        stylist: Stylist = G(
+            Stylist, service_time_gap=datetime.timedelta(minutes=60), salon=salon)
+        service: StylistService = G(
+            StylistService, duration=datetime.timedelta(0), stylist=stylist)
+
+        data = AppointmentPreviewResponse(
+            stylist=stylist,
+            datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
+            grand_total=15,
+            total_client_price_before_tax=10,
+            total_tax=4,
+            total_card_fee=1,
+            duration=stylist.service_time_gap,
+            conflicts_with=Appointment.objects.none(),
+            has_tax_included=True,
+            has_card_fee_included=True,
+            services=[
+                AppointmentServicePreview(
+                    service_name=service.name,
+                    service_uuid=service.uuid,
+                    client_price=15,
+                    regular_price=10,
+                    duration=service.duration,
+                    is_original=True,
+                    uuid=service.uuid
+                )
+            ],
+            status=AppointmentStatus.NEW
+        )
+        serializer = AppointmentPreviewResponseSerializer()
+        output = serializer.to_representation(instance=data)
+        assert (output == {
+            'duration_minutes': 60,
+            'conflicts_with': [],
+            'total_client_price_before_tax': 10,
+            'total_tax': 4,
+            'total_card_fee': 1,
+            'grand_total': 15,
+            'has_tax_included': True,
+            'has_card_fee_included': True,
+            'services': [
+                {
+                    'uuid': str(service.uuid),
+                    'service_name': service.name,
+                    'service_uuid': str(service.uuid),
+                    'client_price': 15,
+                    'regular_price': 10,
+                    'is_original': True
+                }
+            ],
+        })

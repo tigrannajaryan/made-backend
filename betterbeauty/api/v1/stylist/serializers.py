@@ -900,7 +900,7 @@ class AppointmentPreviewSerializer(serializers.ModelSerializer):
         ]
 
     def get_datetime_end_at(self, appointment: Appointment):
-        datetime_end_at = appointment.datetime_start_at + appointment.duration
+        datetime_end_at = appointment.datetime_start_at + appointment.stylist.service_time_gap
         return serializers.DateTimeField().to_representation(datetime_end_at)
 
 
@@ -914,8 +914,8 @@ class AppointmentPreviewRequestSerializer(
     )
     services = AppointmentServiceSerializer(many=True, required=True)
     datetime_start_at = serializers.DateTimeField()
-    has_tax_included = serializers.BooleanField()
-    has_card_fee_included = serializers.BooleanField()
+    has_tax_included = serializers.BooleanField(required=True)
+    has_card_fee_included = serializers.BooleanField(required=True)
     appointment_uuid = serializers.UUIDField(required=False, allow_null=True)
 
     def validate_appointment_uuid(
