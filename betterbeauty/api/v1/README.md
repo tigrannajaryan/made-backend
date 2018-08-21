@@ -2429,27 +2429,42 @@ curl -X GET \
 
 ```
 curl -X POST \
-  http://apiserver/api/v1/client/services/pricing \
-  -H 'Authorization: Token jwt_token' \
+  'http://{{url}}/api/v1/client/services/pricing' \
+  -H 'Authorization: Token {{auth_token}}' \
   -H 'Content-Type: application/json' \
   -d '{
-  "service_uuid": "11a37320-c320-4d43-8d9d-b8f03147e54f"
+  "service_uuids": ["11a37320-c320-4d43-8d9d-b8f03147e54f",
+					"f16a4d14-d176-4691-8488-3a7d4685413f"
+  ]
 }'
 ```
 
 **Response 200 OK**
 
 ```json
-{"service_uuid": "11a37320-c320-4d43-8d9d-b8f03147e54f",
-    "service_name": "Crochet braids",
+{
+    "service_uuids": [
+        "11a37320-c320-4d43-8d9d-b8f03147e54f",
+        "f16a4d14-d176-4691-8488-3a7d4685413f"
+    ],
+    "stylist_uuid": "d5a2e88f-68f1-4ed5-95d2-e4e2a51f13e4",
     "prices": [
         {
-            "date": "2018-07-19",
-            "price": 150,
-            "discount_type": "revisit_within_2_weeks",
+            "date": "2018-08-21",
+            "price": 260,
+            "discount_type": "revisit_within_1_week",
             "is_fully_booked": false,
             "is_working_day": true
-        }
+        },
+        {
+            "date": "2018-08-22",
+            "price": 401,
+            "discount_type": null,
+            "is_fully_booked": false,
+            "is_working_day": false
+        },
+        {},
+        {}
     ]
 }
 ```

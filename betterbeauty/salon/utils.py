@@ -17,10 +17,10 @@ from core.constants import (
 from core.models import User
 from core.types import UserRole, Weekday
 from pricing import (
-    calc_client_prices,
+    Calculate,
     CalculatedPrice,
-    DiscountSettings,
-)
+    CalculateTotal,
+    DiscountSettings, )
 from pricing.constants import COMPLETELY_BOOKED_DEMAND, PRICE_BLOCK_SIZE
 from salon.models import Stylist, StylistAvailableWeekDay, StylistService
 from salon.types import DemandOnDate, PriceOnDate
@@ -182,13 +182,68 @@ def generate_prices_for_stylist_service(
 
     discounts = generate_discount_settings_for_stylist(stylist)
 
-    prices_list = calc_client_prices(
+    prices_list = Calculate(
         stylist.salon.timezone,
         discounts,
         last_visit_date,
         float(service.regular_price),
         demand_list
-    )
+    ).calc_client_prices()
+
+    is_fully_booked_list = [d.is_fully_booked for d in demand_on_dates]
+    is_working_day_list = [d.is_working_day for d in demand_on_dates]
+    prices_on_dates: Iterable[PriceOnDate] = [PriceOnDate._make(x) for x in zip(
+        dates_list, prices_list, is_fully_booked_list, is_working_day_list)]
+    if exclude_fully_booked:
+        # remove dates where demand is equal to COMPLETELY_BOOKED_DEMAND
+        prices_on_dates = compress(prices_on_dates, is_fully_booked_list)
+
+    if exclude_unavailable_days:
+        # remove dates where demand is equal to UNAVAILABLE_DEMAND
+        prices_on_dates = compress(prices_on_dates, is_working_day_list)
+
+    return prices_on_dates
+
+
+def generate_prices_for_service_list(
+        services: List[StylistService],
+        stylist: Stylist,
+        client: Optional[ClientOfStylist],
+        exclude_fully_booked: bool=False,
+        exclude_unavailable_days: bool=False
+) -> Iterable[PriceOnDate]:
+    """
+    Generate prices for given stylist, client and service for PRICE_BLOCK_SIZE days ahead
+
+    :param services: Services to generate prices for
+    :param stylist: Stylist
+    :param client: (optional) Client object, if omitted no client-specific discounts will apply
+    :param exclude_fully_booked: whether or not remove fully booked dates
+    :param exclude_unavailable_days: whether or not remove unavailable dates
+    :return: Iterator over (date, CalculatedPrice, fully_booked boolean)
+    """
+
+    last_visit_date = get_last_visit_date_for_client(stylist, client) if client else None
+
+    today = stylist.get_current_now().date()
+    dates_list = [today + datetime.timedelta(days=i) for i in range(0, PRICE_BLOCK_SIZE)]
+    demand_on_dates = generate_demand_list_for_stylist(stylist=stylist, dates=dates_list)
+
+    demand_list = [x.demand for x in demand_on_dates]
+
+    discounts = generate_discount_settings_for_stylist(stylist)
+
+    regular_price_list = [float(service.regular_price) for service in services]
+    total_regular_price = sum(regular_price_list)
+
+    prices_list = CalculateTotal(
+        stylist.salon.timezone,
+        discounts,
+        last_visit_date,
+        regular_price_list,
+        total_regular_price,
+        demand_list
+    ).calc_multiple_services()
 
     is_fully_booked_list = [d.is_fully_booked for d in demand_on_dates]
     is_working_day_list = [d.is_working_day for d in demand_on_dates]

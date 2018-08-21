@@ -11,7 +11,7 @@ from freezegun import freeze_time
 
 from core.types import Weekday
 from pricing import (
-    calc_client_prices,
+    Calculate,
     DiscountSettings,
     DiscountType,
     normalize_demand,
@@ -24,7 +24,6 @@ def _calculate_discount(regular_price, demand, discount, maximum_discount):
 
 
 class TestCalcClientPrices(object):
-
     tz = pytz.utc
 
     def test_invalid_arguments(self):
@@ -33,7 +32,7 @@ class TestCalcClientPrices(object):
         with pytest.raises(ValueError):
             discounts = DiscountSettings()
             discounts.weekday_discounts = {}
-            calc_client_prices(self.tz, discounts, None, 0, [])
+            Calculate(self.tz, discounts, None, 0, []).calc_client_prices()
 
         # Invalid demand values
         with pytest.raises(ValueError):
@@ -45,7 +44,7 @@ class TestCalcClientPrices(object):
             discounts.maximum_discount = 20
             discounts.is_maximum_discount_enabled = True
             current_demand = [2 for x in range(0, PRICE_BLOCK_SIZE)]  # Invalid
-            calc_client_prices(self.tz, discounts, None, 0, current_demand)
+            Calculate(self.tz, discounts, None, 0, current_demand).calc_client_prices()
 
         # Invalid discount values
         with pytest.raises(ValueError):
@@ -57,7 +56,7 @@ class TestCalcClientPrices(object):
             discounts.maximum_discount = 20
             discounts.is_maximum_discount_enabled = True
             current_demand = [0 for x in range(0, PRICE_BLOCK_SIZE)]
-            calc_client_prices(self.tz, discounts, None, 0, current_demand)
+            Calculate(self.tz, discounts, None, 0, current_demand).calc_client_prices()
 
         # Invalid discount values
         with pytest.raises(ValueError):
@@ -69,7 +68,7 @@ class TestCalcClientPrices(object):
             discounts.maximum_discount = 20
             discounts.is_maximum_discount_enabled = True
             current_demand = [0 for x in range(0, PRICE_BLOCK_SIZE)]
-            calc_client_prices(self.tz, discounts, None, 0, current_demand)
+            Calculate(self.tz, discounts, None, 0, current_demand).calc_client_prices()
 
     def test_no_input_discount(self):
         current_demand = [random() for x in range(0, PRICE_BLOCK_SIZE)]
@@ -83,7 +82,8 @@ class TestCalcClientPrices(object):
         discounts.is_maximum_discount_enabled = True
 
         regular_price = 1000 * random()
-        prices = calc_client_prices(self.tz, discounts, None, regular_price, current_demand)
+        prices = Calculate(self.tz, discounts, None,
+                           regular_price, current_demand).calc_client_prices()
 
         assert len(prices) == PRICE_BLOCK_SIZE
 
@@ -106,7 +106,8 @@ class TestCalcClientPrices(object):
         discounts.is_maximum_discount_enabled = False
 
         regular_price = 1000 * random()
-        prices = calc_client_prices(self.tz, discounts, None, regular_price, current_demand)
+        prices = Calculate(self.tz, discounts, None,
+                           regular_price, current_demand).calc_client_prices()
 
         assert len(prices) == PRICE_BLOCK_SIZE
 
@@ -136,7 +137,8 @@ class TestCalcClientPrices(object):
         discounts.is_maximum_discount_enabled = True
 
         regular_price = 1000 * random()
-        prices = calc_client_prices(self.tz, discounts, None, regular_price, current_demand)
+        prices = Calculate(self.tz, discounts, None,
+                           regular_price, current_demand).calc_client_prices()
 
         assert len(prices) == PRICE_BLOCK_SIZE
 
@@ -175,7 +177,8 @@ class TestCalcClientPrices(object):
         discounts.is_maximum_discount_enabled = False
 
         regular_price = 1000 * random()
-        prices = calc_client_prices(self.tz, discounts, None, regular_price, current_demand)
+        prices = Calculate(self.tz, discounts, None,
+                           regular_price, current_demand).calc_client_prices()
 
         assert len(prices) == PRICE_BLOCK_SIZE
 
@@ -202,7 +205,8 @@ class TestCalcClientPrices(object):
         discounts.is_maximum_discount_enabled = False
 
         regular_price = 1000 * random()
-        prices = calc_client_prices(self.tz, discounts, None, regular_price, current_demand)
+        prices = Calculate(self.tz, discounts, None,
+                           regular_price, current_demand).calc_client_prices()
 
         assert len(prices) == PRICE_BLOCK_SIZE
 
@@ -219,7 +223,7 @@ class TestCalcClientPrices(object):
             assert price.price == regular_price
             assert price.applied_discount is None
 
-    @freeze_time('2018-06-09 13:30:00 UTC')     # Saturday
+    @freeze_time('2018-06-09 13:30:00 UTC')  # Saturday
     def test_weekday_discount(self):
 
         # Zero demand on all days
@@ -239,7 +243,8 @@ class TestCalcClientPrices(object):
         discounts.is_maximum_discount_enabled = False
 
         regular_price = 1000 * random()
-        prices = calc_client_prices(self.tz, discounts, None, regular_price, current_demand)
+        prices = Calculate(self.tz, discounts, None,
+                           regular_price, current_demand).calc_client_prices()
 
         assert len(prices) == PRICE_BLOCK_SIZE
 
@@ -253,7 +258,7 @@ class TestCalcClientPrices(object):
                 assert prices[i].price == regular_price * (1 - DISCOUNT2 / 100.0)
                 assert prices[i].applied_discount == DiscountType.FIRST_BOOKING
 
-    @freeze_time('2018-06-09 13:30:00 UTC')     # Saturday
+    @freeze_time('2018-06-09 13:30:00 UTC')  # Saturday
     def test_multiple_applicable_discount(self):
 
         # Zero demand on all days
@@ -273,7 +278,8 @@ class TestCalcClientPrices(object):
         discounts.is_maximum_discount_enabled = False
 
         regular_price = 1000 * random()
-        prices = calc_client_prices(self.tz, discounts, None, regular_price, current_demand)
+        prices = Calculate(self.tz, discounts, None,
+                           regular_price, current_demand).calc_client_prices()
 
         assert len(prices) == PRICE_BLOCK_SIZE
 
@@ -303,8 +309,8 @@ class TestCalcClientPrices(object):
 
         last_visit_date = date(2018, 5, 25)
         regular_price = 1000 * random()
-        prices = calc_client_prices(self.tz, discounts, last_visit_date, regular_price,
-                                    current_demand)
+        prices = Calculate(self.tz, discounts, last_visit_date,
+                           regular_price, current_demand).calc_client_prices()
 
         assert len(prices) == PRICE_BLOCK_SIZE
 
@@ -334,8 +340,8 @@ class TestCalcClientPrices(object):
 
         last_visit_date = date(2018, 6, 2)
         regular_price = 1000 * random()
-        prices = calc_client_prices(self.tz, discounts, last_visit_date, regular_price,
-                                    current_demand)
+        prices = Calculate(self.tz, discounts, last_visit_date, regular_price,
+                           current_demand).calc_client_prices()
 
         assert len(prices) == PRICE_BLOCK_SIZE
 

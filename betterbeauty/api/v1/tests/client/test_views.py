@@ -310,30 +310,33 @@ class TestStylistServicePriceView(object):
         user, auth_token = authorized_client_user
         client_obj = user.client
         G(PreferredStylist, client=client_obj, stylist=our_stylist)
+        G(ClientOfStylist, client=client_obj, stylist=our_stylist)
         our_service = G(StylistService, stylist=our_stylist, duration=datetime.timedelta(0))
+        our_service_2 = G(StylistService, stylist=our_stylist, duration=datetime.timedelta(0))
         foreign_service = G(
             StylistService, stylist=foreign_stylist, duration=datetime.timedelta(0)
         )
-        stylist_service_url = reverse('api:v1:client:services-pricing')
+        client_service_pricing_url = reverse('api:v1:client:services-pricing')
         response = client.post(
-            stylist_service_url,
+            client_service_pricing_url,
             data={
-                'service_uuid': our_service.uuid
+                'service_uuids': [our_service.uuid,
+                                  our_service_2.uuid]
             }, HTTP_AUTHORIZATION=auth_token)
         assert (status.is_success(response.status_code))
 
         response = client.post(
-            stylist_service_url,
+            client_service_pricing_url,
             data={
-                'service_uuid': foreign_service.uuid
+                'service_uuids': [foreign_service.uuid]
             }, HTTP_AUTHORIZATION=auth_token)
         assert (response.status_code == status.HTTP_404_NOT_FOUND)
 
         user, auth_token = authorized_stylist_user
         response = client.post(
-            stylist_service_url,
+            client_service_pricing_url,
             data={
-                'service_uuid': our_service.uuid
+                'service_uuids': [our_service.uuid]
             }, HTTP_AUTHORIZATION=auth_token)
         assert (response.status_code == status.HTTP_403_FORBIDDEN)
 

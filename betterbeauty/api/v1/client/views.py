@@ -28,11 +28,12 @@ from api.v1.client.serializers import (
     HistorySerializer,
     HomeSerializer,
     ServicePricingRequestSerializer,
+    ServicePricingSerializer,
     StylistServiceListSerializer,
     TimeSlotSerializer
 )
 from api.v1.stylist.constants import MAX_APPOINTMENTS_PER_REQUEST
-from api.v1.stylist.serializers import StylistSerializer, StylistServicePricingSerializer
+from api.v1.stylist.serializers import StylistSerializer
 from appointment.models import Appointment
 from appointment.preview import AppointmentPreviewRequest, build_appointment_preview_dict
 from appointment.types import AppointmentStatus
@@ -125,7 +126,7 @@ class StylistServicePriceView(views.APIView):
             data=request.data)
         serializer.is_valid(raise_exception=True)
         client = self.request.user.client
-        service_uuid = serializer.validated_data.get('service_uuid')
+        service_uuids = serializer.validated_data.get('service_uuids')
         service_queryset = StylistService.objects.filter(
             Q(
                 stylist__preferredstylist__client=client,
@@ -134,17 +135,22 @@ class StylistServicePriceView(views.APIView):
                 stylist__clients_of_stylist__client=client
             )
         ).distinct('id')
-        service = get_object_or_404(
-            service_queryset,
-            uuid=service_uuid
-        )
-
-        # client_of_stylist can as well be None here, which is OK; in such a case
-        # prices will be returned without discounts
-        client_of_stylist = client.client_of_stylists.filter(stylist=service.stylist).last()
+        services = []
+        for service_uuid in service_uuids:
+            services.append(get_object_or_404(
+                service_queryset,
+                uuid=service_uuid
+            ))
+            # client_of_stylist can as well be None here, which is OK; in such a case
+            # prices will be returned without discounts
+        stylist = services[0].stylist
+        client_of_stylist = client.client_of_stylists.filter(stylist=stylist).last()
 
         return Response(
-            StylistServicePricingSerializer(service, context={'client': client_of_stylist}).data
+            ServicePricingSerializer({
+                'service_uuids': service_uuids,
+                'stylist_uuid': stylist.uuid,
+            }, context={'client_of_stylist': client_of_stylist, 'services': services}).data
         )
 
 
