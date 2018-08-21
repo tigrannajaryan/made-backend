@@ -111,6 +111,14 @@ class StylistServiceSerializer(
     category_name = serializers.CharField(source='category.name', read_only=True)
     category_code = serializers.CharField(source='category.category_code', read_only=True)
 
+    class Meta:
+        model = StylistService
+        fields = [
+            'name', 'description', 'base_price', 'duration_minutes',
+            'is_enabled', 'is_addon', 'photo_samples', 'category_uuid', 'category_name',
+            'uuid', 'category_code',
+        ]
+
     def create(self, validated_data):
         stylist = self.context['stylist']
         uuid = validated_data.pop('uuid', None)
@@ -150,14 +158,6 @@ class StylistServiceSerializer(
         data_to_save.update({'category': category, 'service_origin_uuid': service_origin_uuid})
 
         return super(StylistServiceSerializer, self).update(instance, data_to_save)
-
-    class Meta:
-        model = StylistService
-        fields = [
-            'name', 'description', 'base_price', 'duration_minutes',
-            'is_enabled', 'is_addon', 'photo_samples', 'category_uuid', 'category_name',
-            'uuid', 'category_code',
-        ]
 
 
 class StylistSerializer(
@@ -411,9 +411,14 @@ class StylistServiceListSerializer(
         ).data
 
     def update(self, instance: Stylist, validated_data: Dict):
-        services = self.initial_data.pop('services')
+        services = self.initial_data.get('services')
         validated_data.pop('services', [])
         with transaction.atomic():
+            # check if this is initial population during registration. In that case,
+            # *all* UUIDs will be empty, so we need to overwrite stylist's services
+            uuids = [service_item.get('uuid', None) for service_item in services]
+            if not any(uuids):
+                instance.services.all().delete()
             for service_item in services:
                 service_object = None
                 uuid = service_item.pop('uuid', None)

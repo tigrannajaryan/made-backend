@@ -17,6 +17,7 @@ from api.v1.stylist.serializers import (
     StylistDiscountsSerializer,
     StylistProfileStatusSerializer,
     StylistSerializer,
+    StylistServiceListSerializer,
     StylistServiceSerializer,
     StylistSettingsRetrieveSerializer,
     StylistTodaySerializer,
@@ -1047,3 +1048,102 @@ class TestStylistSettingsRetrieveSerializer(object):
         data = serializer.data
         assert (data['total_week_booked_minutes'] == 150)
         assert (data['total_week_appointments_count'] == 5)
+
+
+class TestStylistServiceListSerializer(object):
+    @pytest.mark.django_db
+    def test_initial_creation(self):
+        stylist: Stylist = G(Stylist)
+        category: ServiceCategory = G(ServiceCategory)
+        data = {
+            'services': [
+                {
+                    'base_price': 10,
+                    'category_uuid': category.uuid,
+                    'name': 'service1'
+                },
+                {
+                    'base_price': 10,
+                    'category_uuid': category.uuid,
+                    'name': 'service2'
+                }
+            ],
+            'service_time_gap_minutes': 60
+        }
+        serializer = StylistServiceListSerializer(
+            data=data, instance=stylist,
+            context={'stylist': stylist},
+            partial=True
+        )
+        assert(serializer.is_valid(raise_exception=False))
+        serializer.save()
+        stylist.refresh_from_db()
+        assert(frozenset([s.name for s in stylist.services.all()]) == frozenset(
+            ['service1', 'service2']
+        ))
+        # test indempotency
+        serializer = StylistServiceListSerializer(
+            data=data, instance=stylist,
+            context={'stylist': stylist},
+            partial=True
+        )
+        assert (serializer.is_valid(raise_exception=False))
+        serializer.save()
+        stylist.refresh_from_db()
+        assert (frozenset([s.name for s in stylist.services.all()]) == frozenset(
+            ['service1', 'service2']
+        ))
+
+    @pytest.mark.django_db
+    def test_update(self):
+        stylist: Stylist = G(Stylist)
+        category: ServiceCategory = G(ServiceCategory)
+        data = {
+            'services': [
+                {
+                    'base_price': 10,
+                    'category_uuid': category.uuid,
+                    'name': 'service1'
+                },
+                {
+                    'base_price': 10,
+                    'category_uuid': category.uuid,
+                    'name': 'service2'
+                }
+            ],
+            'service_time_gap_minutes': 60
+        }
+        serializer = StylistServiceListSerializer(
+            data=data, instance=stylist,
+            context={'stylist': stylist},
+            partial=True
+        )
+        assert (serializer.is_valid(raise_exception=False))
+        serializer.save()
+        stylist.refresh_from_db()
+        assert (frozenset([s.name for s in stylist.services.all()]) == frozenset(
+            ['service1', 'service2']
+        ))
+        service_to_change: StylistService = stylist.services.get(name='service1')
+        data = {
+            'services': [
+                {
+                    'uuid': service_to_change.uuid,
+                    'base_price': 10,
+                    'category_uuid': category.uuid,
+                    'name': 'service1_updated'
+                }
+            ],
+            'service_time_gap_minutes': 60
+        }
+        serializer = StylistServiceListSerializer(
+            data=data, instance=stylist,
+            context={'stylist': stylist},
+            partial=True
+        )
+        assert (serializer.is_valid(raise_exception=False))
+        serializer.save()
+        stylist.refresh_from_db()
+        assert (frozenset([s.name for s in stylist.services.all()]) == frozenset(
+            ['service1_updated', 'service2']
+        ))
