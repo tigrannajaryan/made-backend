@@ -4,6 +4,7 @@ from typing import Dict
 import pytest
 import pytz
 
+from dateutil import parser
 from django_dynamic_fixture import G
 from freezegun import freeze_time
 
@@ -219,3 +220,21 @@ class TestStylistService(object):
         service.save()
         assert (StylistService.objects.count() == 0)
         assert (StylistService.all_objects.count() == 1)
+
+
+class TestAvailableSlots(object):
+
+    @pytest.mark.django_db
+    @freeze_time('2018-05-14 13:30:00 UTC')
+    def test_available_slots(self, stylist_data):
+        stylist = stylist_data
+        date = datetime.datetime.now().date()
+        stylist_appointments_data(stylist)
+        stylist.available_days.filter(weekday=date.isoweekday()).update(
+            work_start_at="09:00", work_end_at="18:00", is_available=True)
+        all_slots = stylist.get_available_slots(date)
+        unavailable_slots = list(filter(lambda x: x.is_booked, all_slots))
+        assert (len(unavailable_slots) == 2)
+        unavailable_slot_times = list(map(lambda x: x.start, unavailable_slots))
+        assert (parser.parse('2018-05-14 13:30:00+0000') in unavailable_slot_times)
+        assert (parser.parse('2018-05-14 14:30:00+0000') in unavailable_slot_times)

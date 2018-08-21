@@ -22,7 +22,7 @@ from core.types import Weekday
 from integrations.gmaps import geo_code
 from .choices import INVITATION_STATUS_CHOICES
 from .contstants import DEFAULT_SERVICE_GAP_TIME_MINUTES
-from .types import InvitationStatus
+from .types import InvitationStatus, TimeSlot, TimeSlotAvailability
 
 
 class StylistServiceManager(models.Manager):
@@ -108,6 +108,19 @@ class StylistAvailableWeekDay(models.Model):
             date, self.work_end_at
         ) - datetime.datetime.combine(date, self.work_start_at)
 
+    def get_all_slots(self, service_time_gap: datetime.timedelta) -> List[
+            TimeSlot]:
+        available_slots: List[TimeSlot] = []
+        if not self.is_available:
+            return available_slots
+        start_at = self.work_start_at
+        while start_at < self.work_end_at:
+            slot_end_time = (datetime.datetime.combine(
+                datetime.date.today(), start_at) + service_time_gap).time()
+            available_slots.append((start_at, slot_end_time))
+            start_at = slot_end_time
+        return available_slots
+
 
 class StylistWeekdayDiscount(models.Model):
     stylist = models.ForeignKey(
@@ -188,6 +201,35 @@ class Stylist(models.Model):
         if self.user.photo:
             return self.user.photo.url
         return None
+
+    def get_available_slots(self, date: datetime.date) -> List[TimeSlotAvailability]:
+        datetime_from = self.with_salon_tz(datetime.datetime(date.year, date.month, date.day))
+        datetime_to = self.with_salon_tz(datetime.datetime(
+            date.year, date.month, date.day) + datetime.timedelta(days=1))
+        available_slots: List[TimeSlotAvailability] = []
+        try:
+            shift = self.available_days.get(
+                weekday=date.isoweekday(), is_available=True)
+        except StylistAvailableWeekDay.DoesNotExist:
+            return available_slots
+        for slot in shift.get_all_slots(self.service_time_gap):
+            available_slots.append(
+                TimeSlotAvailability(
+                    start=self.with_salon_tz(datetime.datetime.combine(date, slot[0])),
+                    end=self.with_salon_tz(datetime.datetime.combine(date, slot[1])),
+                    is_booked=False))
+        appointments = self.get_appointments_in_datetime_range(
+            datetime_from, datetime_to, exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+                AppointmentStatus.CANCELLED_BY_STYLIST])
+        for appointment in appointments:
+            appointment_start_time = appointment.datetime_start_at
+            for slot in available_slots:
+                if (slot.start - (self.service_time_gap / 2) <= appointment_start_time <= (
+                        slot.start + (self.service_time_gap / 2))):
+                    slot.is_booked = True
+                    break
+        return available_slots
 
     def get_weekday_discount_percent(self, weekday: Weekday) -> int:
         weekday_discount = self.weekday_discounts.filter(

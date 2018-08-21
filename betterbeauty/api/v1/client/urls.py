@@ -3,7 +3,10 @@ from django.conf.urls import url
 from api.v1.client.views import (
     AppointmentListCreateAPIView,
     AppointmentRetriveUpdateView,
+    AvailableTimeSlotView,
     ClientProfileView,
+    HistoryView,
+    HomeView,
     PreferredStylistDeleteView,
     PreferredStylistListCreateView,
     SearchStylistView,
@@ -15,14 +18,17 @@ app_name = 'client'
 
 urlpatterns = [
     url('^profile$', ClientProfileView.as_view(), name='client-profile'),
+    url('^home$', HomeView.as_view(), name='home'),
+    url('^history$', HistoryView.as_view(), name='history'),
     url('^search-stylists$', SearchStylistView.as_view(), name='search-stylist'),
     url('^preferred-stylists$',
         PreferredStylistListCreateView.as_view(), name='preferred-stylist'),
     url('^preferred-stylists/(?P<uuid>[0-9a-f\-]+)$',
         PreferredStylistDeleteView.as_view(), name='preferred-stylist-delete'),
-    url('^stylists/(?P<uuid>[0-9a-f\-]+)/services',
+    url('^stylists/(?P<uuid>[0-9a-f\-]+)/services$',
         StylistServicesView.as_view(), name='stylist-services'),
-    url('^services/pricing', StylistServicePriceView.as_view(), name='services-pricing'),
+    url('^services/pricing$', StylistServicePriceView.as_view(), name='services-pricing'),
+    url('^available-times$', AvailableTimeSlotView.as_view(), name='available-times'),
 
     url('^appointments$',
         AppointmentListCreateAPIView.as_view(), name='appointments'),

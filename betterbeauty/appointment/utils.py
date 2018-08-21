@@ -25,7 +25,7 @@ def get_appointments_in_datetime_range(
 
     if datetime_from is not None:
         queryset = queryset.filter(
-            datetime_start_at__gte=datetime_from - models.F('stylist__service_time_gap')
+            datetime_start_at__gt=datetime_from - models.F('stylist__service_time_gap')
         )
 
     if datetime_to is not None:
