@@ -113,7 +113,7 @@ class StylistServicePriceView(views.APIView):
 
     def post(self, request, *args, **kwargs):
         serializer = ServicePricingRequestSerializer(
-            data=request.data, )
+            data=request.data)
         serializer.is_valid(raise_exception=True)
         client = self.request.user.client
         service_uuid = serializer.validated_data.get('service_uuid')
