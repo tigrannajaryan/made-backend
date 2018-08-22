@@ -54,7 +54,7 @@ def build_appointment_preview_dict(
         preview_request: AppointmentPreviewRequest
 ) -> AppointmentPreviewResponse:
     if client_of_stylist is not None:
-        assert issubclass(client_of_stylist, ClientOfStylist)
+        assert isinstance(client_of_stylist, ClientOfStylist)
     service_items: List[AppointmentServicePreview] = []
     appointment: Optional[Appointment] = None
     status = AppointmentStatus.NEW
