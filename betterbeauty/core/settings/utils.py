@@ -40,5 +40,5 @@ def get_logger_dict(handlers, level='INFO'):
     return {
         'handlers': handlers,
         'level': level,
-        'propagate': True,
+        'propagate': False,
     }

@@ -18,15 +18,15 @@ LOGGING = {
     'formatters': {
         'django.server': {
             '()': 'django.utils.log.ServerFormatter',
-            'format': '%(levelname)s [%(server_time)s] %(message)s',
+            'format': '%(levelname)s %(asctime)s %(message)s',
         },
         'simple': {
             'level': 'DEBUG',
             'format': '%(levelname)s %(asctime)s %(message)s',
         },
         'verbose': {
-            'format': ('%(levelname)s %(asctime)s %(module)s %(process)d '
-                       '%(thread)d %(message)s'),
+            'format': ('%(levelname)s %(asctime)s %(name)s in .%(funcName)s '
+                       '(line %(lineno)d): %(message)s'),
         }
     },
     'filters': {
@@ -44,6 +44,12 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose'
         },
+        'console_simple': {
+            'level': 'DEBUG',
+            'filters': ['require_debug_true', ],
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
         'syslog': {
             'filters': ['require_debug_false', ],
             'level': 'DEBUG',
@@ -56,9 +62,11 @@ LOGGING = {
         'madebeauty_log_file': get_handler_dict(LOGS_PATH, 'madebeauty', 'django.server', ),
     },
     'loggers': {
-        'django': get_logger_dict(['console', 'syslog', 'django_log_file', ], 'INFO'),
-        'django.server': get_logger_dict(['console', 'syslog', 'django_log_file', ], 'INFO'),
-        'django.request': get_logger_dict(['console', 'syslog', 'django_log_file', ], 'INFO'),
+        'django': get_logger_dict(['console_simple', 'syslog', 'django_log_file', ], 'INFO'),
+        'django.server': get_logger_dict(
+            ['console_simple', 'syslog', 'django_log_file', ], 'INFO'
+        ),
+        'django.request': get_logger_dict(['console_simple', 'django_log_file', ], 'INFO'),
         'api': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
         'appointment': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
         'client': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
