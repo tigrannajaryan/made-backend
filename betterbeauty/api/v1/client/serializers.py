@@ -68,10 +68,12 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
         client_data = self.validated_data.pop('client', None)
         client = self.context['user'].client
         if client_data:
-            client.zip_code = client_data.get('zip_code', client.zip_code)
+            if client.zip_code != client_data.get('zip_code', client.zip_code):
+                client.zip_code = client_data.get('zip_code', client.zip_code)
+                client.last_geo_coded = None
             client.birthday = client_data.get('birthday', client.birthday)
             client.email = client_data.get('email', client.email)
-            client.save(update_fields=['zip_code', 'birthday', 'email'])
+            client.save(update_fields=['zip_code', 'birthday', 'email', 'last_geo_coded'])
         user = super(ClientProfileSerializer, self).save(**kwargs)
         if should_save_photo:
             save_profile_photo(

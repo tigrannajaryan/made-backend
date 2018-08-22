@@ -6,10 +6,12 @@ from uuid import uuid4
 from django.apps import apps
 from django.contrib.gis.db.models import PointField
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from appointment.utils import get_appointments_in_datetime_range
 from core.models import User
+from integrations.gmaps import geo_code
 from utils.models import SmartModel
 
 logger = logging.getLogger(__name__)
@@ -21,6 +23,21 @@ class Client(models.Model):
     zip_code = models.CharField(max_length=10, blank=True, null=True)
     birthday = models.DateField(blank=True, null=True)
     email = models.EmailField(null=True, unique=True)
+    city = models.CharField(blank=True, null=True, max_length=64)
+    state = models.CharField(blank=True, null=True, max_length=2)
+
+    is_address_geocoded = models.BooleanField(default=False)
+    last_geo_coded = models.DateTimeField(blank=True, null=True, default=None)
+
+    def geo_code_address(self):
+        geo_coded_address = geo_code(self.zip_code)
+        if geo_coded_address:
+            self.city = geo_coded_address.city
+            self.state = geo_coded_address.state
+            self.is_address_geocoded = True
+        self.last_geo_coded = timezone.now()
+        self.save(update_fields=[
+            'city', 'state', 'is_address_geocoded', 'last_geo_coded'])
 
     class Meta:
         db_table = 'client'
