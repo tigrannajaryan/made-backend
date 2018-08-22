@@ -1,4 +1,5 @@
 import datetime
+from typing import Optional
 
 from dateutil.parser import parse
 
@@ -17,6 +18,8 @@ from rest_framework.response import Response
 from api.common.permissions import ClientPermission
 from api.v1.client.serializers import (
     AddPreferredClientsSerializer,
+    AppointmentPreviewRequestSerializer,
+    AppointmentPreviewResponseSerializer,
     AppointmentSerializer,
     AppointmentUpdateSerializer,
     AvailableDateSerializer,
@@ -25,12 +28,15 @@ from api.v1.client.serializers import (
     HistorySerializer,
     HomeSerializer,
     ServicePricingRequestSerializer,
-    StylistServiceListSerializer, TimeSlotSerializer)
+    StylistServiceListSerializer,
+    TimeSlotSerializer
+)
 from api.v1.stylist.constants import MAX_APPOINTMENTS_PER_REQUEST
 from api.v1.stylist.serializers import StylistSerializer, StylistServicePricingSerializer
 from appointment.models import Appointment
+from appointment.preview import AppointmentPreviewRequest, build_appointment_preview_dict
 from appointment.types import AppointmentStatus
-from client.models import StylistSearchRequest
+from client.models import Client, ClientOfStylist, StylistSearchRequest
 from core.utils import post_or_get
 from core.utils import post_or_get_or_data
 from salon.models import Stylist, StylistService
@@ -116,7 +122,7 @@ class StylistServicePriceView(views.APIView):
 
     def post(self, request, *args, **kwargs):
         serializer = ServicePricingRequestSerializer(
-            data=request.data, )
+            data=request.data)
         serializer.is_valid(raise_exception=True)
         client = self.request.user.client
         service_uuid = serializer.validated_data.get('service_uuid')
@@ -261,6 +267,44 @@ class AppointmentRetriveUpdateView(generics.RetrieveUpdateAPIView):
             appointments,
             uuid=self.kwargs['uuid']
         )
+
+
+class AppointmentPreviewView(views.APIView):
+    permission_classes = [ClientPermission, permissions.IsAuthenticated]
+
+    def get_serializer_context(self):
+        stylist_uuid = post_or_get_or_data(self.request, 'stylist_uuid', None)
+        stylist = None
+        if stylist_uuid:
+            stylist = Stylist.objects.get(uuid=stylist_uuid)
+        return {
+            'user': self.request.user,
+            'stylist': stylist,
+        }
+
+    def post(self, request):
+        client: Client = self.request.user.client
+        serializer = AppointmentPreviewRequestSerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+        stylist: Stylist = get_object_or_404(
+            Stylist,
+            uuid=serializer.validated_data.pop('stylist_uuid')
+        )
+        client_of_stylist: Optional[ClientOfStylist] = stylist.clients_of_stylist.filter(
+            client=client
+        ).last()
+        preview_request = AppointmentPreviewRequest(**serializer.validated_data)
+        response_serializer = AppointmentPreviewResponseSerializer(
+            build_appointment_preview_dict(
+                stylist=stylist,
+                client_of_stylist=client_of_stylist,
+                preview_request=preview_request
+            ),
+            context=self.get_serializer_context()
+        )
+        return Response(response_serializer.data)
 
 
 class AvailableTimeSlotView(views.APIView):
