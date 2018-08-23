@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
 
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import serializers
@@ -185,7 +185,21 @@ class StylistServiceListSerializer(FormattedErrorMessageMixin, serializers.Model
 
 
 class ServicePricingRequestSerializer(FormattedErrorMessageMixin, serializers.Serializer):
-    service_uuid = serializers.UUIDField()
+    service_uuid = serializers.UUIDField(required=True, allow_null=False)
+
+    def validate_service_uuid(self, service_uuid):
+        client: Client = self.context['client']
+        if StylistService.objects.filter(
+            Q(
+                stylist__preferredstylist__client=client,
+                stylist__preferredstylist__deleted_at__isnull=True
+            ) | Q(
+                stylist__clients_of_stylist__client=client
+            ),
+            uuid=service_uuid
+        ).exists():
+            return service_uuid
+        raise ValidationError(appointment_errors.ERR_SERVICE_DOES_NOT_EXIST)
 
 
 class AppointmentValidationMixin(object):
