@@ -35,7 +35,6 @@ DISCOUNT_TYPE_CHOICES = Choices(
 
 
 class DiscountSettings(object):
-
     # Discount values are in [0..100] range, expressed as percentages
     weekday_discounts: Dict[Weekday, float] = {}
     first_visit_percentage: float = 0
@@ -56,9 +55,9 @@ class CalculatedPrice(object):
 
     @staticmethod
     def build(
-        price: float,
-        applied_discount: Optional[DiscountType],
-        discount_percentage: int
+            price: float,
+            applied_discount: Optional[DiscountType],
+            discount_percentage: int
 
     ) -> 'CalculatedPrice':
         obj = CalculatedPrice()
@@ -68,139 +67,191 @@ class CalculatedPrice(object):
         return obj
 
 
-def calc_client_prices(
-        stylist_timezone: tzinfo,
-        discounts: DiscountSettings,
-        last_visit_date: Optional[date],
-        regular_price: float,
-        current_demand: List[float]) -> List[CalculatedPrice]:
-    """
-    Calculate client prices for PRICE_BLOCK_SIZE days starting from today's date in stylists's
-    timezone. For each particular day finds the maximum applicable discount. Then that
-    discount is fully applied if the day's demand is minimal within all the days in the
-    PRICE_BLOCK_SIZE. If the demand is higher than the minimal then the discount value
-    is linearly interpolated so that zero discount corresponds to a fully booked day.
-    The final applied discount is granularized, so that only some possible portions of
-    discount percentage are ever used. This ensures that the prices don't jump around from
-    minor demand fluctuations. See description of DISCOUNT_GRANULARIZATION for more details.
+class Calculate:
 
-    The implemented simple heuristic approach has the following desirable characteritic:
-    the discount applied is inverselly proportional to the demand, i.e. higher demand results in
-    less discount and higher pricing. This is inline with our intuitive understanding of how
-    the dynamic pricing should work.
+    def __init__(self,
+                 stylist_timezone: tzinfo,
+                 discounts: DiscountSettings,
+                 last_visit_date: Optional[date],
+                 regular_price: float,
+                 current_demand: List[float]) -> None:
+        self.stylist_timezone = stylist_timezone
+        self.discounts = discounts
+        self.last_visit_date = last_visit_date
+        self.regular_price = regular_price
+        self.current_demand = current_demand
 
-    Note that the results of this function depend on the start date and block size
-    (because we use minimum demand value in the block for the rest of calculations),
-    that's why this function does not accept start date or block size as parameters.
-    It helps ensure we always work with the same window of dates and the results are
-    stable.
+    def calc_client_prices(
+            self) -> List[CalculatedPrice]:
+        """
+        Calculate client prices for PRICE_BLOCK_SIZE days starting from today's date in stylists's
+        timezone. For each particular day finds the maximum applicable discount. Then that
+        discount is fully applied if the day's demand is minimal within all the days in the
+        PRICE_BLOCK_SIZE. If the demand is higher than the minimal then the discount value
+        is linearly interpolated so that zero discount corresponds to a fully booked day.
+        The final applied discount is granularized, so that only some possible portions of
+        discount percentage are ever used. This ensures that the prices don't jump around from
+        minor demand fluctuations. See description of DISCOUNT_GRANULARIZATION for more details.
 
-    Args:
-        stylist_timezone: timezone of the stylist. Used to correctly determine today's date.
+        The implemented simple heuristic approach has the following desirable characteritic:
+        the discount applied is inverselly proportional to the demand, i.e. higher demand results
+        in less discount and higher pricing. This is inline with our intuitive understanding of
+        how the dynamic pricing should work.
 
-        discounts: the definitions of discounts for the stylist.
+        Note that the results of this function depend on the start date and block size
+        (because we use minimum demand value in the block for the rest of calculations),
+        that's why this function does not accept start date or block size as parameters.
+        It helps ensure we always work with the same window of dates and the results are
+        stable.
 
-        last_visit_date: last time the client visited. None if they never visited (e.g.
-            new client).
+        Args:
+            stylist_timezone: timezone of the stylist. Used to correctly determine today's date.
 
-        regular_price: the regular price for the service.
+            discounts: the definitions of discounts for the stylist.
 
-        current_demand: A list of PRICE_BLOCK_SIZE items. Each item describes the demand for one
-            day, the first item corresponds to today. The demand is a normalized number between 0
-            and 1. 0 means there are no booked appointments for that day. 1 means the day is
-            fully booked, no more appointments should be accepted. Usually calculated as
-            (total booked time)/(total available time). normalize_demand() can be used to convert
-            absolute demand values to normalized.
+            last_visit_date: last time the client visited. None if they never visited (e.g.
+                new client).
 
-    Returns:
-        A list of PRICE_BLOCK_SIZE items with prices. The first item represents today.
+            regular_price: the regular price for the service.
 
-    Raises:
-        ValueError exception on invalid input.
-    """
+            current_demand: A list of PRICE_BLOCK_SIZE items. Each item describes the demand for
+                one day, the first item corresponds to today. The demand is a normalized number
+                between and 1. 0 means there are no booked appointments for that day. 1 means the
+                day is fully booked, no more appointments should be accepted. Usually calculated
+                as (total booked time)/(total available time). normalize_demand() can be used
+                to convert absolute demand values to normalized.
 
-    if len(current_demand) != PRICE_BLOCK_SIZE:
-        raise ValueError(f"current_demand must have {PRICE_BLOCK_SIZE} elements")
+        Returns:
+            A list of PRICE_BLOCK_SIZE items with prices. The first item represents today.
 
-    min_demand = min(current_demand)
-    max_demand = max(current_demand)
-    if not (0 <= min_demand <= 1 and 0 <= max_demand <= 1):
-        raise ValueError("Demand values must be in [0..1] range")
+        Raises:
+            ValueError exception on invalid input.
+        """
 
-    discounts_to_validate = [
-        discounts.first_visit_percentage,
-        discounts.revisit_within_1week_percentage,
-        discounts.revisit_within_2week_percentage,
-        discounts.revisit_within_3week_percentage,
-        discounts.revisit_within_4week_percentage,
-        discounts.revisit_within_5week_percentage,
-        discounts.revisit_within_6week_percentage,
-    ]
+        if len(self.current_demand) != PRICE_BLOCK_SIZE:
+            raise ValueError(f"current_demand must have {PRICE_BLOCK_SIZE} elements")
 
-    if not all(map(is_valid_discount_percentage, discounts_to_validate)):
-        raise ValueError("Invalid discount value")
+        min_demand = min(self.current_demand)
+        max_demand = max(self.current_demand)
+        if not (0 <= min_demand <= 1 and 0 <= max_demand <= 1):
+            raise ValueError("Demand values must be in [0..1] range")
 
-    for discount in discounts.weekday_discounts.values():
-        if not is_valid_discount_percentage(discount):
-            raise ValueError("Invalid weekday discount value")
+        discounts_to_validate = [
+            self.discounts.first_visit_percentage,
+            self.discounts.revisit_within_1week_percentage,
+            self.discounts.revisit_within_2week_percentage,
+            self.discounts.revisit_within_3week_percentage,
+            self.discounts.revisit_within_4week_percentage,
+            self.discounts.revisit_within_5week_percentage,
+            self.discounts.revisit_within_6week_percentage,
+        ]
 
-    results: List[CalculatedPrice] = []
+        if not all(map(is_valid_discount_percentage, discounts_to_validate)):
+            raise ValueError("Invalid discount value")
 
-    for i in range(0, PRICE_BLOCK_SIZE):
-        today = datetime.now(stylist_timezone).date()
-        dt = today + timedelta(days=i)
-        calculated_price = CalculatedPrice()
+        for discount in self.discounts.weekday_discounts.values():
+            if not is_valid_discount_percentage(discount):
+                raise ValueError("Invalid weekday discount value")
 
-        max_discount = find_applicable_discount(discounts, last_visit_date, dt)
-        if max_discount is None:
-            calculated_price.price = regular_price
-            calculated_price.applied_discount = None
-            calculated_price.discount_percentage = 0
-        else:
-            demand = current_demand[i]
+        results: List[CalculatedPrice] = []
 
-            if min_demand < 1:
-                # linearly interpolate the discount between 0 and max_discount
-                # for demands in the range of [1 .. min_demand]. This means that
-                # on the days with minimal demand full discount will be applied
-                # and on the days that are fully booked zero discount will be applied
-                # (actually no booking should be allowed on those days at all).
-                apply_discount_part = (1 - demand) / (1 - min_demand)
+        for i in range(0, PRICE_BLOCK_SIZE):
+            today = datetime.now(self.stylist_timezone).date()
+            dt = today + timedelta(days=i)
+            calculated_price = CalculatedPrice()
 
-                # Introduce granularity to the lienar interpolation so that the
-                # the final prices fall into a few buckets instead of forming
-                # a more continuous spectrum, which would be more precise but
-                # undesirable from user perspective. The granularity ensures that
-                # small changes in demand do not cause all prices to jump around
-                # and brings some stability to them.
-                apply_discount_part = granularize(apply_discount_part,
-                                                  DISCOUNT_GRANULARIZATION)
-
-                # Calculate discount percentage to apply as a portion of
-                # maximum applicable discount.
-                discount_percentage = (max_discount.discount_percentage *
-                                       apply_discount_part)
-            else:
-                # The current demand is full on all days, no discount
-                discount_percentage = 0
-
-            price = regular_price * (1 - discount_percentage / 100.0)
-
-            if discounts.is_maximum_discount_enabled and discounts.maximum_discount:
-                price = max(price, (regular_price - discounts.maximum_discount))
-
-            calculated_price.price = price
-
-            if discount_percentage > 0:
-                calculated_price.applied_discount = max_discount.type
-                calculated_price.discount_percentage = round(discount_percentage)
-            else:
+            max_discount = find_applicable_discount(self.discounts, self.last_visit_date, dt)
+            if max_discount is None:
+                calculated_price.price = self.regular_price
                 calculated_price.applied_discount = None
                 calculated_price.discount_percentage = 0
+            else:
+                demand = self.current_demand[i]
 
-        results.append(calculated_price)
+                if min_demand < 1:
+                    # linearly interpolate the discount between 0 and max_discount
+                    # for demands in the range of [1 .. min_demand]. This means that
+                    # on the days with minimal demand full discount will be applied
+                    # and on the days that are fully booked zero discount will be applied
+                    # (actually no booking should be allowed on those days at all).
+                    apply_discount_part = (1 - demand) / (1 - min_demand)
 
-    return results
+                    # Introduce granularity to the lienar interpolation so that the
+                    # the final prices fall into a few buckets instead of forming
+                    # a more continuous spectrum, which would be more precise but
+                    # undesirable from user perspective. The granularity ensures that
+                    # small changes in demand do not cause all prices to jump around
+                    # and brings some stability to them.
+                    apply_discount_part = granularize(apply_discount_part,
+                                                      DISCOUNT_GRANULARIZATION)
+
+                    # Calculate discount percentage to apply as a portion of
+                    # maximum applicable discount.
+                    self.discount_percentage = (max_discount.discount_percentage *
+                                                apply_discount_part)
+                else:
+                    # The current demand is full on all days, no discount
+                    self.discount_percentage = 0
+
+                price = self.calculate_discount()
+
+                calculated_price.price = price
+
+                if self.discount_percentage > 0:
+                    calculated_price.applied_discount = max_discount.type
+                    calculated_price.discount_percentage = round(self.discount_percentage)
+                else:
+                    calculated_price.applied_discount = None
+                    calculated_price.discount_percentage = 0
+
+            results.append(calculated_price)
+
+        return results
+
+    def cap_max_discount(self, fully_discounted_price, price_without_discount):
+        if self.discounts.is_maximum_discount_enabled and self.discounts.maximum_discount:
+            return max(fully_discounted_price, (
+                price_without_discount - self.discounts.maximum_discount))
+        return fully_discounted_price
+
+    def calculate_discount(self):
+        price = self.regular_price * (1 - self.discount_percentage / 100.0)
+        price = self.cap_max_discount(price, self.regular_price)
+        return price
+
+
+class CalculateTotal(Calculate):
+    """
+    This extends class Calculate() to calculate the total
+    discount prices for multiple services.
+    """
+
+    def __init__(self,
+                 stylist_timezone: tzinfo,
+                 discounts: DiscountSettings,
+                 last_visit_date: Optional[date],
+                 regular_price_list: List[float],
+                 total_regular_price: float,
+                 current_demand: List[float]) -> None:
+        self.regular_price_list = regular_price_list
+        super(CalculateTotal, self).__init__(
+            stylist_timezone,
+            discounts,
+            last_visit_date,
+            total_regular_price,
+            current_demand,
+        )
+
+    def calc_multiple_services(
+            self) -> List[CalculatedPrice]:
+        return self.calc_client_prices()
+
+    def calculate_discount(self):
+        total_price = 0
+        for regular_price in self.regular_price_list:
+            fully_discounted_price = regular_price * (1 - self.discount_percentage / 100.0)
+            total_price += self.cap_max_discount(fully_discounted_price, regular_price)
+        return total_price
 
 
 def is_valid_discount_percentage(discount_percentage: float) -> bool:
@@ -293,7 +344,7 @@ def normalize_demand(
         weekday_available_hours: Dict[Weekday, timedelta]) -> List[float]:
     """
     Convert absolute demand values expressed as durations into normalized demand
-    values in [0..1] range. Use to prepare demand values for calc_client_prices()
+    values in [0..1] range. Use to prepare demand values for Calculate.calc_client_prices()
     function.
 
     Args:

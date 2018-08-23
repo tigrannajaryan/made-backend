@@ -1,7 +1,8 @@
 import datetime
 import uuid
 from decimal import Decimal
-from typing import Dict, List, Optional, Tuple
+from math import trunc
+from typing import Dict, Iterable, List, Optional, Tuple
 
 from django.db import transaction
 from django.db.models import Sum
@@ -18,7 +19,9 @@ from api.v1.client.constants import ErrorMessages
 
 from api.v1.stylist.fields import DurationMinuteField
 from api.v1.stylist.serializers import (
-    AppointmentServiceSerializer, StylistServiceCategoryDetailsSerializer)
+    AppointmentServiceSerializer,
+    StylistServiceCategoryDetailsSerializer,
+    StylistServicePriceSerializer)
 
 from appointment.constants import (
     APPOINTMENT_CLIENT_SETTABLE_STATUSES,
@@ -31,7 +34,9 @@ from core.types import AppointmentPrices
 from core.utils import calculate_appointment_prices
 from pricing import CalculatedPrice
 from salon.models import ServiceCategory, Stylist, StylistService
-from salon.utils import calculate_price_and_discount_for_client_on_date
+from salon.types import PriceOnDate
+from salon.utils import (calculate_price_and_discount_for_client_on_date,
+                         generate_prices_for_service_list)
 
 
 class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
@@ -185,7 +190,38 @@ class StylistServiceListSerializer(FormattedErrorMessageMixin, serializers.Model
 
 
 class ServicePricingRequestSerializer(FormattedErrorMessageMixin, serializers.Serializer):
-    service_uuid = serializers.UUIDField()
+    service_uuids = serializers.ListField(child=serializers.UUIDField())
+
+
+class ServicePricingSerializer(serializers.Serializer):
+    service_uuids = serializers.ListField(child=serializers.UUIDField())
+    stylist_uuid = serializers.UUIDField(read_only=True)
+    prices = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        fields = ['service_uuid', 'service_name', 'prices', ]
+
+    def get_prices(self, object):
+        services = self.context.get('services', [])
+        client: ClientOfStylist = self.context.get('client_of_stylist', None)
+        stylist = client.stylist
+        prices_and_dates: Iterable[PriceOnDate] = generate_prices_for_service_list(
+            services,
+            stylist,
+            client,
+            exclude_fully_booked=False,
+            exclude_unavailable_days=False
+        )
+        return StylistServicePriceSerializer(
+            map(lambda m: {'date': m.date,
+                           'price': trunc(m.calculated_price.price),
+                           'is_fully_booked': m.is_fully_booked,
+                           'is_working_day': m.is_working_day,
+                           'discount_type': m.calculated_price.applied_discount.value
+                           if m.calculated_price.applied_discount else None,
+                           }, prices_and_dates),
+            many=True
+        ).data
 
 
 class AppointmentValidationMixin(object):
