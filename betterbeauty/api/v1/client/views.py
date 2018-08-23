@@ -285,7 +285,7 @@ class AppointmentPreviewView(views.APIView):
     def post(self, request):
         client: Client = self.request.user.client
         serializer = AppointmentPreviewRequestSerializer(
-            data=request.data
+            data=request.data, context=self.get_serializer_context()
         )
         serializer.is_valid(raise_exception=True)
         stylist: Stylist = get_object_or_404(
