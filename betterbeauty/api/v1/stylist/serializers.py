@@ -2,7 +2,7 @@ import datetime
 import uuid
 from decimal import Decimal
 from math import trunc
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional
 
 from django.conf import settings
 from django.db import transaction
@@ -28,7 +28,6 @@ from core.types import AppointmentPrices, Weekday
 from core.utils import (
     calculate_appointment_prices,
 )
-from pricing import CalculatedPrice
 from salon.models import (
     Invitation,
     Salon,
@@ -43,7 +42,6 @@ from salon.models import (
 )
 from salon.types import PriceOnDate
 from salon.utils import (
-    calculate_price_and_discount_for_client_on_date,
     create_stylist_profile_for_user,
     generate_prices_for_stylist_service,
 )
@@ -828,8 +826,6 @@ class AppointmentSerializer(
         data['created_by'] = stylist.user
         data['stylist'] = stylist
 
-        datetime_start_at: datetime.datetime = data['datetime_start_at']
-
         # create first AppointmentService
         with transaction.atomic():
             if client:
@@ -840,39 +836,26 @@ class AppointmentSerializer(
 
             appointment_services = data.pop('services', [])
 
-            # pre-calculate client services before adding the appointment; otherwise
-            # appointment presence will affect the price calculation
-
-            services_with_client_prices: List[Tuple[StylistService, CalculatedPrice]] = []
-            for appointment_service in appointment_services:
-                service: StylistService = stylist.services.get(
-                    uuid=appointment_service['service_uuid']
-                )
-                client_price: CalculatedPrice = calculate_price_and_discount_for_client_on_date(
-                    service=service, client=client, date=datetime_start_at.date()
-                )
-                services_with_client_prices.append((service, client_price))
-
             appointment: Appointment = super(AppointmentSerializer, self).create(data)
             total_client_price_before_tax: Decimal = 0
-            for (service, client_price) in services_with_client_prices:
+            for service_dict in appointment_services:
+                service: StylistService = stylist.services.get(
+                    uuid=service_dict['service_uuid']
+                )
                 AppointmentService.objects.create(
                     appointment=appointment,
                     service_name=service.name,
                     service_uuid=service.uuid,
                     duration=service.duration,
                     regular_price=service.regular_price,
-                    client_price=client_price.price,
-                    calculated_price=client_price.price,
-                    applied_discount=(
-                        client_price.applied_discount.value
-                        if client_price.applied_discount else None
-                    ),
-                    discount_percentage=client_price.discount_percentage,
+                    client_price=service.regular_price,
+                    calculated_price=service.regular_price,
+                    applied_discount=None,
+                    discount_percentage=0,
                     is_price_edited=False,
                     is_original=True
                 )
-                total_client_price_before_tax += Decimal(client_price.price)
+                total_client_price_before_tax += Decimal(service.regular_price)
 
             # set initial price settings
             appointment_prices: AppointmentPrices = calculate_appointment_prices(

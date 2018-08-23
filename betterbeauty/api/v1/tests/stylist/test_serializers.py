@@ -39,7 +39,6 @@ from core.choices import USER_ROLE
 from core.models import TemporaryFile, User
 from core.types import UserRole, Weekday
 from core.utils import calculate_card_fee, calculate_tax
-from pricing import CalculatedPrice
 from salon.models import (
     Salon,
     ServiceCategory,
@@ -50,7 +49,6 @@ from salon.models import (
 )
 from salon.tests.test_models import stylist_appointments_data
 from salon.utils import (
-    calculate_price_and_discount_for_client_on_date,
     create_stylist_profile_for_user,
 )
 
@@ -649,13 +647,6 @@ class TestAppointmentSerializer(object):
     @freeze_time('2018-05-17 15:30:00 UTC')
     @pytest.mark.django_db
     def test_create_without_client(self, stylist_data: Stylist, mocker):
-        calculate_mock = mocker.patch(
-            'api.v1.stylist.serializers.calculate_price_and_discount_for_client_on_date',
-            mock.Mock()
-        )
-        calculate_mock.return_value = CalculatedPrice.build(
-            price=30, applied_discount=None, discount_percentage=0
-        )
         service: StylistService = G(
             StylistService,
             stylist=stylist_data, duration=datetime.timedelta(minutes=30),
@@ -684,7 +675,7 @@ class TestAppointmentSerializer(object):
         assert(serializer.is_valid() is True)
         appointment: Appointment = serializer.save()
 
-        assert(appointment.total_client_price_before_tax == 30)
+        assert(appointment.total_client_price_before_tax == 50)
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == 'Fred')
         assert(appointment.client is None)
@@ -693,7 +684,7 @@ class TestAppointmentSerializer(object):
         original_service: AppointmentService = appointment.services.first()
         assert(original_service.is_original is True)
         assert(original_service.regular_price == service.regular_price)
-        assert(original_service.client_price == 30)
+        assert(original_service.client_price == 50)
         assert(original_service.service_uuid == service.uuid)
         assert(original_service.service_name == service.name)
 
@@ -710,13 +701,7 @@ class TestAppointmentSerializer(object):
             work_start_at=datetime.time(8, 0),
             work_end_at=datetime.time(17, 0)
         )
-        calculate_mock = mocker.patch(
-            'api.v1.stylist.serializers.calculate_price_and_discount_for_client_on_date',
-            mock.Mock()
-        )
-        calculate_mock.return_value = CalculatedPrice.build(
-            price=30, applied_discount=None, discount_percentage=0
-        )
+
         available_time: datetime.datetime = datetime.datetime(
             2018, 5, 17, 16, 00, tzinfo=pytz.utc)
         client: ClientOfStylist = G(
@@ -745,7 +730,7 @@ class TestAppointmentSerializer(object):
         appointment: Appointment = serializer.save()
 
         assert (
-            appointment.total_client_price_before_tax == 30
+            appointment.total_client_price_before_tax == 50
         )
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == client.first_name)
@@ -756,7 +741,7 @@ class TestAppointmentSerializer(object):
         original_service: AppointmentService = appointment.services.first()
         assert (original_service.is_original is True)
         assert (original_service.regular_price == service.regular_price)
-        assert (original_service.client_price == 30)
+        assert (original_service.client_price == 50)
         assert (original_service.service_uuid == service.uuid)
         assert (original_service.service_name == service.name)
 
@@ -796,16 +781,14 @@ class TestAppointmentSerializer(object):
                 ).isoformat()
             }
 
-            calculated_price: CalculatedPrice = calculate_price_and_discount_for_client_on_date(
-                service=service, client=client, date=appointment_start.date()
-            )
+            calculated_price = service.regular_price
             appointment_serializer = AppointmentSerializer(
                 data=appointment_data, context={'stylist': stylist_data, 'force_start': True}
             )
             assert(appointment_serializer.is_valid(raise_exception=False) is True)
             appointment: Appointment = appointment_serializer.save()
             appointment_service: AppointmentService = appointment.services.first()
-            assert(calculated_price.price == appointment_service.client_price)
+            assert(calculated_price == appointment_service.client_price)
 
 
 class TestAppointmentUpdateSerializer(object):
@@ -936,13 +919,6 @@ class TestAppointmentUpdateSerializer(object):
 
     @pytest.mark.django_db
     def test_save_checked_out_status(self, mocker):
-        calculate_mock = mocker.patch(
-            'api.v1.stylist.serializers.calculate_price_and_discount_for_client_on_date',
-            mock.Mock()
-        )
-        calculate_mock.return_value = CalculatedPrice.build(
-            price=30, applied_discount=None, discount_percentage=0
-        )
         salon = G(Salon, timezone=pytz.utc)
         stylist = G(Stylist, salon=salon)
         appointment = G(

@@ -155,13 +155,6 @@ class TestAppointmentSerializer(object):
     @freeze_time('2018-05-17 15:30:00 UTC')
     @pytest.mark.django_db
     def test_create_without_client(self, stylist_data: Stylist, client_data: Client, mocker):
-        calculate_mock = mocker.patch(
-            'api.v1.stylist.serializers.calculate_price_and_discount_for_client_on_date',
-            mock.Mock()
-        )
-        calculate_mock.return_value = CalculatedPrice.build(
-            price=30, applied_discount=None, discount_percentage=0
-        )
         service: StylistService = G(
             StylistService,
             stylist=stylist_data, duration=datetime.timedelta(minutes=30),
@@ -219,13 +212,6 @@ class TestAppointmentSerializer(object):
             is_available=True,
             work_start_at=datetime.time(8, 0),
             work_end_at=datetime.time(17, 0)
-        )
-        calculate_mock = mocker.patch(
-            'api.v1.stylist.serializers.calculate_price_and_discount_for_client_on_date',
-            mock.Mock()
-        )
-        calculate_mock.return_value = CalculatedPrice.build(
-            price=30, applied_discount=None, discount_percentage=0
         )
         available_time: datetime.datetime = datetime.datetime(
             2018, 5, 17, 16, 00, tzinfo=pytz.utc)
@@ -479,13 +465,6 @@ class TestAppointmentUpdateSerializer(object):
 
     @pytest.mark.django_db
     def test_save_checked_out_status(self, mocker, stylist_data: Stylist, client_data: Client):
-        calculate_mock = mocker.patch(
-            'api.v1.stylist.serializers.calculate_price_and_discount_for_client_on_date',
-            mock.Mock()
-        )
-        calculate_mock.return_value = CalculatedPrice.build(
-            price=30, applied_discount=None, discount_percentage=0
-        )
         salon = G(Salon, timezone=pytz.utc)
         stylist = G(Stylist, salon=salon)
         appointment = G(
