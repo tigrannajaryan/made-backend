@@ -225,7 +225,7 @@ class TestStylistService(object):
 class TestAvailableSlots(object):
 
     @pytest.mark.django_db
-    @freeze_time('2018-05-14 13:30:00 UTC')
+    @freeze_time('2018-05-14 07:30:00 UTC')
     def test_available_slots(self, stylist_data):
         stylist = stylist_data
         date = datetime.datetime.now().date()
