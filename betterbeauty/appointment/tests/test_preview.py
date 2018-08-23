@@ -15,7 +15,7 @@ from appointment.preview import (
     build_appointment_preview_dict,
 )
 from appointment.types import AppointmentStatus
-# from client.models import Client, ClientOfStylist
+from client.models import Client, ClientOfStylist
 from pricing import CalculatedPrice
 from salon.models import Stylist, StylistService
 
@@ -124,7 +124,6 @@ class TestBuildAppointmentPreviewDict(object):
         ))
 
     @pytest.mark.django_db
-    @pytest.mark.django_db
     @mock.patch(
         'appointment.preview.calculate_price_and_discount_for_client_on_date',
         lambda service, client, date: CalculatedPrice.build(0, None, 0)
@@ -201,4 +200,55 @@ class TestBuildAppointmentPreviewDict(object):
             stylist=stylist,
             datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
             status=appointment.status
+        ))
+
+    @pytest.mark.django_db
+    @mock.patch(
+        'appointment.preview.calculate_price_and_discount_for_client_on_date',
+        lambda service, client, date: CalculatedPrice.build(0, None, 0)
+    )
+    def test_with_existing_client(self):
+        stylist: Stylist = G(Stylist)
+        service: StylistService = G(StylistService, stylist=stylist)
+        client: Client = G(Client)
+        client_of_stylist: ClientOfStylist = G(ClientOfStylist, client=client, stylist=stylist)
+        preview_request = AppointmentPreviewRequest(
+            services=[
+                {'service_uuid': service.uuid}
+            ],
+            datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
+            has_tax_included=False,
+            has_card_fee_included=False,
+        )
+        preview_dict = build_appointment_preview_dict(
+            stylist=stylist,
+            client_of_stylist=client_of_stylist,
+            preview_request=preview_request
+        )
+        assert (preview_dict.conflicts_with.count() == 0)
+        # we can't compare QuerySets, so will just replace the field
+        preview_dict = preview_dict._replace(conflicts_with=None)
+        assert (preview_dict == AppointmentPreviewResponse(
+            grand_total=0,
+            total_client_price_before_tax=0,
+            total_tax=0,
+            total_card_fee=0,
+            duration=stylist.service_time_gap,
+            conflicts_with=None,
+            has_tax_included=False,
+            has_card_fee_included=False,
+            services=[
+                AppointmentServicePreview(
+                    service_name=service.name,
+                    service_uuid=service.uuid,
+                    client_price=0,
+                    regular_price=service.regular_price,
+                    duration=service.duration,
+                    is_original=True,
+                    uuid=None,
+                ),
+            ],
+            stylist=stylist,
+            datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
+            status=AppointmentStatus.NEW
         ))
