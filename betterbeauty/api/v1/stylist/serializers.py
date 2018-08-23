@@ -1273,9 +1273,9 @@ class StylistServicePricingSerializer(serializers.ModelSerializer):
         fields = ['service_uuid', 'service_name', 'prices', ]
 
     def get_prices(self, stylist_service):
-        client: ClientOfStylist = self.context.get('client_of_stylist', None)
+        client_of_stylist: Optional[ClientOfStylist] = self.context['client_of_stylist']
         prices_and_dates: Iterable[PriceOnDate] = generate_prices_for_stylist_service(
-            stylist_service, client, exclude_fully_booked=False,
+            stylist_service, client_of_stylist, exclude_fully_booked=False,
             exclude_unavailable_days=False
         )
         return StylistServicePriceSerializer(
