@@ -15,6 +15,7 @@ from api.v1.client.serializers import (
     AppointmentSerializer,
     AppointmentUpdateSerializer,
     AppointmentValidationMixin,
+    ServicePricingRequestSerializer,
 )
 from appointment.constants import ErrorMessages as appointment_errors
 from appointment.models import Appointment, AppointmentService
@@ -671,3 +672,28 @@ class TestAppointmentPreviewResponseSerializer(object):
             'has_tax_included': True,
             'has_card_fee_included': False,
         })
+
+
+class TestServicePricingRequestSerializer(object):
+    @pytest.mark.django_db
+    def test_validation(self):
+        stylist: Stylist = G(Stylist)
+        client: Client = G(Client)
+        service: StylistService = G(StylistService, stylist=stylist)
+        data = {
+            'service_uuid': str(service.uuid)
+        }
+        serializer = ServicePricingRequestSerializer(data=data, context={'client': client})
+        assert(not serializer.is_valid(raise_exception=False))
+        assert (
+            {'code': appointment_errors.ERR_SERVICE_DOES_NOT_EXIST} in
+            serializer.errors['field_errors']['service_uuid']
+        )
+        preference = G(PreferredStylist, stylist=stylist, client=client)
+
+        serializer = ServicePricingRequestSerializer(data=data, context={'client': client})
+        assert (serializer.is_valid(raise_exception=False))
+        preference.delete()
+        G(ClientOfStylist, client=client, stylist=stylist)
+        serializer = ServicePricingRequestSerializer(data=data, context={'client': client})
+        assert (serializer.is_valid(raise_exception=False))
