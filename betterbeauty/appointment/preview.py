@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.models import ClientOfStylist
+from core.constants import DEFAULT_TAX_RATE
 from core.types import AppointmentPrices
 from core.utils import calculate_appointment_prices
 from salon.models import Stylist, StylistService
@@ -46,6 +47,7 @@ class AppointmentPreviewResponse(NamedTuple):
     stylist: Optional[Stylist]
     datetime_start_at: datetime.datetime
     status: AppointmentStatus
+    tax_percentage: Decimal = DEFAULT_TAX_RATE * 100
 
 
 def build_appointment_preview_dict(
@@ -136,6 +138,7 @@ def build_appointment_preview_dict(
         conflicts_with=conflicts_with,
         total_client_price_before_tax=appointment_prices.total_client_price_before_tax,
         grand_total=appointment_prices.grand_total,
+        tax_percentage=DEFAULT_TAX_RATE * 100,
         total_tax=appointment_prices.total_tax,
         total_card_fee=appointment_prices.total_card_fee,
         has_tax_included=appointment_prices.has_tax_included,
