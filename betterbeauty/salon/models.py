@@ -374,7 +374,7 @@ class Stylist(models.Model):
         return self.available_days.filter(
             weekday=date_time.isoweekday(),
             work_start_at__lte=date_time.time(),
-            work_end_at__gt=end_time
+            work_end_at__gte=end_time
         ).exists()
 
     def is_working_day(self, date_time: datetime.datetime):
