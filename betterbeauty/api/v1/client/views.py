@@ -122,29 +122,22 @@ class StylistServicePriceView(views.APIView):
 
     def post(self, request, *args, **kwargs):
         serializer = ServicePricingRequestSerializer(
-            data=request.data)
+            data=request.data, context={'client': self.request.user.client}
+        )
         serializer.is_valid(raise_exception=True)
         client = self.request.user.client
         service_uuid = serializer.validated_data.get('service_uuid')
-        service_queryset = StylistService.objects.filter(
-            Q(
-                stylist__preferredstylist__client=client,
-                stylist__preferredstylist__deleted_at__isnull=True
-            ) | Q(
-                stylist__clients_of_stylist__client=client
-            )
-        ).distinct('id')
-        service = get_object_or_404(
-            service_queryset,
-            uuid=service_uuid
-        )
+        # service_uuid is already validated here, so we can safely query it by UUID
+        service: StylistService = StylistService.objects.get(uuid=service_uuid)
 
         # client_of_stylist can as well be None here, which is OK; in such a case
         # prices will be returned without discounts
         client_of_stylist = client.client_of_stylists.filter(stylist=service.stylist).last()
 
         return Response(
-            StylistServicePricingSerializer(service, context={'client': client_of_stylist}).data
+            StylistServicePricingSerializer(
+                service, context={'client_of_stylist': client_of_stylist}
+            ).data
         )
 
 

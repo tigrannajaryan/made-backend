@@ -327,7 +327,11 @@ class TestStylistServicePriceView(object):
             data={
                 'service_uuid': foreign_service.uuid
             }, HTTP_AUTHORIZATION=auth_token)
-        assert (response.status_code == status.HTTP_404_NOT_FOUND)
+        assert (response.status_code == status.HTTP_400_BAD_REQUEST)
+        assert (
+            {'code': appointment_errors.ERR_SERVICE_DOES_NOT_EXIST} in
+            response.data['field_errors']['service_uuid']
+        )
 
         user, auth_token = authorized_stylist_user
         response = client.post(
