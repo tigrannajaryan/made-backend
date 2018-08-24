@@ -108,7 +108,8 @@ class StylistAvailableWeekDay(models.Model):
             date, self.work_end_at
         ) - datetime.datetime.combine(date, self.work_start_at)
 
-    def get_all_slots(self, service_time_gap: datetime.timedelta) -> List[
+    def get_all_slots(self, service_time_gap: datetime.timedelta,
+                      current_time: Optional[datetime.time] = None) -> List[
             TimeSlot]:
         available_slots: List[TimeSlot] = []
         if not self.is_available:
@@ -117,7 +118,8 @@ class StylistAvailableWeekDay(models.Model):
         while start_at < self.work_end_at:
             slot_end_time = (datetime.datetime.combine(
                 datetime.date.today(), start_at) + service_time_gap).time()
-            available_slots.append((start_at, slot_end_time))
+            if not current_time or (current_time and start_at > current_time):
+                available_slots.append((start_at, slot_end_time))
             start_at = slot_end_time
         return available_slots
 
@@ -212,7 +214,14 @@ class Stylist(models.Model):
                 weekday=date.isoweekday(), is_available=True)
         except StylistAvailableWeekDay.DoesNotExist:
             return available_slots
-        for slot in shift.get_all_slots(self.service_time_gap):
+        if date < timezone.now().date():
+            return available_slots
+        if date == timezone.now().date():
+            slots = shift.get_all_slots(self.service_time_gap,
+                                        self.with_salon_tz(timezone.now()).time())
+        else:
+            slots = shift.get_all_slots(self.service_time_gap, None)
+        for slot in slots:
             available_slots.append(
                 TimeSlotAvailability(
                     start=self.with_salon_tz(datetime.datetime.combine(date, slot[0])),
