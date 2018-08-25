@@ -228,7 +228,11 @@ class AppointmentValidationMixin(object):
         # check if there are intersecting appointments
         if stylist.get_appointments_in_datetime_range(
             datetime_start_at, datetime_start_at + stylist.service_time_gap,
-            including_to=True
+            including_to=True,
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+                AppointmentStatus.CANCELLED_BY_STYLIST
+            ]
         ).exists():
             raise serializers.ValidationError(
                 appointment_errors.ERR_APPOINTMENT_INTERSECTION
