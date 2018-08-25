@@ -696,12 +696,16 @@ class AppointmentValidationMixin(object):
     def validate_service_uuid(self, service_uuid: str):
         context: Dict = getattr(self, 'context', {})
         stylist: Stylist = context['stylist']
+        appointment: Optional[Appointment] = context.get('appointment', None)
         if not stylist.services.filter(
             uuid=service_uuid
         ).exists():
-            raise serializers.ValidationError(
-                appointment_errors.ERR_SERVICE_DOES_NOT_EXIST
-            )
+            if not appointment or (
+                    appointment and not appointment.services.filter(
+                        service_uuid=service_uuid).exists()):
+                raise serializers.ValidationError(
+                    appointment_errors.ERR_SERVICE_DOES_NOT_EXIST
+                )
         return service_uuid
 
     def validate_services(self, services):

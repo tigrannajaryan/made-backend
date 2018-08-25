@@ -9,3 +9,4 @@ class ErrorMessages:
     ERR_UNIQUE_CLIENT_NAME = 'err_unique_client_name'
     ERR_INVALID_QUERY_FOR_HOME = 'err_invalid_query_for_home'
     ERR_AVAILABLE_TIME_NOT_SET = 'err_available_time_not_set'
+    ERR_INVALID_APPOINTMENT_UUID = 'err_invalid_appointment_uuid'

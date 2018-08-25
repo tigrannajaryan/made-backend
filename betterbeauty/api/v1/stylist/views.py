@@ -6,9 +6,9 @@ from dateutil.parser import parse
 from django.db import transaction
 from django.db.models import F, Q, QuerySet, Value
 from django.db.models.functions import Concat
-from django.shortcuts import get_object_or_404
 
 from rest_framework import generics, permissions, status, views
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from api.common.permissions import (
@@ -26,7 +26,7 @@ from core.utils import (
     post_or_get,
 )
 from salon.models import ServiceTemplateSet, Stylist, StylistService
-from .constants import MAX_APPOINTMENTS_PER_REQUEST
+from .constants import ErrorMessages, MAX_APPOINTMENTS_PER_REQUEST
 from .serializers import (
     AppointmentPreviewRequestSerializer,
     AppointmentPreviewResponseSerializer,
@@ -268,15 +268,20 @@ class StylistAppointmentPreviewView(views.APIView):
 
     def post(self, request):
         stylist: Stylist = self.request.user.stylist
+        try:
+            appointment: Appointment = stylist.appointments.get(
+                uuid=request.data['appointment_uuid'])
+        except Appointment.DoesNotExist:
+            raise ValidationError({'detail': ErrorMessages.ERR_INVALID_APPOINTMENT_UUID})
         serializer = AppointmentPreviewRequestSerializer(
-            data=request.data, context={'stylist': stylist, 'force_start': True}
+            data=request.data, context={'stylist': stylist,
+                                        'appointment': appointment, 'force_start': True}
         )
         serializer.is_valid(raise_exception=True)
         client_uuid = serializer.validated_data.pop('client_uuid', None)
         client_of_stylist: ClientOfStylist = None
         if client_uuid:
-            client_of_stylist = get_object_or_404(
-                stylist.clients_of_stylist.all(),
+            client_of_stylist = stylist.clients_of_stylist.get(
                 uuid=client_uuid
             )
         preview_request = AppointmentPreviewRequest(**serializer.validated_data)
@@ -318,9 +323,13 @@ class StylistAppointmentRetrieveUpdateCancelView(
         return Response(AppointmentSerializer(appointment).data)
 
     def get_serializer_context(self):
+        stylist = self.request.user.stylist
+        appointment: Appointment = stylist.appointments.get(
+            uuid=self.kwargs['appointment_uuid'])
         return {
             'user': self.request.user,
-            'stylist': self.request.user.stylist
+            'stylist': self.request.user.stylist,
+            'appointment': appointment
         }
 
     def get_queryset(self):
