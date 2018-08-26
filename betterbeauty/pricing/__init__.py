@@ -72,7 +72,7 @@ def calc_client_prices(
         stylist_timezone: tzinfo,
         discounts: DiscountSettings,
         last_visit_date: Optional[date],
-        regular_price: float,
+        regular_prices: List[float],
         current_demand: List[float]) -> List[CalculatedPrice]:
     """
     Calculate client prices for PRICE_BLOCK_SIZE days starting from today's date in stylists's
@@ -103,7 +103,7 @@ def calc_client_prices(
         last_visit_date: last time the client visited. None if they never visited (e.g.
             new client).
 
-        regular_price: the regular price for the service.
+        regular_prices: the array of regular prices for the services.
 
         current_demand: A list of PRICE_BLOCK_SIZE items. Each item describes the demand for one
             day, the first item corresponds to today. The demand is a normalized number between 0
@@ -153,7 +153,7 @@ def calc_client_prices(
 
         max_discount = find_applicable_discount(discounts, last_visit_date, dt)
         if max_discount is None:
-            calculated_price.price = regular_price
+            calculated_price.price = sum(regular_prices)
             calculated_price.applied_discount = None
             calculated_price.discount_percentage = 0
         else:
@@ -184,12 +184,16 @@ def calc_client_prices(
                 # The current demand is full on all days, no discount
                 discount_percentage = 0
 
-            price = regular_price * (1 - discount_percentage / 100.0)
+            total_price: float = 0
+            for regular_price in regular_prices:
+                price = regular_price * (1 - discount_percentage / 100.0)
+                # every service should be capped to maximum discount amount
+                if discounts.is_maximum_discount_enabled and discounts.maximum_discount:
+                    price = max(price, (regular_price - discounts.maximum_discount))
 
-            if discounts.is_maximum_discount_enabled and discounts.maximum_discount:
-                price = max(price, (regular_price - discounts.maximum_discount))
+                total_price += price
 
-            calculated_price.price = price
+            calculated_price.price = total_price
 
             if discount_percentage > 0:
                 calculated_price.applied_discount = max_discount.type

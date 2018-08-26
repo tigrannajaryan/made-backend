@@ -314,28 +314,29 @@ class TestStylistServicePriceView(object):
         foreign_service = G(
             StylistService, stylist=foreign_stylist, duration=datetime.timedelta(0)
         )
-        stylist_service_url = reverse('api:v1:client:services-pricing')
+        client_service_pricing_url = reverse('api:v1:client:services-pricing')
         response = client.post(
-            stylist_service_url,
+            client_service_pricing_url,
             data={
-                'service_uuid': our_service.uuid
+                'service_uuids': [our_service.uuid]
             }, HTTP_AUTHORIZATION=auth_token)
         assert (status.is_success(response.status_code))
 
         response = client.post(
-            stylist_service_url,
+            client_service_pricing_url,
             data={
-                'service_uuid': foreign_service.uuid
+                'service_uuids': [our_service.uuid,
+                                  foreign_service.uuid]
             }, HTTP_AUTHORIZATION=auth_token)
         assert (response.status_code == status.HTTP_400_BAD_REQUEST)
         assert (
             {'code': appointment_errors.ERR_SERVICE_DOES_NOT_EXIST} in
-            response.data['field_errors']['service_uuid']
+            response.data['field_errors']['service_uuids']
         )
 
         user, auth_token = authorized_stylist_user
         response = client.post(
-            stylist_service_url,
+            client_service_pricing_url,
             data={
                 'service_uuid': our_service.uuid
             }, HTTP_AUTHORIZATION=auth_token)

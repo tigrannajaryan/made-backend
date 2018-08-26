@@ -160,7 +160,7 @@ def generate_discount_settings_for_stylist(
 
 
 def generate_prices_for_stylist_service(
-        service: StylistService,
+        services: List[StylistService],
         client: Optional[ClientOfStylist],
         exclude_fully_booked: bool=False,
         exclude_unavailable_days: bool=False
@@ -174,7 +174,7 @@ def generate_prices_for_stylist_service(
     :param exclude_unavailable_days: whether or not remove unavailable dates
     :return: Iterator over (date, CalculatedPrice, fully_booked boolean)
     """
-    stylist = service.stylist
+    stylist = services[0].stylist
 
     last_visit_date = get_last_visit_date_for_client(stylist, client) if client else None
 
@@ -190,7 +190,7 @@ def generate_prices_for_stylist_service(
         stylist.salon.timezone,
         discounts,
         last_visit_date,
-        float(service.regular_price),
+        [float(x.regular_price) for x in services],
         demand_list
     )
 
@@ -215,7 +215,7 @@ def calculate_price_and_discount_for_client_on_date(
 
     price_on_dates: Iterable[PriceOnDate] = (
         generate_prices_for_stylist_service(
-            service=service, client=client, exclude_fully_booked=False,
+            services=[service, ], client=client, exclude_fully_booked=False,
             exclude_unavailable_days=False
         ))
 
