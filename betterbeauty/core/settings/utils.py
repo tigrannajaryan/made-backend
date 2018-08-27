@@ -7,7 +7,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 # more details at https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
-AWS_EC2_METADATA_URL = 'http://169.254.169.254/latest/meta-data/'
+AWS_EC2_METADATA_URL = 'http://169.254.169.254/latest/meta-data'
 
 
 def parse_database_url(database_url, ssl_cert=None):
