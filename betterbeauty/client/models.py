@@ -93,7 +93,6 @@ class ClientOfStylist(models.Model):
     class Meta:
         db_table = 'client_of_stylist'
         unique_together = (("stylist", "phone"),
-                           ("stylist", "first_name", "last_name"),
                            ("stylist", "client"),)
 
     def get_full_name(self):
