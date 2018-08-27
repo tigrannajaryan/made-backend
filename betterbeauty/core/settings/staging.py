@@ -1,6 +1,7 @@
 from typing import List
 
 from .defaults import *  # noqa
+from .utils import get_ec2_instance_ip
 
 LEVEL = 'staging'
 
@@ -9,6 +10,7 @@ ALLOWED_HOSTS = (
     'admindev.betterbeauty.io',
     '*.admindev.madebeauty.com',
     'admindev.madebeauty.com',
+    get_ec2_instance_ip()
 )
 
 DEBUG = False

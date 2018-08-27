@@ -1,10 +1,11 @@
 from typing import List
 
 from .defaults import *  # noqa
+from .utils import get_ec2_instance_ip
 
 LEVEL = 'production'
 
-ALLOWED_HOSTS = ('*.admin.madebeauty.com', 'admin.madebeauty.com', )
+ALLOWED_HOSTS = ('*.admin.madebeauty.com', 'admin.madebeauty.com', get_ec2_instance_ip())
 
 DEBUG = False
 
