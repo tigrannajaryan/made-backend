@@ -196,7 +196,7 @@ class ServicePricingRequestSerializer(FormattedErrorMessageMixin, serializers.Se
     service_uuids = serializers.ListField(child=serializers.UUIDField())
 
     def validate_service_uuids(self, service_uuids: List[str]):
-        context: Dict = getattr(self, 'context', {})
+        context: Dict = self.context
         client: Client = context['client']
         available_services = StylistService.objects.filter(
             stylist__preferredstylist__client=client).values_list('uuid', flat=True)
@@ -224,16 +224,17 @@ class ServicePricingSerializer(serializers.Serializer):
             exclude_fully_booked=False,
             exclude_unavailable_days=False
         )
-        return StylistServicePriceSerializer(
-            map(lambda m: {'date': m.date,
-                           'price': trunc(m.calculated_price.price),
-                           'is_fully_booked': m.is_fully_booked,
-                           'is_working_day': m.is_working_day,
-                           'discount_type': m.calculated_price.applied_discount.value
-                           if m.calculated_price.applied_discount else None,
-                           }, prices_and_dates),
-            many=True
-        ).data
+        prices_and_dates_list = []
+        for obj in prices_and_dates:
+            prices_and_dates_list.append({
+                'date': obj.date,
+                'price': trunc(obj.calculated_price.price),
+                'is_fully_booked': obj.is_fully_booked,
+                'is_working_day': obj.is_working_day,
+                'discount_type': obj.calculated_price.applied_discount.value
+                if obj.calculated_price.applied_discount else None
+            })
+        return StylistServicePriceSerializer(prices_and_dates_list, many=True).data
 
 
 class AppointmentValidationMixin(object):
