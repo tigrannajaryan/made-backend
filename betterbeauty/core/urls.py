@@ -5,10 +5,12 @@ from django.urls import path
 from django.views.static import serve
 
 from api import urls as api_urls
+from .views import HealthCheckView
 
 urlpatterns = [
     path('djangoadmin/', admin.site.urls),
     url(r'^api/', include(api_urls, namespace='api')),
+
 ]
 
 if settings.LEVEL in ['development', 'tests']:
@@ -19,4 +21,9 @@ if settings.LEVEL in ['development', 'tests']:
         url(r'^static/(?P<path>.*)$', serve, {
             'document_root': settings.STATIC_ROOT,
         }),
+    ]
+
+if settings.LEVEL in ['production', 'staging']:
+    urlpatterns += [
+        url(r'^healthcheck', HealthCheckView.as_view()),
     ]
