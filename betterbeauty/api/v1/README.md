@@ -2437,14 +2437,19 @@ curl -X POST \
   -H 'Authorization: Token jwt_token' \
   -H 'Content-Type: application/json' \
   -d '{
-  "service_uuid": "11a37320-c320-4d43-8d9d-b8f03147e54f"
+  "services_uuids": [
+    "11a37320-c320-4d43-8d9d-b8f03147e54f",
+    "12345678-c320-4d43-8d9d-b8f0314abcde"
 }'
 ```
 
 **Response 200 OK**
 
 ```json
-{"service_uuid": "11a37320-c320-4d43-8d9d-b8f03147e54f",
+{"service_uuids": [
+    "11a37320-c320-4d43-8d9d-b8f03147e54f",
+    "12345678-c320-4d43-8d9d-b8f0314abcde"
+    ],
     "service_name": "Crochet braids",
     "prices": [
         {

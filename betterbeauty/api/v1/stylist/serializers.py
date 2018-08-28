@@ -1282,7 +1282,7 @@ class StylistServicePricingSerializer(serializers.ModelSerializer):
     def get_prices(self, stylist_service):
         client_of_stylist: Optional[ClientOfStylist] = self.context['client_of_stylist']
         prices_and_dates: Iterable[PriceOnDate] = generate_prices_for_stylist_service(
-            stylist_service, client_of_stylist, exclude_fully_booked=False,
+            [stylist_service, ], client_of_stylist, exclude_fully_booked=False,
             exclude_unavailable_days=False
         )
         return StylistServicePriceSerializer(

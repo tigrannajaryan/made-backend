@@ -28,11 +28,12 @@ from api.v1.client.serializers import (
     HistorySerializer,
     HomeSerializer,
     ServicePricingRequestSerializer,
+    ServicePricingSerializer,
     StylistServiceListSerializer,
-    TimeSlotSerializer
+    TimeSlotSerializer,
 )
 from api.v1.stylist.constants import MAX_APPOINTMENTS_PER_REQUEST
-from api.v1.stylist.serializers import StylistSerializer, StylistServicePricingSerializer
+from api.v1.stylist.serializers import StylistSerializer
 from appointment.models import Appointment
 from appointment.preview import AppointmentPreviewRequest, build_appointment_preview_dict
 from appointment.types import AppointmentStatus
@@ -122,22 +123,33 @@ class StylistServicePriceView(views.APIView):
 
     def post(self, request, *args, **kwargs):
         serializer = ServicePricingRequestSerializer(
-            data=request.data, context={'client': self.request.user.client}
-        )
+            data=request.data, context={'client': request.user.client})
         serializer.is_valid(raise_exception=True)
         client = self.request.user.client
-        service_uuid = serializer.validated_data.get('service_uuid')
-        # service_uuid is already validated here, so we can safely query it by UUID
-        service: StylistService = StylistService.objects.get(uuid=service_uuid)
-
-        # client_of_stylist can as well be None here, which is OK; in such a case
-        # prices will be returned without discounts
-        client_of_stylist = client.client_of_stylists.filter(stylist=service.stylist).last()
+        service_uuids = serializer.validated_data.get('service_uuids')
+        service_queryset = StylistService.objects.filter(
+            Q(
+                stylist__preferredstylist__client=client,
+                stylist__preferredstylist__deleted_at__isnull=True
+            ) | Q(
+                stylist__clients_of_stylist__client=client
+            )
+        ).distinct('id')
+        services = []
+        for service_uuid in service_uuids:
+            services.append(service_queryset.get(
+                uuid=service_uuid
+            ))
+            # client_of_stylist can as well be None here, which is OK; in such a case
+            # prices will be returned without discounts
+        stylist = services[0].stylist
+        client_of_stylist = client.client_of_stylists.filter(stylist=stylist).last()
 
         return Response(
-            StylistServicePricingSerializer(
-                service, context={'client_of_stylist': client_of_stylist}
-            ).data
+            ServicePricingSerializer({
+                'service_uuids': service_uuids,
+                'stylist_uuid': stylist.uuid,
+            }, context={'client_of_stylist': client_of_stylist, 'services': services}).data
         )
 
 

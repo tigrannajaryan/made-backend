@@ -1,10 +1,11 @@
 import datetime
 import uuid
 from decimal import Decimal
-from typing import Dict, List, Optional, Tuple
+from math import trunc
+from typing import Dict, Iterable, List, Optional, Tuple
 
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import serializers
@@ -18,7 +19,10 @@ from api.v1.client.constants import ErrorMessages
 
 from api.v1.stylist.fields import DurationMinuteField
 from api.v1.stylist.serializers import (
-    AppointmentServiceSerializer, StylistServiceCategoryDetailsSerializer)
+    AppointmentServiceSerializer,
+    StylistServiceCategoryDetailsSerializer,
+    StylistServicePriceSerializer
+)
 
 from appointment.constants import (
     APPOINTMENT_CLIENT_SETTABLE_STATUSES,
@@ -31,7 +35,11 @@ from core.types import AppointmentPrices
 from core.utils import calculate_appointment_prices
 from pricing import CalculatedPrice
 from salon.models import ServiceCategory, Stylist, StylistService
-from salon.utils import calculate_price_and_discount_for_client_on_date
+from salon.types import PriceOnDate
+from salon.utils import (
+    calculate_price_and_discount_for_client_on_date,
+    generate_prices_for_stylist_service
+)
 
 
 class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
@@ -185,21 +193,48 @@ class StylistServiceListSerializer(FormattedErrorMessageMixin, serializers.Model
 
 
 class ServicePricingRequestSerializer(FormattedErrorMessageMixin, serializers.Serializer):
-    service_uuid = serializers.UUIDField(required=True, allow_null=False)
+    service_uuids = serializers.ListField(child=serializers.UUIDField())
 
-    def validate_service_uuid(self, service_uuid):
-        client: Client = self.context['client']
-        if StylistService.objects.filter(
-            Q(
-                stylist__preferredstylist__client=client,
-                stylist__preferredstylist__deleted_at__isnull=True
-            ) | Q(
-                stylist__clients_of_stylist__client=client
-            ),
-            uuid=service_uuid
-        ).exists():
-            return service_uuid
-        raise ValidationError(appointment_errors.ERR_SERVICE_DOES_NOT_EXIST)
+    def validate_service_uuids(self, service_uuids: List[str]):
+        context: Dict = self.context
+        client: Client = context['client']
+        available_services = StylistService.objects.filter(
+            stylist__preferredstylist__client=client).values_list('uuid', flat=True)
+        if not all(x in available_services for x in service_uuids):
+            raise serializers.ValidationError(
+                appointment_errors.ERR_SERVICE_DOES_NOT_EXIST
+            )
+        return service_uuids
+
+
+class ServicePricingSerializer(serializers.Serializer):
+    service_uuids = serializers.ListField(child=serializers.UUIDField())
+    stylist_uuid = serializers.UUIDField(read_only=True)
+    prices = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        fields = ['service_uuid', 'service_name', 'prices', ]
+
+    def get_prices(self, object):
+        services = self.context.get('services', [])
+        client_of_stylist: ClientOfStylist = self.context['client_of_stylist']
+        prices_and_dates: Iterable[PriceOnDate] = generate_prices_for_stylist_service(
+            services,
+            client_of_stylist,
+            exclude_fully_booked=False,
+            exclude_unavailable_days=False
+        )
+        prices_and_dates_list = []
+        for obj in prices_and_dates:
+            prices_and_dates_list.append({
+                'date': obj.date,
+                'price': trunc(obj.calculated_price.price),
+                'is_fully_booked': obj.is_fully_booked,
+                'is_working_day': obj.is_working_day,
+                'discount_type': obj.calculated_price.applied_discount.value
+                if obj.calculated_price.applied_discount else None
+            })
+        return StylistServicePriceSerializer(prices_and_dates_list, many=True).data
 
 
 class AppointmentValidationMixin(object):
