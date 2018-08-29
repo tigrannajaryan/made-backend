@@ -349,7 +349,8 @@ class HomeView(generics.RetrieveAPIView):
         datetime_from = timezone.now()
         datetime_to = None
         exclude_statuses = [
-            AppointmentStatus.CANCELLED_BY_CLIENT
+            AppointmentStatus.CANCELLED_BY_CLIENT,
+            AppointmentStatus.CANCELLED_BY_STYLIST
         ]
         return client.get_appointments_in_datetime_range(
             datetime_from, datetime_to, exclude_statuses=exclude_statuses

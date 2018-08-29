@@ -1104,6 +1104,7 @@ class StylistTodaySerializer(serializers.ModelSerializer):
             exclude_statuses=[
                 AppointmentStatus.CHECKED_OUT,
                 AppointmentStatus.CANCELLED_BY_STYLIST,
+                AppointmentStatus.CANCELLED_BY_CLIENT,
                 AppointmentStatus.NO_SHOW,
             ]
         )
@@ -1176,6 +1177,7 @@ class StylistHomeSerializer(serializers.ModelSerializer):
                 upcoming_only=False,
                 exclude_statuses=[
                     AppointmentStatus.CANCELLED_BY_STYLIST,
+                    AppointmentStatus.CANCELLED_BY_CLIENT,
                     AppointmentStatus.CHECKED_OUT
                 ]
             )
@@ -1188,6 +1190,7 @@ class StylistHomeSerializer(serializers.ModelSerializer):
             upcoming_only=False,
             exclude_statuses=[
                 AppointmentStatus.CANCELLED_BY_STYLIST,
+                AppointmentStatus.CANCELLED_BY_CLIENT,
                 AppointmentStatus.CHECKED_OUT
             ]
         ).count()

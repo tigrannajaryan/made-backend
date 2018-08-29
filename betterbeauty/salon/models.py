@@ -393,6 +393,7 @@ class Stylist(models.Model):
             datetime_to=None,
             exclude_statuses=[
                 AppointmentStatus.CANCELLED_BY_STYLIST,
+                AppointmentStatus.CANCELLED_BY_CLIENT,
             ]
         )
 
@@ -406,7 +407,10 @@ class Stylist(models.Model):
 
         return self.get_appointments_in_datetime_range(
             datetime_from=None,
-            exclude_statuses=[AppointmentStatus.CANCELLED_BY_STYLIST, ],
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_STYLIST,
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+            ],
             q_filter=(Q(datetime_start_at__lt=last_midnight) | Q(
                 datetime_start_at__gte=last_midnight,
                 datetime_start_at__lt=next_midnight,
