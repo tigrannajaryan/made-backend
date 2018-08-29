@@ -15,11 +15,11 @@ def post_or_get_or_data(request, key, default=None):
 
 
 def calculate_tax(original_cost: Decimal) -> Decimal:
-    return original_cost * DEFAULT_TAX_RATE
+    return original_cost * Decimal(DEFAULT_TAX_RATE)
 
 
 def calculate_card_fee(original_cost: Decimal) -> Decimal:
-    return original_cost * DEFAULT_CARD_FEE
+    return original_cost * Decimal(DEFAULT_CARD_FEE)
 
 
 def calculate_appointment_prices(
