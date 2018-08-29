@@ -682,13 +682,13 @@ class TestServicePricingRequestSerializer(object):
         client: Client = G(Client)
         service: StylistService = G(StylistService, stylist=stylist)
         data = {
-            'service_uuid': str(service.uuid)
+            'service_uuids': [str(service.uuid)]
         }
         serializer = ServicePricingRequestSerializer(data=data, context={'client': client})
         assert(not serializer.is_valid(raise_exception=False))
         assert (
             {'code': appointment_errors.ERR_SERVICE_DOES_NOT_EXIST} in
-            serializer.errors['field_errors']['service_uuid']
+            serializer.errors['field_errors']['service_uuids']
         )
         preference = G(PreferredStylist, stylist=stylist, client=client)
 
