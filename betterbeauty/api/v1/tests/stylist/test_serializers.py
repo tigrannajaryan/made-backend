@@ -1,5 +1,4 @@
 import datetime
-from decimal import Decimal
 
 import mock
 import pytest
@@ -1286,7 +1285,8 @@ class TestAppointmentPreviewResponseSerializer(object):
             'total_tax': 4,
             'total_card_fee': 1,
             'grand_total': 15,
-            'tax_percentage': Decimal('8.87'),
+            'tax_percentage': 8.875,
+            'card_fee_percentage': 2.75,
             'has_tax_included': True,
             'has_card_fee_included': True,
             'services': [

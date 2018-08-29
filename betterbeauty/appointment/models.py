@@ -6,7 +6,7 @@ from uuid import uuid4
 from django.db import models, transaction
 
 from client.models import ClientOfStylist
-from core.constants import DEFAULT_TAX_RATE
+from core.constants import DEFAULT_CARD_FEE, DEFAULT_TAX_RATE
 from core.models import User
 from pricing import DISCOUNT_TYPE_CHOICES
 from salon.models import Stylist
@@ -61,7 +61,10 @@ class Appointment(models.Model):
     total_client_price_before_tax = models.DecimalField(max_digits=6, decimal_places=2, null=True)
     total_tax = models.DecimalField(max_digits=6, decimal_places=2, null=True)
     tax_percentage = models.DecimalField(
-        max_digits=4, decimal_places=2, default=DEFAULT_TAX_RATE * 100
+        max_digits=5, decimal_places=3, default=float(DEFAULT_TAX_RATE) * 100
+    )
+    card_fee_percentage = models.DecimalField(
+        max_digits=5, decimal_places=3, default=float(DEFAULT_CARD_FEE) * 100
     )
     total_card_fee = models.DecimalField(max_digits=6, decimal_places=2, null=True)
     grand_total = models.DecimalField(max_digits=4, decimal_places=0, null=True)

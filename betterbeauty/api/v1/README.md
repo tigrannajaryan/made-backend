@@ -1660,7 +1660,8 @@ curl -X POST \
     "total_tax": 26.18,
     "total_card_fee": 8.83,
     "grand_total": 315,
-    "tax_percentage": 8.87,
+    "tax_percentage": 8.875,
+    "card_fee_percentage": 2.75,
     "has_tax_included": False,
     "has_card_fee_included": False,
     "services": [
@@ -1763,7 +1764,8 @@ curl -X POST \
     "total_tax": 26.18,
     "total_card_fee": 8.83,
     "grand_total": 315,
-    "tax_percentage": 8.87,
+    "tax_percentage": 8.875,
+    "card_fee_percentage": 2.75,
     "has_tax_included": False,
     "has_card_fee_included": False,
     "datetime_start_at": "2018-05-20T18:00:00-04:00",
@@ -1890,7 +1892,8 @@ curl -X POST \
     "total_card_fee": 8.83,
     "total_client_price_before_tax": 295,
     "grand_total": 315,
-    "tax_percentage": 8.87,
+    "tax_percentage": 8.875,
+    "card_fee_percentage": 2.75,
     "has_tax_included": False,
     "has_card_fee_included": False,
     "services": [
@@ -1959,7 +1962,8 @@ curl -X GET \
                 }
             ],
             "grand_total": 200,
-            "tax_percentage": 8.87,
+            "tax_percentage": 8.875,
+            "card_fee_percentage": 2.75,
             "has_tax_included": false,
             "has_card_fee_included": false
         }],
@@ -2502,7 +2506,8 @@ curl -X GET \
             }
         ],
         "grand_total": 201,
-        "tax_percentage": 8.87,
+        "tax_percentage": 8.875,
+        "card_fee_percentage": 2.75,
         "has_tax_included": false,
         "has_card_fee_included": false
     }
@@ -2546,7 +2551,8 @@ curl -X GET \
         }
     ],
     "grand_total": 201,
-    "tax_percentage": 8.87,
+    "tax_percentage": 8.875,
+    "card_fee_percentage": 2.75,
     "has_tax_included": false,
     "has_card_fee_included": false
 }
@@ -2597,7 +2603,8 @@ curl -X POST \
         }
     ],
     "grand_total": 201,
-    "tax_percentage": 8.87,
+    "tax_percentage": 8.875,
+    "card_fee_percentage": 2.75,
     "has_tax_included": false,
     "has_card_fee_included": false
 }
@@ -2645,7 +2652,8 @@ curl -X PATCH \
         }
     ],
     "grand_total": 120,
-    "tax_percentage": 8.87,
+    "tax_percentage": 8.875,
+    "card_fee_percentage": 2.75,
     "has_tax_included": false,
     "has_card_fee_included": false
 }
@@ -2694,7 +2702,8 @@ curl -X POST \
         }
     ],
     "grand_total": 201,
-    "tax_percentage": 8.87,
+    "tax_percentage": 8.875,
+    "card_fee_percentage": 2.75,
     "has_tax_included": false,
     "has_card_fee_included": false
 }
@@ -2783,7 +2792,8 @@ curl -X GET \
                 }
             ],
             "grand_total": 230,
-            "tax_percentage": 8.87,
+            "tax_percentage": 8.875,
+            "card_fee_percentage": 2.75,
             "has_tax_included": false,
             "has_card_fee_included": false
         }
@@ -2821,7 +2831,8 @@ curl -X GET \
             }
         ],
         "grand_total": 230,
-        "tax_percentage": 8.87,
+        "tax_percentage": 8.875,
+        "card_fee_percentage": 2.75,
         "has_tax_included": false,
         "has_card_fee_included": false
     }
@@ -2869,7 +2880,8 @@ curl -X POST \
                 }
             ],
             "grand_total": 201,
-            "tax_percentage": 8.87,
+            "tax_percentage": 8.875,
+            "card_fee_percentage": 2.75,
             "has_tax_included": false,
             "has_card_fee_included": false
         }
