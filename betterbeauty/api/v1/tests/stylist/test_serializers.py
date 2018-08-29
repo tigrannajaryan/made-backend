@@ -513,8 +513,6 @@ class TestStylistTodaySerializer(object):
         data = serializer.data
         today_appointments = data['today_appointments']
         assert(frozenset([a['uuid'] for a in today_appointments]) == frozenset([
-            str(appointments['cancelled_by_client_future'].uuid),
-            str(appointments['cancelled_by_client_past'].uuid),
             str(appointments['current_appointment'].uuid),
             str(appointments['past_appointment'].uuid),  # unpaid yet
             str(appointments['future_appointment'].uuid),
