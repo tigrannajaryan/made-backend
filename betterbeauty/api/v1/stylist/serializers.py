@@ -1165,7 +1165,7 @@ class StylistHomeSerializer(serializers.ModelSerializer):
         if query == "upcoming":
             appointments = stylist.get_upcoming_visits()
         if query == "past":
-            appointments = stylist.get_past_visits()
+            appointments = stylist.get_past_visits().order_by('-datetime_start_at')
         if query == "today":
             appointments = stylist.get_today_appointments(
                 upcoming_only=False,
