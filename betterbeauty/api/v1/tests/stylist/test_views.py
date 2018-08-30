@@ -178,10 +178,17 @@ class TestStylistAppointmentPreviewView(object):
         url = reverse('api:v1:stylist:appointment-preview')
         foreign_client = G(Client)
         foreign_client_of_stylist = G(ClientOfStylist, client=foreign_client)
+        appointment = G(
+            Appointment,
+            duration=datetime.timedelta(0),
+            datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
+            stylist=stylist
+        )
         data = {
             'datetime_start_at': datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
             'services': [],
-            'client_uuid': foreign_client_of_stylist.uuid
+            'client_uuid': foreign_client_of_stylist.uuid,
+            'appointment_uuid': appointment.uuid,
         }
         response = client.post(
             url, data=data, HTTP_AUTHORIZATION=auth_token
@@ -208,10 +215,6 @@ class TestStylistAppointmentPreviewView(object):
             url, data=data, HTTP_AUTHORIZATION=auth_token
         )
         assert (response.status_code == status.HTTP_400_BAD_REQUEST)
-        assert (
-            {'code': appointment_errors.ERR_APPOINTMENT_DOESNT_EXIST} in
-            response.data['field_errors']['appointment_uuid']
-        )
 
 
 class TestStylistAppointmentRetrieveUpdateCancelView(object):
