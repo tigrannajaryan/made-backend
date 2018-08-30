@@ -24,7 +24,10 @@ class ClientPermission(permissions.BasePermission):
 class BackdoorPermission(permissions.BasePermission):
     @staticmethod
     def _get_backdoor_api_key():
-        return os.environ.get('BACKDOOR_API_KEY', None)
+        key = os.environ.get('BACKDOOR_API_KEY', '').strip()
+        if len(key) < 20:
+            return None
+        return key
 
     @staticmethod
     def _get_header_api_key(request):

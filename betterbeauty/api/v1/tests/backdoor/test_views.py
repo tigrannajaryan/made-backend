@@ -17,13 +17,18 @@ from client.models import ClientOfStylist
 from core.models import PhoneSMSCodes, User
 
 
+CORRECT_API_KEY = 'SXcgbHVm6KUpEejdUKffcCd'
+INCORRECT_API_KEY = 'DWWbFNZJ6Wghuh3Vf5LhhWh'
+SHORT_API_KEY = 'N9UYBLHZ23dWBngw577'
+
+
 class TestGetAuthCodeView(object):
 
     url = reverse('api:v1:backdoor:get-auth-code') + '?' + urlencode({
         'phone': '+15555550122'
     })
 
-    @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: 'api_key')
+    @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: CORRECT_API_KEY)
     @pytest.mark.django_db
     @override_settings(LEVEL='staging')
     def test_jwt_access(self, client, authorized_client_user, authorized_stylist_user):
@@ -35,7 +40,7 @@ class TestGetAuthCodeView(object):
         response = client.get(self.url, HTTP_AUTHORIZATION=stylist_auth_token)
         assert (response.status_code == status.HTTP_403_FORBIDDEN)
 
-    @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: 'correct_api_key')
+    @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: CORRECT_API_KEY)
     @pytest.mark.django_db
     @override_settings(LEVEL='staging')
     def test_api_key_permissions(self, client):
@@ -43,29 +48,39 @@ class TestGetAuthCodeView(object):
         G(PhoneSMSCodes, phone='+15555550122', redeemed_at=None)
         response = client.get(self.url)
         assert (response.status_code == status.HTTP_401_UNAUTHORIZED)
-        response = client.get(self.url, HTTP_AUTHORIZATION='Secret wrong_api_key')
+        response = client.get(
+            self.url, HTTP_AUTHORIZATION='Secret {0}'.format(INCORRECT_API_KEY)
+        )
         assert (response.status_code == status.HTTP_401_UNAUTHORIZED)
-        response = client.get(self.url, HTTP_AUTHORIZATION='Secret correct_api_key')
+        response = client.get(
+            self.url, HTTP_AUTHORIZATION='Secret {0}'.format(CORRECT_API_KEY)
+        )
         assert(status.is_success(response.status_code))
 
-    @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: 'api_key')
+    @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: CORRECT_API_KEY)
     @pytest.mark.django_db
     @override_settings(LEVEL='staging')
     def test_existing_phone(self, client):
         """Test that code for existing User's phone cannot be retrieved"""
         G(PhoneSMSCodes, phone='+15555550122', redeemed_at=None)
         user = G(User, phone='+15555550122')
-        response = client.get(self.url, HTTP_AUTHORIZATION='Secret api_key')
+        response = client.get(
+            self.url, HTTP_AUTHORIZATION='Secret {0}'.format(CORRECT_API_KEY)
+        )
         assert (response.status_code == status.HTTP_404_NOT_FOUND)
         user.delete()
         client_of_stylist = G(ClientOfStylist, phone='+15555550122')
-        response = client.get(self.url, HTTP_AUTHORIZATION='Secret api_key')
+        response = client.get(
+            self.url, HTTP_AUTHORIZATION='Secret {0}'.format(CORRECT_API_KEY)
+        )
         assert (response.status_code == status.HTTP_404_NOT_FOUND)
         client_of_stylist.delete()
-        response = client.get(self.url, HTTP_AUTHORIZATION='Secret api_key')
+        response = client.get(
+            self.url, HTTP_AUTHORIZATION='Secret {0}'.format(CORRECT_API_KEY)
+        )
         assert (status.is_success(response.status_code))
 
-    @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: 'api_key')
+    @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: CORRECT_API_KEY)
     @pytest.mark.django_db
     @override_settings(LEVEL='staging')
     def test_non_fictional_number(self, client):
@@ -74,10 +89,10 @@ class TestGetAuthCodeView(object):
         url = reverse('api:v1:backdoor:get-auth-code') + '?' + urlencode({
             'phone': '+15255550122'
         })
-        response = client.get(url, HTTP_AUTHORIZATION='Secret api_key')
+        response = client.get(url, HTTP_AUTHORIZATION='Secret {0}'.format(CORRECT_API_KEY))
         assert (response.status_code == status.HTTP_404_NOT_FOUND)
 
-    @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: 'api_key')
+    @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: CORRECT_API_KEY)
     @pytest.mark.django_db
     @override_settings(LEVEL='staging')
     def test_old_sms_code(self, client):
@@ -86,29 +101,64 @@ class TestGetAuthCodeView(object):
             PhoneSMSCodes, phone='+15555550122', redeemed_at=None,
             generated_at=timezone.now() - datetime.timedelta(minutes=21)
         )
-        response = client.get(self.url, HTTP_AUTHORIZATION='Secret api_key')
+        response = client.get(self.url, HTTP_AUTHORIZATION='Secret {0}'.format(CORRECT_API_KEY))
         assert (response.status_code == status.HTTP_404_NOT_FOUND)
 
-    @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: 'api_key')
+    @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: CORRECT_API_KEY)
     @pytest.mark.django_db
     @override_settings(LEVEL='production')
     def test_non_staging(self, client):
         G(
             PhoneSMSCodes, phone='+15555550122', redeemed_at=None
         )
-        response = client.get(self.url, HTTP_AUTHORIZATION='Secret api_key')
+        response = client.get(self.url, HTTP_AUTHORIZATION='Secret {0}'.format(CORRECT_API_KEY))
         assert (response.status_code == status.HTTP_401_UNAUTHORIZED)
 
-    @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: 'api_key')
+    @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: CORRECT_API_KEY)
     @pytest.mark.django_db
     @override_settings(LEVEL='staging')
     def test_positive_path(self, client):
         sms_code = G(
             PhoneSMSCodes, phone='+15555550122', redeemed_at=None
         )
-        response = client.get(self.url, HTTP_AUTHORIZATION='Secret api_key')
+        response = client.get(self.url, HTTP_AUTHORIZATION='Secret {0}'.format(CORRECT_API_KEY))
         assert (response.status_code == status.HTTP_200_OK)
         assert(response.data['code'] == sms_code.code)
+
+    @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: CORRECT_API_KEY)
+    @pytest.mark.django_db
+    @override_settings(LEVEL='staging')
+    def test_no_or_empty_key(self, client):
+        G(
+            PhoneSMSCodes, phone='+15555550122', redeemed_at=None
+        )
+        response = client.get(self.url, HTTP_AUTHORIZATION='Secret ')
+        assert (response.status_code == status.HTTP_401_UNAUTHORIZED)
+        response = client.get(self.url)
+        assert (response.status_code == status.HTTP_401_UNAUTHORIZED)
+
+    @mock.patch('os.environ.get', lambda a, _: SHORT_API_KEY)
+    @pytest.mark.django_db
+    @override_settings(LEVEL='staging')
+    def test_short_key_restriction(self, client):
+        G(
+            PhoneSMSCodes, phone='+15555550122', redeemed_at=None
+        )
+        response = client.get(self.url, HTTP_AUTHORIZATION='Secret {0}'.format(SHORT_API_KEY))
+        assert (response.status_code == status.HTTP_401_UNAUTHORIZED)
+
+    @pytest.mark.django_db
+    @override_settings(LEVEL='staging')
+    def test_unset_api_key(self, client):
+        G(
+            PhoneSMSCodes, phone='+15555550122', redeemed_at=None
+        )
+        response = client.get(self.url, HTTP_AUTHORIZATION='')
+        assert (response.status_code == status.HTTP_401_UNAUTHORIZED)
+        response = client.get(self.url, HTTP_AUTHORIZATION='Secret ')
+        assert (response.status_code == status.HTTP_401_UNAUTHORIZED)
+        response = client.get(self.url)
+        assert (response.status_code == status.HTTP_401_UNAUTHORIZED)
 
 
 class TestBackdoorViewPermissions(object):
