@@ -415,7 +415,7 @@ class Stylist(models.Model):
                 datetime_start_at__gte=last_midnight,
                 datetime_start_at__lt=next_midnight,
                 status=AppointmentStatus.CHECKED_OUT)),
-        )
+        ).order_by('-datetime_start_at')
 
 
 class ServiceCategory(models.Model):
