@@ -784,9 +784,11 @@ class AppointmentSerializer(
         max_digits=4, decimal_places=0, coerce_to_string=False, read_only=True
     )
     tax_percentage = serializers.DecimalField(
-        max_digits=4, decimal_places=2, coerce_to_string=False, read_only=True
+        max_digits=5, decimal_places=3, coerce_to_string=False, read_only=True
     )
-
+    card_fee_percentage = serializers.DecimalField(
+        max_digits=5, decimal_places=3, coerce_to_string=False, read_only=True
+    )
     has_tax_included = serializers.NullBooleanField(read_only=True)
     has_card_fee_included = serializers.NullBooleanField(read_only=True)
 
@@ -805,7 +807,7 @@ class AppointmentSerializer(
             'client_phone', 'datetime_start_at', 'duration_minutes', 'status',
             'total_tax', 'total_card_fee', 'total_client_price_before_tax',
             'services', 'grand_total', 'has_tax_included', 'has_card_fee_included',
-            'tax_percentage',
+            'tax_percentage', 'card_fee_percentage',
         ]
 
     def validate(self, attrs):
@@ -943,7 +945,10 @@ class AppointmentPreviewResponseSerializer(serializers.Serializer):
         max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
     )
     tax_percentage = serializers.DecimalField(
-        max_digits=4, decimal_places=2, coerce_to_string=False, read_only=True
+        max_digits=5, decimal_places=3, coerce_to_string=False, read_only=True
+    )
+    card_fee_percentage = serializers.DecimalField(
+        max_digits=5, decimal_places=3, coerce_to_string=False, read_only=True
     )
     has_tax_included = serializers.BooleanField(read_only=True)
     has_card_fee_included = serializers.BooleanField(read_only=True)
@@ -1103,6 +1108,7 @@ class StylistTodaySerializer(serializers.ModelSerializer):
             exclude_statuses=[
                 AppointmentStatus.CHECKED_OUT,
                 AppointmentStatus.CANCELLED_BY_STYLIST,
+                AppointmentStatus.CANCELLED_BY_CLIENT,
                 AppointmentStatus.NO_SHOW,
             ]
         )
@@ -1175,6 +1181,7 @@ class StylistHomeSerializer(serializers.ModelSerializer):
                 upcoming_only=False,
                 exclude_statuses=[
                     AppointmentStatus.CANCELLED_BY_STYLIST,
+                    AppointmentStatus.CANCELLED_BY_CLIENT,
                     AppointmentStatus.CHECKED_OUT
                 ]
             )
@@ -1187,6 +1194,7 @@ class StylistHomeSerializer(serializers.ModelSerializer):
             upcoming_only=False,
             exclude_statuses=[
                 AppointmentStatus.CANCELLED_BY_STYLIST,
+                AppointmentStatus.CANCELLED_BY_CLIENT,
                 AppointmentStatus.CHECKED_OUT
             ]
         ).count()
