@@ -13,6 +13,7 @@ from salon.models import ClientOfStylist
 
 
 RESERVED_PHONE_NUMBER_PATTERN = r'^\+1555\d{7}$'
+ACCOUNT_LIFETIME_THRESHOLD = datetime.timedelta(minutes=20)
 
 
 class GetAuthCodeView(views.APIView):
@@ -20,17 +21,24 @@ class GetAuthCodeView(views.APIView):
 
     def get(self, request):
         phone = post_or_get(request=request, key='phone', default=None)
+        old_user_accounts = User.objects.filter(
+            phone=phone,
+            date_joined__lt=timezone.now() - ACCOUNT_LIFETIME_THRESHOLD
+        )
+        old_client_accounts = ClientOfStylist.objects.filter(
+            phone=phone,
+            created_at__lt=timezone.now() - ACCOUNT_LIFETIME_THRESHOLD
+        )
         if (
             not phone or
-            User.objects.filter(phone=phone).exists() or
-            ClientOfStylist.objects.filter(phone=phone).exists()
+            old_client_accounts.exists() or
+            old_user_accounts.exists()
         ):
             return response.Response(status=status.HTTP_404_NOT_FOUND)
         match = re.search(RESERVED_PHONE_NUMBER_PATTERN, phone)
         if not match:
             return response.Response(status=status.HTTP_404_NOT_FOUND)
         sms_code: Optional[PhoneSMSCodes] = PhoneSMSCodes.objects.filter(
-            generated_at__gt=timezone.now() - datetime.timedelta(minutes=20),
             phone=phone,
             redeemed_at__isnull=True
         ).order_by('generated_at').last()

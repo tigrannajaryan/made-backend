@@ -60,29 +60,6 @@ class TestGetAuthCodeView(object):
     @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: CORRECT_API_KEY)
     @pytest.mark.django_db
     @override_settings(LEVEL='staging')
-    def test_existing_phone(self, client):
-        """Test that code for existing User's phone cannot be retrieved"""
-        G(PhoneSMSCodes, phone='+15555550122', redeemed_at=None)
-        user = G(User, phone='+15555550122')
-        response = client.get(
-            self.url, HTTP_AUTHORIZATION='Secret {0}'.format(CORRECT_API_KEY)
-        )
-        assert (response.status_code == status.HTTP_404_NOT_FOUND)
-        user.delete()
-        client_of_stylist = G(ClientOfStylist, phone='+15555550122')
-        response = client.get(
-            self.url, HTTP_AUTHORIZATION='Secret {0}'.format(CORRECT_API_KEY)
-        )
-        assert (response.status_code == status.HTTP_404_NOT_FOUND)
-        client_of_stylist.delete()
-        response = client.get(
-            self.url, HTTP_AUTHORIZATION='Secret {0}'.format(CORRECT_API_KEY)
-        )
-        assert (status.is_success(response.status_code))
-
-    @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: CORRECT_API_KEY)
-    @pytest.mark.django_db
-    @override_settings(LEVEL='staging')
     def test_non_fictional_number(self, client):
         """Test that a number not following pattern cannot be retrieved"""
         G(PhoneSMSCodes, phone='+15255550122', redeemed_at=None)
@@ -95,14 +72,39 @@ class TestGetAuthCodeView(object):
     @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: CORRECT_API_KEY)
     @pytest.mark.django_db
     @override_settings(LEVEL='staging')
-    def test_old_sms_code(self, client):
+    def test_old_user_account(self, client):
         """Test that a code created longer than 20 minutes ago cannot be retrieved"""
         G(
             PhoneSMSCodes, phone='+15555550122', redeemed_at=None,
-            generated_at=timezone.now() - datetime.timedelta(minutes=21)
+        )
+        old_user = G(
+            User, phone='+15555550122', date_joined=timezone.now() - datetime.timedelta(minutes=21)
         )
         response = client.get(self.url, HTTP_AUTHORIZATION='Secret {0}'.format(CORRECT_API_KEY))
         assert (response.status_code == status.HTTP_404_NOT_FOUND)
+        old_user.date_joined = timezone.now() - datetime.timedelta(minutes=19)
+        old_user.save(update_fields=['date_joined', ])
+        response = client.get(self.url, HTTP_AUTHORIZATION='Secret {0}'.format(CORRECT_API_KEY))
+        assert (status.is_success(response.status_code))
+
+    @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: CORRECT_API_KEY)
+    @pytest.mark.django_db
+    @override_settings(LEVEL='staging')
+    def test_old_client_of_stylist_account(self, client):
+        """Test that a code created longer than 20 minutes ago cannot be retrieved"""
+        G(
+            PhoneSMSCodes, phone='+15555550122', redeemed_at=None
+        )
+        old_client_of_stylist = G(
+            ClientOfStylist, created_at=timezone.now() - datetime.timedelta(minutes=21),
+            phone='+15555550122'
+        )
+        response = client.get(self.url, HTTP_AUTHORIZATION='Secret {0}'.format(CORRECT_API_KEY))
+        assert (response.status_code == status.HTTP_404_NOT_FOUND)
+        old_client_of_stylist.created_at = timezone.now() - datetime.timedelta(minutes=19)
+        old_client_of_stylist.save(update_fields=['created_at', ])
+        response = client.get(self.url, HTTP_AUTHORIZATION='Secret {0}'.format(CORRECT_API_KEY))
+        assert (status.is_success(response.status_code))
 
     @mock.patch.object(BackdoorPermission, '_get_backdoor_api_key', lambda a: CORRECT_API_KEY)
     @pytest.mark.django_db
