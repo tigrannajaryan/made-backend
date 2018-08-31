@@ -40,6 +40,7 @@ from appointment.types import AppointmentStatus
 from client.models import Client, ClientOfStylist, StylistSearchRequest
 from core.utils import post_or_get
 from core.utils import post_or_get_or_data
+from integrations.ipstack import get_lat_lng_for_ip_address
 from salon.models import Stylist, StylistService
 
 
@@ -174,10 +175,14 @@ class SearchStylistView(generics.ListAPIView):
 
     def get_queryset(self):
         query = post_or_get_or_data(self.request, 'search_like', '')
-        latitude = post_or_get_or_data(self.request, 'latitude', 40.7128)
-        longitude = post_or_get_or_data(self.request, 'longitude', -74.0060)
+        latitude = post_or_get_or_data(self.request, 'latitude', None)
+        longitude = post_or_get_or_data(self.request, 'longitude', None)
         accuracy = post_or_get_or_data(self.request, 'accuracy', 50000)
-        location = Point(longitude, latitude)
+        if latitude and longitude:
+            location = Point((longitude, latitude))
+        else:
+            ip, is_routable = get_client_ip(self.request)
+            location = get_lat_lng_for_ip_address(ip)
         self.save_search_request(location)
         return self._search_stylists(query, location, accuracy)
 
