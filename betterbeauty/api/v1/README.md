@@ -2232,8 +2232,10 @@ curl -X GET \
     "phone": "+11234567890",
     "profile_photo_url": "https://mediaserver/media/user_uploads/uuid/uuid-a_NI03Ckn.jpg",
     "birthday": "1988-09-08",
-    "zip_code":12345,
-    "email": "test@example.com"
+    "zip_code":11104,
+    "email": "test@example.com",
+    "city": "Queens",
+    "state": "NY"
 }
 ```
 
@@ -2263,7 +2265,9 @@ curl -X POST \
     "profile_photo_url": "https://mediaserver/media/user_uploads/uuid/uuid-a_NI03Ckn.jpg",
     "birthday": "1988-09-08",
     "zip_code":12345,
-    "email": "test@example.com"
+    "email": "test@example.com",
+    "city": null,
+    "state": null
 }
 ```
 
