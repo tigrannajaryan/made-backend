@@ -89,6 +89,7 @@ class ClientOfStylist(models.Model):
     phone = models.CharField(max_length=20, blank=True, null=True, default=None)
     client = models.ForeignKey(
         Client, on_delete=models.PROTECT, blank=True, null=True, related_name='client_of_stylists')
+    created_at = models.DateTimeField(_('date joined'), auto_now_add=True, null=True)
 
     class Meta:
         db_table = 'client_of_stylist'
