@@ -29,6 +29,7 @@ from appointment.constants import (
     ErrorMessages as appointment_errors)
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
+from client.constants import END_OF_DAY_BUFFER_TIME_IN_MINUTES
 from client.models import Client, ClientOfStylist, PreferredStylist
 from core.models import User
 from core.types import AppointmentPrices
@@ -220,6 +221,7 @@ class ServicePricingSerializer(serializers.Serializer):
     def get_prices(self, object):
         services = self.context.get('services', [])
         client_of_stylist: ClientOfStylist = self.context['client_of_stylist']
+        stylist = self.context['stylist']
         prices_and_dates: Iterable[PriceOnDate] = generate_prices_for_stylist_service(
             services,
             client_of_stylist,
@@ -228,14 +230,24 @@ class ServicePricingSerializer(serializers.Serializer):
         )
         prices_and_dates_list = []
         for obj in prices_and_dates:
-            prices_and_dates_list.append({
-                'date': obj.date,
-                'price': trunc(obj.calculated_price.price),
-                'is_fully_booked': obj.is_fully_booked,
-                'is_working_day': obj.is_working_day,
-                'discount_type': obj.calculated_price.applied_discount.value
-                if obj.calculated_price.applied_discount else None
-            })
+            availability_on_day = stylist.available_days.filter(
+                weekday=obj.date.isoweekday(),
+                is_available=True).last() if obj.date == stylist.get_current_now().date() else None
+            stylist_eod = datetime.datetime.combine(date=obj.date,
+                                                    time=availability_on_day.work_end_at,
+                                                    tzinfo=stylist.salon.timezone
+                                                    ) if availability_on_day else None
+            if not stylist_eod or stylist.get_current_now() < (
+                    stylist_eod - stylist.service_time_gap -
+                    datetime.timedelta(minutes=END_OF_DAY_BUFFER_TIME_IN_MINUTES)):
+                prices_and_dates_list.append({
+                    'date': obj.date,
+                    'price': trunc(obj.calculated_price.price),
+                    'is_fully_booked': obj.is_fully_booked,
+                    'is_working_day': obj.is_working_day,
+                    'discount_type': obj.calculated_price.applied_discount.value
+                    if obj.calculated_price.applied_discount else None
+                })
         return StylistServicePriceSerializer(prices_and_dates_list, many=True).data
 
 

@@ -149,7 +149,8 @@ class StylistServicePriceView(views.APIView):
             ServicePricingSerializer({
                 'service_uuids': service_uuids,
                 'stylist_uuid': stylist.uuid,
-            }, context={'client_of_stylist': client_of_stylist, 'services': services}).data
+            }, context={'client_of_stylist': client_of_stylist,
+                        'services': services, 'stylist': stylist}).data
         )
 
 
