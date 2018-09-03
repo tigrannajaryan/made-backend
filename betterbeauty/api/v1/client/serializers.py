@@ -51,11 +51,13 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
     birthday = serializers.DateField(source='client.birthday', required=False, )
     zip_code = serializers.CharField(source='client.zip_code', required=False, )
     email = serializers.CharField(source='client.email', required=True)
+    city = serializers.CharField(source='client.city', read_only=True)
+    state = serializers.CharField(source='client.state', read_only=True)
 
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'phone', 'profile_photo_id',
-                  'profile_photo_url', 'zip_code', 'birthday', 'email']
+                  'profile_photo_url', 'zip_code', 'birthday', 'email', 'city', 'state']
 
     def validate_email(self, email: str):
         if self.instance and Client.objects.exclude(
