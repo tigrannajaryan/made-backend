@@ -64,5 +64,8 @@ pytest:
 test: clean lint pytest
 	LEVEL=tests
 
+e2e-test:
+	$(PYTHON) tests/e2e.py
+
 flake8:
 	$(FLAKE8) --statistics ./$(PROJECT)/

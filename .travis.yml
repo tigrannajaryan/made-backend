@@ -32,6 +32,8 @@ addons:
     - postgis*
     - postgresql-10-postgis*
 
+  # Chrome is needed for E2E tests
+  chrome: stable
 
 install: make install-py
 
