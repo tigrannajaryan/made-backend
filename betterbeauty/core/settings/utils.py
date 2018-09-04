@@ -37,6 +37,7 @@ def get_handler_dict(local_path: str, filename: str, formatter: str) -> dict:
     )
     return {
         'filename': log_file_name,
+        'filters': ['require_debug_true', ],
         'formatter': formatter,
         'level': 'DEBUG',
         'class': 'logging.FileHandler'

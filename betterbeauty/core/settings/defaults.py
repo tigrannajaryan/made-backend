@@ -66,7 +66,8 @@ LOGGING = {
         'django.server': get_logger_dict(
             ['console_simple', 'syslog', 'django_log_file', ], 'INFO'
         ),
-        'django.request': get_logger_dict(['console_simple', 'django_log_file', ], 'INFO'),
+        'django.request': get_logger_dict(
+            ['console_simple', 'syslog', 'django_log_file', ], 'INFO'),
         'api': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
         'appointment': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
         'client': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
