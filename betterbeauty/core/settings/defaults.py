@@ -3,7 +3,7 @@ import os
 
 from path import Path
 
-from core.settings.utils import get_handler_dict, get_logger_dict
+from core.settings.utils import get_file_handler_dict, get_logger_dict
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 PATH = Path(__file__).parent
@@ -58,8 +58,8 @@ LOGGING = {
             'address': '/dev/log',
             'formatter': 'verbose'
         },
-        'django_log_file': get_handler_dict(LOGS_PATH, 'django', 'django.server', ),
-        'madebeauty_log_file': get_handler_dict(LOGS_PATH, 'madebeauty', 'django.server', ),
+        'django_log_file': get_file_handler_dict(LOGS_PATH, 'django', 'django.server', ),
+        'madebeauty_log_file': get_file_handler_dict(LOGS_PATH, 'madebeauty', 'django.server', ),
     },
     'loggers': {
         'django': get_logger_dict(['console_simple', 'syslog', 'django_log_file', ], 'INFO'),
