@@ -3,7 +3,7 @@ import os
 
 from path import Path
 
-from core.settings.utils import get_handler_dict, get_logger_dict
+from core.settings.utils import get_file_handler_dict, get_logger_dict
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 PATH = Path(__file__).parent
@@ -58,8 +58,8 @@ LOGGING = {
             'address': '/dev/log',
             'formatter': 'verbose'
         },
-        'django_log_file': get_handler_dict(LOGS_PATH, 'django', 'django.server', ),
-        'madebeauty_log_file': get_handler_dict(LOGS_PATH, 'madebeauty', 'django.server', ),
+        'django_log_file': get_file_handler_dict(LOGS_PATH, 'django', 'django.server', ),
+        'madebeauty_log_file': get_file_handler_dict(LOGS_PATH, 'madebeauty', 'django.server', ),
     },
     'loggers': {
         'django': get_logger_dict(['console_simple', 'syslog', 'django_log_file', ], 'INFO'),
@@ -229,7 +229,7 @@ TWILLIO_SLACK_HOOK = (
 )
 TWILIO_SMS_ENABLED = False
 TWILIO_SLACK_MOCK_ENABLED = False
-TWILIO_FROM_TEL = '+19293771047'
+TWILIO_FROM_TEL = '+13477516233'
 TWILLIO_SLACK_CHANNEL = '#auto-twilio-dev'
 
 GOOGLE_AUTOCOMPLETE_API_KEY = os.environ.get(
@@ -237,3 +237,6 @@ GOOGLE_AUTOCOMPLETE_API_KEY = os.environ.get(
 
 GOOGLE_GEOCODING_API_KEY = os.environ.get(
     'GOOGLE_GEOCODING_API_KEY', '<override in local.py>')
+
+IPSTACK_API_KEY = os.environ.get(
+    'IPSTACK_API_KEY', '<override in local.py>')

@@ -49,8 +49,8 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
     profile_photo_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
     profile_photo_url = serializers.SerializerMethodField()
     birthday = serializers.DateField(source='client.birthday', required=False, )
-    zip_code = serializers.CharField(source='client.zip_code', required=False, )
-    email = serializers.CharField(source='client.email', required=False)
+    zip_code = serializers.CharField(source='client.zip_code', required=False, allow_blank=True)
+    email = serializers.CharField(source='client.email', required=False, allow_blank=True)
     city = serializers.CharField(source='client.city', read_only=True)
     state = serializers.CharField(source='client.state', read_only=True)
 
