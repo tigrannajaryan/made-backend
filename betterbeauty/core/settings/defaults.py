@@ -237,3 +237,6 @@ GOOGLE_AUTOCOMPLETE_API_KEY = os.environ.get(
 
 GOOGLE_GEOCODING_API_KEY = os.environ.get(
     'GOOGLE_GEOCODING_API_KEY', '<override in local.py>')
+
+IPSTACK_API_KEY = os.environ.get(
+    'IPSTACK_API_KEY', '<override in local.py>')
