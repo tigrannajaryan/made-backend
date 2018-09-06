@@ -45,7 +45,7 @@ from salon.utils import (
     create_stylist_profile_for_user,
     generate_prices_for_stylist_service,
 )
-from .constants import ErrorMessages, MAX_SERVICE_TEMPLATE_PREVIEW_COUNT
+from .constants import ErrorMessages, MAX_SERVICE_TEMPLATE_PREVIEW_COUNT, MIN_VALID_ADDR_LEN
 from .fields import DurationMinuteField
 
 
@@ -62,6 +62,7 @@ class StylistUserSerializer(FormattedErrorMessageMixin, serializers.ModelSeriali
 
 
 class SalonSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
+    address = serializers.CharField(min_length=MIN_VALID_ADDR_LEN)
     profile_photo_url = serializers.CharField(source='get_photo_url', read_only=True)
     full_address = serializers.CharField(source='get_full_address', read_only=True)
 
