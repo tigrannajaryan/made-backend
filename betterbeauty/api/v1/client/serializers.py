@@ -5,7 +5,7 @@ from math import trunc
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import serializers
@@ -202,7 +202,13 @@ class ServicePricingRequestSerializer(FormattedErrorMessageMixin, serializers.Se
         context: Dict = self.context
         client: Client = context['client']
         available_services = StylistService.objects.filter(
-            stylist__preferredstylist__client=client).values_list('uuid', flat=True)
+            Q(
+                stylist__preferredstylist__client=client,
+                stylist__preferredstylist__deleted_at__isnull=True
+            ) | Q(
+                stylist__clients_of_stylist__client=client
+            )
+        ).values_list('uuid', flat=True)
         if not all(x in available_services for x in service_uuids):
             raise serializers.ValidationError(
                 appointment_errors.ERR_SERVICE_DOES_NOT_EXIST
