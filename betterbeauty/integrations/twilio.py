@@ -2,10 +2,12 @@ import logging
 
 from django.conf import settings
 from django.template.loader import render_to_string
+from rest_framework import status
 
 from twilio.base.exceptions import TwilioRestException
 from twilio.rest import Client
 
+from core.exceptions.middleware import HttpCodeException
 from .slack import send_slack_twilio_message_notification
 
 logger = logging.getLogger(__name__)
@@ -34,6 +36,7 @@ def send_sms_message(to_phone: str, body: str, role: str, status_callback=None):
             return result.sid
         except TwilioRestException:
             logger.info('Cannot send SMS through twilio', exc_info=True)
+            raise HttpCodeException(status_code=status.HTTP_504_GATEWAY_TIMEOUT)
     if settings.TWILIO_SLACK_MOCK_ENABLED:
         send_slack_twilio_message_notification(
             from_phone=settings.TWILIO_FROM_TEL,
