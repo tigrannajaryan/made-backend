@@ -19,3 +19,16 @@ DEFAULT_WEEKDAY_DISCOUNT_PERCENTS = {
     6: 0,
     7: 0
 }
+
+# We restrict some environment vars to specific environments.
+# For eg. twilio is restricted only to production.
+# ENV_BLACKLIST contains the map of blacklisted vars for each envs.
+ENV_BLACKLIST = {
+    'production': [
+        'BACKDOOR_API_KEY',
+    ],
+    'staging': [
+        'TWILIO_ACCOUNT_SID',
+        'TWILIO_AUTH_TOKEN'
+    ]
+}
