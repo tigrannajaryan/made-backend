@@ -10,11 +10,11 @@ class HttpCodeException(APIException):
         super(HttpCodeException, self).__init__(args, kwargs)
 
 
-class ExceptionToHTTPStatusCodeMIddleware(MiddlewareMixin):
+class ExceptionToHTTPStatusCodeMiddleware(MiddlewareMixin):
 
     def process_exception(self, exception):
         if isinstance(exception, HttpCodeException):
-            return super(ExceptionToHTTPStatusCodeMIddleware, self).handle_exception(
+            return super(ExceptionToHTTPStatusCodeMiddleware, self).handle_exception(
                 HttpCodeException())
 
-        return super(ExceptionToHTTPStatusCodeMIddleware, self).process_exception(exception)
+        return None

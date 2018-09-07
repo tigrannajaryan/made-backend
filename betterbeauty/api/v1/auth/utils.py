@@ -59,4 +59,5 @@ def create_client_profile_from_phone(phone: str, user: Optional[User]=None)-> Us
                 phone=user.phone,
                 stylist=invitation.stylist,
             )
+            current_stylists.append(invitation.stylist_id)
     return user

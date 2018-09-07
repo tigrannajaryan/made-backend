@@ -136,7 +136,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
-    'core.exceptions.middleware.ExceptionToHTTPStatusCodeMIddleware'
+    'core.exceptions.middleware.ExceptionToHTTPStatusCodeMiddleware'
 ]
 
 ROOT_URLCONF = 'core.urls'
