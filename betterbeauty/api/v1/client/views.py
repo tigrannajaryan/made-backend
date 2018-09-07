@@ -250,7 +250,7 @@ class AppointmentListCreateAPIView(generics.ListCreateAPIView):
 
         return client.get_appointments_in_datetime_range(
             datetime_from, datetime_to, exclude_statuses=exclude_statuses
-        )[:limit]
+        ).order_by('-datetime_start_at')[:limit]
 
 
 class AppointmentRetriveUpdateView(generics.RetrieveUpdateAPIView):
