@@ -1,12 +1,14 @@
 import datetime
 
 import re
+from random import randint
 from typing import Optional
 
 from django.utils import timezone
 from rest_framework import response, status, views
 
 from api.common.permissions import BackdoorPermission
+from api.v1.backdoor.constants import MAX_RETRIES_FOR_UNUSED_PHONE_NUMBER
 from core.models import PhoneSMSCodes, User
 from core.utils import post_or_get
 from salon.models import ClientOfStylist
@@ -48,5 +50,29 @@ class GetAuthCodeView(views.APIView):
         return response.Response(
             {
                 'code': sms_code.code
+            }
+        )
+
+
+def phone_number_factory():
+    return '+1555{0}'.format(randint(10**(7 - 1), (10**7) - 1))
+
+
+class GetUnusedPhoneNumber(views.APIView):
+    permission_classes = [BackdoorPermission, ]
+
+    def get(self, request):
+        existing_numbers = User.objects.all().values_list('phone', flat=True)
+
+        phone_number = phone_number_factory()
+        number_of_tries = 0
+        while phone_number in existing_numbers and (
+                number_of_tries < MAX_RETRIES_FOR_UNUSED_PHONE_NUMBER):
+            phone_number = phone_number_factory()
+            number_of_tries += 1
+
+        return response.Response(
+            {
+                'phone': phone_number
             }
         )
