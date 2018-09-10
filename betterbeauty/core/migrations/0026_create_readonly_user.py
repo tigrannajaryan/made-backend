@@ -15,19 +15,20 @@ class Migration(migrations.Migration):
             # Create User if user doesnot exist
             "DO $$"
             "BEGIN"
-            "  CREATE USER readonly_user WITH ENCRYPTED PASSWORD 'tgoHSHQKj4CS';"
+            "  CREATE USER readonly_user WITH ENCRYPTED PASSWORD '{0}';"
             "  EXCEPTION WHEN OTHERS THEN"
             "  RAISE NOTICE 'not creating role my_role -- it already exists';"
             "END"
             "$$;"
             # First, grant connect access
-            "GRANT CONNECT ON DATABASE {0} TO readonly_user;"
+            "GRANT CONNECT ON DATABASE {1} TO readonly_user;"
             # Then grant SELECT for all existing tables
             "GRANT SELECT ON ALL TABLES IN SCHEMA public TO readonly_user;"
             # Grant select for tables that are newly created
             "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO readonly_user;"
             # Create schema exists by default. Remove them.
             "REVOKE CREATE ON SCHEMA public FROM readonly_user;".format(
+                settings.READ_ONLY_USER_PASSWORD,
                 settings.DATABASES['default']['NAME']),
 
             reverse_sql= "DROP OWNED BY readonly_user;"
