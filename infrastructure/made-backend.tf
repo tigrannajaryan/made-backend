@@ -72,6 +72,31 @@ resource "aws_elastic_beanstalk_environment" "made-backend-test-env" {
     name      = "LEVEL"
     value     = "staging"
   }
+  setting {
+    namespace = "aws:elasticbeanstalk:application:environment"
+    name      = "RDS_DB_NAME"
+    value     = "ebdb"
+  }
+  setting {
+    namespace = "aws:elasticbeanstalk:application:environment"
+    name      = "RDS_USERNAME"
+    value     = "betterbeauty"
+  }
+  setting {
+    namespace = "aws:elasticbeanstalk:application:environment"
+    name      = "RDS_PASSWORD"
+    value     = "2vKcFBV8q5yR923RNh7P"
+  }
+  setting {
+    namespace = "aws:elasticbeanstalk:application:environment"
+    name      = "RDS_HOSTNAME"
+    value     = "made-test-db"
+  }
+  setting {
+    namespace = "aws:elasticbeanstalk:application:environment"
+    name      = "RDS_PORT"
+    value     = "5432"
+  }
 
   # Disable HTTP listener
   setting {
@@ -104,3 +129,97 @@ resource "aws_elastic_beanstalk_environment" "made-backend-test-env" {
   }
 }
 
+# data "aws_db_instance" "made-test-db" {
+#   db_instance_identifier = "made-test-db"
+#   identifier           = "made-test-db"
+#   allocated_storage    = 10
+#   storage_type         = "gp2"
+#   engine               = "postgres"
+#   engine_version       = "10.4"
+#   instance_class       = "db.t2.micro"
+#   name                 = "ebdb"
+#   username             = "betterbeauty"
+#   password             = "2vKcFBV8q5yR923RNh7P"
+#   #parameter_group_name = "default.mysql5.7"
+#   apply_immediately    = true
+#   backup_retention_period = 2 # days
+#   backup_window       = "05:00-06:00"
+#   maintenance_window  = "Tue:06:00-Tue:07:00"
+#   final_snapshot_identifier = "made-test-db-final-snapshot"
+#   multi_az             = true
+# }
+
+
+##############################################################
+# Data sources to get VPC, subnets and security group details
+##############################################################
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_subnet_ids" "all" {
+  vpc_id = "${data.aws_vpc.default.id}"
+}
+
+data "aws_security_group" "default" {
+  vpc_id = "${data.aws_vpc.default.id}"
+  name   = "default"
+}
+
+# For RDS configuration documentation see: https://github.com/terraform-aws-modules/terraform-aws-rds
+# For all parameters see: https://github.com/terraform-aws-modules/terraform-aws-rds/blob/master/main.tf
+# Example is here: https://github.com/terraform-aws-modules/terraform-aws-rds/blob/master/examples/complete-postgres/main.tf
+module "db" {
+  source = "terraform-aws-modules/rds/aws"
+
+  identifier = "made-test-db"
+
+  engine            = "postgres"
+  engine_version    = "10.4"
+  instance_class    = "db.t2.micro"
+  allocated_storage = 10 # GiB
+
+  name     = "ebdb"
+  username = "betterbeauty"
+  password = "2vKcFBV8q5yR923RNh7P!"
+  port     = "5432"
+
+  #multi_az = true
+  backup_retention_period = 1
+
+  #iam_database_authentication_enabled = true
+
+  vpc_security_group_ids = ["${data.aws_security_group.default.id}"]
+
+  backup_window       = "05:00-06:00"
+  maintenance_window  = "Tue:06:00-Tue:07:00"
+
+  tags = {
+    Owner       = "tigran"
+    Environment = "test"
+  }
+
+  # DB subnet group
+  subnet_ids = ["${data.aws_subnet_ids.all.ids}"]
+
+  # DB parameter group
+  family = "postgres10"
+  db_subnet_group_name = "default"
+  parameter_group_name = "default.postgres10"
+
+  # Snapshot name upon DB deletion
+  final_snapshot_identifier = "made-test-db-final-snapsho"
+}
+
+# resource "aws_db_instance" "made-test-db" {
+#   db_instance_identifier = "made-test-db"
+# }
+
+
+output "made_test_db_endpoint" {
+  value = "${module.db.this_db_instance_endpoint}"
+}
+
+output "made_test_db_address" {
+  value = "${module.db.this_db_instance_address}"
+}
