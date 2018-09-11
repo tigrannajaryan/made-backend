@@ -90,7 +90,7 @@ resource "aws_elastic_beanstalk_environment" "made-backend-test-env" {
   setting {
     namespace = "aws:elasticbeanstalk:application:environment"
     name      = "RDS_HOSTNAME"
-    value     = "made-test-db"
+    value     = "${module.made-test-db-module.this_db_instance_address}"
   }
   setting {
     namespace = "aws:elasticbeanstalk:application:environment"
@@ -169,7 +169,7 @@ data "aws_security_group" "default" {
 # For RDS configuration documentation see: https://github.com/terraform-aws-modules/terraform-aws-rds
 # For all parameters see: https://github.com/terraform-aws-modules/terraform-aws-rds/blob/master/main.tf
 # Example is here: https://github.com/terraform-aws-modules/terraform-aws-rds/blob/master/examples/complete-postgres/main.tf
-module "db" {
+module "made-test-db-module" {
   source = "terraform-aws-modules/rds/aws"
 
   identifier = "made-test-db"
@@ -217,9 +217,9 @@ module "db" {
 
 
 output "made_test_db_endpoint" {
-  value = "${module.db.this_db_instance_endpoint}"
+  value = "${module.made-test-db-module.this_db_instance_endpoint}"
 }
 
 output "made_test_db_address" {
-  value = "${module.db.this_db_instance_address}"
+  value = "${module.made-test-db-module.this_db_instance_address}"
 }
