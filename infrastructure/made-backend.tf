@@ -42,6 +42,18 @@ resource "aws_elastic_beanstalk_environment" "made-backend-test-env" {
     value = "Rolling"
   }
 
+  # Enable Health based rolling configuration updates
+  setting {
+    namespace = "aws:autoscaling:updatepolicy:rollingupdate"
+    name = "RollingUpdateEnabled"
+    value = "true"
+  }
+  setting {
+    namespace = "aws:autoscaling:updatepolicy:rollingupdate"
+    name = "RollingUpdateType"
+    value = "Health"
+  }
+
   # One instance per deployment batch
   setting {
     namespace = "aws:elasticbeanstalk:command"
