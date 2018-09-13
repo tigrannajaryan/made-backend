@@ -98,7 +98,7 @@ if 'RDS_DB_NAME' in os.environ:
     }
 
 READ_ONLY_USER_PASSWORD = os.environ.get(
-    'READ_ONLY_USER_PASSWORD', 'tgoHSHQKj4CS')
+    'READ_ONLY_USER_PASSWORD', None)
 
 # Application definition
 
