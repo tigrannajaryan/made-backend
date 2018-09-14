@@ -62,7 +62,7 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
                   'profile_photo_url', 'zip_code', 'birthday', 'email', 'city', 'state']
 
     def validate_email(self, email: str):
-        if self.instance and Client.objects.exclude(
+        if email and self.instance and Client.objects.exclude(
                 pk=self.instance.client.pk).filter(email=email):
             raise serializers.ValidationError(ErrorMessages.ERR_UNIQUE_CLIENT_EMAIL)
         return email
