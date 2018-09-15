@@ -22,7 +22,7 @@ class Client(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     zip_code = models.CharField(max_length=10, blank=True, null=True)
     birthday = models.DateField(blank=True, null=True)
-    email = models.EmailField(null=True, unique=True)
+    email = models.EmailField(null=True)
     city = models.CharField(blank=True, null=True, max_length=64)
     state = models.CharField(blank=True, null=True, max_length=2)
 
