@@ -12,7 +12,7 @@ class HttpCodeException(APIException):
 
 class ExceptionToHTTPStatusCodeMiddleware(MiddlewareMixin):
 
-    def process_exception(self, exception):
+    def process_exception(self, request, exception):
         if isinstance(exception, HttpCodeException):
             return super(ExceptionToHTTPStatusCodeMiddleware, self).handle_exception(
                 HttpCodeException())
