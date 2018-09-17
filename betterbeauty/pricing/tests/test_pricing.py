@@ -116,7 +116,7 @@ class TestCalcClientPrices(object):
             assert price.applied_discount == DiscountType.FIRST_BOOKING
 
     def test_partial_demand_with_max_discount(self):
-        current_demand = [0 for x in range(0, PRICE_BLOCK_SIZE)]
+        current_demand = [0] * PRICE_BLOCK_SIZE
         current_demand[0] = 0.11
         current_demand[1] = 0.22
         current_demand[2] = 0.33
@@ -141,17 +141,17 @@ class TestCalcClientPrices(object):
         assert len(prices) == PRICE_BLOCK_SIZE
 
         # Verify that the discount percentages are granularized at 0.25 intervals
-        assert prices[0].price == _calculate_discount(regular_price, 1,
+        assert prices[0].price == _calculate_discount(regular_price, 0.89,
                                                       DISCOUNT, discounts.maximum_discount)
-        assert prices[1].price == _calculate_discount(regular_price, 0.75,
+        assert prices[1].price == _calculate_discount(regular_price, 0.78,
                                                       DISCOUNT, discounts.maximum_discount)
-        assert prices[2].price == _calculate_discount(regular_price, 0.75,
+        assert prices[2].price == _calculate_discount(regular_price, 0.67,
                                                       DISCOUNT, discounts.maximum_discount)
-        assert prices[3].price == _calculate_discount(regular_price, 0.5,
+        assert prices[3].price == _calculate_discount(regular_price, 0.56,
                                                       DISCOUNT, discounts.maximum_discount)
-        assert prices[4].price == _calculate_discount(regular_price, 0.5,
+        assert prices[4].price == _calculate_discount(regular_price, 0.45,
                                                       DISCOUNT, discounts.maximum_discount)
-        assert prices[5].price == _calculate_discount(regular_price, 0,
+        assert prices[5].price == _calculate_discount(regular_price, 0.05,
                                                       DISCOUNT, discounts.maximum_discount)
         assert prices[6].price == _calculate_discount(regular_price, 0,
                                                       DISCOUNT, discounts.maximum_discount)
