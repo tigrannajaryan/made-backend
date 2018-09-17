@@ -19,7 +19,7 @@ from client.models import ClientOfStylist
 from core.choices import WEEKDAY
 from core.models import User
 from core.types import Weekday
-from integrations.gmaps import geo_code
+from integrations.gmaps import GeocodeValidAddress
 from .choices import INVITATION_STATUS_CHOICES
 from .contstants import DEFAULT_SERVICE_GAP_TIME_MINUTES
 from .types import InvitationStatus, TimeSlot, TimeSlotAvailability
@@ -60,7 +60,7 @@ class Salon(models.Model):
         return self.address
 
     def geo_code_address(self):
-        geo_coded_address = geo_code(self.address)
+        geo_coded_address = GeocodeValidAddress(self.address).geo_code()
         if geo_coded_address:
             self.city = geo_coded_address.city
             self.state = geo_coded_address.state
