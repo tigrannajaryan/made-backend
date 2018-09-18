@@ -17,6 +17,7 @@ SUPERUSER_EMAILS_BY_LEVEL = {
 }
 
 SUPERUSER_PASSWORD_ENV_VAR_NAME = 'DJANGO_SUPERUSER_PASSWORD'
+MIN_PASSWORD_LENGTH = 12
 
 
 @transaction.atomic
@@ -26,10 +27,12 @@ def update_or_create_superuser(
 
     superuser_email = SUPERUSER_EMAILS_BY_LEVEL[level]
     superuser_password = os.environ.get(SUPERUSER_PASSWORD_ENV_VAR_NAME, '').strip()
-    if not superuser_password or len(superuser_password) < 12:
-        stdout.write('{0} is not set or too short, skipping...'.format(
-            SUPERUSER_PASSWORD_ENV_VAR_NAME
-        ))
+    if not superuser_password or len(superuser_password) < MIN_PASSWORD_LENGTH:
+        stdout.write(
+            '{0} is not set or too short (must be at least {1} chars), skipping...'.format(
+                SUPERUSER_PASSWORD_ENV_VAR_NAME, MIN_PASSWORD_LENGTH
+            )
+        )
         return None, False
 
     created = False
