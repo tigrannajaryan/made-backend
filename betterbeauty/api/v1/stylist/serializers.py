@@ -770,7 +770,8 @@ class AppointmentSerializer(
         allow_null=True, allow_blank=True, required=False
     )
     client_phone = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-
+    client_profile_photo_url = serializers.CharField(
+        read_only=True, source='client.client.get_profile_photo_url', default=None)
     total_client_price_before_tax = serializers.DecimalField(
         max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
     )
@@ -808,7 +809,7 @@ class AppointmentSerializer(
             'client_phone', 'datetime_start_at', 'duration_minutes', 'status',
             'total_tax', 'total_card_fee', 'total_client_price_before_tax',
             'services', 'grand_total', 'has_tax_included', 'has_card_fee_included',
-            'tax_percentage', 'card_fee_percentage',
+            'tax_percentage', 'card_fee_percentage', 'client_profile_photo_url'
         ]
 
     def validate(self, attrs):

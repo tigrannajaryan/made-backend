@@ -45,6 +45,11 @@ class Client(models.Model):
     def __str__(self):
         return '{0} ({1})'.format(self.user.get_full_name(), self.user.phone)
 
+    def get_profile_photo_url(self) -> Optional[str]:
+        if self.user.photo:
+            return self.user.photo.url
+        return None
+
     def get_appointments_in_datetime_range(
             self,
             datetime_from: Optional[datetime.datetime]=None,

@@ -47,7 +47,8 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
 
     phone = PhoneNumberField(read_only=True)
     profile_photo_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
-    profile_photo_url = serializers.SerializerMethodField()
+    profile_photo_url = serializers.CharField(read_only=True,
+                                              source='client.get_profile_photo_url', default=None)
     birthday = serializers.DateField(source='client.birthday', required=False, )
     zip_code = serializers.CharField(source='client.zip_code',
                                      required=False, allow_blank=True, allow_null=True)
@@ -93,11 +94,6 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
                 user, profile_photo_id
             )
         return user
-
-    def get_profile_photo_url(self, user: User) -> Optional[str]:
-        if user.photo:
-            return user.photo.url
-        return None
 
 
 class PreferredStylistSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
