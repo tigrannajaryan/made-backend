@@ -11,7 +11,7 @@ from django.utils.translation import gettext_lazy as _
 
 from appointment.utils import get_appointments_in_datetime_range
 from core.models import User
-from integrations.gmaps import geo_code
+from integrations.gmaps import GeoCode
 from utils.models import SmartModel
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ class Client(models.Model):
     last_geo_coded = models.DateTimeField(blank=True, null=True, default=None)
 
     def geo_code_address(self):
-        geo_coded_address = geo_code(self.zip_code)
+        geo_coded_address = GeoCode(self.zip_code).geo_code()
         if geo_coded_address:
             self.city = geo_coded_address.city
             self.state = geo_coded_address.state
@@ -44,6 +44,11 @@ class Client(models.Model):
 
     def __str__(self):
         return '{0} ({1})'.format(self.user.get_full_name(), self.user.phone)
+
+    def get_profile_photo_url(self) -> Optional[str]:
+        if self.user.photo:
+            return self.user.photo.url
+        return None
 
     def get_appointments_in_datetime_range(
             self,
