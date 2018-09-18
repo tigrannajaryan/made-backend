@@ -32,7 +32,9 @@ def populate_service_data(apps, schema_editor):
     with transaction.atomic():
         for template_set in data['template_sets']:
             template_set_db, created = ServiceTemplateSet.objects.get_or_create(
-                name=template_set['name']
+                name=template_set['name'],
+                sort_weight=template_set['sort_weight'],
+
             )
             if created:
                 template_set_db.uuid = uuid.uuid4()

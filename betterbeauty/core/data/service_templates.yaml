@@ -1,5 +1,6 @@
 template_sets:
-  - name: set 1
+  - name: Naturally Straight Hair
+    sort_weight: 0
     categories:
       - name: Extensions
         templates:
@@ -119,7 +120,8 @@ template_sets:
           - name: Ponytails
             base_price: 65
             duration: 60
-  - name: set 2
+  - name: Naturally Curly Hair
+    sort_weight: 1
     categories:
       - name: Color
         templates:

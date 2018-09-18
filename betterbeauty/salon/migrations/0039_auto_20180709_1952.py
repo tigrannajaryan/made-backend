@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
             name='servicetemplateset',
             options={'ordering': ['sort_weight', 'id']},
         ),
-        migrations.AddField(
+        migrations.AlterField(
             model_name='servicetemplateset',
             name='sort_weight',
             field=models.IntegerField(default=0, verbose_name='Weight in API output; smallest go first'),
