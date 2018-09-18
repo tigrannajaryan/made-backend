@@ -17,6 +17,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=255)),
                 ('description', models.TextField(blank=True)),
                 ('templates', models.ManyToManyField(to='salon.ServiceTemplate')),
+                ('sort_weight', models.IntegerField(default=0, verbose_name='Weight in API output; smallest go first'))
             ],
         ),
     ]
