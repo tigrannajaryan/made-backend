@@ -7,6 +7,7 @@ import pytest
 import pytz
 
 from dateutil import parser
+from django.contrib.gis.geos import Point
 from django.urls import reverse
 from django.utils import timezone
 from django_dynamic_fixture import G
@@ -15,6 +16,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
 from api.common.permissions import ClientPermission
+from api.v1.client.constants import NEW_YORK_LOCATION
 from api.v1.client.serializers import AppointmentValidationMixin
 from api.v1.client.urls import urlpatterns
 from api.v1.client.views import HistoryView, HomeView, SearchStylistView
@@ -216,33 +218,46 @@ class TestPreferredStylistDeleteView(object):
 class TestSearchStylistView(object):
     @pytest.mark.django_db
     def test_search_stylists(self, client, stylist_data: Stylist):
-
-        stylist_data_2 = G(Stylist)
         location = stylist_data.salon.location
+        G(Salon, location=location)
+        stylist_data_2 = G(Stylist)
+
         accuracy = 50000
         results = SearchStylistView._search_stylists(
             '', location=location, accuracy=accuracy)
-        assert (results.count() == 1)
+        assert (len(results) == 1)
 
         results = SearchStylistView._search_stylists(
             'Fred', location=location, accuracy=accuracy)
-        assert (results.count() == 1)
-        assert (results.last() == stylist_data)
+        assert (len(results) == 1)
+        assert (results[0] == stylist_data)
         results = SearchStylistView._search_stylists(
             'mcbob fr', location=location, accuracy=accuracy)
-        assert (results.count() == 1)
-        assert (results.last() == stylist_data)
+        assert (len(results) == 1)
+        assert (results[0] == stylist_data)
         salon = stylist_data_2.salon
         salon.location = location
         salon.save()
         results = SearchStylistView._search_stylists(
             stylist_data_2.get_full_name(), location=location, accuracy=accuracy)
-        assert (results.count() == 1)
-        assert (results.last() == stylist_data_2)
+        assert (len(results) == 1)
+        assert (results[0] == stylist_data_2)
 
         results = SearchStylistView._search_stylists(
             'some-junk-text', location=location, accuracy=accuracy)
-        assert (results.count() == 0)
+        assert (len(results) == 0)
+
+    @pytest.mark.django_db
+    def test_search_stylists_when_no_results(self, stylist_data: Stylist):
+        salon_2 = G(Salon, location=NEW_YORK_LOCATION)
+        stylist_data_2 = G(Stylist, salon=salon_2)
+        location = Point(77.303474, 11.1503445)
+        accuracy = 50000
+
+        results = SearchStylistView._search_stylists(
+            '', location=location, accuracy=accuracy)
+        assert (len(results) == 1)
+        assert results[0] == stylist_data_2
 
     @pytest.mark.django_db
     def test_view_permissions(self, client, authorized_stylist_user):
