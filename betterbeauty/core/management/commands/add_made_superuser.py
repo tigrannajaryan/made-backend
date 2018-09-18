@@ -16,7 +16,7 @@ SUPERUSER_EMAILS_BY_LEVEL = {
     'production': 'admin@madebeauty.com',
 }
 
-SUPERUSER_ENV_VAR_NAME = 'DJANGO_SUPERUSER_PASSWORD'
+SUPERUSER_PASSWORD_ENV_VAR_NAME = 'DJANGO_SUPERUSER_PASSWORD'
 
 
 @transaction.atomic
@@ -25,9 +25,11 @@ def update_or_create_superuser(
 ) -> Tuple[Optional[User], bool]:
 
     superuser_email = SUPERUSER_EMAILS_BY_LEVEL[level]
-    superuser_password = os.environ.get(SUPERUSER_ENV_VAR_NAME, '').strip()
-    if not superuser_password:
-        stdout.write('{0} is not set, skipping...'.format(SUPERUSER_ENV_VAR_NAME))
+    superuser_password = os.environ.get(SUPERUSER_PASSWORD_ENV_VAR_NAME, '').strip()
+    if not superuser_password or len(superuser_password) < 12:
+        stdout.write('{0} is not set or too short, skipping...'.format(
+            SUPERUSER_PASSWORD_ENV_VAR_NAME
+        ))
         return None, False
 
     created = False
