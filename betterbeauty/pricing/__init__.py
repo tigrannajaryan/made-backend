@@ -5,10 +5,7 @@ from model_utils import Choices
 
 from core.types import StrEnum, Weekday
 
-from .constants import (
-    DISCOUNT_GRANULARIZATION,
-    PRICE_BLOCK_SIZE,
-)
+from .constants import PRICE_BLOCK_SIZE
 
 
 class DiscountType(StrEnum):
@@ -80,11 +77,8 @@ def calc_client_prices(
     discount is fully applied if the day's demand is minimal within all the days in the
     PRICE_BLOCK_SIZE. If the demand is higher than the minimal then the discount value
     is linearly interpolated so that zero discount corresponds to a fully booked day.
-    The final applied discount is granularized, so that only some possible portions of
-    discount percentage are ever used. This ensures that the prices don't jump around from
-    minor demand fluctuations. See description of DISCOUNT_GRANULARIZATION for more details.
 
-    The implemented simple heuristic approach has the following desirable characteritic:
+    The implemented simple heuristic approach has the following desirable characteristic:
     the discount applied is inverselly proportional to the demand, i.e. higher demand results in
     less discount and higher pricing. This is inline with our intuitive understanding of how
     the dynamic pricing should work.
@@ -167,15 +161,6 @@ def calc_client_prices(
                 # (actually no booking should be allowed on those days at all).
                 apply_discount_part = (1 - demand) / (1 - min_demand)
 
-                # Introduce granularity to the lienar interpolation so that the
-                # the final prices fall into a few buckets instead of forming
-                # a more continuous spectrum, which would be more precise but
-                # undesirable from user perspective. The granularity ensures that
-                # small changes in demand do not cause all prices to jump around
-                # and brings some stability to them.
-                apply_discount_part = granularize(apply_discount_part,
-                                                  DISCOUNT_GRANULARIZATION)
-
                 # Calculate discount percentage to apply as a portion of
                 # maximum applicable discount.
                 discount_percentage = (max_discount.discount_percentage *
@@ -209,11 +194,6 @@ def calc_client_prices(
 
 def is_valid_discount_percentage(discount_percentage: float) -> bool:
     return 0 <= discount_percentage <= 100
-
-
-def granularize(value: float, granularity: float) -> float:
-    value = round(value / granularity) * granularity
-    return value
 
 
 class DiscountDescr(NamedTuple):
