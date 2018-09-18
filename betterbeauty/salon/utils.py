@@ -84,13 +84,14 @@ def generate_demand_list_for_stylist(
             else COMPLETELY_BOOKED_DEMAND
         )
         is_fully_booked: bool = False
-        if is_working_day and demand_on_date == COMPLETELY_BOOKED_DEMAND:
-            is_fully_booked = True
 
         # Technically, there may be a situation of overbooking, which may cause actual
         # demand be > 1; in this case we'll cast it to 1 manually
         if demand_on_date > 1:
             demand_on_date = 1
+
+        if is_working_day and demand_on_date == COMPLETELY_BOOKED_DEMAND:
+            is_fully_booked = True
 
         demand = DemandOnDate(
             demand=demand_on_date,

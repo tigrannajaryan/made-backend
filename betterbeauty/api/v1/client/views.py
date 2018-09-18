@@ -397,4 +397,4 @@ class HistoryView(generics.ListAPIView):
         ]
         return client.get_appointments_in_datetime_range(
             datetime_from, datetime_to, exclude_statuses=exclude_statuses
-        )
+        ).order_by('-datetime_start_at')

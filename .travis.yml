@@ -61,8 +61,8 @@ deploy:
   secret_access_key:
     secure: "$AWS_SECURE_KEY"
   region: us-east-1
-  app: madebeauty-django-backend-prod
-  env: MadebeautyDjangoBackendProd-env
+  app: made-production-app
+  env: made-production-env 
   bucket_name: betterbeauty-eb-upload-bucket
   bucket_path: production
   on:
