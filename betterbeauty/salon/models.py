@@ -214,11 +214,11 @@ class Stylist(models.Model):
                 weekday=date.isoweekday(), is_available=True)
         except StylistAvailableWeekDay.DoesNotExist:
             return available_slots
-        if date < timezone.now().date():
+        if date < self.get_current_now().date():
             return available_slots
-        if date == timezone.now().date():
+        if date == self.get_current_now().date():
             slots = shift.get_all_slots(self.service_time_gap,
-                                        self.with_salon_tz(timezone.now()).time())
+                                        self.get_current_now().time())
         else:
             slots = shift.get_all_slots(self.service_time_gap, None)
         for slot in slots:
