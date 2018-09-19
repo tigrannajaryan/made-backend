@@ -6,7 +6,9 @@ import mock
 import pytest
 import pytz
 
+from dateutil import parser
 from django.urls import reverse
+from django.utils import timezone
 from django_dynamic_fixture import G
 from freezegun import freeze_time
 from rest_framework import status
@@ -485,6 +487,10 @@ class TestAvailableTimeSlotView(object):
             "stylist_uuid": our_stylist.uuid})
         assert (status.is_success(response.status_code))
 
+        start_times = [slot['start'] for slot in response.data['time_slots']]
+        # assert all the returned slots are future slots
+        assert all(parser.parse(date) > timezone.now() for date in start_times)
+
         stylist_appointments_data(foreign_stylist)
         foreign_stylist.available_days.filter(weekday=date.isoweekday()).update(
             work_start_at="09:00", work_end_at="18:00", is_available=True)
@@ -492,6 +498,49 @@ class TestAvailableTimeSlotView(object):
             "date": "2018-05-14",
             "stylist_uuid": foreign_stylist.uuid})
         assert (response.status_code == status.HTTP_404_NOT_FOUND)
+
+    @pytest.mark.django_db
+    @freeze_time('2018-05-14 22:30:00 UTC')
+    def test_after_stylist_eod(
+            self, client, authorized_client_user, stylist_data
+    ):
+        user, auth_token = authorized_client_user
+        client_obj = user.client
+        other_client = G(Client)
+        our_stylist = stylist_data
+        salon = G(Salon, timezone=pytz.utc)
+        foreign_stylist = G(Stylist, salon=salon)
+        G(PreferredStylist, client=client_obj, stylist=our_stylist)
+        G(PreferredStylist, client=other_client, stylist=foreign_stylist)
+        availability_url = reverse(
+            'api:v1:client:available-times'
+        )
+        stylist_appointments_data(our_stylist)
+        date = datetime.date(2018, 5, 13)
+        our_stylist.available_days.filter(weekday=date.isoweekday()).update(
+            work_start_at="09:00", work_end_at="18:00", is_available=True)
+        response = client.post(availability_url, HTTP_AUTHORIZATION=auth_token, data={
+            "date": "2018-05-13",
+            "stylist_uuid": our_stylist.uuid})
+        # Return empty for past dates
+        assert len(response.data['time_slots']) == 0
+
+        date = datetime.date(2018, 5, 14)
+        our_stylist.available_days.filter(weekday=date.isoweekday()).update(
+            work_start_at="09:00", work_end_at="18:00", is_available=True)
+        response = client.post(availability_url, HTTP_AUTHORIZATION=auth_token, data={
+            "date": "2018-05-14",
+            "stylist_uuid": our_stylist.uuid})
+        # Return empty if time is past stylist end of day
+        assert len(response.data['time_slots']) == 0
+
+        date = datetime.date(2018, 5, 15)
+        our_stylist.available_days.filter(weekday=date.isoweekday()).update(
+            work_start_at="09:00", work_end_at="18:00", is_available=True)
+        response = client.post(availability_url, HTTP_AUTHORIZATION=auth_token, data={
+            "date": "2018-05-15",
+            "stylist_uuid": our_stylist.uuid})
+        assert len(response.data['time_slots']) > 0
 
 
 class TestClientViewPermissions(object):
