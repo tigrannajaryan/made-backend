@@ -38,6 +38,12 @@ LOGGING = {
         },
     },
     'handlers': {
+        'sentry': {
+            'filters': ['require_debug_false', ],
+            'formatter': 'verbose',
+            'level': 'ERROR',
+            'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
+        },
         'console': {
             'level': 'DEBUG',
             'filters': ['require_debug_true', ],
@@ -62,19 +68,26 @@ LOGGING = {
         'madebeauty_log_file': get_file_handler_dict(LOGS_PATH, 'madebeauty', 'django.server', ),
     },
     'loggers': {
-        'django': get_logger_dict(['console_simple', 'syslog', 'django_log_file', ], 'INFO'),
+        'django': get_logger_dict(
+            ['sentry', 'console_simple', 'syslog', 'django_log_file', ], 'INFO'),
         'django.server': get_logger_dict(
-            ['console_simple', 'syslog', 'django_log_file', ], 'INFO'
-        ),
+            ['sentry', 'console_simple', 'syslog', 'django_log_file', ], 'INFO'),
         'django.request': get_logger_dict(
-            ['console_simple', 'syslog', 'django_log_file', ], 'INFO'),
-        'api': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
-        'appointment': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
-        'client': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
-        'core': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
-        'integrations': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
-        'pricing': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
-        'salon': get_logger_dict(['console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
+            ['sentry', 'console_simple', 'syslog', 'django_log_file', ], 'INFO'),
+        'api': get_logger_dict(
+            ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
+        'appointment': get_logger_dict(
+            ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
+        'client': get_logger_dict(
+            ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
+        'core': get_logger_dict(
+            ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
+        'integrations': get_logger_dict(
+            ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
+        'pricing': get_logger_dict(
+            ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
+        'salon': get_logger_dict(
+            ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
     }
 }
 
