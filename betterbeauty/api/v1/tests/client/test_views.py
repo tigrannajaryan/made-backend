@@ -568,6 +568,11 @@ class TestHomeAPIView(object):
         )
         appointments: Dict[str, Appointment] = stylist_appointments_data(stylist_data)
 
+        appointments['past_appointment'].set_status(
+            AppointmentStatus.CHECKED_OUT, updated_by=stylist_data.user)
+        appointments['future_appointment'].set_status(
+            AppointmentStatus.CHECKED_OUT, updated_by=stylist_data.user)
+
         for a in appointments.values():
             a.client = client_of_stylist
             a.save(update_fields=['client', ])
@@ -584,12 +589,16 @@ class TestHomeAPIView(object):
             stylist=stylist_data
         )
         appointments: Dict[str, Appointment] = stylist_appointments_data(stylist_data)
+        appointments['last_week_appointment'].set_status(
+            AppointmentStatus.CHECKED_OUT, updated_by=stylist_data.user)
 
         for a in appointments.values():
             a.client = client_of_stylist
             a.save(update_fields=['client', ])
+
         last_appointment = HomeView.get_last_visited_object(client)
-        assert (last_appointment == appointments['past_appointment'])
+
+        assert (last_appointment == appointments['last_week_appointment'])
 
 
 class TestHistoryAPIView(object):
