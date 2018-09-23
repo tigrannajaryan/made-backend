@@ -1,3 +1,6 @@
+import json
+import logging
+
 from typing import NamedTuple, Optional
 
 import googlemaps
@@ -6,6 +9,8 @@ from django.conf import settings
 from django.contrib.gis.geos import Point
 
 from api.v1.stylist.constants import MIN_VALID_ADDR_LEN
+
+logger = logging.getLogger(__name__)
 
 
 class GeoCodedAddress(NamedTuple):
@@ -35,6 +40,7 @@ class GeoCode:
         gmaps = googlemaps.Client(key=settings.GOOGLE_GEOCODING_API_KEY)
         geocode_results = gmaps.geocode(
             address=self.str_to_geocode)
+        logger.info("Geocoding result: {0}".format(json.dumps(geocode_results)))
         if len(geocode_results) != 1:
             return None
         geocode_result = geocode_results[0]
