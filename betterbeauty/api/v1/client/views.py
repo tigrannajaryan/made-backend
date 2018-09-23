@@ -1,5 +1,5 @@
 import datetime
-from typing import Optional
+from typing import List, Optional
 
 from dateutil.parser import parse
 
@@ -16,6 +16,7 @@ from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
 
 from api.common.permissions import ClientPermission
+from api.v1.client.constants import NEW_YORK_LOCATION
 from api.v1.client.serializers import (
     AddPreferredClientsSerializer,
     AppointmentPreviewRequestSerializer,
@@ -187,22 +188,36 @@ class SearchStylistView(generics.ListAPIView):
         return self._search_stylists(query, location, accuracy)
 
     @staticmethod
-    def _search_stylists(query: str, location: Point, accuracy: int) -> models.QuerySet:
+    def _search_stylists(query: str, location: Point, accuracy: int) -> List:
 
-        stylists = Stylist.objects.annotate(
+        queryset = Stylist.objects.annotate(
             full_name=Concat(F('user__first_name'), Value(' '), F('user__last_name')),
             reverse_full_name=Concat(F('user__last_name'), Value(' '), F('user__first_name')),
         ).distinct('id')
+
+        nearby_stylists = SearchStylistView._get_nearby_stylists(queryset, location, accuracy)
+        if len(nearby_stylists) == 0:
+            # if there is no stylist in the area, return stylist from NY
+            nearby_stylists = SearchStylistView._get_nearby_stylists(
+                queryset, NEW_YORK_LOCATION, accuracy)
 
         query_filter = (
             Q(full_name__icontains=query) |
             Q(salon__name__icontains=query) |
             Q(reverse_full_name__icontains=query)
         )
+        list_of_stylists = nearby_stylists.filter(query_filter)
+        # we can't use order_by('distance') here since we also need to use distinct('distance') to
+        # avoid "SELECT DISTINCT ON expressions must match initial ORDER BY expressions" error,
+        # So we get the results and sort by distance manually.
+        return sorted(list_of_stylists, key=lambda x: x.distance)
 
-        return stylists.filter(query_filter, salon__location__distance_lte=(
+    @staticmethod
+    def _get_nearby_stylists(queryset: models.QuerySet,
+                             location: Point, accuracy: int) -> models.QuerySet:
+        return queryset.filter(salon__location__distance_lte=(
             location, D(m=accuracy))).annotate(distance=Distance('salon__location', location)
-                                               ).order_by('distance').distinct('distance')
+                                               )
 
 
 class AppointmentListCreateAPIView(generics.ListCreateAPIView):
