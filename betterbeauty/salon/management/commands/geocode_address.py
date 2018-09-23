@@ -16,8 +16,8 @@ def geocode_stylist_address(stdout: TextIOBase, dry_run: bool):
         ' with dry run' if dry_run else '',
     ))
     for salon in ungeo_coded_salons:
-        stdout.write('GeoCoding salon {0}'.format(
-            salon.name,
+        stdout.write('GeoCoding salon {0} - {1}'.format(
+            salon.name, salon.address
         ))
         if not dry_run:
             salon.geo_code_address()
