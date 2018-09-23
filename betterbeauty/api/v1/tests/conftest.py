@@ -3,6 +3,7 @@ from typing import Tuple
 
 import pytest
 import pytz
+from django.contrib.gis.geos import Point
 
 from django.urls import reverse
 from django_dynamic_fixture import G
@@ -23,7 +24,7 @@ def stylist_data(db) -> Stylist:
     salon = G(
         Salon,
         name='Test salon', address='2000 Rilma Lane', city='Los Altos', state='CA',
-        zip_code='94022', latitude=37.4009997, longitude=-122.1185007,
+        zip_code='94022', location=Point(x=-122.1185007, y=37.4009997),
         timezone=pytz.utc
     )
     stylist_user = G(
