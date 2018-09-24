@@ -37,7 +37,7 @@ class BackdoorPermission(permissions.BasePermission):
         return auth[1]
 
     def has_permission(self, request, view):
-        if settings.LEVEL != 'staging':
+        if settings.LEVEL not in ['staging', 'tests']:
             return False
         api_key = self._get_backdoor_api_key()
         header_key = self._get_header_api_key(request)

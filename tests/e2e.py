@@ -35,7 +35,7 @@ class E2ETests(unittest.TestCase):
     @classmethod
     def prepare_frontend_env(cls, app_dir):
         shutil.copyfile(os.path.join(cls.work_dir, 'environment.e2e.ts'),
-                        os.path.join(app_dir, 'src', 'environments', 'environment.e2e.ts'))
+                        os.path.join(app_dir, 'src', 'app', 'environments', 'environment.e2e.ts'))
         cls.frontend_env = os.environ.copy()
         cls.frontend_env["MB_ENV"] = "e2e"
 
@@ -88,7 +88,15 @@ class E2ETests(unittest.TestCase):
         server_env["LEVEL"] = "tests"
         server_env["DJANGO_SETTINGS_MODULE"] = "core.settings.tests"
 
-        proc = subprocess.Popen(["make", "run"], env=server_env)
+        # TODO: Make E2E tests read backdoor API key from environment.*.ts and generate a random
+        # key here instead of hard-coding it (currently also hard-coded in E2E tests).
+        server_env["BACKDOOR_API_KEY"] = "z7NdGmXDcncz5Ht4D6P4m"
+
+        # Start the subprocess. Note: we use os.setsid to run the subprocess and its
+        # children in a separate process group. This is neccessary so that we can
+        # later kill the entire group at once without killing ourselves.
+        # (Solution inspired by: https://stackoverflow.com/a/22582602)
+        proc = subprocess.Popen(["make", "run"], env=server_env, preexec_fn=os.setsid)
         cls.server_proc = proc
 
         # Wait until we can connect to it
@@ -104,25 +112,20 @@ class E2ETests(unittest.TestCase):
 
     @classmethod
     def stop_api_server(cls):
-        print('\nStopping API server, sending SIGINT to make, you can ignore the next failure message from make...')
-        pgrp = os.getpgid(cls.server_proc.pid)
-        try:
-            os.killpg(pgrp, signal.SIGINT)
-        except KeyboardInterrupt:
-            # Ignore our own signal
-            pass
+        print('\nStopping API server, sending SIGTERM to make, you can ignore the next failure message from make...')
+        os.killpg(os.getpgid(cls.server_proc.pid), signal.SIGTERM)
         cls.server_proc.wait()
         print('API server stopped.')
 
     def test_stylist_app(self):
         print('Begin running Stylist App E2E tests.')
         os.chdir(self.stylist_dir)
-        cmd(["npm", "run", "e2e-test"])
+        cmd(["npm", "run", "e2e-test"], env=self.frontend_env)
 
     def test_client_app(self):
         print('Begin running Client App E2E tests.')
         os.chdir(self.client_dir)
-        cmd(["npm", "run", "e2e-test"])
+        cmd(["npm", "run", "e2e-test"], env=self.frontend_env)
 
 
 if __name__ == '__main__':
