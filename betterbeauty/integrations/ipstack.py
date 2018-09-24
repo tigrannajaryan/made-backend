@@ -4,6 +4,8 @@ import requests
 from django.conf import settings
 from django.contrib.gis.geos import Point
 
+from api.v1.client.constants import NEW_YORK_LOCATION
+
 
 def get_lat_lng_for_ip_address(ip_addr: str) -> Point:
 
@@ -13,11 +15,11 @@ def get_lat_lng_for_ip_address(ip_addr: str) -> Point:
         response = requests.get(api_address)
     except requests.RequestException as e:
         logging.exception(str(e))
-        return Point((-74.0060, 40.7128))  # Location of New York
+        return NEW_YORK_LOCATION
     json_response = response.json()
     latitude = json_response.get('latitude', None)
     longitude = json_response.get('longitude', None)
     if latitude and longitude:
         return Point((longitude, latitude))
     else:
-        return Point((-74.0060, 40.7128))  # Location of New York
+        return NEW_YORK_LOCATION
