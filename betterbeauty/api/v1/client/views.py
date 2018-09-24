@@ -367,11 +367,12 @@ class HomeView(generics.RetrieveAPIView):
 
     @staticmethod
     def get_upcoming_appointments(client):
-        datetime_from = timezone.now()
+        datetime_from = timezone.now().replace(hour=0, minute=0, second=0)
         datetime_to = None
         exclude_statuses = [
             AppointmentStatus.CANCELLED_BY_CLIENT,
-            AppointmentStatus.CANCELLED_BY_STYLIST
+            AppointmentStatus.CANCELLED_BY_STYLIST,
+            AppointmentStatus.CHECKED_OUT
         ]
         return client.get_appointments_in_datetime_range(
             datetime_from, datetime_to, exclude_statuses=exclude_statuses
@@ -379,11 +380,15 @@ class HomeView(generics.RetrieveAPIView):
 
     @staticmethod
     def get_last_visited_object(client):
+
         datetime_from = None
-        datetime_to = timezone.now()
+        datetime_to = (
+            timezone.now() + datetime.timedelta(days=1)
+        ).replace(hour=0, minute=0, second=0)
         exclude_statuses = [
             AppointmentStatus.CANCELLED_BY_CLIENT,
-            AppointmentStatus.CANCELLED_BY_STYLIST
+            AppointmentStatus.CANCELLED_BY_STYLIST,
+            AppointmentStatus.NEW
         ]
         return client.get_appointments_in_datetime_range(
             datetime_from, datetime_to, exclude_statuses=exclude_statuses
