@@ -36,8 +36,8 @@ from core.models import User
 from core.types import AppointmentPrices
 from core.utils import calculate_appointment_prices
 from pricing import CalculatedPrice
-from salon.models import ServiceCategory, Stylist, StylistService
-from salon.types import PriceOnDate
+from salon.models import Invitation, ServiceCategory, Stylist, StylistService
+from salon.types import InvitationStatus, PriceOnDate
 from salon.utils import (
     calculate_price_and_discount_for_client_on_date,
     generate_prices_for_stylist_service
@@ -163,6 +163,16 @@ class AddPreferredClientsSerializer(FormattedErrorMessageMixin, serializers.Mode
                 stylist=stylist, client=client, defaults={
                     'deleted_at': None
                 })
+            client_of_stylist, created = ClientOfStylist.objects.get_or_create(
+                client=client, stylist=stylist, defaults={
+                    'first_name': client.user.first_name,
+                    'last_name': client.user.last_name,
+                    'phone': client.user.phone
+                })
+            Invitation.objects.filter(phone=client.user.phone, stylist=stylist,
+                                      status=InvitationStatus.INVITED).update(
+                status=InvitationStatus.ACCEPTED, accepted_at=timezone.now(),
+                created_client=client_of_stylist)
             self.instance = preferred_stylist
             return self.instance
 
