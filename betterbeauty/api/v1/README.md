@@ -1367,7 +1367,7 @@ curl -X POST \
 ## Service pricing
 
 Returns prices for given service for given client in the timeframe of the
-next 14 days.
+next 28 days.
 
 **POST /api/v1/services/pricing**
 
@@ -1591,7 +1591,7 @@ to preview resulting price and conflicting appointments (if any).
 **POST /api/v1/stylist/appointments/preview**
 
 - **services** (optional) - list of uuids of services to create appointment for
-- **client_price** (optional) - custom price for the service that stylist wants to 
+- **client_price** (optional) - custom price for the service that stylist wants to
 have only for this appointment
 - **datetime_start_at** (required) - datetime when appointment is to start
 - **has_tax_included** (required) - whether or not grand total should contain tax
@@ -2338,7 +2338,7 @@ curl -X POST \
 
 **Response 400 BAD REQUEST**
 
-If the stylist is already a preferred stylist and returns existing preference object   
+If the stylist is already a preferred stylist and returns existing preference object
 ```json
 {
     "preference_uuid": "37d795d6-e2a5-46d2-88e6-c1fbe01f756b"
@@ -2360,7 +2360,7 @@ curl -X DELETE \
 **POST /api/v1/client/search-stylists**
 
 Length of `search_like` param should either be 0 or greater than 2.
-Passing empty `search_like` parameter will return all the results. 
+Passing empty `search_like` parameter will return all the results.
 
 ```
 curl -X POST \
@@ -2430,7 +2430,7 @@ curl -X GET \
                 }
             ]
         }
-                
+
     ]
 }
 ```
