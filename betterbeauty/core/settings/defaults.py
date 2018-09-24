@@ -64,6 +64,9 @@ LOGGING = {
             'address': '/dev/log',
             'formatter': 'verbose'
         },
+        'null': {
+            'class': 'logging.NullHandler',
+        },
         'django_log_file': get_file_handler_dict(LOGS_PATH, 'django', 'django.server', ),
         'madebeauty_log_file': get_file_handler_dict(LOGS_PATH, 'madebeauty', 'django.server', ),
     },
@@ -74,6 +77,8 @@ LOGGING = {
             ['sentry', 'console_simple', 'syslog', 'django_log_file', ], 'INFO'),
         'django.request': get_logger_dict(
             ['sentry', 'console_simple', 'syslog', 'django_log_file', ], 'INFO'),
+        'django.security.DisallowedHost': get_logger_dict(
+            ['null', ]),
         'api': get_logger_dict(
             ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
         'appointment': get_logger_dict(
