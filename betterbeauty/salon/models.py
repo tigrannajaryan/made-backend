@@ -1,4 +1,5 @@
 import datetime
+import logging
 import uuid
 
 from typing import List, Optional, Tuple
@@ -23,6 +24,8 @@ from integrations.gmaps import GeocodeValidAddress
 from .choices import INVITATION_STATUS_CHOICES
 from .contstants import DEFAULT_SERVICE_GAP_TIME_MINUTES
 from .types import InvitationStatus, TimeSlot, TimeSlotAvailability
+
+logger = logging.getLogger(__name__)
 
 
 class StylistServiceManager(models.Manager):
@@ -67,6 +70,9 @@ class Salon(models.Model):
             self.zip_code = geo_coded_address.zip_code
             self.location = geo_coded_address.location
             self.is_address_geocoded = True
+            logger.info('Geo-coding Success', exc_info=True)
+        else:
+            logger.info("Geo-coding returned None")
         self.last_geo_coded = timezone.now()
         self.save(update_fields=[
             'city', 'state', 'zip_code', 'location', 'is_address_geocoded', 'last_geo_coded'])
