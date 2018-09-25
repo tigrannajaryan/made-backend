@@ -78,5 +78,4 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         dry_run = options['dry_run']
-        updating_user: Optional[User]
         auto_checkout_appointments(stdout=self.stdout, dry_run=dry_run)
