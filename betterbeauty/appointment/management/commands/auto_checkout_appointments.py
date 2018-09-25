@@ -41,28 +41,28 @@ def get_updating_user(stdout: TextIOBase, dry_run: bool) -> Optional[User]:
     return updating_user
 
 
-@transaction.atomic
-def auto_checkout_appointments(updating_user: Optional[User], stdout: TextIOBase, dry_run: bool):
-    # if it's not dry_run - updating user must be set
+def auto_checkout_appointments(stdout: TextIOBase, dry_run: bool):
+    updating_user: Optional[User] = get_updating_user(stdout=stdout, dry_run=dry_run)
     assert bool(updating_user) != dry_run
-    appointments_to_update = Appointment.objects.filter(
-        status=AppointmentStatus.NEW,
-        datetime_start_at__lt=timezone.now() - APPOINTMENT_AUTO_CHECKOUT_INTERVAL
-    ).select_for_update(
-        skip_locked=True
-    )
-    for appointment in appointments_to_update:
-        action = 'checking out' if not dry_run else 'pretending to check out'
-        stdout.write('Appointment with id={0} created on {1}, {2}'.format(
-            appointment.id,
-            appointment.created_at,
-            action
-        ))
-        if not dry_run:
-            appointment.set_status(
-                status=AppointmentStatus.CHECKED_OUT,
-                updated_by=updating_user
-            )
+    with transaction.atomic():
+        appointments_to_update = Appointment.objects.filter(
+            status=AppointmentStatus.NEW,
+            datetime_start_at__lt=timezone.now() - APPOINTMENT_AUTO_CHECKOUT_INTERVAL
+        ).select_for_update(
+            skip_locked=True
+        )
+        for appointment in appointments_to_update:
+            action = 'checking out' if not dry_run else 'pretending to check out'
+            stdout.write('Appointment with id={0} created on {1}, {2}'.format(
+                appointment.id,
+                appointment.created_at,
+                action
+            ))
+            if not dry_run:
+                appointment.set_status(
+                    status=AppointmentStatus.CHECKED_OUT,
+                    updated_by=updating_user
+                )
 
 
 class Command(BaseCommand):
@@ -78,5 +78,5 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         dry_run = options['dry_run']
-        updating_user: Optional[User] = get_updating_user(stdout=self.stdout, dry_run=dry_run)
-        auto_checkout_appointments(updating_user=updating_user, stdout=self.stdout, dry_run=dry_run)
+        updating_user: Optional[User]
+        auto_checkout_appointments(stdout=self.stdout, dry_run=dry_run)
