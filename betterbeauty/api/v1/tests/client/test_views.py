@@ -627,9 +627,10 @@ class TestHistoryAPIView(object):
             stylist=stylist_data
         )
         appointments: Dict[str, Appointment] = stylist_appointments_data(stylist_data)
-
+        appointments['current_appointment'].set_status(status=AppointmentStatus.CHECKED_OUT,
+                                                       updated_by=client.user)
         for a in appointments.values():
             a.client = client_of_stylist
             a.save(update_fields=['client', ])
         past_appointments = HistoryView.get_historical_appointments(client)
-        assert (past_appointments.count() == 3)
+        assert (past_appointments.count() == 2)
