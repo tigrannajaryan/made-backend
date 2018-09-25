@@ -127,13 +127,7 @@ def generate_discount_settings_for_stylist(
         for discount in stylist.weekday_discounts.all()
     }
 
-    # We set first time discount to 0% because First Time Discount makes no sense
-    # without Client App. See https://github.com/madebeauty/monorepo/issues/375
-    # As soon as the Client App is released we need to distinguish between
-    # appointments added by stylist and set first time discount to 0% in that
-    # and appointments added by client and set first time discount to
-    # be equal to stylist.first_time_book_discount_percent.
-    discounts.first_visit_percentage = 0
+    discounts.first_visit_percentage = stylist.first_time_book_discount_percent
 
     discounts.revisit_within_1week_percentage = (
         stylist.rebook_within_1_week_discount_percent
