@@ -155,11 +155,11 @@ def calc_client_prices(
 
             if min_demand < 1:
                 # linearly interpolate the discount between 0 and max_discount
-                # for demands in the range of [1 .. min_demand]. This means that
-                # on the days with minimal demand full discount will be applied
+                # for demands in the range of [1 .. 0]. This means that
+                # on the days with zero demand full discount will be applied
                 # and on the days that are fully booked zero discount will be applied
                 # (actually no booking should be allowed on those days at all).
-                apply_discount_part = (1 - demand) / (1 - min_demand)
+                apply_discount_part = (1 - demand)
 
                 # Calculate discount percentage to apply as a portion of
                 # maximum applicable discount.

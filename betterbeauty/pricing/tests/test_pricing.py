@@ -140,7 +140,6 @@ class TestCalcClientPrices(object):
 
         assert len(prices) == PRICE_BLOCK_SIZE
 
-        # Verify that the discount percentages are granularized at 0.25 intervals
         assert prices[0].price == _calculate_discount(regular_price, 0.89,
                                                       DISCOUNT, discounts.maximum_discount)
         assert prices[1].price == _calculate_discount(regular_price, 0.78,
