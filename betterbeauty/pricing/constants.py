@@ -1,5 +1,5 @@
 # How many days of price calculation to perform at once
-PRICE_BLOCK_SIZE = 14
+PRICE_BLOCK_SIZE = 28
 
 # For a day which is not available for booking (because it is either fully
 # occupied, or is not available for booking at all, we will consider demand
