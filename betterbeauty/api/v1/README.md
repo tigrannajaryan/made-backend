@@ -2137,6 +2137,8 @@ Note: in the future we should extend this also to those clients who have
 accepted invitations from the stylist (even though they may not yet had
 any appointments scheduled)
 
+Sending empty query value returns all clients of the stylists.
+
 **GET /api/v1/stylist/search-clients?query=query_string**
 
 ```
@@ -2154,7 +2156,10 @@ curl -X GET \
             "uuid": "f74b1c66-943c-4bc4-bf14-6fefa21ab5a5",
             "first_name": "Fred",
             "last_name": "McBob",
-            "phone": "112233"
+            "phone": "112233",
+            "city": "Brooklyn",
+            "state": "NY",
+            "photo": "profile_photo_url"
         }
     ]
 }
