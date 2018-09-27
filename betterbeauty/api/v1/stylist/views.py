@@ -388,14 +388,8 @@ class ClientSearchView(views.APIView):
 
     @staticmethod
     def _search_clients(queryset: QuerySet, query: str) -> QuerySet:
-        if len(query) < 3:
+        if len(query) and len(query) < 3:
             return ClientOfStylist.objects.none()
-
-        # we will only search among current stylist's clients, i.e. those
-        # who already had appointments with this stylist in the past
-
-        # TODO: Also extend this to those clients who have accepted invitations
-        # TODO: from the stylist (even though had no appointments yet)
 
         stylists_clients = queryset.annotate(
             full_name=Concat(F('first_name'), Value(' '), F('last_name')),
