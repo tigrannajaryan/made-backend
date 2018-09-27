@@ -127,7 +127,7 @@ class TemporaryFile(models.Model):
 
 
 class PhoneSMSCodes(models.Model):
-    phone = models.CharField(max_length=15, unique=True)
+    phone = models.CharField(max_length=15)
     code = models.CharField(max_length=6)
     role = models.CharField(max_length=10, choices=USER_ROLE, default=UserRole.CLIENT.value)
 
@@ -137,6 +137,7 @@ class PhoneSMSCodes(models.Model):
 
     class Meta:
         db_table = 'phone_sms_codes'
+        unique_together = ['phone', 'role']
 
     @classmethod
     def generate_code(cls) -> str:
@@ -174,9 +175,8 @@ class PhoneSMSCodes(models.Model):
     @transaction.atomic
     def create_or_update_phone_sms_code(cls, phone: str, role: str=UserRole.CLIENT):
         code = cls.generate_code()
-        phone_sms_code, created = cls.objects.get_or_create(phone=phone, defaults={
+        phone_sms_code, created = cls.objects.get_or_create(phone=phone, role=role, defaults={
             'code': code,
-            'role': role,
             'generated_at': timezone.now(),
             'expires_at': timezone.now() + timedelta(minutes=SMS_CODE_EXPIRY_TIME_MINUTES),
             'redeemed_at': None,
