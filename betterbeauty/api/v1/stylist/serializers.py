@@ -1264,10 +1264,13 @@ class ClientOfStylistSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(read_only=True)
     last_name = serializers.CharField(read_only=True)
     phone = PhoneNumberField(read_only=True)
+    city = serializers.CharField(source='client.city', read_only=True)
+    state = serializers.CharField(source='client.state', read_only=True)
+    photo = serializers.CharField(source='client.get_profile_photo_url', read_only=True)
 
     class Meta:
         model = ClientOfStylist
-        fields = ['uuid', 'first_name', 'last_name', 'phone', ]
+        fields = ['uuid', 'first_name', 'last_name', 'phone', 'city', 'state', 'photo']
 
 
 class StylistServicePriceSerializer(serializers.Serializer):
