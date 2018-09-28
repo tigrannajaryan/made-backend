@@ -1971,10 +1971,15 @@ curl -X GET \
         }],
     "today_visits_count": 1,
     "upcoming_visits_count": 0,
-    "past_visits_count": 41
+    "past_visits_count": 41,
+    "followers": 2,
+    "this_week_earning": 500,
+    "today_slots": 5
 }
 
 ```
+
+Note: `today_slots` will be `null` if query param is not `today`
 
 **Response 400 Bad Request**
 ```json
