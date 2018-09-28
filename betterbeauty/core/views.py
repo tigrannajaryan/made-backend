@@ -64,7 +64,10 @@ class HealthCheckView(views.APIView):
             db_connection.ensure_connection()
         except OperationalError:
             is_healthy = False
-            logger.exception('Could not get DB connection while doing health check')
+            logger.exception(
+                'Could not get DB connection from instance {0} while doing health check'.format(
+                    settings.AWS_INSTANCE_ID
+                ))
         # verify if we can write to S3 bucket
         try:
             assert default_storage.connection is not None
