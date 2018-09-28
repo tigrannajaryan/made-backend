@@ -1,6 +1,8 @@
 import logging
 import os
 
+from typing import Optional
+
 import dj_database_url
 import requests
 
@@ -57,7 +59,7 @@ def get_logger_dict(handlers, level='INFO'):
     }
 
 
-def get_ec2_instance_ip_address():
+def get_ec2_instance_ip_address() -> Optional[str]:
     """Return IP address of current EC2 instance by requesting AWS metadata"""
     aws_get_ip_url = '{0}/local-ipv4'.format(AWS_EC2_METADATA_URL)
     try:
@@ -70,7 +72,7 @@ def get_ec2_instance_ip_address():
     return None
 
 
-def get_ec2_instance_id():
+def get_ec2_instance_id() -> Optional[str]:
     """Return AWS id of current EC2 instance by requesting AWS metadata"""
     aws_get_id_url = '{0}/instance-id'.format(AWS_EC2_METADATA_URL)
     try:
