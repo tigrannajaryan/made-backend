@@ -42,7 +42,9 @@ class HealthCheckView(views.APIView):
                 Body=b'test', Key=settings.AWS_S3_WRITE_ACCESS_TEST_FILE_NAME,
                 ACL='private')
         except (BotoCoreError, ClientError):
-            logger.exception('Instance failed S3 write test')
+            logger.exception('Instance {0} failed S3 write test'.format(
+                settings.AWS_INSTANCE_ID
+            ))
             return False
         return True
 
@@ -71,7 +73,10 @@ class HealthCheckView(views.APIView):
                     is_healthy = False
         except Exception as e:
             is_healthy = False
-            logger.exception('Could not get S3 connection while doing health check')
+            logger.exception(
+                'Could not get S3 connection while doing health check; instance: {0}'.format(
+                    settings.AWS_INSTANCE_ID
+                ))
         if is_healthy:
             return response.Response(status=status.HTTP_200_OK)
         return response.Response(status=status.HTTP_400_BAD_REQUEST)

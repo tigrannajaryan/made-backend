@@ -3,16 +3,18 @@ from typing import List
 from core.constants import EnvLevel
 
 from .defaults import *  # noqa
-from .utils import get_ec2_instance_ip
+from .utils import get_ec2_instance_id, get_ec2_instance_ip_address
 
 LEVEL = EnvLevel.STAGING
+
+AWS_INSTANCE_ID = get_ec2_instance_id()
 
 ALLOWED_HOSTS = (
     '*.admindev.betterbeauty.io',
     'admindev.betterbeauty.io',
     '*.admindev.madebeauty.com',
     'admindev.madebeauty.com',
-    get_ec2_instance_ip()
+    get_ec2_instance_ip_address(),
 )
 
 DEBUG = False
