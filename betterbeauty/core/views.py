@@ -11,7 +11,7 @@ from django.db import connection as db_connection
 from django.db.utils import OperationalError
 from rest_framework import permissions, response, status, views
 
-from core.constants import ENV_BLACKLIST
+from core.constants import ENV_BLACKLIST, EnvLevel
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class HealthCheckView(views.APIView):
         # We should only perform this check on production, and we'll
         # try to make it roughly once every 20 health-checks to save on
         # the S3 PUT operation costs
-        if settings.LEVEL != 'production':
+        if settings.LEVEL != EnvLevel.PRODUCTION:
             return False
         return random.random() < 1 / settings.AWS_S3_WRITE_ACCESS_TEST_PERIODICITY
 

@@ -1,9 +1,11 @@
 from typing import List
 
+from core.constants import EnvLevel
+
 from .defaults import *  # noqa
 from .utils import get_ec2_instance_ip
 
-LEVEL = 'staging'
+LEVEL = EnvLevel.STAGING
 
 ALLOWED_HOSTS = (
     '*.admindev.betterbeauty.io',

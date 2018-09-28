@@ -4,6 +4,8 @@ import os
 import dj_database_url
 import requests
 
+from core.constants import EnvLevel
+
 logger = logging.getLogger(__name__)
 
 # more details at https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
@@ -27,10 +29,10 @@ def parse_database_url(database_url, ssl_cert=None):
 
 
 def get_file_handler_dict(local_path: str, filename: str, formatter: str) -> dict:
-    level = os.environ.get('LEVEL', '')
+    level = os.environ.get('LEVEL', EnvLevel.DEVELOPMENT)
     # disable file logging on staging/production. It's useless in multi-instance
     # environment and produces all kinds of issues with log file permissions
-    if level in ['staging', 'production']:
+    if level in [EnvLevel.STAGING, EnvLevel.PRODUCTION]:
         return {
             'class': 'logging.NullHandler'
         }

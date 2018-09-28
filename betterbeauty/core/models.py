@@ -16,6 +16,7 @@ from client.constants import SMS_CODE_EXPIRY_TIME_MINUTES
 from integrations.twilio import render_one_time_sms_for_phone, send_sms_message
 
 from .choices import USER_ROLE
+from .constants import EnvLevel
 from .types import UserRole
 
 
@@ -144,7 +145,7 @@ class PhoneSMSCodes(models.Model):
 
     @classmethod
     def generate_code(cls) -> str:
-        if settings.LEVEL in ['development', 'tests', ]:
+        if settings.LEVEL in [EnvLevel.DEVELOPMENT, EnvLevel.TESTS, ]:
             code = '123456'
             logger.info('Generated SMS code: {0}'.format(code))
         else:

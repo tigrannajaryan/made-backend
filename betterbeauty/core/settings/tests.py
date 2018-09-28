@@ -1,6 +1,8 @@
+from core.constants import EnvLevel  # noqa
+
 from .development import *  # noqa
 
-LEVEL = 'tests'
+LEVEL = EnvLevel.TESTS
 
 # Twilio
 TWILIO_SMS_ENABLED = False
