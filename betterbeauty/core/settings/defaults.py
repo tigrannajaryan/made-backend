@@ -93,6 +93,9 @@ LOGGING = {
             ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
         'salon': get_logger_dict(
             ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
+        'auto_checkout': get_logger_dict(
+            ['syslog', 'sentry', ], 'INFO'
+        ),
     }
 }
 
