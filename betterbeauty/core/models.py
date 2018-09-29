@@ -19,6 +19,9 @@ from .choices import USER_ROLE
 from .types import UserRole
 
 
+logger = logging.getLogger(__name__)
+
+
 class BaseEmailUserManager(BaseUserManager):
     use_in_migrations = True
 
@@ -143,7 +146,7 @@ class PhoneSMSCodes(models.Model):
     def generate_code(cls) -> str:
         if settings.LEVEL in ['development', 'tests', ]:
             code = '123456'
-            logging.info('Generated SMS code: {0}'.format(code))
+            logger.info('Generated SMS code: {0}'.format(code))
         else:
             code = str(randint(100000, 999999))
         return code

@@ -31,14 +31,14 @@ class HealthCheckView(views.APIView):
             db_connection.ensure_connection()
         except OperationalError:
             is_healthy = False
-            logging.exception('Could not get DB connection while doing health check')
+            logger.exception('Could not get DB connection while doing health check')
         # verify if S3 is available
 
         try:
             assert default_storage.connection is not None
         except Exception as e:
             is_healthy = False
-            logging.exception('Could not get S3 connection while doing health check')
+            logger.exception('Could not get S3 connection while doing health check')
         if is_healthy:
             return response.Response(status=status.HTTP_200_OK)
         return response.Response(status=status.HTTP_400_BAD_REQUEST)
