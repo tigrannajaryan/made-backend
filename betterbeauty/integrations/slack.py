@@ -31,4 +31,4 @@ def send_slack_twilio_message_notification(from_phone, to_phone, message):
     except HTTPError:
         if settings.LEVEL != 'production':
             raise
-        logging.exception('Failed to send Slack message', exc_info=True)
+        logger.exception('Failed to send Slack message', exc_info=True)

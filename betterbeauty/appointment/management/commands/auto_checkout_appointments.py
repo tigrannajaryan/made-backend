@@ -80,10 +80,10 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        logging.info('Auto-checkout mgmt command started')
+        logger.info('Auto-checkout mgmt command started')
         dry_run = options['dry_run']
         try:
             auto_checkout_appointments(stdout=self.stdout, dry_run=dry_run)
         except DatabaseError:
-            logging.exception('Auto-checkout failed in transaction')
-        logging.info('Auto-checkout mgmt command exiting')
+            logger.exception('Auto-checkout failed in transaction')
+        logger.info('Auto-checkout mgmt command exiting')
