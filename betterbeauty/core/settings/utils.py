@@ -1,8 +1,12 @@
 import logging
 import os
 
+from typing import Optional
+
 import dj_database_url
 import requests
+
+from core.constants import EnvLevel
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +31,10 @@ def parse_database_url(database_url, ssl_cert=None):
 
 
 def get_file_handler_dict(local_path: str, filename: str, formatter: str) -> dict:
-    level = os.environ.get('LEVEL', '')
+    level = os.environ.get('LEVEL', EnvLevel.DEVELOPMENT)
     # disable file logging on staging/production. It's useless in multi-instance
     # environment and produces all kinds of issues with log file permissions
-    if level in ['staging', 'production']:
+    if level in [EnvLevel.STAGING, EnvLevel.PRODUCTION]:
         return {
             'class': 'logging.NullHandler'
         }
@@ -55,7 +59,7 @@ def get_logger_dict(handlers, level='INFO'):
     }
 
 
-def get_ec2_instance_ip():
+def get_ec2_instance_ip_address() -> Optional[str]:
     """Return IP address of current EC2 instance by requesting AWS metadata"""
     aws_get_ip_url = '{0}/local-ipv4'.format(AWS_EC2_METADATA_URL)
     try:
@@ -63,6 +67,19 @@ def get_ec2_instance_ip():
         return aws_metadata.text
     except (ConnectionError, IOError):
         logger.exception(
-            'Could not retrieve instance IP; instance will not pass the health check'
+            'Could not retrieve instance IP addr; instance will not pass the health check'
+        )
+    return None
+
+
+def get_ec2_instance_id() -> Optional[str]:
+    """Return AWS id of current EC2 instance by requesting AWS metadata"""
+    aws_get_id_url = '{0}/instance-id'.format(AWS_EC2_METADATA_URL)
+    try:
+        aws_metadata = requests.get(aws_get_id_url, timeout=0.1)
+        return aws_metadata.text
+    except (ConnectionError, IOError):
+        logger.exception(
+            'Could not retrieve instance ID'
         )
     return None

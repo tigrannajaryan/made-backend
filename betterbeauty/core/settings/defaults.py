@@ -243,6 +243,14 @@ STATIC_URL = '/static/'
 MAX_FILE_UPLOAD_SIZE = 1024 * 1024 * 5  # 5MB
 
 AWS_S3_FILE_OVERWRITE = False
+# On production file with this name will be created during healthcheck
+# to verify that an instance has write access
+AWS_S3_WRITE_ACCESS_TEST_FILE_NAME = 'write-access-test.tmp'
+
+# We will test only ~5% of all healthchecks against real write operation
+# to save on S3 PUT calls, making a real PUT operation once every 20
+# healthcheck attempts
+AWS_S3_WRITE_ACCESS_TEST_PERIODICITY = 20
 
 DEBUG = False
 

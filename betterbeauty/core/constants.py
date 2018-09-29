@@ -1,3 +1,13 @@
+from .types import StrEnum
+
+
+class EnvLevel(StrEnum):
+    PRODUCTION = 'production'
+    STAGING = 'staging'
+    DEVELOPMENT = 'development'
+    TESTS = 'tests'
+
+
 DEFAULT_TAX_RATE = 0.065
 
 DEFAULT_CARD_FEE = 0.0275
@@ -24,10 +34,10 @@ DEFAULT_WEEKDAY_DISCOUNT_PERCENTS = {
 # For eg. twilio is restricted only to production.
 # ENV_BLACKLIST contains the map of blacklisted vars for each envs.
 ENV_BLACKLIST = {
-    'production': [
+    EnvLevel.PRODUCTION: [
         'BACKDOOR_API_KEY',
     ],
-    'staging': [
+    EnvLevel.STAGING: [
         'TWILIO_ACCOUNT_SID',
         'TWILIO_AUTH_TOKEN'
     ]

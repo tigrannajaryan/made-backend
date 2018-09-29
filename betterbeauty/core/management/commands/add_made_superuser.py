@@ -7,13 +7,14 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+from core.constants import EnvLevel
 from core.models import User
 from core.types import UserRole
 
 
 SUPERUSER_EMAILS_BY_LEVEL = {
-    'staging': 'admin@betterbeauty.io',
-    'production': 'admin@madebeauty.com',
+    EnvLevel.STAGING: 'admin@betterbeauty.io',
+    EnvLevel.PRODUCTION: 'admin@madebeauty.com',
 }
 
 SUPERUSER_PASSWORD_ENV_VAR_NAME = 'DJANGO_SUPERUSER_PASSWORD'
@@ -22,7 +23,7 @@ MIN_PASSWORD_LENGTH = 12
 
 @transaction.atomic
 def update_or_create_superuser(
-        level: str, stdout: TextIOBase, dry_run: bool
+        level: EnvLevel, stdout: TextIOBase, dry_run: bool
 ) -> Tuple[Optional[User], bool]:
 
     superuser_email = SUPERUSER_EMAILS_BY_LEVEL[level]
@@ -75,7 +76,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         dry_run = options['dry_run']
         level = settings.LEVEL
-        if level not in ['staging', 'production']:
+        if level not in [EnvLevel.STAGING, EnvLevel.PRODUCTION]:
             self.stdout.write('The command must be run only on staging or production')
             return
 

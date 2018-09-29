@@ -1,8 +1,11 @@
 import os
+
+from core.constants import EnvLevel
+
 from .defaults import *  # noqa
 from .utils import parse_database_url
 
-LEVEL = 'development'
+LEVEL = EnvLevel.DEVELOPMENT
 
 PG_PORT = os.environ.get('PGPORT', 5432)
 

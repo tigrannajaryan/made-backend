@@ -5,6 +5,7 @@ from django.urls import path
 from django.views.static import serve
 
 from api import urls as api_urls
+from .constants import EnvLevel
 from .views import HealthCheckView
 
 urlpatterns = [
@@ -13,7 +14,7 @@ urlpatterns = [
 
 ]
 
-if settings.LEVEL in ['development', 'tests']:
+if settings.LEVEL in [EnvLevel.DEVELOPMENT, EnvLevel.TESTS]:
     urlpatterns += [
         url(r'^media/(?P<path>.*)$', serve, {
             'document_root': settings.MEDIA_ROOT,
@@ -23,7 +24,7 @@ if settings.LEVEL in ['development', 'tests']:
         }),
     ]
 
-if settings.LEVEL in ['production', 'staging']:
+if settings.LEVEL in [EnvLevel.PRODUCTION, EnvLevel.STAGING]:
     urlpatterns += [
         url(r'^healthcheck', HealthCheckView.as_view()),
     ]
