@@ -379,20 +379,8 @@ class HomeView(generics.RetrieveAPIView):
         )
 
     @staticmethod
-    def get_last_visited_object(client):
-
-        datetime_from = None
-        datetime_to = (
-            timezone.now() + datetime.timedelta(days=1)
-        ).replace(hour=0, minute=0, second=0)
-        exclude_statuses = [
-            AppointmentStatus.CANCELLED_BY_CLIENT,
-            AppointmentStatus.CANCELLED_BY_STYLIST,
-            AppointmentStatus.NEW
-        ]
-        return client.get_appointments_in_datetime_range(
-            datetime_from, datetime_to, exclude_statuses=exclude_statuses
-        ).order_by('datetime_start_at').last()
+    def get_last_visited_object(client) -> Appointment:
+        return client.get_past_appointments().first()
 
 
 class HistoryView(generics.ListAPIView):
@@ -409,20 +397,5 @@ class HistoryView(generics.ListAPIView):
         return Response(serializer.data)
 
     @staticmethod
-    def get_historical_appointments(client):
-        current_now: datetime.datetime = timezone.now()
-        last_midnight = (current_now).replace(hour=0, minute=0, second=0)
-        next_midnight = (current_now + datetime.timedelta(days=1)).replace(
-            hour=0, minute=0, second=0)
-
-        return client.get_appointments_in_datetime_range(
-            datetime_from=None,
-            exclude_statuses=[
-                AppointmentStatus.CANCELLED_BY_STYLIST,
-                AppointmentStatus.CANCELLED_BY_CLIENT,
-            ],
-            q_filter=(Q(datetime_start_at__lt=last_midnight) | Q(
-                datetime_start_at__gte=last_midnight,
-                datetime_start_at__lt=next_midnight,
-                status=AppointmentStatus.CHECKED_OUT)),
-        ).order_by('-datetime_start_at')
+    def get_historical_appointments(client) -> models.QuerySet:
+        return client.get_past_appointments()
