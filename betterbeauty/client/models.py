@@ -6,9 +6,11 @@ from uuid import uuid4
 from django.apps import apps
 from django.contrib.gis.db.models import PointField
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from appointment.types import AppointmentStatus
 from appointment.utils import get_appointments_in_datetime_range
 from core.models import User
 from integrations.gmaps import GeoCode
@@ -86,6 +88,24 @@ class Client(models.Model):
             appointments = appointments.filter(q_filter)
 
         return appointments.order_by('datetime_start_at')
+
+    def get_past_appointments(self):
+        current_now: datetime.datetime = timezone.now()
+        last_midnight = (current_now).replace(hour=0, minute=0, second=0)
+        next_midnight = (current_now + datetime.timedelta(days=1)).replace(
+            hour=0, minute=0, second=0)
+
+        return self.get_appointments_in_datetime_range(
+            datetime_from=None,
+            exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_STYLIST,
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+            ],
+            q_filter=(Q(datetime_start_at__lt=last_midnight) | Q(
+                datetime_start_at__gte=last_midnight,
+                datetime_start_at__lt=next_midnight,
+                status=AppointmentStatus.CHECKED_OUT)),
+        ).order_by('-datetime_start_at')
 
 
 class ClientOfStylist(models.Model):
