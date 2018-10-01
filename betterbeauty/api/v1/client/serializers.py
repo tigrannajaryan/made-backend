@@ -27,7 +27,7 @@ from api.v1.stylist.serializers import (
 
 from appointment.constants import (
     APPOINTMENT_CLIENT_SETTABLE_STATUSES,
-    ErrorMessages as appointment_errors)
+    DEFAULT_HAS_CARD_FEE_INCLUDED, DEFAULT_HAS_TAX_INCLUDED, ErrorMessages as appointment_errors)
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.constants import END_OF_DAY_BUFFER_TIME_IN_MINUTES
@@ -461,7 +461,8 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
             # set initial price settings
             appointment_prices: AppointmentPrices = calculate_appointment_prices(
                 price_before_tax=total_client_price_before_tax,
-                include_card_fee=False, include_tax=False
+                include_card_fee=DEFAULT_HAS_CARD_FEE_INCLUDED,
+                include_tax=DEFAULT_HAS_TAX_INCLUDED
             )
             for k, v in appointment_prices._asdict().items():
                 setattr(appointment, k, v)
@@ -597,8 +598,8 @@ class AppointmentPreviewRequestSerializer(
 
     def to_internal_value(self, data):
         data = super(AppointmentPreviewRequestSerializer, self).to_internal_value(data)
-        data['has_tax_included'] = True
-        data['has_card_fee_included'] = False
+        data['has_tax_included'] = DEFAULT_HAS_TAX_INCLUDED
+        data['has_card_fee_included'] = DEFAULT_HAS_CARD_FEE_INCLUDED
         return data
 
 

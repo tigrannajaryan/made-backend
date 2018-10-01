@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, ROUND_UP
 
 from ..constants import DEFAULT_CARD_FEE, DEFAULT_TAX_RATE
 from ..types import AppointmentPrices
@@ -34,6 +34,7 @@ def calculate_appointment_prices(
     card_fee = calculate_card_fee(grand_total)
     if include_card_fee:
         grand_total += card_fee
+    grand_total = grand_total.quantize(Decimal('1.'), rounding=ROUND_UP)
     return AppointmentPrices(
         total_client_price_before_tax=price_before_tax,
         total_tax=total_tax,
