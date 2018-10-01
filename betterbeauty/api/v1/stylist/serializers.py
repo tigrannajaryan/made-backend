@@ -19,7 +19,7 @@ from api.common.mixins import FormattedErrorMessageMixin
 from api.common.utils import save_profile_photo
 from appointment.constants import (
     APPOINTMENT_STYLIST_SETTABLE_STATUSES,
-    ErrorMessages as appointment_errors,
+    DEFAULT_HAS_CARD_FEE_INCLUDED, DEFAULT_HAS_TAX_INCLUDED, ErrorMessages as appointment_errors,
 )
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
@@ -874,7 +874,8 @@ class AppointmentSerializer(
             # set initial price settings
             appointment_prices: AppointmentPrices = calculate_appointment_prices(
                 price_before_tax=total_client_price_before_tax,
-                include_card_fee=False, include_tax=False
+                include_card_fee=DEFAULT_HAS_CARD_FEE_INCLUDED,
+                include_tax=DEFAULT_HAS_TAX_INCLUDED
             )
             for k, v in appointment_prices._asdict().items():
                 setattr(appointment, k, v)
