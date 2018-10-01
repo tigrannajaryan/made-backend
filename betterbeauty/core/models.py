@@ -16,7 +16,11 @@ from client.constants import SMS_CODE_EXPIRY_TIME_MINUTES
 from integrations.twilio import render_one_time_sms_for_phone, send_sms_message
 
 from .choices import USER_ROLE
+from .constants import EnvLevel
 from .types import UserRole
+
+
+logger = logging.getLogger(__name__)
 
 
 class BaseEmailUserManager(BaseUserManager):
@@ -127,7 +131,7 @@ class TemporaryFile(models.Model):
 
 
 class PhoneSMSCodes(models.Model):
-    phone = models.CharField(max_length=15, unique=True)
+    phone = models.CharField(max_length=15)
     code = models.CharField(max_length=6)
     role = models.CharField(max_length=10, choices=USER_ROLE, default=UserRole.CLIENT.value)
 
@@ -137,12 +141,13 @@ class PhoneSMSCodes(models.Model):
 
     class Meta:
         db_table = 'phone_sms_codes'
+        unique_together = ['phone', 'role']
 
     @classmethod
     def generate_code(cls) -> str:
-        if settings.LEVEL in ['development', 'tests', ]:
+        if settings.LEVEL in [EnvLevel.DEVELOPMENT, EnvLevel.TESTS, ]:
             code = '123456'
-            logging.info('Generated SMS code: {0}'.format(code))
+            logger.info('Generated SMS code: {0}'.format(code))
         else:
             code = str(randint(100000, 999999))
         return code
@@ -174,9 +179,8 @@ class PhoneSMSCodes(models.Model):
     @transaction.atomic
     def create_or_update_phone_sms_code(cls, phone: str, role: str=UserRole.CLIENT):
         code = cls.generate_code()
-        phone_sms_code, created = cls.objects.get_or_create(phone=phone, defaults={
+        phone_sms_code, created = cls.objects.get_or_create(phone=phone, role=role, defaults={
             'code': code,
-            'role': role,
             'generated_at': timezone.now(),
             'expires_at': timezone.now() + timedelta(minutes=SMS_CODE_EXPIRY_TIME_MINUTES),
             'redeemed_at': None,

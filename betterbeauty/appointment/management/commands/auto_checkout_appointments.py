@@ -1,9 +1,10 @@
 import datetime
+import logging
 from io import TextIOBase
 from typing import Optional
 
 from django.core.management.base import BaseCommand
-from django.db import transaction
+from django.db import DatabaseError, transaction
 from django.utils import timezone
 
 from appointment.models import Appointment
@@ -11,6 +12,7 @@ from appointment.types import AppointmentStatus
 from core.models import User
 from core.types import UserRole
 
+logger = logging.getLogger('auto_checkout')
 
 APPOINTMENT_UPDATE_USER_EMAIL = 'auto_appointment_updater@madebeauty.com'
 APPOINTMENT_AUTO_CHECKOUT_INTERVAL = datetime.timedelta(hours=24)
@@ -41,29 +43,29 @@ def get_updating_user(stdout: TextIOBase, dry_run: bool) -> Optional[User]:
     return updating_user
 
 
-@transaction.atomic
 def auto_checkout_appointments(stdout: TextIOBase, dry_run: bool):
     updating_user: Optional[User] = get_updating_user(
         stdout=stdout, dry_run=dry_run
     )
-    appointments_to_update = Appointment.objects.select_for_update(
-        skip_locked=True
-    ).filter(
-        status=AppointmentStatus.NEW,
-        datetime_start_at__lt=timezone.now() - APPOINTMENT_AUTO_CHECKOUT_INTERVAL
-    )
-    for appointment in appointments_to_update:
-        action = 'checking out' if not dry_run else 'pretending to check out'
-        stdout.write('Appointment with id={0} created on {1}, {2}'.format(
-            appointment.id,
-            appointment.created_at,
-            action
-        ))
-        if not dry_run:
-            appointment.set_status(
-                status=AppointmentStatus.CHECKED_OUT,
-                updated_by=updating_user
-            )
+    with transaction.atomic():
+        appointments_to_update = Appointment.objects.select_for_update(
+            skip_locked=True
+        ).filter(
+            status=AppointmentStatus.NEW,
+            datetime_start_at__lt=timezone.now() - APPOINTMENT_AUTO_CHECKOUT_INTERVAL
+        )
+        for appointment in appointments_to_update:
+            action = 'checking out' if not dry_run else 'pretending to check out'
+            stdout.write('Appointment with id={0} created on {1}, {2}'.format(
+                appointment.id,
+                appointment.created_at,
+                action
+            ))
+            if not dry_run:
+                appointment.set_status(
+                    status=AppointmentStatus.CHECKED_OUT,
+                    updated_by=updating_user
+                )
 
 
 class Command(BaseCommand):
@@ -78,5 +80,10 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        logger.info('Auto-checkout mgmt command started')
         dry_run = options['dry_run']
-        auto_checkout_appointments(stdout=self.stdout, dry_run=dry_run)
+        try:
+            auto_checkout_appointments(stdout=self.stdout, dry_run=dry_run)
+        except DatabaseError:
+            logger.exception('Auto-checkout failed in transaction')
+        logger.info('Auto-checkout mgmt command exiting')

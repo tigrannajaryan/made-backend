@@ -1,11 +1,14 @@
 from typing import List
 
+from core.constants import EnvLevel
+
 from .defaults import *  # noqa
-from .utils import get_ec2_instance_ip
+from .utils import get_ec2_instance_id, get_ec2_instance_ip_address
 
-LEVEL = 'production'
+LEVEL = EnvLevel.PRODUCTION
 
-ALLOWED_HOSTS = ('*.admin.madebeauty.com', 'admin.madebeauty.com', get_ec2_instance_ip())
+AWS_INSTANCE_ID = get_ec2_instance_id()
+ALLOWED_HOSTS = ('*.admin.madebeauty.com', 'admin.madebeauty.com', get_ec2_instance_ip_address())
 
 DEBUG = False
 
