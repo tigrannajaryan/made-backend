@@ -426,6 +426,7 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
             data['created_by'] = client.user
             data['client_first_name'] = client.user.first_name
             data['client_last_name'] = client.user.last_name
+            data['client_phone'] = client.user.phone
 
             services_with_client_prices: List[Tuple[StylistService, CalculatedPrice]] = []
             for appointment_service in appointment_services:
