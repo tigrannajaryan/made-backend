@@ -2,6 +2,7 @@ from django.conf.urls import url
 
 from .views import (
     ClientSearchView,
+    ClientView,
     InvitationView,
     ServiceTemplateSetDetailsView,
     ServiceTemplateSetListView,
@@ -44,4 +45,5 @@ urlpatterns = [
         StylistAppointmentRetrieveUpdateCancelView.as_view(), name='appointment'),
     url('^invitations$', InvitationView.as_view(), name='invitation'),
     url('^search-clients$', ClientSearchView.as_view(), name='search-client'),
+    url('^clients/(?P<client_uuid>[0-9a-f\-]+)$', ClientView.as_view(), name='client'),
 ]

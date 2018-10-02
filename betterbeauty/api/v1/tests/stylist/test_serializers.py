@@ -1,4 +1,5 @@
 import datetime
+from typing import Tuple
 
 import mock
 import pytest
@@ -16,6 +17,7 @@ from api.v1.stylist.serializers import (
     AppointmentSerializer,
     AppointmentUpdateSerializer,
     AppointmentValidationMixin,
+    ClientOfStylistDetailsSerializer,
     StylistAvailableWeekDaySerializer,
     StylistAvailableWeekDayWithBookedTimeSerializer,
     StylistDiscountsSerializer,
@@ -34,7 +36,7 @@ from appointment.preview import (
     AppointmentServicePreview,
 )
 from appointment.types import AppointmentStatus
-from client.models import ClientOfStylist
+from client.models import Client, ClientOfStylist
 from core.choices import USER_ROLE
 from core.models import TemporaryFile, User
 from core.types import UserRole, Weekday
@@ -51,6 +53,51 @@ from salon.tests.test_models import stylist_appointments_data
 from salon.utils import (
     create_stylist_profile_for_user,
 )
+
+
+@pytest.fixture
+def client_of_stylist_data() -> Tuple[Stylist, ClientOfStylist]:
+    stylist = G(Stylist)
+    client_user: User = G(
+        User, role=[UserRole.CLIENT, ],
+        first_name='Jane', last_name='McBob', phone='+16135551111'
+    )
+    client: Client = G(
+        Client, user=client_user,
+        email='janemcbob@example.com',
+        city='Palo Alto', state='CA',
+    )
+    client_of_stylist = G(
+        ClientOfStylist, stylist=stylist, client=client,
+        first_name=client_user.first_name, last_name=client_user.last_name,
+        phone=client.user.phone,
+    )
+    service_1 = G(StylistService, stylist=stylist, name='our service 1')
+    service_2 = G(StylistService, stylist=stylist, name='our service 2')
+    # add an past-in-time appointment
+    G(
+        Appointment, stylist=stylist, client=client_of_stylist,
+        created_by=client.user,
+        datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC)
+    )
+
+    appointment_last = G(
+        Appointment, stylist=stylist, client=client_of_stylist,
+        created_by=client.user,
+        datetime_start_at=datetime.datetime(2018, 1, 2, 0, 0, tzinfo=pytz.UTC)
+    )
+
+    G(
+        AppointmentService, appointment=appointment_last, service_uuid=service_1.uuid,
+        service_name=service_1.name
+
+    )
+    G(
+        AppointmentService, appointment=appointment_last, service_uuid=service_2.uuid,
+        service_name=service_2.name
+
+    )
+    return stylist, client_of_stylist
 
 
 class TestStylistSerializer(object):
@@ -1297,4 +1344,31 @@ class TestAppointmentPreviewResponseSerializer(object):
                     'is_original': True
                 }
             ],
+        })
+
+
+class TestClientOfStylistDetailsSerializer(object):
+    @pytest.mark.django_db
+    def test_format(self, client_of_stylist_data: Tuple[Stylist, ClientOfStylist]):
+        stylist, client_of_stylist = client_of_stylist_data
+        client: Client = client_of_stylist.client
+        serializer = ClientOfStylistDetailsSerializer(
+            context={'stylist': stylist}
+        )
+        data = serializer.to_representation(
+            instance=client_of_stylist
+        )
+        data['last_services_names'] = sorted(data['last_services_names'])
+        assert (data == {
+            'uuid': str(client_of_stylist.uuid),
+            'first_name': 'Jane',
+            'last_name': 'McBob',
+            'phone': '+16135551111',
+            'city': 'Palo Alto',
+            'state': 'CA',
+            'photo': client.get_profile_photo_url(),
+            'email': 'janemcbob@example.com',
+            'last_visit_datetime': datetime.datetime(
+                2018, 1, 2, 0, 0, tzinfo=pytz.UTC).isoformat(),
+            'last_services_names': sorted(['our service 1', 'our service 2']),
         })

@@ -300,6 +300,25 @@ class TestStylistServicePricingView(object):
                 response.data['field_errors']['client_uuid'])
 
 
+class TestClientView(object):
+    @pytest.mark.django_db
+    def test_client_selection(self, client, authorized_stylist_user):
+        """Verify that only stylist's client can be retrieved"""
+        user, auth_token = authorized_stylist_user
+        stylist = user.stylist
+        our_client = G(ClientOfStylist, stylist=stylist)
+        foreign_client = G(ClientOfStylist)
+        url = reverse('api:v1:stylist:client', kwargs={'client_uuid': foreign_client.uuid})
+
+        response = client.get(url, HTTP_AUTHORIZATION=auth_token)
+        assert(response.status_code == status.HTTP_404_NOT_FOUND)
+
+        url = reverse('api:v1:stylist:client', kwargs={'client_uuid': our_client.uuid})
+
+        response = client.get(url, HTTP_AUTHORIZATION=auth_token)
+        assert (status.is_success(response.status_code))
+
+
 class TestStylistViewPermissions(object):
 
     def test_view_permissions(self):

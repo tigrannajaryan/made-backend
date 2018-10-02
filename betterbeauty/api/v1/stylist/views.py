@@ -32,6 +32,7 @@ from .serializers import (
     AppointmentPreviewResponseSerializer,
     AppointmentSerializer,
     AppointmentUpdateSerializer,
+    ClientOfStylistDetailsSerializer,
     ClientOfStylistSerializer,
     InvitationSerializer,
     MaximumDiscountSerializer,
@@ -439,3 +440,19 @@ class StylistServicePricingView(views.APIView):
 
     def get_queryset(self):
         return self.request.user.stylist.services.all()
+
+
+class ClientView(generics.RetrieveAPIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+    serializer_class = ClientOfStylistDetailsSerializer
+
+    lookup_field = 'uuid'
+    lookup_url_kwarg = 'client_uuid'
+
+    def get_queryset(self):
+        stylist: Stylist = self.request.user.stylist
+        client_of_stylists = stylist.clients_of_stylist.all()
+        return client_of_stylists
+
+    def get_serializer_context(self):
+        return {'stylist': self.request.user.stylist}

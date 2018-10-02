@@ -102,15 +102,25 @@ def generate_demand_list_for_stylist(
     return demand_list
 
 
-def get_last_visit_date_for_client(
-        stylist: Stylist, client: ClientOfStylist
-) -> Optional[datetime.date]:
+def get_last_appointment_for_client(
+    stylist: Stylist, client_of_stylist: ClientOfStylist
+) -> Optional[Appointment]:
     """Return last checked out appointment between stylist and client"""
     last_appointment: Optional[Appointment] = Appointment.objects.filter(
         status__in=[AppointmentStatus.CHECKED_OUT, AppointmentStatus.NEW],
         stylist=stylist,
-        client=client
+        client=client_of_stylist
     ).order_by('datetime_start_at').last()
+    return last_appointment
+
+
+def get_last_visit_date_for_client(
+        stylist: Stylist, client_of_stylist: ClientOfStylist
+) -> Optional[datetime.date]:
+    """Return last checked out appointment date between stylist and client_of_stylist"""
+    last_appointment = get_last_appointment_for_client(
+        stylist=stylist, client_of_stylist=client_of_stylist
+    )
 
     if last_appointment:
         return last_appointment.datetime_start_at.date()
