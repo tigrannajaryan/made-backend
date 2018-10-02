@@ -43,6 +43,9 @@ script:
 - make build
 - make test
 - make e2e-test
+- mkdir meta
+- echo "$TRAVIS_BUILD_NUMBER" > meta/build_number.txt
+- echo "$TRAVIS_COMMIT" > meta/commit_id.txt
 
 deploy:
 - provider: elasticbeanstalk
