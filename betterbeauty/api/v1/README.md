@@ -40,7 +40,9 @@
       - [Out-of-system client](#user-content-out-of-system-client)
       - [In-the-system client](#user-content-in-the-system-client)
       - [Change appointment status](#user-content-change-appointment-status)
+    - **Clients**
       - [Client search](#client-search)
+      - [Client details](#client-details)
     - **Screens**
       - [Home](#user-content-home-screen)
       - [Today](#user-content-today-screen)
@@ -2166,6 +2168,48 @@ curl -X GET \
 ```
 
 
+## Client details
+Returns details of a client along with date and services of client's
+last visit to current stylist (if any). This API is restricted only
+to current stylist's clients, and would only return information about
+last visit to the current stylist (i.e. if client had prior visit to
+different stylist - this information will be omitted).
+
+**GET /api/v1/stylist/clients/{client_of_stylist_uuid}**
+
+```
+curl -X GET \
+  'http://apiserver/api/v1/stylist/clients/{client_of_stylist_uuid}' \
+  -H 'Authorization: Token jwt_token'
+```
+
+**Response 200 OK**
+
+```
+{
+    "uuid": "ca0f13a4-9f37-41c2-9f27-8e95ae749152",
+    "first_name": "Jane",
+    "last_name": "McBob",
+    "phone": "+16135551111",
+    "city": "Palo Alto",
+    "state": "CA",
+    "photo": "http://example.com/media/105",
+    "email": "janemcbob@example.com",
+    "last_visit_datetime": "2018-01-02T00:00:00+00:00",
+    "last_services_names": ["our service 1", "our service 2"]
+}
+```
+
+**Response 404 Not Found**
+
+Returns in case if there's no client of stylist with such UUID
+```
+{
+    "code":"err_not_found",
+    "field_errors":{},
+    "non_field_errors":[]
+}
+```
 
 # Files upload
 ## Image upload
