@@ -41,7 +41,7 @@
       - [In-the-system client](#user-content-in-the-system-client)
       - [Change appointment status](#user-content-change-appointment-status)
     - **Clients**
-      - [Client search](#client-search)
+      - [Client List](#client-list)
       - [Client details](#client-details)
     - **Screens**
       - [Home](#user-content-home-screen)
@@ -1971,10 +1971,15 @@ curl -X GET \
         }],
     "today_visits_count": 1,
     "upcoming_visits_count": 0,
-    "past_visits_count": 41
+    "past_visits_count": 41,
+    "followers": 2,
+    "this_week_earning": 500,
+    "today_slots": 5
 }
 
 ```
+
+Note: `today_slots` will be `null` if query param is not `today`
 
 **Response 400 Bad Request**
 ```json
@@ -2129,44 +2134,44 @@ in one gulp for the Stylist app's Settings screen.
 }
 ```
 
-## Client search
 
-This endpoint accepts URLEncoded (if necessary) `query` param,
-and will search this string in first, last names and phone of the clients
-with whom authorized stylist has appointments (i.e. "their" clients).
+## Client list
 
-Note: in the future we should extend this also to those clients who have
-accepted invitations from the stylist (even though they may not yet had
-any appointments scheduled)
+**GET /api/v1/stylist/clients**
 
-Sending empty query value returns all clients of the stylists.
-
-**GET /api/v1/stylist/search-clients?query=query_string**
 
 ```
-curl -X GET \
-  'http://apiserver/api/v1/stylist/search-clients?query=Fred' \
-  -H 'Authorization: Token jwt_token'
+curl -X POST \
+  http://apiserver/api/v1/stylist/clients \
+  -H 'Authorization: Token jwt_token' \
+  -H 'Content-Type: application/json'
 ```
 
-**Response 200OK**
 
-```
-{
-    "clients": [
-        {
-            "uuid": "f74b1c66-943c-4bc4-bf14-6fefa21ab5a5",
-            "first_name": "Fred",
-            "last_name": "McBob",
-            "phone": "112233",
-            "city": "Brooklyn",
-            "state": "NY",
-            "photo": "profile_photo_url"
-        }
-    ]
-}
-```
+**Response 200 OK**
 
+```json
+[
+    {
+        "uuid": "7906db39-f688-4d5c-957f-0b7a3dec4fed",
+        "first_name": "Jane4",
+        "last_name": "McBob",
+        "phone": "+11234567890",
+        "city": "Schenectady",
+        "state": "NY",
+        "photo": "profile_photo_url"
+    },
+    {
+        "uuid": "529f8021-672f-4b17-9edd-35f2efbefe74",
+        "first_name": "Mark",
+        "last_name": "Zuckerberg",
+        "phone": "+19876543210",
+        "city": "Redmond",
+        "state": "WA",
+        "photo": null
+    }
+]
+```
 
 ## Client details
 Returns details of a client along with date and services of client's

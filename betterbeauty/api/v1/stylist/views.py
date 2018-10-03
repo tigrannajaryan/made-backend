@@ -4,8 +4,6 @@ from annoying.functions import get_object_or_None
 from dateutil.parser import parse
 
 from django.db import transaction
-from django.db.models import F, Q, QuerySet, Value
-from django.db.models.functions import Concat
 
 from rest_framework import generics, permissions, status, views
 from rest_framework.exceptions import ValidationError
@@ -21,7 +19,7 @@ from appointment.preview import (
     build_appointment_preview_dict,
 )
 from appointment.types import AppointmentStatus
-from client.models import ClientOfStylist
+from client.models import Client, ClientOfStylist
 from core.utils import (
     post_or_get,
 )
@@ -33,7 +31,7 @@ from .serializers import (
     AppointmentSerializer,
     AppointmentUpdateSerializer,
     ClientOfStylistDetailsSerializer,
-    ClientOfStylistSerializer,
+    ClientSerializer,
     InvitationSerializer,
     MaximumDiscountSerializer,
     ServiceTemplateSetDetailsSerializer,
@@ -377,41 +375,6 @@ class StylistSettingsRetrieveView(generics.RetrieveAPIView):
         return self.request.user.stylist
 
 
-class ClientSearchView(views.APIView):
-    permission_classes = [StylistPermission, permissions.IsAuthenticated]
-    serializer_class = ClientOfStylistSerializer
-
-    def get(self, request, *args, **kwargs):
-        query: str = post_or_get(self.request, 'query', '').strip()
-        return Response({'clients': ClientOfStylistSerializer(
-            self._search_clients(self.get_queryset(), query=query), many=True
-        ).data})
-
-    @staticmethod
-    def _search_clients(queryset: QuerySet, query: str) -> QuerySet:
-        if len(query) and len(query) < 3:
-            return ClientOfStylist.objects.none()
-
-        stylists_clients = queryset.annotate(
-            full_name=Concat(F('first_name'), Value(' '), F('last_name')),
-            reverse_full_name=Concat(F('last_name'), Value(' '), F('first_name')),
-        ).distinct('id')
-
-        name_phone_query = (
-            Q(full_name__icontains=query) |
-            Q(phone__icontains=query) |
-            Q(reverse_full_name__icontains=query)
-        )
-
-        return stylists_clients.filter(
-            name_phone_query
-        )
-
-    def get_queryset(self):
-        stylist: Stylist = self.request.user.stylist
-        return stylist.clients_of_stylist.all()
-
-
 class StylistServicePricingView(views.APIView):
     permission_classes = [StylistPermission, permissions.IsAuthenticated]
 
@@ -440,6 +403,19 @@ class StylistServicePricingView(views.APIView):
 
     def get_queryset(self):
         return self.request.user.stylist.services.all()
+
+
+class ClientListView(generics.ListAPIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+    serializer_class = ClientSerializer
+
+    def get_queryset(self):
+        stylist: Stylist = self.request.user.stylist
+        queryset = Client.objects.filter(preferred_stylists__stylist=stylist)
+        return queryset
+
+    def get_serializer_context(self):
+        return {'stylist': self.request.user.stylist}
 
 
 class ClientView(generics.RetrieveAPIView):

@@ -23,7 +23,7 @@ from appointment.constants import (
 )
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
-from client.models import ClientOfStylist
+from client.models import Client, ClientOfStylist
 from core.models import User
 from core.types import AppointmentPrices, Weekday
 from core.utils import (
@@ -1163,11 +1163,15 @@ class StylistHomeSerializer(serializers.ModelSerializer):
     appointments = serializers.SerializerMethodField()
     today_visits_count = serializers.SerializerMethodField()
     upcoming_visits_count = serializers.SerializerMethodField()
+    followers = serializers.SerializerMethodField()
+    this_week_earning = serializers.SerializerMethodField()
+    today_slots = serializers.SerializerMethodField()
 
     class Meta:
         model = Stylist
         fields = [
             'appointments', 'today_visits_count', 'upcoming_visits_count',
+            'followers', 'this_week_earning', 'today_slots'
         ]
 
     def validate(self, attrs):
@@ -1176,6 +1180,40 @@ class StylistHomeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 "non_field_errors": ErrorMessages.ERR_INVALID_QUERY_FOR_HOME})
         return attrs
+
+    def get_today_slots(self, stylist: Stylist) -> Optional[int]:
+        query = self.context['query']
+        if query == "today":
+            date = stylist.get_current_now().date()
+            try:
+                shift = stylist.available_days.get(
+                    weekday=date.isoweekday(), is_available=True)
+                return len(shift.get_all_slots())
+            except StylistAvailableWeekDay.DoesNotExist:
+                return 0
+        return None
+
+    def get_followers(self, stylist: Stylist) -> Optional[int]:
+        return stylist.preferredstylist_set.filter(deleted_at=None).count()
+
+    def get_this_week_earning(self, stylist: Stylist) -> Optional[float]:
+        """
+        This function calculates the total earnings from most recent Monday 00:00:00 to
+        upcoming sunday 23:59:59
+        """
+        current_now = stylist.get_current_now()
+        start = (stylist.get_current_now() - datetime.timedelta(
+            days=current_now.weekday())).replace(hour=0, minute=0, second=0)
+        end = (start + datetime.timedelta(days=6)).replace(hour=23, minute=59, second=59)
+        exclude_statuses = [
+            AppointmentStatus.CANCELLED_BY_STYLIST,
+            AppointmentStatus.CANCELLED_BY_CLIENT,
+            AppointmentStatus.NEW
+        ]
+        sum_of_earnings = stylist.get_appointments_in_datetime_range(
+            datetime_from=start, datetime_to=end, exclude_statuses=exclude_statuses).aggregate(
+            Sum('grand_total'))['grand_total__sum']
+        return sum_of_earnings if sum_of_earnings else 0
 
     def get_appointments(self, stylist: Stylist):
         query = self.context['query']
@@ -1260,6 +1298,17 @@ class StylistSettingsRetrieveSerializer(serializers.ModelSerializer):
                 AppointmentStatus.CANCELLED_BY_STYLIST
             ]
         ).count()
+
+
+class ClientSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(source="user.first_name", read_only=True)
+    last_name = serializers.CharField(source="user.last_name", read_only=True)
+    phone = PhoneNumberField(source="user.phone", read_only=True)
+    photo = serializers.CharField(source='get_profile_photo_url', read_only=True)
+
+    class Meta:
+        model = Client
+        fields = ['uuid', 'first_name', 'last_name', 'phone', 'city', 'state', 'photo']
 
 
 class ClientOfStylistSerializer(serializers.ModelSerializer):

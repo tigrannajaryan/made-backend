@@ -21,6 +21,7 @@ from api.v1.stylist.serializers import (
     StylistAvailableWeekDaySerializer,
     StylistAvailableWeekDayWithBookedTimeSerializer,
     StylistDiscountsSerializer,
+    StylistHomeSerializer,
     StylistProfileStatusSerializer,
     StylistSerializer,
     StylistServiceListSerializer,
@@ -36,7 +37,7 @@ from appointment.preview import (
     AppointmentServicePreview,
 )
 from appointment.types import AppointmentStatus
-from client.models import Client, ClientOfStylist
+from client.models import Client, ClientOfStylist, PreferredStylist
 from core.choices import USER_ROLE
 from core.models import TemporaryFile, User
 from core.types import UserRole, Weekday
@@ -1372,3 +1373,29 @@ class TestClientOfStylistDetailsSerializer(object):
                 2018, 1, 2, 0, 0, tzinfo=pytz.UTC).isoformat(),
             'last_services_names': sorted(['our service 1', 'our service 2']),
         })
+
+
+class TestHomeAPISerializer(object):
+
+    @freeze_time('2018-05-14 13:30:00 UTC')
+    @pytest.mark.django_db
+    def test_response(self, stylist_data: Stylist, client_data: Client):
+        appointments = stylist_appointments_data(stylist_data)
+        stylist_data.available_days.filter(weekday=Weekday.MONDAY).update(
+            work_start_at=datetime.time(8, 0),
+            work_end_at=datetime.time(17, 00),
+            is_available=True)
+        past_appointment = appointments['past_appointment']
+        past_appointment.status = AppointmentStatus.CHECKED_OUT
+        past_appointment.save()
+        current_appointment = appointments['current_appointment']
+        current_appointment.status = AppointmentStatus.CHECKED_OUT
+        current_appointment.save()
+        G(PreferredStylist, stylist=stylist_data, client=client_data)
+        serializer_data = StylistHomeSerializer(stylist_data, context={"query": "today"}).data
+        expected_earning = past_appointment.grand_total + current_appointment.grand_total
+        assert(serializer_data['today_visits_count'] == 2)
+        assert(serializer_data['upcoming_visits_count'] == 3)
+        assert(serializer_data['this_week_earning'] == expected_earning)
+        assert(serializer_data['today_slots'] == 18)
+        assert(serializer_data['followers'] == 1)
