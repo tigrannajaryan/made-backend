@@ -45,6 +45,7 @@ from salon.types import PriceOnDate
 from salon.utils import (
     create_stylist_profile_for_user,
     generate_prices_for_stylist_service,
+    get_last_appointment_for_client,
 )
 from .constants import ErrorMessages, MAX_SERVICE_TEMPLATE_PREVIEW_COUNT, MIN_VALID_ADDR_LEN
 from .fields import DurationMinuteField
@@ -1272,6 +1273,36 @@ class ClientOfStylistSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClientOfStylist
         fields = ['uuid', 'first_name', 'last_name', 'phone', 'city', 'state', 'photo']
+
+
+class ClientOfStylistDetailsSerializer(ClientOfStylistSerializer):
+    email = serializers.EmailField(source='client.email', read_only=True)
+    last_visit_datetime = serializers.SerializerMethodField()
+    last_services_names = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ClientOfStylist
+        fields = ClientOfStylistSerializer.Meta.fields + [
+            'email', 'last_visit_datetime', 'last_services_names',
+        ]
+
+    def get_last_visit_datetime(self, client_of_stylist):
+        stylist: Stylist = self.context['stylist']
+        last_appointment: Optional[Appointment] = get_last_appointment_for_client(
+            stylist=stylist, client_of_stylist=client_of_stylist
+        )
+        if not last_appointment:
+            return None
+        return last_appointment.datetime_start_at.isoformat()
+
+    def get_last_services_names(self, client_of_stylist):
+        stylist: Stylist = self.context['stylist']
+        last_appointment: Optional[Appointment] = get_last_appointment_for_client(
+            stylist=stylist, client_of_stylist=client_of_stylist
+        )
+        if not last_appointment:
+            return []
+        return [service.service_name for service in last_appointment.services.all()]
 
 
 class StylistServicePriceSerializer(serializers.Serializer):

@@ -3,7 +3,11 @@ from typing import List
 from core.constants import EnvLevel
 
 from .defaults import *  # noqa
-from .utils import get_ec2_instance_id, get_ec2_instance_ip_address
+from .utils import (
+    get_ec2_instance_id,
+    get_ec2_instance_ip_address,
+    get_travis_commit_id,
+)
 
 LEVEL = EnvLevel.PRODUCTION
 
@@ -25,7 +29,9 @@ RAVEN_CONFIG = {
     'processors': (
         'raven.processors.SanitizePasswordsProcessor',
         'raven.processors.RemovePostDataProcessor',
-    )
+    ),
+    'release': get_travis_commit_id(COMMIT_ID_FILE_PATH), # noqa
+    'environment': LEVEL,
 }
 MIDDLEWARE: List = [
     'raven.contrib.django.raven_compat.middleware.SentryResponseErrorIdMiddleware',

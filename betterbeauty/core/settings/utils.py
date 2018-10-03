@@ -5,6 +5,7 @@ from typing import Optional
 
 import dj_database_url
 import requests
+from path import Path
 
 from core.constants import EnvLevel
 
@@ -83,3 +84,24 @@ def get_ec2_instance_id() -> Optional[str]:
             'Could not retrieve instance ID'
         )
     return None
+
+
+def get_travis_commit_id(path_to_commit_id_file: Path) -> str:
+    level = os.environ.get('LEVEL', EnvLevel.DEVELOPMENT)
+    if level not in [EnvLevel.STAGING, EnvLevel.PRODUCTION]:
+        return ''
+    try:
+        with open(path_to_commit_id_file, 'r') as commit_file:
+            commit_id: str = commit_file.read()
+            if commit_id:
+                commit_id = commit_id.strip()
+            return commit_id
+    except FileNotFoundError:
+        print('Could not read {0} file; no release msg will be added to Sentry messages'.format(
+            path_to_commit_id_file
+        ))
+        logger.warning(
+            'Could not read {0} file; no release msg will be added to Sentry messages'.format(
+                path_to_commit_id_file
+            ))
+        return ''
