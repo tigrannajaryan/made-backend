@@ -23,7 +23,7 @@ from appointment.constants import (
 )
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
-from client.models import ClientOfStylist
+from client.models import Client, ClientOfStylist
 from core.models import User
 from core.types import AppointmentPrices, Weekday
 from core.utils import (
@@ -1298,6 +1298,17 @@ class StylistSettingsRetrieveSerializer(serializers.ModelSerializer):
                 AppointmentStatus.CANCELLED_BY_STYLIST
             ]
         ).count()
+
+
+class ClientSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(source="user.first_name", read_only=True)
+    last_name = serializers.CharField(source="user.last_name", read_only=True)
+    phone = PhoneNumberField(source="user.phone", read_only=True)
+    photo = serializers.CharField(source='get_profile_photo_url', read_only=True)
+
+    class Meta:
+        model = Client
+        fields = ['uuid', 'first_name', 'last_name', 'phone', 'city', 'state', 'photo']
 
 
 class ClientOfStylistSerializer(serializers.ModelSerializer):
