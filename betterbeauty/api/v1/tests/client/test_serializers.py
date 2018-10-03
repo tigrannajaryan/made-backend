@@ -186,7 +186,7 @@ class TestAppointmentSerializer(object):
         assert(serializer.is_valid() is True)
         appointment: Appointment = serializer.save()
 
-        assert(appointment.total_client_price_before_tax == 35)
+        assert(appointment.total_client_price_before_tax == 37.5)
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == client_data.user.first_name)
         assert(appointment.client is not None)
@@ -197,7 +197,7 @@ class TestAppointmentSerializer(object):
         original_service: AppointmentService = appointment.services.first()
         assert(original_service.is_original is True)
         assert(original_service.regular_price == service.regular_price)
-        assert(original_service.client_price == 35)
+        assert(original_service.client_price == 37.5)
         assert(original_service.service_uuid == service.uuid)
         assert(original_service.service_name == service.name)
 
@@ -250,7 +250,7 @@ class TestAppointmentSerializer(object):
         appointment: Appointment = serializer.save()
 
         assert (
-            appointment.total_client_price_before_tax == 32.5
+            appointment.total_client_price_before_tax == 37.5
         )
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == client.first_name)
@@ -260,7 +260,7 @@ class TestAppointmentSerializer(object):
         original_service: AppointmentService = appointment.services.first()
         assert (original_service.is_original is True)
         assert (original_service.regular_price == service.regular_price)
-        assert (original_service.client_price == 32.5)
+        assert (original_service.client_price == 37.5)
         assert (original_service.service_uuid == service.uuid)
         assert (original_service.service_name == service.name)
 
@@ -347,7 +347,7 @@ class TestAppointmentSerializer(object):
             assert(appointment_serializer.is_valid(raise_exception=False) is True)
             appointment: Appointment = appointment_serializer.save()
             appointment_service: AppointmentService = appointment.services.first()
-            assert(calculated_price.price == appointment_service.client_price)
+            assert(round(calculated_price.price, 2) == float(appointment_service.client_price))
 
 
 class TestAppointmentUpdateSerializer(object):

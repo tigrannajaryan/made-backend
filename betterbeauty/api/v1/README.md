@@ -40,7 +40,9 @@
       - [Out-of-system client](#user-content-out-of-system-client)
       - [In-the-system client](#user-content-in-the-system-client)
       - [Change appointment status](#user-content-change-appointment-status)
-      - [Client search](#client-search)
+    - **Clients**
+      - [Client List](#client-list)
+      - [Client details](#client-details)
     - **Screens**
       - [Home](#user-content-home-screen)
       - [Today](#user-content-today-screen)
@@ -1969,10 +1971,15 @@ curl -X GET \
         }],
     "today_visits_count": 1,
     "upcoming_visits_count": 0,
-    "past_visits_count": 41
+    "past_visits_count": 41,
+    "followers": 2,
+    "this_week_earning": 500,
+    "today_slots": 5
 }
 
 ```
+
+Note: `today_slots` will be `null` if query param is not `today`
 
 **Response 400 Bad Request**
 ```json
@@ -2127,45 +2134,87 @@ in one gulp for the Stylist app's Settings screen.
 }
 ```
 
-## Client search
 
-This endpoint accepts URLEncoded (if necessary) `query` param,
-and will search this string in first, last names and phone of the clients
-with whom authorized stylist has appointments (i.e. "their" clients).
+## Client list
 
-Note: in the future we should extend this also to those clients who have
-accepted invitations from the stylist (even though they may not yet had
-any appointments scheduled)
+**GET /api/v1/stylist/clients**
 
-Sending empty query value returns all clients of the stylists.
 
-**GET /api/v1/stylist/search-clients?query=query_string**
+```
+curl -X POST \
+  http://apiserver/api/v1/stylist/clients \
+  -H 'Authorization: Token jwt_token' \
+  -H 'Content-Type: application/json'
+```
+
+
+**Response 200 OK**
+
+```json
+[
+    {
+        "uuid": "7906db39-f688-4d5c-957f-0b7a3dec4fed",
+        "first_name": "Jane4",
+        "last_name": "McBob",
+        "phone": "+11234567890",
+        "city": "Schenectady",
+        "state": "NY",
+        "photo": "profile_photo_url"
+    },
+    {
+        "uuid": "529f8021-672f-4b17-9edd-35f2efbefe74",
+        "first_name": "Mark",
+        "last_name": "Zuckerberg",
+        "phone": "+19876543210",
+        "city": "Redmond",
+        "state": "WA",
+        "photo": null
+    }
+]
+```
+
+## Client details
+Returns details of a client along with date and services of client's
+last visit to current stylist (if any). This API is restricted only
+to current stylist's clients, and would only return information about
+last visit to the current stylist (i.e. if client had prior visit to
+different stylist - this information will be omitted).
+
+**GET /api/v1/stylist/clients/{client_of_stylist_uuid}**
 
 ```
 curl -X GET \
-  'http://apiserver/api/v1/stylist/search-clients?query=Fred' \
+  'http://apiserver/api/v1/stylist/clients/{client_of_stylist_uuid}' \
   -H 'Authorization: Token jwt_token'
 ```
 
-**Response 200OK**
+**Response 200 OK**
 
 ```
 {
-    "clients": [
-        {
-            "uuid": "f74b1c66-943c-4bc4-bf14-6fefa21ab5a5",
-            "first_name": "Fred",
-            "last_name": "McBob",
-            "phone": "112233",
-            "city": "Brooklyn",
-            "state": "NY",
-            "photo": "profile_photo_url"
-        }
-    ]
+    "uuid": "ca0f13a4-9f37-41c2-9f27-8e95ae749152",
+    "first_name": "Jane",
+    "last_name": "McBob",
+    "phone": "+16135551111",
+    "city": "Palo Alto",
+    "state": "CA",
+    "photo": "http://example.com/media/105",
+    "email": "janemcbob@example.com",
+    "last_visit_datetime": "2018-01-02T00:00:00+00:00",
+    "last_services_names": ["our service 1", "our service 2"]
 }
 ```
 
+**Response 404 Not Found**
 
+Returns in case if there's no client of stylist with such UUID
+```
+{
+    "code":"err_not_found",
+    "field_errors":{},
+    "non_field_errors":[]
+}
+```
 
 # Files upload
 ## Image upload

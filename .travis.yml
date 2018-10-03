@@ -43,8 +43,11 @@ script:
 - make build
 - make test
 - make e2e-test
+- echo "$TRAVIS_BUILD_NUMBER" > meta/build_number.txt
+- echo "$TRAVIS_COMMIT" > meta/commit_id.txt
 
 deploy:
+
 - provider: elasticbeanstalk
   access_key_id: "$AWS_ACCESS_KEY"
   secret_access_key:
@@ -54,6 +57,7 @@ deploy:
   env: made-staging-env
   bucket_name: betterbeauty-eb-upload-bucket
   bucket_path: staging
+  skip_cleanup: true
   on:
     repo: madebeauty/backend
     branch: develop
@@ -66,6 +70,7 @@ deploy:
   env: made-production-env
   bucket_name: betterbeauty-eb-upload-bucket
   bucket_path: production
+  skip_cleanup: true
   on:
     repo: madebeauty/backend
     branch: develop

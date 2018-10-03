@@ -1,5 +1,9 @@
 from .types import AppointmentStatus
 
+DEFAULT_HAS_TAX_INCLUDED = True
+
+DEFAULT_HAS_CARD_FEE_INCLUDED = False
+
 APPOINTMENT_STYLIST_SETTABLE_STATUSES = [
     AppointmentStatus.NEW,
     AppointmentStatus.NO_SHOW,

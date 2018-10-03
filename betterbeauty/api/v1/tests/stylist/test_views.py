@@ -13,10 +13,10 @@ from rest_framework.permissions import IsAuthenticated
 from api.common.permissions import StylistPermission, StylistRegisterUpdatePermission
 from api.v1.stylist.serializers import AppointmentValidationMixin
 from api.v1.stylist.urls import urlpatterns
-from api.v1.stylist.views import ClientSearchView, StylistView
+from api.v1.stylist.views import StylistView
 from appointment.constants import AppointmentStatus, ErrorMessages as appointment_errors
 from appointment.models import Appointment
-from client.models import Client, ClientOfStylist
+from client.models import Client, ClientOfStylist, PreferredStylist
 from core.models import User
 from core.types import UserRole
 from salon.models import Salon, Stylist, StylistService
@@ -62,61 +62,6 @@ class TestStylistView(object):
         data = response.data
         assert (not data['first_name'])
         assert ('id' not in data)
-
-
-class TestClientSearchView(object):
-
-    @pytest.mark.django_db
-    def test_search_clients(self):
-        stylist_1 = G(Stylist)
-        # stray_client
-        G(
-            ClientOfStylist,
-            first_name='Jenny',
-            last_name='McDonald',
-            phone='123456',
-            stylist=stylist_1,
-        )
-
-        our_stylist = G(Stylist)
-        # client that our stylist has appointments with
-        our_client = G(
-            ClientOfStylist,
-            first_name='Fred',
-            last_name='McBob',
-            phone='123457',
-            stylist=our_stylist,
-        )
-
-        G(Appointment, stylist=our_stylist, client=our_client)
-
-        no_results = ClientSearchView()._search_clients(
-            our_stylist.clients_of_stylist.all(), 'Jenny'
-        )
-        assert(no_results.count() == 0)
-        results = ClientSearchView()._search_clients(
-            our_stylist.clients_of_stylist.all(), 'Fred'
-        )
-        assert(results.count() == 1)
-        assert(results.last() == our_client)
-
-        results = ClientSearchView()._search_clients(
-            our_stylist.clients_of_stylist.all(), 'Fred mc'
-        )
-        assert (results.count() == 1)
-        assert (results.last() == our_client)
-
-        results = ClientSearchView()._search_clients(
-            our_stylist.clients_of_stylist.all(), 'mcbob fr'
-        )
-        assert (results.count() == 1)
-        assert (results.last() == our_client)
-
-        results = ClientSearchView()._search_clients(
-            our_stylist.clients_of_stylist.all(), '12345'
-        )
-        assert (results.count() == 1)
-        assert (results.last() == our_client)
 
 
 class TestStylistServiceView(object):
@@ -298,6 +243,44 @@ class TestStylistServicePricingView(object):
         assert (response.status_code == status.HTTP_400_BAD_REQUEST)
         assert ({'code': appointment_errors.ERR_CLIENT_DOES_NOT_EXIST} in
                 response.data['field_errors']['client_uuid'])
+
+
+class TestClientListView(object):
+    @pytest.mark.django_db
+    def test_client_selection(self, client, authorized_stylist_user):
+        """Verify that only stylist's client can be retrieved"""
+        user, auth_token = authorized_stylist_user
+        stylist = user.stylist
+        client_data = G(Client)
+        G(PreferredStylist, stylist=stylist, client=client_data)
+        foreign_stylist = G(Stylist)
+        foreign_client = G(Client)
+        G(PreferredStylist, stylist=foreign_stylist, client=foreign_client)
+        url = reverse('api:v1:stylist:my-clients')
+
+        response = client.get(url, HTTP_AUTHORIZATION=auth_token)
+        assert (status.is_success(response.status_code))
+        assert (len(response.data) == 1)
+        assert (response.data[0]['uuid'] == str(client_data.uuid))
+
+
+class TestClientView(object):
+    @pytest.mark.django_db
+    def test_client_selection(self, client, authorized_stylist_user):
+        """Verify that only stylist's client can be retrieved"""
+        user, auth_token = authorized_stylist_user
+        stylist = user.stylist
+        our_client = G(ClientOfStylist, stylist=stylist)
+        foreign_client = G(ClientOfStylist)
+        url = reverse('api:v1:stylist:client', kwargs={'client_uuid': foreign_client.uuid})
+
+        response = client.get(url, HTTP_AUTHORIZATION=auth_token)
+        assert(response.status_code == status.HTTP_404_NOT_FOUND)
+
+        url = reverse('api:v1:stylist:client', kwargs={'client_uuid': our_client.uuid})
+
+        response = client.get(url, HTTP_AUTHORIZATION=auth_token)
+        assert (status.is_success(response.status_code))
 
 
 class TestStylistViewPermissions(object):
