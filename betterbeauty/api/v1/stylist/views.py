@@ -273,7 +273,7 @@ class StylistAppointmentPreviewView(views.APIView):
             appointment: Appointment = stylist.appointments.get(
                 uuid=request.data['appointment_uuid'])
         except Appointment.DoesNotExist:
-            raise ValidationError({'detail': ErrorMessages.ERR_INVALID_APPOINTMENT_UUID})
+            raise ValidationError({'non_field_errors': ErrorMessages.ERR_INVALID_APPOINTMENT_UUID})
         serializer = AppointmentPreviewRequestSerializer(
             data=request.data, context={'stylist': stylist,
                                         'appointment': appointment, 'force_start': True}

@@ -1174,7 +1174,7 @@ class StylistHomeSerializer(serializers.ModelSerializer):
         query = self.context['query']
         if query not in ['upcoming', 'past', 'today']:
             raise serializers.ValidationError({
-                "detail": ErrorMessages.ERR_INVALID_QUERY_FOR_HOME})
+                "non_field_errors": ErrorMessages.ERR_INVALID_QUERY_FOR_HOME})
         return attrs
 
     def get_appointments(self, stylist: Stylist):
