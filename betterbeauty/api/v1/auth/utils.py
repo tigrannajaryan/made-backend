@@ -1,7 +1,9 @@
 from typing import Optional
 from uuid import uuid4
 
+import phonenumbers
 from django.db import transaction
+from phonenumbers import region_code_for_number
 
 from client.models import Client, ClientOfStylist
 from core.models import User
@@ -39,8 +41,8 @@ def create_client_profile_from_phone(phone: str, user: Optional[User]=None)-> Us
         user.save(update_fields=['role'])
     if not user:
         user = create_user_from_phone(phone, UserRole.CLIENT)
-
-    client = Client.objects.create(user=user)
+    region = get_country_code_from_phone(phone)
+    client = Client.objects.create(user=user, country=region)
     current_stylists = []
     # get all client_of_stylists and link with client profile
     client_of_stylists = ClientOfStylist.objects.filter(phone=user.phone)
@@ -61,3 +63,8 @@ def create_client_profile_from_phone(phone: str, user: Optional[User]=None)-> Us
             )
             current_stylists.append(invitation.stylist_id)
     return user
+
+
+def get_country_code_from_phone(phone_number: str) -> str:
+    phone_number = phonenumbers.parse(phone_number)
+    return region_code_for_number(phone_number)
