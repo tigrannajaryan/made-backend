@@ -53,8 +53,8 @@ deploy:
   secret_access_key:
     secure: "$AWS_SECURE_KEY"
   region: us-east-1
-  app: betterbeauty_django_backend
-  env: betterbeauty-django-backend-dev
+  app: made-staging-app
+  env: made-staging-env
   bucket_name: betterbeauty-eb-upload-bucket
   bucket_path: staging
   skip_cleanup: true
