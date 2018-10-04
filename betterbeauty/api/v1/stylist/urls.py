@@ -4,6 +4,7 @@ from .views import (
     ClientListView,
     ClientView,
     InvitationView,
+    NearbyClientsView,
     ServiceTemplateSetDetailsView,
     ServiceTemplateSetListView,
     StylistAppointmentListCreateView,
@@ -46,4 +47,5 @@ urlpatterns = [
     url('^invitations$', InvitationView.as_view(), name='invitation'),
     url('^clients$', ClientListView.as_view(), name='my-clients'),
     url('^clients/(?P<client_uuid>[0-9a-f\-]+)$', ClientView.as_view(), name='client'),
+    url('^nearby-clients$', NearbyClientsView.as_view(), name='nearby-client'),
 ]

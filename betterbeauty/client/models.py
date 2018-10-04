@@ -27,22 +27,25 @@ class Client(models.Model):
     email = models.EmailField(null=True)
     city = models.CharField(blank=True, null=True, max_length=64)
     state = models.CharField(blank=True, null=True, max_length=2)
+    country = models.CharField(max_length=20, blank=True, null=True)
+    location = PointField(geography=True, null=True)
 
     is_address_geocoded = models.BooleanField(default=False)
     last_geo_coded = models.DateTimeField(blank=True, null=True, default=None)
 
     def geo_code_address(self):
-        geo_coded_address = GeoCode(self.zip_code).geo_code()
+        geo_coded_address = GeoCode(self.zip_code).geo_code(country=self.country)
         if geo_coded_address:
             self.city = geo_coded_address.city
             self.state = geo_coded_address.state
+            self.location = geo_coded_address.location
             self.is_address_geocoded = True
             logger.info('Geo-coding Success', exc_info=True)
         else:
             logger.info("Geo-coding returned None")
         self.last_geo_coded = timezone.now()
         self.save(update_fields=[
-            'city', 'state', 'is_address_geocoded', 'last_geo_coded'])
+            'city', 'state', 'is_address_geocoded', 'last_geo_coded', 'location'])
 
     class Meta:
         db_table = 'client'
