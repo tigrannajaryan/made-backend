@@ -1,5 +1,4 @@
 import datetime
-import decimal
 import uuid
 from decimal import Decimal
 from math import trunc
@@ -786,7 +785,6 @@ class AppointmentSerializer(
 
     grand_total = serializers.DecimalField(
         max_digits=4, decimal_places=0, coerce_to_string=False, read_only=True,
-        rounding=decimal.ROUND_UP
     )
     tax_percentage = serializers.DecimalField(
         max_digits=5, decimal_places=3, coerce_to_string=False, read_only=True
@@ -940,7 +938,6 @@ class AppointmentPreviewResponseSerializer(serializers.Serializer):
     conflicts_with = AppointmentPreviewSerializer(many=True)
     grand_total = serializers.DecimalField(
         max_digits=4, decimal_places=0, coerce_to_string=False, read_only=True,
-        rounding=decimal.ROUND_UP
     )
     total_client_price_before_tax = serializers.DecimalField(
         max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
