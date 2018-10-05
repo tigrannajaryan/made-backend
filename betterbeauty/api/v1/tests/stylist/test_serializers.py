@@ -17,7 +17,7 @@ from api.v1.stylist.serializers import (
     AppointmentSerializer,
     AppointmentUpdateSerializer,
     AppointmentValidationMixin,
-    ClientOfStylistDetailsSerializer,
+    ClientDetailsSerializer,
     StylistAvailableWeekDaySerializer,
     StylistAvailableWeekDayWithBookedTimeSerializer,
     StylistDiscountsSerializer,
@@ -57,7 +57,7 @@ from salon.utils import (
 
 
 @pytest.fixture
-def client_of_stylist_data() -> Tuple[Stylist, ClientOfStylist]:
+def client_details_data() -> Tuple[Stylist, Client]:
     stylist = G(Stylist)
     client_user: User = G(
         User, role=[UserRole.CLIENT, ],
@@ -68,6 +68,7 @@ def client_of_stylist_data() -> Tuple[Stylist, ClientOfStylist]:
         email='janemcbob@example.com',
         city='Palo Alto', state='CA',
     )
+    G(PreferredStylist, client=client, stylist=stylist)
     client_of_stylist = G(
         ClientOfStylist, stylist=stylist, client=client,
         first_name=client_user.first_name, last_name=client_user.last_name,
@@ -98,7 +99,7 @@ def client_of_stylist_data() -> Tuple[Stylist, ClientOfStylist]:
         service_name=service_2.name
 
     )
-    return stylist, client_of_stylist
+    return stylist, client
 
 
 class TestStylistSerializer(object):
@@ -1348,20 +1349,19 @@ class TestAppointmentPreviewResponseSerializer(object):
         })
 
 
-class TestClientOfStylistDetailsSerializer(object):
+class TestClientDetailsSerializer(object):
     @pytest.mark.django_db
-    def test_format(self, client_of_stylist_data: Tuple[Stylist, ClientOfStylist]):
-        stylist, client_of_stylist = client_of_stylist_data
-        client: Client = client_of_stylist.client
-        serializer = ClientOfStylistDetailsSerializer(
+    def test_format(self, client_details_data: Tuple[Stylist, Client]):
+        stylist, client = client_details_data
+        serializer = ClientDetailsSerializer(
             context={'stylist': stylist}
         )
         data = serializer.to_representation(
-            instance=client_of_stylist
+            instance=client
         )
         data['last_services_names'] = sorted(data['last_services_names'])
         assert (data == {
-            'uuid': str(client_of_stylist.uuid),
+            'uuid': str(client.uuid),
             'first_name': 'Jane',
             'last_name': 'McBob',
             'phone': '+16135551111',
