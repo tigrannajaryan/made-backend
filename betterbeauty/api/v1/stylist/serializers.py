@@ -1321,30 +1321,29 @@ class ClientOfStylistSerializer(serializers.ModelSerializer):
         fields = ['uuid', 'first_name', 'last_name', 'phone', 'city', 'state', 'photo']
 
 
-class ClientOfStylistDetailsSerializer(ClientOfStylistSerializer):
-    email = serializers.EmailField(source='client.email', read_only=True)
+class ClientDetailsSerializer(ClientSerializer):
     last_visit_datetime = serializers.SerializerMethodField()
     last_services_names = serializers.SerializerMethodField()
 
     class Meta:
-        model = ClientOfStylist
-        fields = ClientOfStylistSerializer.Meta.fields + [
+        model = Client
+        fields = ClientSerializer.Meta.fields + [
             'email', 'last_visit_datetime', 'last_services_names',
         ]
 
-    def get_last_visit_datetime(self, client_of_stylist):
+    def get_last_visit_datetime(self, client):
         stylist: Stylist = self.context['stylist']
         last_appointment: Optional[Appointment] = get_last_appointment_for_client(
-            stylist=stylist, client_of_stylist=client_of_stylist
+            stylist=stylist, client=client
         )
         if not last_appointment:
             return None
         return last_appointment.datetime_start_at.isoformat()
 
-    def get_last_services_names(self, client_of_stylist):
+    def get_last_services_names(self, client):
         stylist: Stylist = self.context['stylist']
         last_appointment: Optional[Appointment] = get_last_appointment_for_client(
-            stylist=stylist, client_of_stylist=client_of_stylist
+            stylist=stylist, client=client
         )
         if not last_appointment:
             return []

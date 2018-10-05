@@ -209,6 +209,7 @@ such specific errors in particular API calls.
 |err_status_not_allowed| This status cannot be set for appointment|/api/v1/stylist/appointments/{uuid}|status|
 |err_no_second_checkout| Appointment can only be checked out once|/api/v1/stylist/appointments/{uuid}|status|
 |err_appointment_does_not_exist| The appointment either does not exists or does not belong to current stylist|--|--|
+|err_stylist_location_unavailable| Stylist does not have an address or it is not yet geo-coded|api/v1/stylist/nearby-clients|non-field|
 |err_unique_client_email|The email belongs to the existing client|/api/v1/client/profile|field|
 |err_stylist_is_already_in_preference|The stylist is already a preference| /api/v1/client/preferred-stylists|stylist_uuid|
 |err_invalid_stylist_uuid|Invalid Stylist UUID|/api/v1/client/preferred-stylists|stylist_uuid|
@@ -2150,7 +2151,43 @@ curl -X POST \
 
 **Response 200 OK**
 
+
 ```json
+[
+    {
+        "uuid": "7906db39-f688-4d5c-957f-0b7a3dec4fed",
+        "first_name": "Jane4",
+        "last_name": "McBob",
+        "phone": "+11234567890",
+        "city": "Schenectady",
+        "state": "NY",
+        "photo": "profile_photo_url"
+    },
+    {
+        "uuid": "529f8021-672f-4b17-9edd-35f2efbefe74",
+        "first_name": "Mark",
+        "last_name": "Zuckerberg",
+        "phone": "+19876543210",
+        "city": "Redmond",
+        "state": "WA",
+        "photo": null
+    }
+]
+```
+
+## Nearby Clients
+
+**GET /api/v1/stylist/nearby-clients**
+
+```
+curl -X GET \
+  apiserver/api/v1/stylist/nearby-clients \
+  -H 'Authorization: Token auth_token' \
+  -H 'Content-Type: application/json'
+```
+
+**Response 200 OK**
+```
 [
     {
         "uuid": "7906db39-f688-4d5c-957f-0b7a3dec4fed",

@@ -2,8 +2,11 @@ import datetime
 
 from annoying.functions import get_object_or_None
 from dateutil.parser import parse
+from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.geos import Point
+from django.contrib.gis.measure import D
 
-from django.db import transaction
+from django.db import models, transaction
 
 from rest_framework import generics, permissions, status, views
 from rest_framework.exceptions import ValidationError
@@ -24,13 +27,13 @@ from core.utils import (
     post_or_get,
 )
 from salon.models import ServiceTemplateSet, Stylist, StylistService
-from .constants import ErrorMessages, MAX_APPOINTMENTS_PER_REQUEST
+from .constants import ErrorMessages, MAX_APPOINTMENTS_PER_REQUEST, NEARBY_CLIENTS_ACCURACY
 from .serializers import (
     AppointmentPreviewRequestSerializer,
     AppointmentPreviewResponseSerializer,
     AppointmentSerializer,
     AppointmentUpdateSerializer,
-    ClientOfStylistDetailsSerializer,
+    ClientDetailsSerializer,
     ClientSerializer,
     InvitationSerializer,
     MaximumDiscountSerializer,
@@ -271,7 +274,8 @@ class StylistAppointmentPreviewView(views.APIView):
             appointment: Appointment = stylist.appointments.get(
                 uuid=request.data['appointment_uuid'])
         except Appointment.DoesNotExist:
-            raise ValidationError({'non_field_errors': ErrorMessages.ERR_INVALID_APPOINTMENT_UUID})
+            raise ValidationError(
+                {'non_field_errors': [ErrorMessages.ERR_INVALID_APPOINTMENT_UUID]})
         serializer = AppointmentPreviewRequestSerializer(
             data=request.data, context={'stylist': stylist,
                                         'appointment': appointment, 'force_start': True}
@@ -420,15 +424,49 @@ class ClientListView(generics.ListAPIView):
 
 class ClientView(generics.RetrieveAPIView):
     permission_classes = [StylistPermission, permissions.IsAuthenticated]
-    serializer_class = ClientOfStylistDetailsSerializer
+    serializer_class = ClientDetailsSerializer
 
     lookup_field = 'uuid'
     lookup_url_kwarg = 'client_uuid'
 
     def get_queryset(self):
         stylist: Stylist = self.request.user.stylist
-        client_of_stylists = stylist.clients_of_stylist.all()
-        return client_of_stylists
+        queryset = Client.objects.filter(preferred_stylists__stylist=stylist)
+        return queryset
 
     def get_serializer_context(self):
         return {'stylist': self.request.user.stylist}
+
+
+class NearbyClientsView(views.APIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        serializer = ClientSerializer(self.get_queryset(), many=True)
+        response_dict = {
+            'clients': serializer.data
+        }
+        return Response(response_dict, status=status.HTTP_200_OK)
+
+    def get_queryset(self):
+        location = self.request.user.stylist.salon.location
+        if location:
+            return NearbyClientsView._search_clients(
+                location=location, accuracy=NEARBY_CLIENTS_ACCURACY)
+        else:
+            raise ValidationError(
+                {'non_field_errors': [ErrorMessages.ERR_STYLIST_LOCATION_UNAVAILABLE]})
+
+    @staticmethod
+    def _search_clients(location: Point, accuracy: int) -> models.QuerySet:
+        queryset = Client.objects.all()
+
+        nearby_clients = NearbyClientsView._get_nearby_clients(queryset, location, accuracy)
+
+        return nearby_clients.order_by('distance')[:1000]
+
+    @staticmethod
+    def _get_nearby_clients(queryset: models.QuerySet,
+                            location: Point, accuracy: int) -> models.QuerySet:
+        return queryset.filter(location__distance_lte=(
+            location, D(m=accuracy))).annotate(distance=Distance('location', location))

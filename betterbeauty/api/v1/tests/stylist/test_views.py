@@ -270,8 +270,9 @@ class TestClientView(object):
         """Verify that only stylist's client can be retrieved"""
         user, auth_token = authorized_stylist_user
         stylist = user.stylist
-        our_client = G(ClientOfStylist, stylist=stylist)
-        foreign_client = G(ClientOfStylist)
+        our_client = G(Client)
+        G(PreferredStylist, client=our_client, stylist=stylist)
+        foreign_client = G(Client)
         url = reverse('api:v1:stylist:client', kwargs={'client_uuid': foreign_client.uuid})
 
         response = client.get(url, HTTP_AUTHORIZATION=auth_token)
