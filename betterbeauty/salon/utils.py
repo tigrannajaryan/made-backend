@@ -7,7 +7,7 @@ from django.db import transaction
 
 from appointment.constants import AppointmentStatus
 from appointment.models import Appointment
-from client.models import ClientOfStylist
+from client.models import Client, ClientOfStylist
 from core.constants import (
     DEFAULT_FIRST_TIME_BOOK_DISCOUNT_PERCENT,
     DEFAULT_REBOOK_WITHIN_1_WEEK_DISCOUNT_PERCENT,
@@ -102,7 +102,9 @@ def generate_demand_list_for_stylist(
     return demand_list
 
 
-def get_last_appointment_for_client(
+# TODO: we're going to need to delete this function
+# TODO: as soon as we remove client_of_stylist model
+def get_last_appointment_for_client_of_stylist(
     stylist: Stylist, client_of_stylist: ClientOfStylist
 ) -> Optional[Appointment]:
     """Return last checked out appointment between stylist and client"""
@@ -114,11 +116,23 @@ def get_last_appointment_for_client(
     return last_appointment
 
 
-def get_last_visit_date_for_client(
+def get_last_appointment_for_client(
+    stylist: Stylist, client: Client
+) -> Optional[Appointment]:
+    """Return last checked out appointment between stylist and client"""
+    last_appointment: Optional[Appointment] = Appointment.objects.filter(
+        status__in=[AppointmentStatus.CHECKED_OUT, AppointmentStatus.NEW],
+        stylist=stylist,
+        client__client=client
+    ).order_by('datetime_start_at').last()
+    return last_appointment
+
+
+def get_last_visit_date_for_client_of_stylist(
         stylist: Stylist, client_of_stylist: ClientOfStylist
 ) -> Optional[datetime.date]:
     """Return last checked out appointment date between stylist and client_of_stylist"""
-    last_appointment = get_last_appointment_for_client(
+    last_appointment = get_last_appointment_for_client_of_stylist(
         stylist=stylist, client_of_stylist=client_of_stylist
     )
 
@@ -181,7 +195,9 @@ def generate_prices_for_stylist_service(
     """
     stylist = services[0].stylist
 
-    last_visit_date = get_last_visit_date_for_client(stylist, client) if client else None
+    last_visit_date = get_last_visit_date_for_client_of_stylist(
+        stylist, client
+    ) if client else None
 
     today = stylist.get_current_now().date()
     dates_list = [today + datetime.timedelta(days=i) for i in range(0, PRICE_BLOCK_SIZE)]
