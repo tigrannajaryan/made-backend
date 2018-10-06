@@ -1948,6 +1948,7 @@ curl -X GET \
             "client_uuid": "09e4adbb-c02d-489e-90ab-1b5997754d93",
             "client_first_name": "John",
             "client_last_name": "Doe",
+            "created_at": "2018-09-30T13:11:44.581848-04:00",
             "datetime_start_at": "2018-06-26T23:00:00-04:00",
             "duration_minutes": 150,
             "status": "new",
@@ -2403,7 +2404,8 @@ curl -X GET \
             "first_name": "dsfa",
             "last_name": "asdf",
             "phone": null,
-            "preference_uuid": "37d795d6-e2a5-46d2-88e6-c1fbe01f756b"
+            "preference_uuid": "37d795d6-e2a5-46d2-88e6-c1fbe01f756b",
+            "website_url": "4sw.in"
         }
     ]
 }
