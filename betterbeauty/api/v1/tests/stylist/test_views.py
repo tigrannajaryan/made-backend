@@ -261,7 +261,7 @@ class TestClientListView(object):
         response = client.get(url, HTTP_AUTHORIZATION=auth_token)
         assert (status.is_success(response.status_code))
         assert (len(response.data) == 1)
-        assert (response.data[0]['uuid'] == str(client_data.uuid))
+        assert (response.data['clients'][0]['uuid'] == str(client_data.uuid))
 
 
 class TestClientView(object):
