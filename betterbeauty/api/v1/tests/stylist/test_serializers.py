@@ -77,15 +77,20 @@ def client_details_data() -> Tuple[Stylist, Client]:
     service_1 = G(StylistService, stylist=stylist, name='our service 1')
     service_2 = G(StylistService, stylist=stylist, name='our service 2')
     # add an past-in-time appointment
-    G(
+    first_appoitment = G(
         Appointment, stylist=stylist, client=client_of_stylist,
-        created_by=client.user,
+        created_by=client.user, status=AppointmentStatus.CHECKED_OUT,
         datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC)
+    )
+    G(
+        AppointmentService, appointment=first_appoitment, service_uuid=service_1.uuid,
+        service_name=service_1.name
+
     )
 
     appointment_last = G(
         Appointment, stylist=stylist, client=client_of_stylist,
-        created_by=client.user,
+        created_by=client.user, status=AppointmentStatus.CHECKED_OUT,
         datetime_start_at=datetime.datetime(2018, 1, 2, 0, 0, tzinfo=pytz.UTC)
     )
 
