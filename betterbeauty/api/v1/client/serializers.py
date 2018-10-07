@@ -106,6 +106,9 @@ class PreferredStylistSerializer(FormattedErrorMessageMixin, serializers.ModelSe
     instagram_url = serializers.CharField(
         source="stylist.instagram_url", read_only=True
     )
+    website_url = serializers.CharField(
+        source="stylist.website_url", read_only=True
+    )
     salon_address = serializers.CharField(source='stylist.salon.address', allow_null=True)
     profile_photo_url = serializers.CharField(read_only=True,
                                               source='stylist.get_profile_photo_url')
@@ -116,7 +119,8 @@ class PreferredStylistSerializer(FormattedErrorMessageMixin, serializers.ModelSe
     class Meta:
         model = PreferredStylist
         fields = ['uuid', 'salon_name', 'salon_address', 'profile_photo_url',
-                  'first_name', 'last_name', 'phone', 'preference_uuid', 'instagram_url']
+                  'first_name', 'last_name', 'phone', 'preference_uuid', 'instagram_url',
+                  'website_url']
 
 
 class ClientPreferredStylistSerializer(serializers.ModelSerializer):

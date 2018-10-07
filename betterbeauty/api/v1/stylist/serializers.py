@@ -802,6 +802,7 @@ class AppointmentSerializer(
 
     # status will be read-only in this serializer, to avoid arbitrary setting
     status = serializers.CharField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Appointment
@@ -810,7 +811,7 @@ class AppointmentSerializer(
             'client_phone', 'datetime_start_at', 'duration_minutes', 'status',
             'total_tax', 'total_card_fee', 'total_client_price_before_tax',
             'services', 'grand_total', 'has_tax_included', 'has_card_fee_included',
-            'tax_percentage', 'card_fee_percentage', 'client_profile_photo_url'
+            'tax_percentage', 'card_fee_percentage', 'client_profile_photo_url', 'created_at'
         ]
 
     def validate(self, attrs):
