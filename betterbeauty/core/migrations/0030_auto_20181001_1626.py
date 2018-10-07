@@ -72,10 +72,13 @@ def forwards(apps, schema_editor):
 					        on cs.id = i.created_client_id
 			        group by c.user_id) inv
 		        on u.id = inv.user_id
-	        where 1 = 1
-		        and u.id not in (select user_id from public.rpt_staff_client)
-		        and u.id not in (select user_id from public.rpt_staff_stylist)
-	        ;
+			where 
+				u.id not in (
+					select user_id from public.rpt_staff_client
+					union all
+					select user_id from public.rpt_staff_stylist
+				)	 
+			;
 	
 	
 	        create or replace view public.rpt_users_h as
@@ -87,9 +90,12 @@ def forwards(apps, schema_editor):
 	        from rpt_dates dt
 		        left join public.rpt_user u
 			        on u.dt_joined = dt.dt
-	        where 1=1
-		        and u.id not in (select user_id from public.rpt_staff_client)
-		        and u.id not in (select user_id from public.rpt_staff_stylist)
+			where 
+				u.id not in (
+					select user_id from public.rpt_staff_client
+					union all
+					select user_id from public.rpt_staff_stylist
+				)
 	        group by dt.dt
 	        ;
 
@@ -108,90 +114,92 @@ def forwards(apps, schema_editor):
             ;
 
 
-            create or replace view public.rpt_distribution_clients_per_stylists as
-	        select 
-		        current_timestamp datetime,
-		        'client of stylist' link_type,
-		        a.clients_count, 
-		        substring( '   ' || a.clients_count::varchar from '...$') s_clients_count, 
-		        count( distinct a.stylist_id) stylist_count
-	        from (
-		        select count( distinct t.client_id) clients_count, stylist_id
-		        from public.client_of_stylist t
-			        left join rpt_staff_client sc 
-				        on t.client_id = sc.id
-			        left join rpt_staff_stylist ss 
-				        on t.stylist_id = ss.id
-		        where sc.id is null and ss.id is null
-		        group by stylist_id
-		        ) a
-	        group by a.clients_count
-	        union all
-	        select 
-		        current_timestamp datetime,
-		        'preferred stylist' link_type,
-		        a.clients_count, 
-		        substring( '   ' || a.clients_count::varchar from '...$') s_clients_count, 
-		        count( distinct a.stylist_id) stylist_count
-	        from (
-		        select count( distinct t.client_id) clients_count, stylist_id
-		        from public.preferred_stylist t
-			        left join rpt_staff_client sc 
-				        on t.client_id = sc.id
-			        left join rpt_staff_stylist ss 
-				        on t.stylist_id = ss.id
-		        where sc.id is null and ss.id is null
-			        and t.deleted_at is null
-		        group by stylist_id
-		        ) a
-	        group by a.clients_count
-	        ;
 
-                
-            create or replace view public.rpt_distribution_stylists_per_clients as
-	        select 
-		        a.stylists_count, 
-		        substring( '   ' || a.stylists_count::varchar from '...$') s_stylists_count, 
-		        count( distinct a.client_id) client_count,
-		        current_timestamp datetime
-	        from (
-		        select t.client_id, 
-			        count( distinct t.stylist_id) stylists_count
-		        from public.client_of_stylist t
-			        left join rpt_staff_client sc 
-				        on t.client_id = sc.id
-			        left join rpt_staff_stylist ss 
-				        on t.stylist_id = ss.id
-		        where 1 = 1 and sc.id is null and ss.id is null
-		        group by client_id
-		        ) a
-	        group by a.stylists_count
-	        ;
-                
-                
-            create or replace view public.rpt_distribution_pareto_stylist_client as
-	        select 
-		        current_timestamp datetime,
-		        (sum( a.clients_count) over ( order by a.clients_count desc, a.stylist_id))/
-			        (sum( a.clients_count) over ( partition by a.g))::float clients_percent, 
-		        (count( a.stylist_id) over ( order by a.clients_count desc, a.stylist_id))/
-			        (count( a.stylist_id) over ( partition by a.g))::float stylist_percent
-	        from (
-		        select 
-			        count( distinct client_id) clients_count, 
-			        stylist_id, 
-			        1 g
-		        from public.client_of_stylist t
-			        left join rpt_staff_client sc 
-				        on t.client_id = sc.id
-			        left join rpt_staff_stylist ss 
-				        on t.stylist_id = ss.id
-		        where sc.id is null and ss.id is null
-		        group by stylist_id
-		        ) a
-	        union 
-	        select current_timestamp, .0, .0
-	        ;
+			create or replace view public.rpt_distribution_clients_per_stylists as
+			select 
+				current_timestamp datetime,
+				'booking' link_type,
+				a.clients_count, 
+				substring( '   ' || a.clients_count::varchar from '...$') s_clients_count, 
+				count( distinct a.stylist_id) stylist_count
+			from (
+				select count( distinct t.client_id) clients_count, stylist_id
+				from public.appointment t
+					left join rpt_staff_client sc 
+						on t.client_id = sc.id
+					left join rpt_staff_stylist ss 
+						on t.stylist_id = ss.id
+				where sc.id is null and ss.id is null
+				group by stylist_id
+				) a
+			group by a.clients_count
+			union all
+			select 
+				current_timestamp datetime,
+				'preferred stylist' link_type,
+				a.clients_count, 
+				substring( '   ' || a.clients_count::varchar from '...$') s_clients_count, 
+				count( distinct a.stylist_id) stylist_count
+			from (
+				select count( distinct t.client_id) clients_count, stylist_id
+				from public.preferred_stylist t
+					left join rpt_staff_client sc 
+						on t.client_id = sc.id
+					left join rpt_staff_stylist ss 
+						on t.stylist_id = ss.id
+				where sc.id is null and ss.id is null
+					and t.deleted_at is null
+				group by stylist_id
+				) a
+			group by a.clients_count
+			;
+
+	
+			create or replace view public.rpt_distribution_stylists_per_clients as
+			select 
+				a.stylists_count, 
+				substring( '   ' || a.stylists_count::varchar from '...$') s_stylists_count, 
+				count( distinct a.client_id) client_count,
+				current_timestamp datetime
+			from (
+				select t.client_id, 
+					count( distinct t.stylist_id) stylists_count
+				from public.appointment t
+					left join rpt_staff_client sc 
+						on t.client_id = sc.id
+					left join rpt_staff_stylist ss 
+						on t.stylist_id = ss.id
+				where 1 = 1 and sc.id is null and ss.id is null
+				group by client_id
+				) a
+			group by a.stylists_count
+			;
+	
+	
+			create or replace view public.rpt_distribution_pareto_stylist_client as
+			select 
+				current_timestamp datetime,
+				(sum( a.clients_count) over ( order by a.clients_count desc, a.stylist_id))/
+					(sum( a.clients_count) over ( partition by a.g))::float clients_percent, 
+				(count( a.stylist_id) over ( order by a.clients_count desc, a.stylist_id))/
+					(count( a.stylist_id) over ( partition by a.g))::float stylist_percent
+			from (
+				select 
+					count( distinct client_id) clients_count, 
+					stylist_id, 
+					1 g
+				from public.appointment t
+					left join rpt_staff_client sc 
+						on t.client_id = sc.id
+					left join rpt_staff_stylist ss 
+						on t.stylist_id = ss.id
+				where sc.id is null and ss.id is null
+				group by stylist_id
+				) a
+			union 
+			select current_timestamp, .0, .0
+			;
+
 
 
 	        create or replace view public.rpt_booking as
@@ -304,76 +312,65 @@ def forwards(apps, schema_editor):
 	        ;
 
 	
-         	create or replace view public.rpt_stylist as
-	        select 
-		        st.id stylist_id,
-		        coalesce( srv.stylist_services_count, 0) stylist_services_count,
-		        srv.avg_regular_price,
-		        coalesce( wd.weekday_discounts_count, 0)::int weekday_discounts_count,
-		        case when coalesce( wd.weekday_discounts_count, 0) > 0 
-			        then 1 else 0 
-			        end is_daily_discount,
-		        coalesce( wd.avg_weekday_discount, 0) avg_weekday_discount,
-		        (0 < any( st.rebook_discounts))::int is_loyalty_discount,
-		        case when 0 = all( st.rebook_discounts)
-			        then 0
-			        else
-			        (st.rebook_within_1_week_discount_percent +
-			        st.rebook_within_2_weeks_discount_percent +
-			        st.rebook_within_3_weeks_discount_percent + 
-			        st.rebook_within_4_weeks_discount_percent +
-			        st.rebook_within_5_weeks_discount_percent +
-			        st.rebook_within_6_weeks_discount_percent) / 
-			        ((st.rebook_within_1_week_discount_percent > 0)::int +
-			        (st.rebook_within_2_weeks_discount_percent > 0)::int +
-			        (st.rebook_within_3_weeks_discount_percent > 0)::int + 	
-			        (st.rebook_within_4_weeks_discount_percent > 0)::int +
-			        (st.rebook_within_5_weeks_discount_percent > 0)::int +
-			        (st.rebook_within_6_weeks_discount_percent > 0)::int) 
-			        end avg_loyalty_discount,
-		        (st.rebook_within_1_week_discount_percent > 0)::int is_first_week_discount,
-		        st.first_time_book_discount_percent,
-		        st.rebook_within_1_week_discount_percent,
-		        (st.maximum_discount > 0 and st.is_maximum_discount_enabled)::int is_maximum_discount_enabled,
-		        case when not st.is_maximum_discount_enabled 
-			        then null else st.maximum_discount 
-			        end maximum_discount,
-		        (0 = all( st.rebook_discounts || 
-			        array[
-				        st.is_maximum_discount_enabled::int4,
-				        coalesce( wd.weekday_discounts_count, 0)::int4
-				        ]))::int no_discount_count
-	        from (
-			        select *,
-				        array[ rebook_within_1_week_discount_percent,
-					        rebook_within_2_weeks_discount_percent,
-					        rebook_within_3_weeks_discount_percent, 
-					        rebook_within_4_weeks_discount_percent,
-					        rebook_within_5_weeks_discount_percent,
-					        rebook_within_6_weeks_discount_percent] rebook_discounts
-			        from public.stylist
-		        ) st
-		        left join (
-			        select ss.stylist_id, 
-				        count( ss.id) stylist_services_count, 
-				        avg( ss.regular_price) avg_regular_price
-			        from public.stylist_service ss
-			        where ss.is_enabled = true and ss.deleted_at is null
-			        group by ss.stylist_id
-		        ) srv
-			        on st.id = srv.stylist_id
-		        left join (
-			        select swd.stylist_id, 
-				        count( swd.id) weekday_discounts_count,
-				        avg( swd.discount_percent) avg_weekday_discount
-			        from public.stylist_weekday_discount swd
-			        where swd.discount_percent > 0
-			        group by swd.stylist_id
-		        ) wd
-			        on st.id = wd.stylist_id
-		        left join public.rpt_staff_stylist ss
-			        on st.id = ss.id
-	        where ss.id is null		
+		 	create or replace view public.rpt_stylist as
+			select 
+				st.id stylist_id,
+				coalesce( srv.stylist_services_count, 0) stylist_services_count,
+				srv.avg_regular_price,
+				coalesce( wd.weekday_discounts_count, 0)::int weekday_discounts_count,
+				case when coalesce( wd.weekday_discounts_count, 0) > 0 
+					then 1 else 0 
+					end is_daily_discount,
+				coalesce( wd.avg_weekday_discount, 0) avg_weekday_discount,
+				(0 < any( st.rebook_discounts))::int is_loyalty_discount,
+				case when 0 = all( st.rebook_discounts)
+					then 0::float
+					else
+					(select avg( nullif( discount, 0)) from unnest( st.rebook_discounts) discount)
+					end avg_loyalty_discount,
+				(st.rebook_within_1_week_discount_percent > 0)::int is_first_week_discount,
+				st.first_time_book_discount_percent,
+				st.rebook_within_1_week_discount_percent,
+				(st.maximum_discount > 0 and st.is_maximum_discount_enabled)::int is_maximum_discount_enabled,
+				case when not st.is_maximum_discount_enabled 
+					then null else st.maximum_discount 
+					end maximum_discount,
+				(0 = all( st.rebook_discounts || 
+					array[
+						st.is_maximum_discount_enabled::int4,
+						coalesce( wd.weekday_discounts_count, 0)::int4
+						]))::int no_discount_count
+			from (
+					select *,
+						array[ rebook_within_1_week_discount_percent,
+							rebook_within_2_weeks_discount_percent,
+							rebook_within_3_weeks_discount_percent, 
+							rebook_within_4_weeks_discount_percent,
+							rebook_within_5_weeks_discount_percent,
+							rebook_within_6_weeks_discount_percent] rebook_discounts
+					from public.stylist
+				) st
+				left join (
+					select ss.stylist_id, 
+						count( ss.id) stylist_services_count, 
+						avg( ss.regular_price) avg_regular_price
+					from public.stylist_service ss
+					where ss.is_enabled = true and ss.deleted_at is null
+					group by ss.stylist_id
+				) srv
+					on st.id = srv.stylist_id
+				left join (
+					select swd.stylist_id, 
+						count( swd.id) weekday_discounts_count,
+						avg( swd.discount_percent) avg_weekday_discount
+					from public.stylist_weekday_discount swd
+					where swd.discount_percent > 0
+					group by swd.stylist_id
+				) wd
+					on st.id = wd.stylist_id
+				left join public.rpt_staff_stylist ss
+					on st.id = ss.id
+			where ss.id is null		
 	        ;
             
             
