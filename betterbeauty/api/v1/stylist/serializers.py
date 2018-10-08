@@ -1298,6 +1298,16 @@ class StylistSettingsRetrieveSerializer(serializers.ModelSerializer):
         ).count()
 
 
+class NearbyClientSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(source="user.first_name", read_only=True)
+    last_name = serializers.CharField(source="user.last_name", read_only=True)
+    photo = serializers.CharField(source='get_profile_photo_url', read_only=True)
+
+    class Meta:
+        model = Client
+        fields = ['first_name', 'last_name', 'city', 'state', 'photo']
+
+
 class ClientSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source="user.first_name", read_only=True)
     last_name = serializers.CharField(source="user.last_name", read_only=True)
