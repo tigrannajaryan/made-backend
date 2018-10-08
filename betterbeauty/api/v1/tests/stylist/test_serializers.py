@@ -18,6 +18,7 @@ from api.v1.stylist.serializers import (
     AppointmentUpdateSerializer,
     AppointmentValidationMixin,
     ClientDetailsSerializer,
+    ClientServicePricingSerializer,
     StylistAvailableWeekDaySerializer,
     StylistAvailableWeekDayWithBookedTimeSerializer,
     StylistDiscountsSerializer,
@@ -769,7 +770,7 @@ class TestAppointmentSerializer(object):
             ],
             'datetime_start_at': available_time.isoformat()
         }
-        # check client which is not related to stylist, i.e. no ClientOfStylist relation exists
+        # check client which is not related to stylist, i.e. no PreferredStylist relation exists
         serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
         assert(serializer.is_valid() is False)
         assert('client_uuid' in serializer.errors['field_errors'])
@@ -1404,3 +1405,50 @@ class TestHomeAPISerializer(object):
         assert(serializer_data['this_week_earning'] == expected_earning)
         assert(serializer_data['today_slots'] == 18)
         assert(serializer_data['followers'] == 1)
+
+
+class TestClientServicePricingSerializer(object):
+    @pytest.mark.django_db
+    def test_validate_client_uuid(self):
+        stylist: Stylist = G(Stylist)
+        service = G(StylistService, stylist=stylist)
+        # test without client
+        data = {
+            'service_uuids': [service.uuid, ],
+        }
+        context = {'stylist': stylist}
+        serializer = ClientServicePricingSerializer(data=data, context=context)
+        assert(not serializer.is_valid())
+        assert ('client_uuid' in serializer.errors['field_errors'])
+        # test with foreign client
+        client = G(Client)
+        data['client_uuid'] = client.uuid
+        serializer = ClientServicePricingSerializer(data=data, context=context)
+        assert(not serializer.is_valid())
+        assert('client_uuid' in serializer.errors['field_errors'])
+        # test with our client
+        G(PreferredStylist, client=client, stylist=stylist)
+        serializer = ClientServicePricingSerializer(data=data, context=context)
+        assert (serializer.is_valid())
+
+    @pytest.mark.django_db
+    def test_validate_service_uuids(self):
+        stylist: Stylist = G(Stylist)
+        client = G(Client)
+        G(PreferredStylist, client=client, stylist=stylist)
+        context = {'stylist': stylist}
+        service = G(StylistService, stylist=stylist)
+        # test without services
+        data = {'client_uuid': client.uuid}
+        serializer = ClientServicePricingSerializer(data=data, context=context)
+        assert (serializer.is_valid())
+        # test with our service
+        data = {'client_uuid': client.uuid, 'service_uuids': [service.uuid, ]}
+        serializer = ClientServicePricingSerializer(data=data, context=context)
+        assert (serializer.is_valid())
+        # test with foreign service
+        foreign_service = G(StylistService)
+        data['service_uuids'] = [service.uuid, foreign_service.uuid, ]
+        serializer = ClientServicePricingSerializer(data=data, context=context)
+        assert (not serializer.is_valid())
+        assert('service_uuids' in serializer.errors['field_errors'])

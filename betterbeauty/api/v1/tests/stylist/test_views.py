@@ -5,6 +5,7 @@ import pytest
 import pytz
 
 from django.urls import reverse
+from django.utils import timezone
 
 from django_dynamic_fixture import G
 from rest_framework import status
@@ -13,9 +14,9 @@ from rest_framework.permissions import IsAuthenticated
 from api.common.permissions import StylistPermission, StylistRegisterUpdatePermission
 from api.v1.stylist.serializers import AppointmentValidationMixin
 from api.v1.stylist.urls import urlpatterns
-from api.v1.stylist.views import StylistView
+from api.v1.stylist.views import ClientPricingView, StylistView
 from appointment.constants import AppointmentStatus, ErrorMessages as appointment_errors
-from appointment.models import Appointment
+from appointment.models import Appointment, AppointmentService
 from client.models import Client, ClientOfStylist, PreferredStylist
 from core.models import User
 from core.types import UserRole
@@ -212,9 +213,10 @@ class TestStylistServicePricingView(object):
         stylist = user.stylist
         url = reverse('api:v1:stylist:service-pricing')
         foreign_service = G(StylistService, duration=datetime.timedelta(0))
-        foreign_client = G(ClientOfStylist)
+        foreign_client = G(Client)
         our_service = G(StylistService, duration=datetime.timedelta(0), stylist=stylist)
-        our_client = G(ClientOfStylist, stylist=stylist)
+        our_client = G(Client)
+        G(PreferredStylist, client=our_client, stylist=stylist)
         data = {
             'service_uuid': foreign_service.uuid
         }
@@ -282,6 +284,71 @@ class TestClientView(object):
 
         response = client.get(url, HTTP_AUTHORIZATION=auth_token)
         assert (status.is_success(response.status_code))
+
+
+class TestClientPricingView(object):
+    @pytest.mark.django_db
+    def test_permissions(self, client, authorized_stylist_user):
+        user, auth_token = authorized_stylist_user
+        stylist = user.stylist
+        salon = G(Salon, timezone=pytz.UTC)
+        stylist.salon = salon
+        stylist.save(update_fields=['salon', ])
+        our_service = G(StylistService, stylist=stylist)
+        our_client = G(Client)
+        G(PreferredStylist, stylist=stylist, client=our_client)
+        foreign_client = G(Client)
+        url = reverse('api:v1:stylist:client-pricing')
+        data = {'client_uuid': foreign_client.uuid}
+        response = client.post(url, data=data, HTTP_AUTHORIZATION=auth_token)
+        assert(response.status_code == status.HTTP_400_BAD_REQUEST)
+        data = {'client_uuid': our_client.uuid}
+        response = client.post(url, data=data, HTTP_AUTHORIZATION=auth_token)
+        assert (status.is_success(response.status_code))
+        assert(response.data['client_uuid'] == str(our_client.uuid))
+        assert (response.data['service_uuids'] == [str(our_service.uuid), ])
+        foreign_service = G(StylistService)
+        data = {'client_uuid': our_client.uuid, 'service_uuids': [foreign_service. uuid]}
+        response = client.post(url, data=data, HTTP_AUTHORIZATION=auth_token)
+        assert (response.status_code == status.HTTP_400_BAD_REQUEST)
+        data = {'client_uuid': our_client.uuid, 'service_uuids': [our_service.uuid]}
+        response = client.post(url, data=data, HTTP_AUTHORIZATION=auth_token)
+        assert(status.is_success(response.status_code))
+        assert(response.data['client_uuid'] == str(our_client.uuid))
+        assert(response.data['service_uuids'] == [str(our_service.uuid), ])
+
+    @pytest.mark.django_db
+    def test__get_initial_service_uuids(self):
+        stylist: Stylist = G(Stylist)
+        client: Client = G(Client)
+        G(PreferredStylist, stylist=stylist, client=client)
+
+        assert(ClientPricingView._get_initial_service_uuids(
+            stylist=stylist, client=client) == [])
+        service = G(StylistService, stylist=stylist)
+        assert (ClientPricingView._get_initial_service_uuids(
+            stylist=stylist, client=client) == [service.uuid, ])
+        popular_service = G(StylistService, stylist=stylist)
+        appointment = G(
+            Appointment, stylist=stylist,
+            datetime_start_at=timezone.now() - datetime.timedelta(weeks=1),
+            status=AppointmentStatus.CHECKED_OUT
+        )
+        G(AppointmentService, service_uuid=popular_service.uuid, appointment=appointment)
+        assert (ClientPricingView._get_initial_service_uuids(
+            stylist=stylist, client=client) == [popular_service.uuid, ])
+        client_of_stylist = G(ClientOfStylist, stylist=stylist, client=client)
+        last_appointment = G(
+            Appointment, stylist=stylist, client=client_of_stylist,
+            datetime_start_at=timezone.now() - datetime.timedelta(days=1),
+            status=AppointmentStatus.CHECKED_OUT
+        )
+        G(AppointmentService, service_uuid=popular_service.uuid, appointment=last_appointment)
+        G(AppointmentService, service_uuid=service.uuid, appointment=last_appointment)
+        assert (sorted(ClientPricingView._get_initial_service_uuids(
+            stylist=stylist, client=client)) == sorted(
+            [popular_service.uuid, service.uuid]
+        ))
 
 
 class TestStylistViewPermissions(object):

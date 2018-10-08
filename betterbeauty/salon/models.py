@@ -16,7 +16,7 @@ from timezone_field import TimeZoneField
 
 from appointment.types import AppointmentStatus
 from appointment.utils import get_appointments_in_datetime_range
-from client.models import ClientOfStylist
+from client.models import Client, ClientOfStylist, PreferredStylist
 from core.choices import WEEKDAY
 from core.models import User
 from core.types import Weekday
@@ -204,6 +204,12 @@ class Stylist(models.Model):
         if self.user.photo:
             return self.user.photo.url
         return None
+
+    def get_preferred_clients(self) -> models.QuerySet:
+        preferences = PreferredStylist.objects.filter(
+            stylist=self, deleted_at__isnull=True
+        ).values_list('client_id', flat=True)
+        return Client.objects.filter(id__in=preferences)
 
     def get_available_slots(self, date: datetime.date) -> List[TimeSlotAvailability]:
         datetime_from = self.with_salon_tz(datetime.datetime(date.year, date.month, date.day))

@@ -1,4 +1,6 @@
 import datetime
+import uuid
+from typing import List, NamedTuple, Optional
 
 from annoying.functions import get_object_or_None
 from dateutil.parser import parse
@@ -27,6 +29,12 @@ from core.utils import (
     post_or_get,
 )
 from salon.models import ServiceTemplateSet, Stylist, StylistService
+from salon.types import ClientPriceOnDate
+from salon.utils import (
+    generate_client_prices_for_stylist_services,
+    get_last_appointment_for_client,
+    get_most_popular_service,
+)
 from .constants import ErrorMessages, MAX_APPOINTMENTS_PER_REQUEST, NEARBY_CLIENTS_ACCURACY
 from .serializers import (
     AppointmentPreviewRequestSerializer,
@@ -35,6 +43,7 @@ from .serializers import (
     AppointmentUpdateSerializer,
     ClientDetailsSerializer,
     ClientSerializer,
+    ClientServicePricingSerializer,
     InvitationSerializer,
     MaximumDiscountSerializer,
     NearbyClientSerializer,
@@ -53,6 +62,17 @@ from .serializers import (
     StylistSettingsRetrieveSerializer,
     StylistTodaySerializer,
 )
+
+
+class ClientPricingRequest(NamedTuple):
+    client_uuid: uuid.UUID
+    service_uuids: List[uuid.UUID] = []
+
+
+class ClientPricingResponse(NamedTuple):
+    prices: List[ClientPriceOnDate]
+    client_uuid: uuid.UUID
+    service_uuids: List[uuid.UUID] = []
 
 
 class StylistView(
@@ -390,10 +410,10 @@ class StylistServicePricingView(views.APIView):
         )
         serializer.is_valid(raise_exception=True)
         client_uuid = serializer.validated_data.get('client_uuid', None)
-        client_of_stylist = None
+        client: Optional[Client] = None
         if client_uuid:
-            client_of_stylist: ClientOfStylist = get_object_or_None(
-                stylist.clients_of_stylist,
+            client = get_object_or_None(
+                stylist.get_preferred_clients(),
                 uuid=client_uuid
             )
         service_uuid = serializer.validated_data['service_uuid']
@@ -402,7 +422,7 @@ class StylistServicePricingView(views.APIView):
 
         return Response(
             StylistServicePricingSerializer(
-                service, context={'client_of_stylist': client_of_stylist}
+                service, context={'client': client}
             ).data
         )
 
@@ -424,7 +444,7 @@ class ClientListView(generics.ListAPIView):
 
     def get_queryset(self):
         stylist: Stylist = self.request.user.stylist
-        queryset = Client.objects.filter(preferred_stylists__stylist=stylist)
+        queryset = stylist.get_preferred_clients()
         return queryset
 
     def get_serializer_context(self):
@@ -440,7 +460,7 @@ class ClientView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         stylist: Stylist = self.request.user.stylist
-        queryset = Client.objects.filter(preferred_stylists__stylist=stylist)
+        queryset = stylist.get_preferred_clients()
         return queryset
 
     def get_serializer_context(self):
@@ -479,3 +499,84 @@ class NearbyClientsView(views.APIView):
                             location: Point, accuracy: int) -> models.QuerySet:
         return queryset.filter(location__distance_lte=(
             location, D(m=accuracy))).annotate(distance=Distance('location', location))
+
+
+class ClientPricingView(views.APIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+
+    def post(self, request):
+        stylist: Stylist = self.request.user.stylist
+        serializer = ClientServicePricingSerializer(
+            context={'stylist': stylist}, data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+        request_data = ClientPricingRequest(**serializer.validated_data)
+
+        client_uuid = request_data.client_uuid
+        client: Client = stylist.get_preferred_clients().get(uuid=client_uuid)
+        service_uuids = request_data.service_uuids
+
+        pricing_response = self._get_pricing_response(
+            stylist=stylist, client=client, service_uuids=service_uuids
+        )
+
+        return Response(
+            ClientServicePricingSerializer(pricing_response).data
+        )
+
+    @staticmethod
+    def _get_pricing_response(
+            stylist: Stylist, client: Optional[Client],
+            service_uuids: Optional[List[uuid.UUID]] = None
+    ) -> ClientPricingResponse:
+
+        if service_uuids is None or not service_uuids:
+            service_uuids = ClientPricingView._get_initial_service_uuids(
+                stylist=stylist, client=client
+            )
+
+        services = [stylist.services.get(uuid=uuid) for uuid in service_uuids]
+
+        prices = generate_client_prices_for_stylist_services(
+            stylist=stylist,
+            services=services,
+            client=client,
+            exclude_fully_booked=False,
+            exclude_unavailable_days=False
+        )
+        pricing_response = ClientPricingResponse(
+            client_uuid=client.uuid if client else None,
+            service_uuids=service_uuids,
+            prices=prices
+        )
+        return pricing_response
+
+    @staticmethod
+    def _get_initial_service_uuids(
+            stylist: Stylist, client: Optional[Client]
+    ) -> List[uuid.UUID]:
+        """
+        Return services to display initial pricing for, if services list is not explicitly
+        provided, using the following rules:
+        1) last service client booked. If they haven’t booked yet, then
+        2) service most often booked for that stylist. If stylist hasn’t had
+           anything booked yet, then
+        3) first service on the stylist list of services
+        """
+        last_appointment: Optional[Appointment] = get_last_appointment_for_client(
+            stylist=stylist, client=client
+        )
+        if last_appointment:
+            service_uuids = [
+                s.service_uuid for s in last_appointment.services.all()
+                if stylist.services.filter(uuid=s.service_uuid).exists()]
+            if service_uuids:
+                return service_uuids
+        most_popular_service: Optional[
+            StylistService
+        ] = get_most_popular_service(stylist=stylist)
+        if most_popular_service:
+            return [most_popular_service.uuid, ]
+        if stylist.services.count():
+            return [stylist.services.first().uuid, ]
+        return []
