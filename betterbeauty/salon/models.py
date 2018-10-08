@@ -108,14 +108,9 @@ class StylistAvailableWeekDay(models.Model):
     def get_available_time(self) -> Optional[datetime.timedelta]:
         if not self.is_available:
             return datetime.timedelta(0)
-        # we can't substract time from time, so cast it to a datetime
-        date = datetime.date(2018, 1, 1)
-        return datetime.datetime.combine(
-            date, self.work_end_at
-        ) - datetime.datetime.combine(date, self.work_start_at)
+        return len(self.get_all_slots()) * self.stylist.service_time_gap
 
-    def get_all_slots(self, service_time_gap: datetime.timedelta,
-                      current_time: Optional[datetime.time] = None) -> List[
+    def get_all_slots(self, current_time: Optional[datetime.time] = None) -> List[
             TimeSlot]:
         available_slots: List[TimeSlot] = []
         if not self.is_available:
@@ -123,7 +118,7 @@ class StylistAvailableWeekDay(models.Model):
         start_at = self.work_start_at
         while start_at < self.work_end_at:
             slot_end_time = (datetime.datetime.combine(
-                datetime.date.today(), start_at) + service_time_gap).time()
+                datetime.date.today(), start_at) + self.stylist.service_time_gap).time()
             if not current_time or (current_time and start_at > current_time):
                 available_slots.append((start_at, slot_end_time))
             start_at = slot_end_time
@@ -223,10 +218,9 @@ class Stylist(models.Model):
         if date < self.get_current_now().date():
             return available_slots
         if date == self.get_current_now().date():
-            slots = shift.get_all_slots(self.service_time_gap,
-                                        self.get_current_now().time())
+            slots = shift.get_all_slots(current_time=self.get_current_now().time())
         else:
-            slots = shift.get_all_slots(self.service_time_gap, None)
+            slots = shift.get_all_slots()
         for slot in slots:
             available_slots.append(
                 TimeSlotAvailability(

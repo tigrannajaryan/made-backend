@@ -2,10 +2,11 @@ import datetime
 
 from annoying.functions import get_object_or_None
 from dateutil.parser import parse
+from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.geos import Point
+from django.contrib.gis.measure import D
 
-from django.db import transaction
-from django.db.models import F, Q, QuerySet, Value
-from django.db.models.functions import Concat
+from django.db import models, transaction
 
 from rest_framework import generics, permissions, status, views
 from rest_framework.exceptions import ValidationError
@@ -21,20 +22,22 @@ from appointment.preview import (
     build_appointment_preview_dict,
 )
 from appointment.types import AppointmentStatus
-from client.models import ClientOfStylist
+from client.models import Client, ClientOfStylist
 from core.utils import (
     post_or_get,
 )
 from salon.models import ServiceTemplateSet, Stylist, StylistService
-from .constants import ErrorMessages, MAX_APPOINTMENTS_PER_REQUEST
+from .constants import ErrorMessages, MAX_APPOINTMENTS_PER_REQUEST, NEARBY_CLIENTS_ACCURACY
 from .serializers import (
     AppointmentPreviewRequestSerializer,
     AppointmentPreviewResponseSerializer,
     AppointmentSerializer,
     AppointmentUpdateSerializer,
-    ClientOfStylistSerializer,
+    ClientDetailsSerializer,
+    ClientSerializer,
     InvitationSerializer,
     MaximumDiscountSerializer,
+    NearbyClientSerializer,
     ServiceTemplateSetDetailsSerializer,
     ServiceTemplateSetListSerializer,
     StylistAvailableWeekDayListSerializer,
@@ -272,7 +275,8 @@ class StylistAppointmentPreviewView(views.APIView):
             appointment: Appointment = stylist.appointments.get(
                 uuid=request.data['appointment_uuid'])
         except Appointment.DoesNotExist:
-            raise ValidationError({'detail': ErrorMessages.ERR_INVALID_APPOINTMENT_UUID})
+            raise ValidationError(
+                {'non_field_errors': [ErrorMessages.ERR_INVALID_APPOINTMENT_UUID]})
         serializer = AppointmentPreviewRequestSerializer(
             data=request.data, context={'stylist': stylist,
                                         'appointment': appointment, 'force_start': True}
@@ -376,41 +380,6 @@ class StylistSettingsRetrieveView(generics.RetrieveAPIView):
         return self.request.user.stylist
 
 
-class ClientSearchView(views.APIView):
-    permission_classes = [StylistPermission, permissions.IsAuthenticated]
-    serializer_class = ClientOfStylistSerializer
-
-    def get(self, request, *args, **kwargs):
-        query: str = post_or_get(self.request, 'query', '').strip()
-        return Response({'clients': ClientOfStylistSerializer(
-            self._search_clients(self.get_queryset(), query=query), many=True
-        ).data})
-
-    @staticmethod
-    def _search_clients(queryset: QuerySet, query: str) -> QuerySet:
-        if len(query) and len(query) < 3:
-            return ClientOfStylist.objects.none()
-
-        stylists_clients = queryset.annotate(
-            full_name=Concat(F('first_name'), Value(' '), F('last_name')),
-            reverse_full_name=Concat(F('last_name'), Value(' '), F('first_name')),
-        ).distinct('id')
-
-        name_phone_query = (
-            Q(full_name__icontains=query) |
-            Q(phone__icontains=query) |
-            Q(reverse_full_name__icontains=query)
-        )
-
-        return stylists_clients.filter(
-            name_phone_query
-        )
-
-    def get_queryset(self):
-        stylist: Stylist = self.request.user.stylist
-        return stylist.clients_of_stylist.all()
-
-
 class StylistServicePricingView(views.APIView):
     permission_classes = [StylistPermission, permissions.IsAuthenticated]
 
@@ -439,3 +408,74 @@ class StylistServicePricingView(views.APIView):
 
     def get_queryset(self):
         return self.request.user.stylist.services.all()
+
+
+class ClientListView(generics.ListAPIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+    serializer_class = ClientSerializer
+
+    def get(self, request, *args, **kwargs):
+        serializer = ClientSerializer(self.get_queryset(),
+                                      many=True, context=self.get_serializer_context())
+        response_dict = {
+            'clients': serializer.data
+        }
+        return Response(response_dict, status=status.HTTP_200_OK)
+
+    def get_queryset(self):
+        stylist: Stylist = self.request.user.stylist
+        queryset = Client.objects.filter(preferred_stylists__stylist=stylist)
+        return queryset
+
+    def get_serializer_context(self):
+        return {'stylist': self.request.user.stylist}
+
+
+class ClientView(generics.RetrieveAPIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+    serializer_class = ClientDetailsSerializer
+
+    lookup_field = 'uuid'
+    lookup_url_kwarg = 'client_uuid'
+
+    def get_queryset(self):
+        stylist: Stylist = self.request.user.stylist
+        queryset = Client.objects.filter(preferred_stylists__stylist=stylist)
+        return queryset
+
+    def get_serializer_context(self):
+        return {'stylist': self.request.user.stylist}
+
+
+class NearbyClientsView(views.APIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        serializer = NearbyClientSerializer(self.get_queryset(), many=True)
+        response_dict = {
+            'clients': serializer.data
+        }
+        return Response(response_dict, status=status.HTTP_200_OK)
+
+    def get_queryset(self):
+        location = self.request.user.stylist.salon.location
+        if location:
+            return NearbyClientsView._search_clients(
+                location=location, accuracy=NEARBY_CLIENTS_ACCURACY)
+        else:
+            raise ValidationError(
+                {'non_field_errors': [ErrorMessages.ERR_STYLIST_LOCATION_UNAVAILABLE]})
+
+    @staticmethod
+    def _search_clients(location: Point, accuracy: int) -> models.QuerySet:
+        queryset = Client.objects.all()
+
+        nearby_clients = NearbyClientsView._get_nearby_clients(queryset, location, accuracy)
+
+        return nearby_clients.order_by('distance')[:1000]
+
+    @staticmethod
+    def _get_nearby_clients(queryset: models.QuerySet,
+                            location: Point, accuracy: int) -> models.QuerySet:
+        return queryset.filter(location__distance_lte=(
+            location, D(m=accuracy))).annotate(distance=Distance('location', location))

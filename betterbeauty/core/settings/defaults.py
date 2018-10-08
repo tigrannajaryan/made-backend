@@ -10,6 +10,12 @@ PATH = Path(__file__).parent
 ROOT_PATH = PATH.parent.parent
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# a file on AWS instance that contains string with commit id representing
+# current release
+
+COMMIT_ID_FILE_PATH = Path(ROOT_PATH.parent / 'meta' / 'commit_id.txt')
+
+
 LOGS_PATH = ROOT_PATH
 LOG_MAX_FILESIZE = 10485760
 

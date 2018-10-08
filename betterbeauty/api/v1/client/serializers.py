@@ -1,5 +1,4 @@
 import datetime
-import decimal
 import uuid
 from decimal import Decimal
 from math import trunc
@@ -107,6 +106,9 @@ class PreferredStylistSerializer(FormattedErrorMessageMixin, serializers.ModelSe
     instagram_url = serializers.CharField(
         source="stylist.instagram_url", read_only=True
     )
+    website_url = serializers.CharField(
+        source="stylist.website_url", read_only=True
+    )
     salon_address = serializers.CharField(source='stylist.salon.address', allow_null=True)
     profile_photo_url = serializers.CharField(read_only=True,
                                               source='stylist.get_profile_photo_url')
@@ -117,7 +119,8 @@ class PreferredStylistSerializer(FormattedErrorMessageMixin, serializers.ModelSe
     class Meta:
         model = PreferredStylist
         fields = ['uuid', 'salon_name', 'salon_address', 'profile_photo_url',
-                  'first_name', 'last_name', 'phone', 'preference_uuid', 'instagram_url']
+                  'first_name', 'last_name', 'phone', 'preference_uuid', 'instagram_url',
+                  'website_url']
 
 
 class ClientPreferredStylistSerializer(serializers.ModelSerializer):
@@ -377,7 +380,6 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
 
     grand_total = serializers.DecimalField(
         max_digits=4, decimal_places=0, coerce_to_string=False, read_only=True,
-        rounding=decimal.ROUND_UP
     )
     tax_percentage = serializers.DecimalField(
         max_digits=5, decimal_places=3, coerce_to_string=False, read_only=True
@@ -624,7 +626,6 @@ class AppointmentPreviewResponseSerializer(serializers.Serializer):
     duration_minutes = DurationMinuteField(source='duration', read_only=True)
     grand_total = serializers.DecimalField(
         max_digits=4, decimal_places=0, coerce_to_string=False, read_only=True,
-        rounding=decimal.ROUND_UP
     )
     total_client_price_before_tax = serializers.DecimalField(
         max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True

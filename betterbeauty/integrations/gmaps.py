@@ -32,14 +32,19 @@ class GeoCode:
             return True
         return False
 
-    def geo_code(self):
+    def geo_code(self, country=None):
         if not settings.IS_GEOCODING_ENABLED:
             return None
         if not self.is_geocodable_string():
             return None
         gmaps = googlemaps.Client(key=settings.GOOGLE_GEOCODING_API_KEY)
-        geocode_results = gmaps.geocode(
-            address=self.str_to_geocode)
+        if country:
+            logger.info("Geocoding in country {0}".format(country))
+            geocode_results = gmaps.geocode(
+                address=self.str_to_geocode, components={'country': country})
+        else:
+            geocode_results = gmaps.geocode(
+                address=self.str_to_geocode)
         logger.info("Geocoding result: {0}".format(json.dumps(geocode_results)))
         if len(geocode_results) != 1:
             return None

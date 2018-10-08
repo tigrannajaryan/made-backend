@@ -1,8 +1,10 @@
 from django.conf.urls import url
 
 from .views import (
-    ClientSearchView,
+    ClientListView,
+    ClientView,
     InvitationView,
+    NearbyClientsView,
     ServiceTemplateSetDetailsView,
     ServiceTemplateSetListView,
     StylistAppointmentListCreateView,
@@ -43,5 +45,7 @@ urlpatterns = [
     url('^appointments/(?P<appointment_uuid>[0-9a-f\-]+)$',
         StylistAppointmentRetrieveUpdateCancelView.as_view(), name='appointment'),
     url('^invitations$', InvitationView.as_view(), name='invitation'),
-    url('^search-clients$', ClientSearchView.as_view(), name='search-client'),
+    url('^clients$', ClientListView.as_view(), name='my-clients'),
+    url('^clients/(?P<client_uuid>[0-9a-f\-]+)$', ClientView.as_view(), name='client'),
+    url('^nearby-clients$', NearbyClientsView.as_view(), name='nearby-client'),
 ]
