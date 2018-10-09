@@ -4,6 +4,7 @@ from math import trunc
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from django.db import transaction
+from django.utils import timezone
 
 from appointment.constants import AppointmentStatus
 from appointment.models import Appointment
@@ -121,9 +122,10 @@ def get_last_appointment_for_client(
 ) -> Optional[Appointment]:
     """Return last checked out appointment between stylist and client"""
     last_appointment: Optional[Appointment] = Appointment.objects.filter(
-        status__in=[AppointmentStatus.CHECKED_OUT, AppointmentStatus.NEW],
+        status__in=[AppointmentStatus.CHECKED_OUT],
         stylist=stylist,
-        client__client=client
+        client__client=client,
+        datetime_start_at__lte=timezone.now()
     ).order_by('datetime_start_at').last()
     return last_appointment
 
