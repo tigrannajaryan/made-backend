@@ -2542,7 +2542,8 @@ curl -X POST \
             "salon_name": "Jane Salon",
             "salon_address": "111"
         }
-    ]
+    ],
+    "more_results_available": false
 }
 ```
 

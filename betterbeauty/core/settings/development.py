@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 from core.constants import EnvLevel
 
@@ -19,6 +20,13 @@ DATABASE_URL = (
 DATABASES = {
     'default': parse_database_url(DATABASE_URL),
 }
+
+if DJANGO_SILK_ENABLED:  # noqa
+    MIDDLEWARE: List = [
+        'silk.middleware.SilkyMiddleware',
+    ] + MIDDLEWARE  # noqa
+
+    INSTALLED_APPS += ['silk', ]  # noqa
 
 DEBUG = True
 
