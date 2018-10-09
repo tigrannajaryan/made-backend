@@ -43,6 +43,7 @@
     - **Clients**
       - [Client List](#client-list)
       - [Client details](#client-details)
+      - [Client pricing calendar](#client-pricing-calendar)
       - [Nearby Clients](#nearby-clients)
     - **Screens**
       - [Home](#user-content-home-screen)
@@ -1373,7 +1374,7 @@ curl -X POST \
 Returns prices for given service for given client in the timeframe of the
 next 28 days.
 
-**POST /api/v1/services/pricing**
+**POST /api/v1/stylist/services/pricing**
 
 - **service_uuid** (required) - UUID of a service to get pricing for (must
 be one of authorized stylist's services)
@@ -2221,6 +2222,58 @@ Returns in case if there's no client of stylist with such UUID
     "code":"err_not_found",
     "field_errors":{},
     "non_field_errors":[]
+}
+```
+
+
+## Client pricing calendar
+Returns list of prices for the next 28 days for given client and selected
+list of services. List of services to generate prices for can be explicitly
+provided. If it is omitted - API will try to decide which services to use
+by applying the following rules:
+1. last service client booked. If they haven’t booked yet, then
+2. service most often booked for that stylist. If stylist hasn’t had
+   anything booked yet, then
+3. first service on the stylist list of services
+
+**POST /api/v1/stylist/clients/pricing**
+
+```
+curl -X POST http://apiserver/api/v1/stylist/clients/pricing \
+  -H 'Authorization: Token jwt_token' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "client_uuid": "client_uuid",
+  "service_uuids": [
+    "service1_uuid"
+  ]
+}'
+```
+
+**Response 200 OK**
+```
+{
+    "client_uuid": "client_uuid",
+    "service_uuids": [
+        "service1_uuid"
+    ],
+    "prices": [
+        {
+            "date": "2018-10-01",
+            "discount_type": null,
+            "price": 10,
+            "is_fully_booked": true,
+            "is_working_day": true
+        },
+        .....
+        {
+            "date": "2018-10-10",
+            "discount_type": "revisit_within_2_weeks",
+            "price": 8,
+            "is_fully_booked": true,
+            "is_working_day": true
+        }
+    ]
 }
 ```
 

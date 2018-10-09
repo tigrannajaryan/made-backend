@@ -1377,6 +1377,18 @@ class StylistServicePricingRequestSerializer(
     service_uuid = serializers.UUIDField()
     client_uuid = serializers.UUIDField(required=False, allow_null=True)
 
+    # TODO: move to AppointmentValidationMixin as soon as we deprecate ClientOfStylist
+    def validate_client_uuid(self, client_uuid: Optional[str]):
+        context: Dict = getattr(self, 'context', {})
+        stylist: Stylist = context['stylist']
+        if client_uuid:
+            if not stylist.get_preferred_clients().filter(
+                uuid=client_uuid
+            ).exists():
+                raise serializers.ValidationError(
+                    appointment_errors.ERR_CLIENT_DOES_NOT_EXIST
+                )
+
 
 class StylistServicePricingSerializer(serializers.ModelSerializer):
     service_uuid = serializers.UUIDField(source='uuid', read_only=True)
@@ -1388,9 +1400,10 @@ class StylistServicePricingSerializer(serializers.ModelSerializer):
         fields = ['service_uuid', 'service_name', 'prices', ]
 
     def get_prices(self, stylist_service):
-        client_of_stylist: Optional[ClientOfStylist] = self.context['client_of_stylist']
+        client: Optional[Client] = self.context['client']
         prices_and_dates: Iterable[PriceOnDate] = generate_prices_for_stylist_service(
-            [stylist_service, ], client_of_stylist, exclude_fully_booked=False,
+            [stylist_service, ], client,
+            exclude_fully_booked=False,
             exclude_unavailable_days=False
         )
         return StylistServicePriceSerializer(
@@ -1403,3 +1416,33 @@ class StylistServicePricingSerializer(serializers.ModelSerializer):
                            }, prices_and_dates),
             many=True
         ).data
+
+
+class ClientServicePricingSerializer(FormattedErrorMessageMixin, serializers.Serializer):
+    service_uuids = serializers.ListField(
+        child=serializers.UUIDField(), required=False, allow_empty=True, allow_null=True
+    )
+    client_uuid = serializers.UUIDField()
+    prices = StylistServicePriceSerializer(many=True, read_only=True)
+
+    def validate_client_uuid(self, client_uuid: Optional[str]):
+        context: Dict = getattr(self, 'context', {})
+        stylist: Stylist = context['stylist']
+        if not stylist.get_preferred_clients().filter(
+                uuid=client_uuid
+        ).exists():
+            raise serializers.ValidationError(
+                appointment_errors.ERR_CLIENT_DOES_NOT_EXIST
+            )
+        return client_uuid
+
+    def validate_service_uuids(self, service_uuids: Optional[List[str]]):
+        context: Dict = self.context
+        stylist: Stylist = context['stylist']
+        if service_uuids is not None:
+            for service_uuid in service_uuids:
+                if not stylist.services.filter(uuid=service_uuid).exists():
+                    raise serializers.ValidationError(
+                        appointment_errors.ERR_SERVICE_DOES_NOT_EXIST
+                    )
+        return service_uuids

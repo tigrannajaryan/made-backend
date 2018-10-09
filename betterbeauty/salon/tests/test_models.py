@@ -5,12 +5,13 @@ import pytest
 import pytz
 
 from dateutil import parser
+from django.utils import timezone
 from django_dynamic_fixture import G
 from freezegun import freeze_time
 
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
-from client.models import ClientOfStylist
+from client.models import Client, ClientOfStylist, PreferredStylist
 from core.types import Weekday
 from salon.models import (
     Stylist,
@@ -210,6 +211,22 @@ class TestStylist(object):
         assert(appointment.status_history.latest('updated_at').updated_by == stylist_data.user)
         assert(appointment.status_history.latest('updated_at').updated_at ==
                stylist_data.get_current_now())
+
+    @pytest.mark.django_db
+    def test_get_preferred_clients(self):
+        stylist: Stylist = G(Stylist)
+        our_client = G(Client)
+        # foreign client
+        G(Client)
+        assert(stylist.get_preferred_clients().count() == 0)
+        preferred_stylist: PreferredStylist = G(
+            PreferredStylist, client=our_client, stylist=stylist
+        )
+        assert(stylist.get_preferred_clients().count() == 1)
+        assert(stylist.get_preferred_clients()[0] == our_client)
+        preferred_stylist.deleted_at = timezone.now()
+        preferred_stylist.save(update_fields=['deleted_at'])
+        assert (stylist.get_preferred_clients().count() == 0)
 
 
 class TestStylistService(object):

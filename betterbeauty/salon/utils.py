@@ -3,11 +3,12 @@ from itertools import compress
 from math import trunc
 from typing import Dict, Iterable, List, Optional, Tuple
 
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from appointment.constants import AppointmentStatus
-from appointment.models import Appointment
+from appointment.models import Appointment, AppointmentService
+from client.constants import END_OF_DAY_BUFFER_TIME_IN_MINUTES
 from client.models import Client, ClientOfStylist
 from core.constants import (
     DEFAULT_FIRST_TIME_BOOK_DISCOUNT_PERCENT,
@@ -28,7 +29,7 @@ from pricing import (
 )
 from pricing.constants import COMPLETELY_BOOKED_DEMAND, PRICE_BLOCK_SIZE
 from salon.models import Stylist, StylistAvailableWeekDay, StylistService
-from salon.types import DemandOnDate, PriceOnDate
+from salon.types import ClientPriceOnDate, DemandOnDate, PriceOnDate
 
 
 def get_weekday_available_times(stylist: Stylist) -> Dict[int, Tuple[datetime.timedelta, bool]]:
@@ -103,20 +104,6 @@ def generate_demand_list_for_stylist(
     return demand_list
 
 
-# TODO: we're going to need to delete this function
-# TODO: as soon as we remove client_of_stylist model
-def get_last_appointment_for_client_of_stylist(
-    stylist: Stylist, client_of_stylist: ClientOfStylist
-) -> Optional[Appointment]:
-    """Return last checked out appointment between stylist and client"""
-    last_appointment: Optional[Appointment] = Appointment.objects.filter(
-        status__in=[AppointmentStatus.CHECKED_OUT, AppointmentStatus.NEW],
-        stylist=stylist,
-        client=client_of_stylist
-    ).order_by('datetime_start_at').last()
-    return last_appointment
-
-
 def get_last_appointment_for_client(
     stylist: Stylist, client: Client
 ) -> Optional[Appointment]:
@@ -130,12 +117,12 @@ def get_last_appointment_for_client(
     return last_appointment
 
 
-def get_last_visit_date_for_client_of_stylist(
-        stylist: Stylist, client_of_stylist: ClientOfStylist
+def get_last_visit_date_for_client(
+        stylist: Stylist, client: Client
 ) -> Optional[datetime.date]:
-    """Return last checked out appointment date between stylist and client_of_stylist"""
-    last_appointment = get_last_appointment_for_client_of_stylist(
-        stylist=stylist, client_of_stylist=client_of_stylist
+    """Return last checked out appointment date between stylist and client"""
+    last_appointment = get_last_appointment_for_client(
+        stylist=stylist, client=client
     )
 
     if last_appointment:
@@ -182,7 +169,7 @@ def generate_discount_settings_for_stylist(
 
 def generate_prices_for_stylist_service(
         services: List[StylistService],
-        client: Optional[ClientOfStylist],
+        client: Optional[Client],
         exclude_fully_booked: bool=False,
         exclude_unavailable_days: bool=False
 ) -> Iterable[PriceOnDate]:
@@ -197,7 +184,7 @@ def generate_prices_for_stylist_service(
     """
     stylist = services[0].stylist
 
-    last_visit_date = get_last_visit_date_for_client_of_stylist(
+    last_visit_date = get_last_visit_date_for_client(
         stylist, client
     ) if client else None
 
@@ -232,13 +219,47 @@ def generate_prices_for_stylist_service(
     return prices_on_dates
 
 
+def generate_client_prices_for_stylist_services(
+        stylist: Stylist,
+        services: List[StylistService],
+        client: Optional[Client],
+        exclude_fully_booked: bool=False,
+        exclude_unavailable_days: bool=False
+) -> List[ClientPriceOnDate]:
+    prices_and_dates = generate_prices_for_stylist_service(
+        services, client, exclude_fully_booked, exclude_unavailable_days
+    )
+    client_prices_on_dates: List[ClientPriceOnDate] = []
+    for obj in prices_and_dates:
+        availability_on_day = stylist.available_days.filter(
+            weekday=obj.date.isoweekday(),
+            is_available=True).last() if obj.date == stylist.get_current_now().date() else None
+        stylist_eod = datetime.datetime.combine(date=obj.date,
+                                                time=availability_on_day.work_end_at,
+                                                tzinfo=stylist.salon.timezone
+                                                ) if availability_on_day else None
+        if not stylist_eod or stylist.get_current_now() < (
+                stylist_eod - stylist.service_time_gap -
+                datetime.timedelta(minutes=END_OF_DAY_BUFFER_TIME_IN_MINUTES)):
+            client_prices_on_dates.append(ClientPriceOnDate(
+                date=obj.date,
+                price=trunc(obj.calculated_price.price),
+                is_fully_booked=obj.is_fully_booked,
+                is_working_day=obj.is_working_day,
+                discount_type=obj.calculated_price.applied_discount,
+
+            ))
+    return client_prices_on_dates
+
+
 def calculate_price_and_discount_for_client_on_date(
         service: StylistService, client: Optional[ClientOfStylist], date: datetime.date
 ) -> CalculatedPrice:
 
     price_on_dates: Iterable[PriceOnDate] = (
         generate_prices_for_stylist_service(
-            services=[service, ], client=client, exclude_fully_booked=False,
+            services=[service, ], client=client.client if client else None,
+            exclude_fully_booked=False,
             exclude_unavailable_days=False
         ))
 
@@ -288,3 +309,19 @@ def create_stylist_profile_for_user(user: User, **kwargs) -> Stylist:
             user.role = current_roles
             user.save(update_fields=['role', ])
         return stylist
+
+
+def get_most_popular_service(stylist: Stylist) -> Optional[StylistService]:
+    """Return service which has max amount of inclusions to appointments"""
+    appt_service_by_popularity = AppointmentService.objects.filter(
+        appointment__stylist=stylist
+    ).values('service_uuid').annotate(
+        num_inclusions=models.Count('service_uuid')).order_by('-num_inclusions')
+    # service with such UUID may no longer exist, so we need to find
+    # first which still has corresponding stylist service
+    for service in appt_service_by_popularity:
+        if stylist.services.filter(
+                uuid=service['service_uuid'], deleted_at__isnull=True
+        ).exists():
+            return stylist.services.get(uuid=service['service_uuid'])
+    return None

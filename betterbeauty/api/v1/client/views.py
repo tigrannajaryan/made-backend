@@ -145,13 +145,12 @@ class StylistServicePriceView(views.APIView):
             # client_of_stylist can as well be None here, which is OK; in such a case
             # prices will be returned without discounts
         stylist = services[0].stylist
-        client_of_stylist = client.client_of_stylists.filter(stylist=stylist).last()
 
         return Response(
             ServicePricingSerializer({
                 'service_uuids': service_uuids,
                 'stylist_uuid': stylist.uuid,
-            }, context={'client_of_stylist': client_of_stylist,
+            }, context={'client': client,
                         'services': services, 'stylist': stylist}).data
         )
 

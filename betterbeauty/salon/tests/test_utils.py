@@ -1,18 +1,21 @@
 import datetime
+import uuid
 
 import pytest
 import pytz
+from django.utils import timezone
 from django_dynamic_fixture import G
 from freezegun import freeze_time
 
 
-from appointment.models import Appointment
+from appointment.models import Appointment, AppointmentService
 from core.models import User
 from core.types import Weekday
-from ..models import Salon
+from ..models import Salon, Stylist, StylistService
 from ..utils import (
     create_stylist_profile_for_user,
     generate_demand_list_for_stylist,
+    get_most_popular_service
 )
 
 
@@ -58,3 +61,50 @@ def test_generate_demand_list_for_stylist():
     assert(demand_list[2].demand == 0)
     assert(demand_list[3].demand == 1)
     assert(demand_list[4].demand == 1)
+
+
+@pytest.mark.django_db
+def test_get_most_popular_service():
+    stylist = G(Stylist)
+    foreign_stylist = G(Stylist)
+    existing_service_1 = G(StylistService, stylist=stylist, name='existing_1')
+    existing_service_2 = G(StylistService, stylist=stylist, name='existing 2')
+    deleted_service = G(
+        StylistService, stylist=stylist, name='deleted', deleted_at=timezone.now()
+    )
+    foreign_service = G(StylistService, name='foreign')
+    nowhere_service_uuid = uuid.uuid4()
+
+    our_appointments = [Appointment.objects.create(
+        stylist=stylist, datetime_start_at=timezone.now(), created_by=stylist.user
+    ) for _ in range(0, 4)]
+    # check correct response without services at all
+    assert(get_most_popular_service(stylist) is None)
+    for i in range(0, 10):
+        other_appointment = Appointment.objects.create(
+            stylist=foreign_stylist, datetime_start_at=timezone.now(),
+            created_by=stylist.user
+        )
+        G(
+            AppointmentService,
+            service_uuid=foreign_service.uuid, appointment=other_appointment
+        )
+    # check that popularity is not effected by other stylist's services
+    assert (get_most_popular_service(stylist) is None)
+    for i in range(0, 4):
+        G(AppointmentService, appointment=our_appointments[i], service_uuid=nowhere_service_uuid)
+        G(AppointmentService, appointment=our_appointments[i], service_uuid=deleted_service.uuid)
+    # check that deleted services are not included
+    assert (get_most_popular_service(stylist) is None)
+    for i in range(0, 2):
+        G(
+            AppointmentService,
+            appointment=our_appointments[i], service_uuid=existing_service_1.uuid
+        )
+    assert (get_most_popular_service(stylist) == existing_service_1)
+    for i in range(0, 3):
+        G(
+            AppointmentService,
+            appointment=our_appointments[i], service_uuid=existing_service_2.uuid
+        )
+    assert (get_most_popular_service(stylist) == existing_service_2)

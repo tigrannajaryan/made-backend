@@ -1,8 +1,8 @@
 import datetime
-from typing import NamedTuple, Tuple
+from typing import NamedTuple, Optional, Tuple
 
 from core.types import StrEnum
-from pricing import CalculatedPrice
+from pricing import CalculatedPrice, DiscountType
 
 
 class InvitationStatus(StrEnum):
@@ -21,6 +21,14 @@ class PriceOnDate(NamedTuple):
     calculated_price: CalculatedPrice
     is_fully_booked: bool
     is_working_day: bool
+
+
+class ClientPriceOnDate(NamedTuple):
+    date: datetime.date
+    is_fully_booked: bool
+    is_working_day: bool
+    price: int
+    discount_type: Optional[DiscountType]
 
 
 class TimeSlotAvailability(object):

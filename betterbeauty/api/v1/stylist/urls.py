@@ -2,6 +2,7 @@ from django.conf.urls import url
 
 from .views import (
     ClientListView,
+    ClientPricingView,
     ClientView,
     InvitationView,
     NearbyClientsView,
@@ -47,5 +48,6 @@ urlpatterns = [
     url('^invitations$', InvitationView.as_view(), name='invitation'),
     url('^clients$', ClientListView.as_view(), name='my-clients'),
     url('^clients/(?P<client_uuid>[0-9a-f\-]+)$', ClientView.as_view(), name='client'),
+    url('^clients/pricing$', ClientPricingView.as_view(), name='client-pricing'),
     url('^nearby-clients$', NearbyClientsView.as_view(), name='nearby-client'),
 ]
