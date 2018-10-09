@@ -43,6 +43,7 @@
     - **Clients**
       - [Client List](#client-list)
       - [Client details](#client-details)
+      - [Nearby Clients](#nearby-clients)
     - **Screens**
       - [Home](#user-content-home-screen)
       - [Today](#user-content-today-screen)
@@ -2154,62 +2155,31 @@ curl -X POST \
 
 
 ```json
-[
-    {
-        "uuid": "7906db39-f688-4d5c-957f-0b7a3dec4fed",
-        "first_name": "Jane4",
-        "last_name": "McBob",
-        "phone": "+11234567890",
-        "city": "Schenectady",
-        "state": "NY",
-        "photo": "profile_photo_url"
-    },
-    {
-        "uuid": "529f8021-672f-4b17-9edd-35f2efbefe74",
-        "first_name": "Mark",
-        "last_name": "Zuckerberg",
-        "phone": "+19876543210",
-        "city": "Redmond",
-        "state": "WA",
-        "photo": null
-    }
-]
-```
-
-## Nearby Clients
-
-**GET /api/v1/stylist/nearby-clients**
+{
+    "clients":  [
+        {
+            "uuid": "7906db39-f688-4d5c-957f-0b7a3dec4fed",
+            "first_name": "Jane4",
+            "last_name": "McBob",
+            "phone": "+11234567890",
+            "city": "Schenectady",
+            "state": "NY",
+            "photo": "profile_photo_url"
+        },
+        {
+            "uuid": "529f8021-672f-4b17-9edd-35f2efbefe74",
+            "first_name": "Mark",
+            "last_name": "Zuckerberg",
+            "phone": "+19876543210",
+            "city": "Redmond",
+            "state": "WA",
+            "photo": null
+        }
+    ]
+}
 
 ```
-curl -X GET \
-  apiserver/api/v1/stylist/nearby-clients \
-  -H 'Authorization: Token auth_token' \
-  -H 'Content-Type: application/json'
-```
 
-**Response 200 OK**
-```
-[
-    {
-        "uuid": "7906db39-f688-4d5c-957f-0b7a3dec4fed",
-        "first_name": "Jane4",
-        "last_name": "McBob",
-        "phone": "+11234567890",
-        "city": "Schenectady",
-        "state": "NY",
-        "photo": "profile_photo_url"
-    },
-    {
-        "uuid": "529f8021-672f-4b17-9edd-35f2efbefe74",
-        "first_name": "Mark",
-        "last_name": "Zuckerberg",
-        "phone": "+19876543210",
-        "city": "Redmond",
-        "state": "WA",
-        "photo": null
-    }
-]
-```
 
 ## Client details
 Returns details of a client along with date and services of client's
@@ -2253,6 +2223,40 @@ Returns in case if there's no client of stylist with such UUID
     "non_field_errors":[]
 }
 ```
+
+
+
+## Nearby Clients
+
+**GET /api/v1/stylist/nearby-clients**
+
+```
+curl -X GET \
+  apiserver/api/v1/stylist/nearby-clients \
+  -H 'Authorization: Token auth_token' \
+  -H 'Content-Type: application/json'
+```
+
+**Response 200 OK**
+```
+[
+    {
+        "first_name": "Jane4",
+        "last_name": "McBob",
+        "city": "Schenectady",
+        "state": "NY",
+        "photo": "profile_photo_url"
+    },
+    {
+        "first_name": "Mark",
+        "last_name": "Zuckerberg",
+        "city": "Redmond",
+        "state": "WA",
+        "photo": null
+    }
+]
+```
+
 
 # Files upload
 ## Image upload

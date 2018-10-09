@@ -37,6 +37,7 @@ from .serializers import (
     ClientSerializer,
     InvitationSerializer,
     MaximumDiscountSerializer,
+    NearbyClientSerializer,
     ServiceTemplateSetDetailsSerializer,
     ServiceTemplateSetListSerializer,
     StylistAvailableWeekDayListSerializer,
@@ -413,6 +414,14 @@ class ClientListView(generics.ListAPIView):
     permission_classes = [StylistPermission, permissions.IsAuthenticated]
     serializer_class = ClientSerializer
 
+    def get(self, request, *args, **kwargs):
+        serializer = ClientSerializer(self.get_queryset(),
+                                      many=True, context=self.get_serializer_context())
+        response_dict = {
+            'clients': serializer.data
+        }
+        return Response(response_dict, status=status.HTTP_200_OK)
+
     def get_queryset(self):
         stylist: Stylist = self.request.user.stylist
         queryset = Client.objects.filter(preferred_stylists__stylist=stylist)
@@ -442,7 +451,7 @@ class NearbyClientsView(views.APIView):
     permission_classes = [StylistPermission, permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        serializer = ClientSerializer(self.get_queryset(), many=True)
+        serializer = NearbyClientSerializer(self.get_queryset(), many=True)
         response_dict = {
             'clients': serializer.data
         }
