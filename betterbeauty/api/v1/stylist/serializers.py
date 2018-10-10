@@ -1422,18 +1422,22 @@ class ClientServicePricingSerializer(FormattedErrorMessageMixin, serializers.Ser
     service_uuids = serializers.ListField(
         child=serializers.UUIDField(), required=False, allow_empty=True, allow_null=True
     )
-    client_uuid = serializers.UUIDField()
+    client_uuid = serializers.UUIDField(allow_null=True, required=False)
     prices = StylistServicePriceSerializer(many=True, read_only=True)
+
+    class Meta:
+        fields = ['service_uuids', 'client_uuid', 'prices', ]
 
     def validate_client_uuid(self, client_uuid: Optional[str]):
         context: Dict = getattr(self, 'context', {})
         stylist: Stylist = context['stylist']
-        if not stylist.get_preferred_clients().filter(
-                uuid=client_uuid
-        ).exists():
-            raise serializers.ValidationError(
-                appointment_errors.ERR_CLIENT_DOES_NOT_EXIST
-            )
+        if client_uuid:
+            if not stylist.get_preferred_clients().filter(
+                    uuid=client_uuid
+            ).exists():
+                raise serializers.ValidationError(
+                    appointment_errors.ERR_CLIENT_DOES_NOT_EXIST
+                )
         return client_uuid
 
     def validate_service_uuids(self, service_uuids: Optional[List[str]]):
@@ -1446,3 +1450,10 @@ class ClientServicePricingSerializer(FormattedErrorMessageMixin, serializers.Ser
                         appointment_errors.ERR_SERVICE_DOES_NOT_EXIST
                     )
         return service_uuids
+
+    def to_internal_value(self, data):
+        data = super(ClientServicePricingSerializer, self).to_internal_value(data)
+        if 'client_uuid' not in data:
+            data = data.copy()
+            data['client_uuid'] = None
+        return data
