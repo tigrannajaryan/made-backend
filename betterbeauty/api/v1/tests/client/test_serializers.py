@@ -47,6 +47,7 @@ class TestAppointmentSerializer(object):
             stylist=stylist_data, duration=datetime.timedelta(minutes=30),
             regular_price=50
         )
+        G(PreferredStylist, stylist=stylist_data, client=client_data)
         stylist_data.available_days.filter(weekday=Weekday.THURSDAY).update(
             is_available=True,
             work_start_at=datetime.time(8, 0),
@@ -103,9 +104,6 @@ class TestAppointmentSerializer(object):
             ],
             'datetime_start_at': available_time.isoformat()
         }
-        G(
-            PreferredStylist, client=client_data, stylist=stylist_data
-        )
         serializer = AppointmentSerializer(
             data=data, context={'stylist': stylist_data, 'user': client_data.user})
         assert (serializer.is_valid(raise_exception=False) is True)
