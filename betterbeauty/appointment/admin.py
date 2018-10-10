@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib import admin
 
-from client.models import ClientOfStylist
+from client.models import Client
 from core.models import User
 from salon.models import Stylist
 
@@ -62,8 +62,8 @@ class AppointmentAdmin(admin.ModelAdmin):
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "stylist":
             kwargs["queryset"] = Stylist.objects.order_by('user__email')
-        if db_field.name == "client":
-            kwargs["queryset"] = ClientOfStylist.objects.order_by('first_name', 'last_name')
+        if db_field.name == "real_client":
+            kwargs["queryset"] = Client.objects.order_by('user__first_name', 'user__last_name')
         return super(AppointmentAdmin, self).formfield_for_foreignkey(db_field, request, **kwargs)
 
     readonly_fields = [

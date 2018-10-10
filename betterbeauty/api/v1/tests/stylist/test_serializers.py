@@ -38,7 +38,7 @@ from appointment.preview import (
     AppointmentServicePreview,
 )
 from appointment.types import AppointmentStatus
-from client.models import Client, ClientOfStylist, PreferredStylist
+from client.models import Client, PreferredStylist
 from core.choices import USER_ROLE
 from core.models import TemporaryFile, User
 from core.types import UserRole, Weekday
@@ -70,16 +70,12 @@ def client_details_data() -> Tuple[Stylist, Client]:
         city='Palo Alto', state='CA',
     )
     G(PreferredStylist, client=client, stylist=stylist)
-    client_of_stylist = G(
-        ClientOfStylist, stylist=stylist, client=client,
-        first_name=client_user.first_name, last_name=client_user.last_name,
-        phone=client.user.phone,
-    )
+
     service_1 = G(StylistService, stylist=stylist, name='our service 1')
     service_2 = G(StylistService, stylist=stylist, name='our service 2')
     # add an past-in-time appointment
     first_appoitment = G(
-        Appointment, stylist=stylist, client=client_of_stylist,
+        Appointment, stylist=stylist, real_client=client,
         created_by=client.user, status=AppointmentStatus.CHECKED_OUT,
         datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC)
     )
@@ -90,7 +86,7 @@ def client_details_data() -> Tuple[Stylist, Client]:
     )
 
     appointment_last = G(
-        Appointment, stylist=stylist, client=client_of_stylist,
+        Appointment, stylist=stylist, real_client=client,
         created_by=client.user, status=AppointmentStatus.CHECKED_OUT,
         datetime_start_at=datetime.datetime(2018, 1, 2, 0, 0, tzinfo=pytz.UTC)
     )
@@ -528,35 +524,35 @@ class TestStylistTodaySerializer(object):
     @pytest.mark.django_db
     def test_today_appointments(self, stylist_data: Stylist):
         appointments = stylist_appointments_data(stylist_data)
-        client = G(ClientOfStylist)
+        client = G(Client)
         appointments.update(
             {
                 'cancelled_by_client_past': G(
-                    Appointment, client=client, stylist=stylist_data,
+                    Appointment, real_client=client, stylist=stylist_data,
                     datetime_start_at=stylist_data.salon.timezone.localize(
                         datetime.datetime(2018, 5, 14, 10, 20)),
                     status=AppointmentStatus.CANCELLED_BY_CLIENT,
                 ),
                 'cancelled_by_client_future': G(
-                    Appointment, client=client, stylist=stylist_data,
+                    Appointment, real_client=client, stylist=stylist_data,
                     datetime_start_at=stylist_data.salon.timezone.localize(
                         datetime.datetime(2018, 5, 14, 18, 20)),
                     status=AppointmentStatus.CANCELLED_BY_CLIENT,
                 ),
                 'cancelled_by_stylist': G(
-                    Appointment, client=client, stylist=stylist_data,
+                    Appointment, real_client=client, stylist=stylist_data,
                     datetime_start_at=stylist_data.salon.timezone.localize(
                         datetime.datetime(2018, 5, 14, 15, 20)),
                     status=AppointmentStatus.CANCELLED_BY_STYLIST,
                 ),
                 'past_paid_appointment': G(
-                    Appointment, client=client, stylist=stylist_data,
+                    Appointment, real_client=client, stylist=stylist_data,
                     datetime_start_at=stylist_data.salon.timezone.localize(
                         datetime.datetime(2018, 5, 14, 10, 20)),
                     status=AppointmentStatus.CHECKED_OUT,
                 ),
                 'no_call_no_show': G(
-                    Appointment, client=client, stylist=stylist_data,
+                    Appointment, real_client=client, stylist=stylist_data,
                     datetime_start_at=stylist_data.salon.timezone.localize(
                         datetime.datetime(2018, 5, 14, 10, 20)),
                     status=AppointmentStatus.NO_SHOW,
@@ -757,9 +753,8 @@ class TestAppointmentSerializer(object):
 
         available_time: datetime.datetime = datetime.datetime(
             2018, 5, 17, 16, 00, tzinfo=pytz.utc)
-        client: ClientOfStylist = G(
-            ClientOfStylist,
-            phone='123456'
+        client: Client = G(
+            Client
         )
         data = {
             'client_uuid': client.uuid,
@@ -775,8 +770,7 @@ class TestAppointmentSerializer(object):
         assert(serializer.is_valid() is False)
         assert('client_uuid' in serializer.errors['field_errors'])
 
-        client.stylist = stylist_data
-        client.save(update_fields=['stylist', ])
+        G(PreferredStylist, client=client, stylist=stylist_data)
 
         serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
         assert (serializer.is_valid() is True)
@@ -786,9 +780,9 @@ class TestAppointmentSerializer(object):
             appointment.total_client_price_before_tax == 50
         )
         assert(appointment.duration == service.duration)
-        assert(appointment.client_first_name == client.first_name)
-        assert(appointment.client == client)
-        assert(appointment.client_phone == client.phone)
+        assert(appointment.client_first_name == client.user.first_name)
+        assert(appointment.real_client == client)
+        assert(appointment.client_phone == client.user.phone)
 
         assert (appointment.services.count() == 1)
         original_service: AppointmentService = appointment.services.first()
@@ -810,10 +804,8 @@ class TestAppointmentSerializer(object):
         appointment_start: datetime.datetime = stylist_data.with_salon_tz(
             datetime.datetime(2018, 5, 17, 15, 00)
         )
-        client = G(
-            ClientOfStylist,
-            stylist=stylist_data,
-        )
+        client = G(Client)
+        G(PreferredStylist, stylist=stylist_data, client=client)
 
         stylist_data.available_days.filter(weekday=Weekday.THURSDAY).delete()
         G(StylistAvailableWeekDay, weekday=Weekday.THURSDAY,
@@ -1193,7 +1185,8 @@ class TestAppointmentPreviewRequestSerializer(object):
         AppointmentValidationMixin, 'validate_datetime_start_at', lambda s, a: a)
     def test_preview_request_with_client(self):
         stylist = G(Stylist)
-        client = G(ClientOfStylist, stylist=stylist)
+        client = G(Client)
+        G(PreferredStylist, client=client, stylist=stylist)
         service = G(StylistService, stylist=stylist, duration=datetime.timedelta(60))
         data = {
             'datetime_start_at': datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
