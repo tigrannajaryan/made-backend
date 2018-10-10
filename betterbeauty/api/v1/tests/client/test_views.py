@@ -380,10 +380,9 @@ class TestAppointmentListCreateAPIView(object):
         our_appointment = G(
             Appointment,
             client=client_obj,
-            real_client=client_obj,
             created_by=user
         )
-        G(Appointment, client=foreign_client, real_client=foreign_client, created_by=user)
+        G(Appointment, client=foreign_client, created_by=user)
         response = client.get(
             appointments_url, HTTP_AUTHORIZATION=auth_token
         )
@@ -413,13 +412,13 @@ class TestAppointmentRetriveUpdateView(object):
         foreign_client = G(Client)
         our_appointment = G(
             Appointment,
-            client=client_obj, real_client=client_obj,
+            client=client_obj,
             datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
             stylist=stylist
         )
         foreign_appointment = G(
             Appointment,
-            client=foreign_client, real_client=foreign_client,
+            client=foreign_client,
             datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
             stylist=stylist
         )
@@ -588,8 +587,7 @@ class TestHomeAPIView(object):
 
         for a in appointments.values():
             a.client = client
-            a.real_client = client
-            a.save(update_fields=['client', 'real_client', ])
+            a.save(update_fields=['client', ])
         upcoming_appointments = HomeView.get_upcoming_appointments(client)
 
         assert (upcoming_appointments.count() == 4)
@@ -605,8 +603,7 @@ class TestHomeAPIView(object):
 
         for a in appointments.values():
             a.client = client
-            a.real_client = client
-            a.save(update_fields=['client', 'real_client', ])
+            a.save(update_fields=['client', ])
 
         last_appointment = HomeView.get_last_visited_object(client)
 
@@ -624,7 +621,6 @@ class TestHistoryAPIView(object):
                                                        updated_by=client.user)
         for a in appointments.values():
             a.client = client
-            a.real_client = client
-            a.save(update_fields=['client', 'real_client', ])
+            a.save(update_fields=['client', ])
         past_appointments = HistoryView.get_historical_appointments(client)
         assert (past_appointments.count() == 2)

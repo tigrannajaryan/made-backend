@@ -75,9 +75,8 @@ class Client(models.Model):
         :param q_filter: optional list of filters to apply
         :return: Resulting Appointment queryset
         """
-        # TODO: replace with `client` after cleanup
         queryset = apps.get_model('appointment', 'Appointment').objects.filter(
-            real_client=self
+            client=self
         )
 
         appointments = get_appointments_in_datetime_range(

@@ -762,10 +762,7 @@ class AppointmentSerializer(
 ):
     uuid = serializers.UUIDField(read_only=True)
 
-    # TODO: replace source to `client.uuid` after cleanup
-    client_uuid = serializers.UUIDField(
-        source='real_client.uuid', allow_null=True, required=False
-    )
+    client_uuid = serializers.UUIDField(source='client.uuid', allow_null=True, required=False)
     client_first_name = serializers.CharField(
         allow_null=True, allow_blank=True, required=False
     )
@@ -773,9 +770,8 @@ class AppointmentSerializer(
         allow_null=True, allow_blank=True, required=False
     )
     client_phone = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    # TODO: replace source to `client.get_profile_photo_url` after cleanup
     client_profile_photo_url = serializers.CharField(
-        read_only=True, source='real_client.get_profile_photo_url', default=None)
+        read_only=True, source='client.get_profile_photo_url', default=None)
     total_client_price_before_tax = serializers.DecimalField(
         max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
     )
@@ -834,8 +830,7 @@ class AppointmentSerializer(
         stylist: Stylist = self.context['stylist']
 
         client: Optional[Client] = None
-        # TODO: pop `client` after cleanup
-        client_data = validated_data.pop('real_client', {})
+        client_data = validated_data.pop('client', {})
         client_uuid = client_data.get('uuid', None)
 
         if client_uuid:
@@ -851,7 +846,6 @@ class AppointmentSerializer(
                 data['client_first_name'] = client.user.first_name
                 data['client_phone'] = client.user.phone
             data['client'] = client
-            data['real_client'] = client
 
             appointment_services = data.pop('services', [])
 
