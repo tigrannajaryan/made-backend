@@ -37,9 +37,6 @@ class Appointment(models.Model):
     client = models.ForeignKey(
         Client, related_name='appointments', null=True, on_delete=models.PROTECT
     )
-    real_client = models.ForeignKey(
-        Client, related_name='appointments_old', null=True, on_delete=models.PROTECT
-    )
     client_first_name = models.CharField(max_length=255, null=True, blank=True)
     client_last_name = models.CharField(max_length=255, null=True, blank=True)
     client_phone = models.CharField(max_length=255, null=True, blank=True)
