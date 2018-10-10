@@ -555,7 +555,31 @@ class TestAvailableTimeSlotView(object):
         response = client.post(availability_url, HTTP_AUTHORIZATION=auth_token, data={
             "date": "2018-05-15",
             "stylist_uuid": our_stylist.uuid})
+        # Return actual slots for tomorrow's date
         assert len(response.data['time_slots']) > 0
+
+        date = datetime.date(2018, 5, 16)
+        our_stylist.available_days.filter(weekday=date.isoweekday()).update(
+            work_start_at="09:00", work_end_at="11:01", is_available=True)
+        response = client.post(availability_url, HTTP_AUTHORIZATION=auth_token, data={
+            "date": "2018-05-16",
+            "stylist_uuid": our_stylist.uuid})
+        assert len(response.data['time_slots']) == 5
+
+        service = our_stylist.services.first()
+        data = {
+            'stylist_uuid': str(our_stylist.uuid),
+            'datetime_start_at': '2018-05-16T11:00:00+00:00',
+            'services': [
+                {'service_uuid': str(service.uuid)}
+            ]
+        }
+        appointments_url = reverse(
+            'api:v1:client:appointments'
+        )
+        response = client.post(appointments_url, HTTP_AUTHORIZATION=auth_token,
+                               data=json.dumps(data), content_type='application/json')
+        assert (status.is_success(response.status_code))
 
 
 class TestClientViewPermissions(object):

@@ -1418,8 +1418,18 @@ class TestClientServicePricingSerializer(object):
         }
         context = {'stylist': stylist}
         serializer = ClientServicePricingSerializer(data=data, context=context)
-        assert(not serializer.is_valid())
-        assert ('client_uuid' in serializer.errors['field_errors'])
+        assert(serializer.is_valid())
+        assert (serializer.validated_data['client_uuid'] is None)
+        data = {}
+        context = {'stylist': stylist}
+        serializer = ClientServicePricingSerializer(data=data, context=context)
+        assert (serializer.is_valid())
+        assert (serializer.validated_data['client_uuid'] is None)
+        data = {'client_uuid': None}
+        context = {'stylist': stylist}
+        serializer = ClientServicePricingSerializer(data=data, context=context)
+        assert (serializer.is_valid())
+        assert(serializer.validated_data['client_uuid'] is None)
         # test with foreign client
         client = G(Client)
         data['client_uuid'] = client.uuid
