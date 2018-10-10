@@ -547,6 +547,9 @@ class Invitation(models.Model):
     created_client = models.ForeignKey(
         ClientOfStylist, null=True, default=None, on_delete=models.CASCADE
     )
+    created_real_client = models.ForeignKey(
+        Client, null=True, default=None, on_delete=models.CASCADE
+    )
 
     class Meta:
         db_table = 'invitation'
