@@ -240,7 +240,7 @@ class Stylist(models.Model):
         for appointment in appointments:
             appointment_start_time = appointment.datetime_start_at
             for slot in available_slots:
-                if (slot.start - (self.service_time_gap / 2) <= appointment_start_time <= (
+                if (slot.start - (self.service_time_gap / 2) < appointment_start_time <= (
                         slot.start + (self.service_time_gap / 2))):
                     slot.is_booked = True
                     break

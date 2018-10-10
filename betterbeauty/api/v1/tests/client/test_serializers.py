@@ -133,11 +133,7 @@ class TestAppointmentSerializer(object):
         )
         serializer = AppointmentSerializer(
             data=data, context={'stylist': stylist_data, 'user': client_data.user})
-        assert (serializer.is_valid(raise_exception=False) is False)
-        assert (
-            {'code': appointment_errors.ERR_APPOINTMENT_INTERSECTION} in
-            serializer.errors['field_errors'].get('datetime_start_at')
-        )
+        assert (serializer.is_valid(raise_exception=False) is True)
         next_appointment.delete()
         # try inner appointment
         G(
