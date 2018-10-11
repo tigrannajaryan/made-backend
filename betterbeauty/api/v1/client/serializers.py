@@ -169,7 +169,7 @@ class AddPreferredClientsSerializer(FormattedErrorMessageMixin, serializers.Mode
             Invitation.objects.filter(phone=client.user.phone, stylist=stylist,
                                       status=InvitationStatus.INVITED).update(
                 status=InvitationStatus.ACCEPTED, accepted_at=timezone.now(),
-                created_real_client=client)
+                created_client=client, created_real_client=client)
             self.instance = preferred_stylist
             return self.instance
 
@@ -402,6 +402,7 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
                 stylist=stylist, client=client
             )
 
+            data['client'] = client
             data['real_client'] = client
             data['stylist'] = stylist
             data['created_by'] = client.user

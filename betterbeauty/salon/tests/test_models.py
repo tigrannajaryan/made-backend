@@ -23,7 +23,7 @@ from salon.models import (
 def stylist_appointments_data(stylist: Stylist) -> Dict[str, Appointment]:
     client = G(Client)
     current_appointment = G(
-        Appointment, real_client=client, stylist=stylist,
+        Appointment, client=client, real_client=client, stylist=stylist,
         datetime_start_at=stylist.salon.timezone.localize(
             datetime.datetime(2018, 5, 14, 13, 20)),
     )
@@ -35,31 +35,31 @@ def stylist_appointments_data(stylist: Stylist) -> Dict[str, Appointment]:
     )
 
     last_week_appointment = G(
-        Appointment, real_client=client, stylist=stylist,
+        Appointment, client=client, real_client=client, stylist=stylist,
         datetime_start_at=stylist.salon.timezone.localize(
             datetime.datetime(2018, 5, 7, 12, 20)),
     )
 
     next_week_appointment = G(
-        Appointment, real_client=client, stylist=stylist,
+        Appointment, client=client, real_client=client, stylist=stylist,
         datetime_start_at=stylist.salon.timezone.localize(
             datetime.datetime(2018, 5, 21, 12, 20)),
     )
 
     future_appointment = G(
-        Appointment, real_client=client, stylist=stylist,
+        Appointment, client=client, real_client=client, stylist=stylist,
         datetime_start_at=stylist.salon.timezone.localize(
             datetime.datetime(2018, 5, 14, 14, 20)),
     )
 
     late_night_appointment = G(
-        Appointment, real_client=client, stylist=stylist,
+        Appointment, client=client, real_client=client, stylist=stylist,
         datetime_start_at=stylist.salon.timezone.localize(
             datetime.datetime(2018, 5, 14, 23, 50)),
     )
 
     next_day_appointment = G(
-        Appointment, real_client=client, stylist=stylist,
+        Appointment, client=client, real_client=client, stylist=stylist,
         datetime_start_at=stylist.salon.timezone.localize(
             datetime.datetime(2018, 5, 15, 13, 20)),
     )

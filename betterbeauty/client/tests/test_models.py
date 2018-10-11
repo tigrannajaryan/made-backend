@@ -34,8 +34,9 @@ class TestClient(object):
         appointments: Dict[str, Appointment] = stylist_appointments_data(stylist_data)
 
         for a in appointments.values():
+            a.client = client
             a.real_client = client
-            a.save(update_fields=['real_client', ])
+            a.save(update_fields=['client', 'real_client', ])
 
         all_appointments = client.get_appointments_in_datetime_range()
 
@@ -91,6 +92,9 @@ class TestClient(object):
         ]))
 
         appointments['future_appointment'].real_client = G(
+            Client
+        )
+        appointments['future_appointment'].client = G(
             Client
         )
         appointments['future_appointment'].save()

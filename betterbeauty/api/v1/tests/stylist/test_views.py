@@ -336,7 +336,7 @@ class TestClientPricingView(object):
         assert (ClientPricingView._get_initial_service_uuids(
             stylist=stylist, client=client) == [popular_service.uuid, ])
         last_appointment = G(
-            Appointment, stylist=stylist, real_client=client,
+            Appointment, stylist=stylist, client=client, real_client=client,
             datetime_start_at=timezone.now() - datetime.timedelta(days=1),
             status=AppointmentStatus.CHECKED_OUT
         )

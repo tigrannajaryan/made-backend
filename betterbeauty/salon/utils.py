@@ -108,6 +108,7 @@ def get_last_appointment_for_client(
     stylist: Stylist, client: Client
 ) -> Optional[Appointment]:
     """Return last checked out appointment between stylist and client"""
+    # TODO: change `real_client` to `client` after cleanup
     last_appointment: Optional[Appointment] = Appointment.objects.filter(
         status__in=[AppointmentStatus.CHECKED_OUT],
         stylist=stylist,
