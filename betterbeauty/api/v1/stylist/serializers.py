@@ -847,6 +847,7 @@ class AppointmentSerializer(
                 data['client_first_name'] = client.first_name
                 data['client_phone'] = client.phone
             data['client'] = client
+            data['real_client'] = client.client if client else None
 
             appointment_services = data.pop('services', [])
 

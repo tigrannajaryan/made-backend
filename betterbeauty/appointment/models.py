@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from django.db import models, transaction
 
-from client.models import ClientOfStylist
+from client.models import Client, ClientOfStylist
 from core.constants import DEFAULT_CARD_FEE, DEFAULT_TAX_RATE
 from core.models import User
 from pricing import DISCOUNT_TYPE_CHOICES
@@ -36,6 +36,9 @@ class Appointment(models.Model):
     # client can be null in case if stylist adds an appointment for someone not in the system
     client = models.ForeignKey(
         ClientOfStylist, related_name='appointments', null=True, on_delete=models.PROTECT
+    )
+    real_client = models.ForeignKey(
+        Client, related_name='appointments', null=True, on_delete=models.PROTECT
     )
     client_first_name = models.CharField(max_length=255, null=True, blank=True)
     client_last_name = models.CharField(max_length=255, null=True, blank=True)
