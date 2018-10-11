@@ -61,6 +61,7 @@ deploy:
   on:
     repo: madebeauty/backend
     branch: develop
+    condition: $TRAVIS_COMMIT = $(git rev-parse HEAD)
 - provider: elasticbeanstalk
   access_key_id: "$AWS_ACCESS_KEY"
   secret_access_key:
