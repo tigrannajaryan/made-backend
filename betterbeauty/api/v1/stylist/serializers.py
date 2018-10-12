@@ -22,7 +22,7 @@ from appointment.constants import (
 )
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
-from client.models import Client, ClientOfStylist
+from client.models import Client
 from core.models import User
 from core.types import AppointmentPrices, Weekday
 from core.utils import (
@@ -682,17 +682,22 @@ class AppointmentValidationMixin(object):
             )
 
         # check if there are intersecting appointments
-        if stylist.get_appointments_in_datetime_range(
-            datetime_start_at, datetime_start_at + stylist.service_time_gap,
+        partially_intersecting_appointments = stylist.get_appointments_in_datetime_range(
+            datetime_start_at - (stylist.service_time_gap / 2),
+            datetime_start_at + (stylist.service_time_gap / 2),
             including_to=True,
             exclude_statuses=[
-                AppointmentStatus.CANCELLED_BY_STYLIST,
-                AppointmentStatus.CANCELLED_BY_CLIENT
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+                AppointmentStatus.CANCELLED_BY_STYLIST
             ]
-        ).exists():
-            raise serializers.ValidationError(
-                appointment_errors.ERR_APPOINTMENT_INTERSECTION
-            )
+        )
+        for appointment in partially_intersecting_appointments:
+            if (datetime_start_at - (stylist.service_time_gap / 2) < (
+                    appointment.datetime_start_at) <= (
+                    datetime_start_at + (stylist.service_time_gap / 2))):
+                raise serializers.ValidationError(
+                    appointment_errors.ERR_APPOINTMENT_INTERSECTION
+                )
         return datetime_start_at
 
     def validate_service_uuid(self, service_uuid: str):
@@ -724,9 +729,8 @@ class AppointmentValidationMixin(object):
         stylist: Stylist = context['stylist']
 
         if client_uuid:
-            if not ClientOfStylist.objects.filter(
-                    uuid=client_uuid,
-                    stylist=stylist,
+            if not stylist.get_preferred_clients().filter(
+                    uuid=client_uuid
             ).exists():
                 raise serializers.ValidationError(
                     appointment_errors.ERR_CLIENT_DOES_NOT_EXIST
@@ -772,7 +776,7 @@ class AppointmentSerializer(
     )
     client_phone = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     client_profile_photo_url = serializers.CharField(
-        read_only=True, source='client.client.get_profile_photo_url', default=None)
+        read_only=True, source='client.get_profile_photo_url', default=None)
     total_client_price_before_tax = serializers.DecimalField(
         max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
     )
@@ -830,12 +834,12 @@ class AppointmentSerializer(
         data = validated_data.copy()
         stylist: Stylist = self.context['stylist']
 
-        client: Optional[ClientOfStylist] = None
+        client: Optional[Client] = None
         client_data = validated_data.pop('client', {})
         client_uuid = client_data.get('uuid', None)
 
         if client_uuid:
-            client: ClientOfStylist = ClientOfStylist.objects.get(uuid=client_uuid)
+            client: Client = Client.objects.get(uuid=client_uuid)
 
         data['created_by'] = stylist.user
         data['stylist'] = stylist
@@ -843,9 +847,9 @@ class AppointmentSerializer(
         # create first AppointmentService
         with transaction.atomic():
             if client:
-                data['client_last_name'] = client.last_name
-                data['client_first_name'] = client.first_name
-                data['client_phone'] = client.phone
+                data['client_last_name'] = client.user.last_name
+                data['client_first_name'] = client.user.first_name
+                data['client_phone'] = client.user.phone
             data['client'] = client
 
             appointment_services = data.pop('services', [])
@@ -1191,7 +1195,7 @@ class StylistHomeSerializer(serializers.ModelSerializer):
         return None
 
     def get_followers(self, stylist: Stylist) -> Optional[int]:
-        return stylist.preferredstylist_set.filter(deleted_at=None).count()
+        return stylist.get_preferred_clients().count()
 
     def get_appointments(self, stylist: Stylist):
         query = self.context['query']
@@ -1299,19 +1303,6 @@ class ClientSerializer(serializers.ModelSerializer):
         fields = ['uuid', 'first_name', 'last_name', 'phone', 'city', 'state', 'photo']
 
 
-class ClientOfStylistSerializer(serializers.ModelSerializer):
-    first_name = serializers.CharField(read_only=True)
-    last_name = serializers.CharField(read_only=True)
-    phone = PhoneNumberField(read_only=True)
-    city = serializers.CharField(source='client.city', read_only=True)
-    state = serializers.CharField(source='client.state', read_only=True)
-    photo = serializers.CharField(source='client.get_profile_photo_url', read_only=True)
-
-    class Meta:
-        model = ClientOfStylist
-        fields = ['uuid', 'first_name', 'last_name', 'phone', 'city', 'state', 'photo']
-
-
 class ClientDetailsSerializer(ClientSerializer):
     last_visit_datetime = serializers.SerializerMethodField()
     last_services_names = serializers.SerializerMethodField()
@@ -1356,18 +1347,6 @@ class StylistServicePricingRequestSerializer(
 ):
     service_uuid = serializers.UUIDField()
     client_uuid = serializers.UUIDField(required=False, allow_null=True)
-
-    # TODO: move to AppointmentValidationMixin as soon as we deprecate ClientOfStylist
-    def validate_client_uuid(self, client_uuid: Optional[str]):
-        context: Dict = getattr(self, 'context', {})
-        stylist: Stylist = context['stylist']
-        if client_uuid:
-            if not stylist.get_preferred_clients().filter(
-                uuid=client_uuid
-            ).exists():
-                raise serializers.ValidationError(
-                    appointment_errors.ERR_CLIENT_DOES_NOT_EXIST
-                )
 
 
 class StylistServicePricingSerializer(serializers.ModelSerializer):

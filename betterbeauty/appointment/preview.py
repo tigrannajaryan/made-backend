@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404
 
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
-from client.models import ClientOfStylist
+from client.models import Client
 from core.constants import DEFAULT_CARD_FEE, DEFAULT_TAX_RATE
 from core.types import AppointmentPrices
 from core.utils import calculate_appointment_prices
@@ -53,11 +53,9 @@ class AppointmentPreviewResponse(NamedTuple):
 
 def build_appointment_preview_dict(
         stylist: Stylist,
-        client_of_stylist: Optional[ClientOfStylist],
+        client: Optional[Client],
         preview_request: AppointmentPreviewRequest
 ) -> AppointmentPreviewResponse:
-    if client_of_stylist is not None:
-        assert isinstance(client_of_stylist, ClientOfStylist)
     service_items: List[AppointmentServicePreview] = []
     appointment: Optional[Appointment] = None
     status = AppointmentStatus.NEW
@@ -102,8 +100,9 @@ def build_appointment_preview_dict(
             if not client_price:
                 client_price = service.regular_price
                 if not appointment:
+                    # FIXME: below
                     client_price = Decimal(calculate_price_and_discount_for_client_on_date(
-                        service=service, client=client_of_stylist,
+                        service=service, client=client,
                         date=preview_request.datetime_start_at.date()
                     ).price)
             service_item = AppointmentServicePreview(

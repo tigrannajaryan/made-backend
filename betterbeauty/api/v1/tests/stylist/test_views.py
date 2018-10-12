@@ -17,7 +17,7 @@ from api.v1.stylist.urls import urlpatterns
 from api.v1.stylist.views import ClientPricingView, StylistView
 from appointment.constants import AppointmentStatus, ErrorMessages as appointment_errors
 from appointment.models import Appointment, AppointmentService
-from client.models import Client, ClientOfStylist, PreferredStylist
+from client.models import Client, PreferredStylist
 from core.models import User
 from core.types import UserRole
 from salon.models import Salon, Stylist, StylistService
@@ -92,11 +92,10 @@ class TestStylistAppointmentListCreateView(object):
         # not in stylist's list, or with other stylists' services
         url = reverse('api:v1:stylist:appointments')
         foreign_client = G(Client)
-        foreign_client_of_stylist = G(ClientOfStylist, client=foreign_client)
         data = {
             'datetime_start_at': datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
             'services': [],
-            'client_uuid': foreign_client_of_stylist.uuid
+            'client_uuid': foreign_client.uuid
         }
         response = client.post(
             url, data=data, HTTP_AUTHORIZATION=auth_token
@@ -123,7 +122,6 @@ class TestStylistAppointmentPreviewView(object):
         stylist.save()
         url = reverse('api:v1:stylist:appointment-preview')
         foreign_client = G(Client)
-        foreign_client_of_stylist = G(ClientOfStylist, client=foreign_client)
         appointment = G(
             Appointment,
             duration=datetime.timedelta(0),
@@ -133,7 +131,7 @@ class TestStylistAppointmentPreviewView(object):
         data = {
             'datetime_start_at': datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
             'services': [],
-            'client_uuid': foreign_client_of_stylist.uuid,
+            'client_uuid': foreign_client.uuid,
             'appointment_uuid': appointment.uuid,
         }
         response = client.post(
@@ -337,9 +335,8 @@ class TestClientPricingView(object):
         G(AppointmentService, service_uuid=popular_service.uuid, appointment=appointment)
         assert (ClientPricingView._get_initial_service_uuids(
             stylist=stylist, client=client) == [popular_service.uuid, ])
-        client_of_stylist = G(ClientOfStylist, stylist=stylist, client=client)
         last_appointment = G(
-            Appointment, stylist=stylist, client=client_of_stylist,
+            Appointment, stylist=stylist, client=client,
             datetime_start_at=timezone.now() - datetime.timedelta(days=1),
             status=AppointmentStatus.CHECKED_OUT
         )

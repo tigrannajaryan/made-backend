@@ -16,7 +16,7 @@ from timezone_field import TimeZoneField
 
 from appointment.types import AppointmentStatus
 from appointment.utils import get_appointments_in_datetime_range
-from client.models import Client, ClientOfStylist, PreferredStylist
+from client.models import Client, PreferredStylist
 from core.choices import WEEKDAY
 from core.models import User
 from core.types import Weekday
@@ -245,7 +245,7 @@ class Stylist(models.Model):
         for appointment in appointments:
             appointment_start_time = appointment.datetime_start_at
             for slot in available_slots:
-                if (slot.start - (self.service_time_gap / 2) <= appointment_start_time <= (
+                if (slot.start - (self.service_time_gap / 2) < appointment_start_time <= (
                         slot.start + (self.service_time_gap / 2))):
                     slot.is_booked = True
                     break
@@ -557,7 +557,7 @@ class Invitation(models.Model):
     accepted_at = models.DateTimeField(null=True, default=None)
 
     created_client = models.ForeignKey(
-        ClientOfStylist, null=True, default=None, on_delete=models.CASCADE
+        Client, null=True, default=None, on_delete=models.CASCADE, related_name='invitations'
     )
 
     class Meta:

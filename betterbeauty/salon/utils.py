@@ -9,7 +9,7 @@ from django.utils import timezone
 from appointment.constants import AppointmentStatus
 from appointment.models import Appointment, AppointmentService
 from client.constants import END_OF_DAY_BUFFER_TIME_IN_MINUTES
-from client.models import Client, ClientOfStylist
+from client.models import Client
 from core.constants import (
     DEFAULT_FIRST_TIME_BOOK_DISCOUNT_PERCENT,
     DEFAULT_REBOOK_WITHIN_1_WEEK_DISCOUNT_PERCENT,
@@ -111,7 +111,7 @@ def get_last_appointment_for_client(
     last_appointment: Optional[Appointment] = Appointment.objects.filter(
         status__in=[AppointmentStatus.CHECKED_OUT],
         stylist=stylist,
-        client__client=client,
+        client=client,
         datetime_start_at__lte=timezone.now()
     ).order_by('datetime_start_at').last()
     return last_appointment
@@ -253,12 +253,12 @@ def generate_client_prices_for_stylist_services(
 
 
 def calculate_price_and_discount_for_client_on_date(
-        service: StylistService, client: Optional[ClientOfStylist], date: datetime.date
+        service: StylistService, client: Optional[Client], date: datetime.date
 ) -> CalculatedPrice:
 
     price_on_dates: Iterable[PriceOnDate] = (
         generate_prices_for_stylist_service(
-            services=[service, ], client=client.client if client else None,
+            services=[service, ], client=client,
             exclude_fully_booked=False,
             exclude_unavailable_days=False
         ))

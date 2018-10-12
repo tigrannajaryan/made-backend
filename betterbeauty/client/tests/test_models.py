@@ -9,7 +9,7 @@ from freezegun import freeze_time
 from api.v1.auth.utils import create_client_profile_from_phone
 from appointment.models import Appointment
 from appointment.types import AppointmentStatus
-from client.models import Client, ClientOfStylist
+from client.models import Client
 from core.models import User, USER_ROLE
 from salon.tests.test_models import (
     stylist_appointments_data,
@@ -30,15 +30,11 @@ class TestClient(object):
         )
         client_user = create_client_profile_from_phone(phone='+11234567890', user=user)
         client: Client = client_user.client
-        client_of_stylist = G(
-            ClientOfStylist,
-            client=client,
-            stylist=stylist_data
-        )
+
         appointments: Dict[str, Appointment] = stylist_appointments_data(stylist_data)
 
         for a in appointments.values():
-            a.client = client_of_stylist
+            a.client = client
             a.save(update_fields=['client', ])
 
         all_appointments = client.get_appointments_in_datetime_range()
@@ -95,7 +91,7 @@ class TestClient(object):
         ]))
 
         appointments['future_appointment'].client = G(
-            ClientOfStylist
+            Client
         )
         appointments['future_appointment'].save()
 
