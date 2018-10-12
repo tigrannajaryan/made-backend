@@ -16,7 +16,7 @@ from timezone_field import TimeZoneField
 
 from appointment.types import AppointmentStatus
 from appointment.utils import get_appointments_in_datetime_range
-from client.models import Client, ClientOfStylist, PreferredStylist
+from client.models import Client, PreferredStylist
 from core.choices import WEEKDAY
 from core.models import User
 from core.types import Weekday
@@ -557,10 +557,10 @@ class Invitation(models.Model):
     accepted_at = models.DateTimeField(null=True, default=None)
 
     created_client = models.ForeignKey(
-        ClientOfStylist, null=True, default=None, on_delete=models.CASCADE
+        Client, null=True, default=None, on_delete=models.CASCADE, related_name='invitations'
     )
     created_real_client = models.ForeignKey(
-        Client, null=True, default=None, on_delete=models.CASCADE
+        Client, null=True, default=None, on_delete=models.CASCADE, related_name='invitations_old'
     )
 
     class Meta:

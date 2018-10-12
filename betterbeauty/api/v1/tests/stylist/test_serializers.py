@@ -75,7 +75,7 @@ def client_details_data() -> Tuple[Stylist, Client]:
     service_2 = G(StylistService, stylist=stylist, name='our service 2')
     # add an past-in-time appointment
     first_appoitment = G(
-        Appointment, stylist=stylist, real_client=client,
+        Appointment, stylist=stylist, client=client, real_client=client,
         created_by=client.user, status=AppointmentStatus.CHECKED_OUT,
         datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC)
     )
@@ -86,7 +86,7 @@ def client_details_data() -> Tuple[Stylist, Client]:
     )
 
     appointment_last = G(
-        Appointment, stylist=stylist, real_client=client,
+        Appointment, stylist=stylist, client=client, real_client=client,
         created_by=client.user, status=AppointmentStatus.CHECKED_OUT,
         datetime_start_at=datetime.datetime(2018, 1, 2, 0, 0, tzinfo=pytz.UTC)
     )
@@ -528,31 +528,31 @@ class TestStylistTodaySerializer(object):
         appointments.update(
             {
                 'cancelled_by_client_past': G(
-                    Appointment, real_client=client, stylist=stylist_data,
+                    Appointment, client=client, real_client=client, stylist=stylist_data,
                     datetime_start_at=stylist_data.salon.timezone.localize(
                         datetime.datetime(2018, 5, 14, 10, 20)),
                     status=AppointmentStatus.CANCELLED_BY_CLIENT,
                 ),
                 'cancelled_by_client_future': G(
-                    Appointment, real_client=client, stylist=stylist_data,
+                    Appointment, client=client, real_client=client, stylist=stylist_data,
                     datetime_start_at=stylist_data.salon.timezone.localize(
                         datetime.datetime(2018, 5, 14, 18, 20)),
                     status=AppointmentStatus.CANCELLED_BY_CLIENT,
                 ),
                 'cancelled_by_stylist': G(
-                    Appointment, real_client=client, stylist=stylist_data,
+                    Appointment, client=client, real_client=client, stylist=stylist_data,
                     datetime_start_at=stylist_data.salon.timezone.localize(
                         datetime.datetime(2018, 5, 14, 15, 20)),
                     status=AppointmentStatus.CANCELLED_BY_STYLIST,
                 ),
                 'past_paid_appointment': G(
-                    Appointment, real_client=client, stylist=stylist_data,
+                    Appointment, client=client, real_client=client, stylist=stylist_data,
                     datetime_start_at=stylist_data.salon.timezone.localize(
                         datetime.datetime(2018, 5, 14, 10, 20)),
                     status=AppointmentStatus.CHECKED_OUT,
                 ),
                 'no_call_no_show': G(
-                    Appointment, real_client=client, stylist=stylist_data,
+                    Appointment, client=client, real_client=client, stylist=stylist_data,
                     datetime_start_at=stylist_data.salon.timezone.localize(
                         datetime.datetime(2018, 5, 14, 10, 20)),
                     status=AppointmentStatus.NO_SHOW,
@@ -727,6 +727,7 @@ class TestAppointmentSerializer(object):
         assert(appointment.total_client_price_before_tax == 50)
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == 'Fred')
+        assert (appointment.real_client is None)
         assert(appointment.client is None)
         assert(appointment.client_phone == '(541)-754-3010')
         assert(appointment.services.count() == 1)
@@ -782,6 +783,7 @@ class TestAppointmentSerializer(object):
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == client.user.first_name)
         assert(appointment.real_client == client)
+        assert(appointment.client == client)
         assert(appointment.client_phone == client.user.phone)
 
         assert (appointment.services.count() == 1)

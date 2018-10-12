@@ -188,7 +188,8 @@ class TestAppointmentSerializer(object):
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == client_data.user.first_name)
         assert(appointment.real_client is not None)
-        client: Client = appointment.real_client
+        assert (appointment.client is not None)
+        client: Client = appointment.client
         assert(client.user.first_name == client_data.user.first_name)
         assert(client.user.phone == client_data.user.phone)
         assert(appointment.services.count() == 1)
@@ -232,6 +233,7 @@ class TestAppointmentSerializer(object):
 
         G(
             Appointment,
+            client=client_data,
             real_client=client_data, stylist=stylist_data, created_by=stylist_data.user,
             datetime_start_at=stylist_data.with_salon_tz(datetime.datetime(2018, 5, 15, 15, 30))
         )
@@ -248,7 +250,7 @@ class TestAppointmentSerializer(object):
         )
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == client_data.user.first_name)
-        assert(appointment.real_client == client_data)
+        assert(appointment.client == client_data)
 
         assert (appointment.services.count() == 1)
         original_service: AppointmentService = appointment.services.first()
@@ -306,7 +308,7 @@ class TestAppointmentSerializer(object):
 
         # associate client with stylist
         G(PreferredStylist, client=client_data, stylist=stylist_data)
-        G(Appointment, stylist=stylist_data, real_client=client_data,
+        G(Appointment, stylist=stylist_data, client=client_data, real_client=client_data,
           datetime_start_at=stylist_data.with_salon_tz(
               datetime.datetime(2018, 5, 10, 10, 00)
           ))
