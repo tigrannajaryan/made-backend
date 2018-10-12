@@ -11,7 +11,6 @@ from api.common.permissions import BackdoorPermission
 from api.v1.backdoor.constants import MAX_RETRIES_FOR_UNUSED_PHONE_NUMBER
 from core.models import PhoneSMSCodes, User
 from core.utils import post_or_get
-from salon.models import ClientOfStylist
 
 
 RESERVED_PHONE_NUMBER_PATTERN = r'^\+1555\d{7}$'
@@ -27,13 +26,9 @@ class GetAuthCodeView(views.APIView):
             phone=phone,
             date_joined__lt=timezone.now() - ACCOUNT_LIFETIME_THRESHOLD
         )
-        old_client_accounts = ClientOfStylist.objects.filter(
-            phone=phone,
-            created_at__lt=timezone.now() - ACCOUNT_LIFETIME_THRESHOLD
-        )
+
         if (
             not phone or
-            old_client_accounts.exists() or
             old_user_accounts.exists()
         ):
             return response.Response(status=status.HTTP_404_NOT_FOUND)

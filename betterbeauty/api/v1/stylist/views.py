@@ -24,7 +24,7 @@ from appointment.preview import (
     build_appointment_preview_dict,
 )
 from appointment.types import AppointmentStatus
-from client.models import Client, ClientOfStylist
+from client.models import Client
 from core.utils import (
     post_or_get,
 )
@@ -65,13 +65,13 @@ from .serializers import (
 
 
 class ClientPricingRequest(NamedTuple):
-    client_uuid: uuid.UUID
+    client_uuid: Optional[uuid.UUID]
     service_uuids: List[uuid.UUID] = []
 
 
 class ClientPricingResponse(NamedTuple):
     prices: List[ClientPriceOnDate]
-    client_uuid: uuid.UUID
+    client_uuid: Optional[uuid.UUID]
     service_uuids: List[uuid.UUID] = []
 
 
@@ -303,16 +303,16 @@ class StylistAppointmentPreviewView(views.APIView):
         )
         serializer.is_valid(raise_exception=True)
         client_uuid = serializer.validated_data.pop('client_uuid', None)
-        client_of_stylist: ClientOfStylist = None
+        client: Optional[Client] = None
         if client_uuid:
-            client_of_stylist = stylist.clients_of_stylist.get(
+            client = stylist.get_preferred_clients().get(
                 uuid=client_uuid
             )
         preview_request = AppointmentPreviewRequest(**serializer.validated_data)
         response_serializer = AppointmentPreviewResponseSerializer(
             build_appointment_preview_dict(
                 stylist=stylist,
-                client_of_stylist=client_of_stylist,
+                client=client,
                 preview_request=preview_request
             )
         )
@@ -511,9 +511,10 @@ class ClientPricingView(views.APIView):
         )
         serializer.is_valid(raise_exception=True)
         request_data = ClientPricingRequest(**serializer.validated_data)
-
+        client: Optional[Client] = None
         client_uuid = request_data.client_uuid
-        client: Client = stylist.get_preferred_clients().get(uuid=client_uuid)
+        if client_uuid:
+            client = stylist.get_preferred_clients().get(uuid=client_uuid)
         service_uuids = request_data.service_uuids
 
         pricing_response = self._get_pricing_response(
@@ -563,15 +564,16 @@ class ClientPricingView(views.APIView):
            anything booked yet, then
         3) first service on the stylist list of services
         """
-        last_appointment: Optional[Appointment] = get_last_appointment_for_client(
-            stylist=stylist, client=client
-        )
-        if last_appointment:
-            service_uuids = [
-                s.service_uuid for s in last_appointment.services.all()
-                if stylist.services.filter(uuid=s.service_uuid).exists()]
-            if service_uuids:
-                return service_uuids
+        if client:
+            last_appointment: Optional[Appointment] = get_last_appointment_for_client(
+                stylist=stylist, client=client
+            )
+            if last_appointment:
+                service_uuids = [
+                    s.service_uuid for s in last_appointment.services.all()
+                    if stylist.services.filter(uuid=s.service_uuid).exists()]
+                if service_uuids:
+                    return service_uuids
         most_popular_service: Optional[
             StylistService
         ] = get_most_popular_service(stylist=stylist)

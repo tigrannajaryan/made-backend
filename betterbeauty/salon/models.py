@@ -16,7 +16,7 @@ from timezone_field import TimeZoneField
 
 from appointment.types import AppointmentStatus
 from appointment.utils import get_appointments_in_datetime_range
-from client.models import Client, ClientOfStylist, PreferredStylist
+from client.models import Client, PreferredStylist
 from core.choices import WEEKDAY
 from core.models import User
 from core.types import Weekday
@@ -105,6 +105,10 @@ class StylistAvailableWeekDay(models.Model):
             availability_time
         )
 
+    def get_slot_end_time(self) -> Optional[datetime.time]:
+        return (datetime.datetime.combine(
+            datetime.date.today(), self.work_end_at) + self.stylist.service_time_gap).time()
+
     def get_available_time(self) -> Optional[datetime.timedelta]:
         if not self.is_available:
             return datetime.timedelta(0)
@@ -119,7 +123,8 @@ class StylistAvailableWeekDay(models.Model):
         while start_at < self.work_end_at:
             slot_end_time = (datetime.datetime.combine(
                 datetime.date.today(), start_at) + self.stylist.service_time_gap).time()
-            if not current_time or (current_time and start_at > current_time):
+            if (not current_time or (current_time and start_at > current_time)) and (
+                    slot_end_time <= self.get_slot_end_time()):
                 available_slots.append((start_at, slot_end_time))
             start_at = slot_end_time
         return available_slots
@@ -376,12 +381,19 @@ class Stylist(models.Model):
         # FIXME: There should be extra logic to check if start and end time fall to
         # FIXME: different dates. But I guess it should be an extremely rare case for now.
         date_time = self.with_salon_tz(date_time)
-        end_time = (date_time + self.service_time_gap).time()
-        return self.available_days.filter(
-            weekday=date_time.isoweekday(),
-            work_start_at__lte=date_time.time(),
-            work_end_at__gte=end_time
-        ).exists()
+        try:
+            available_weekday: StylistAvailableWeekDay = self.available_days.get(
+                weekday=date_time.isoweekday(),
+                work_start_at__lte=date_time.time(),
+            )
+            last_slot_end_time = datetime.datetime.combine(
+                datetime.date.today(), available_weekday.get_slot_end_time(),
+                tzinfo=self.salon.timezone).time()
+            if (date_time + self.service_time_gap).time() <= last_slot_end_time:
+                return True
+        except StylistAvailableWeekDay.DoesNotExist:
+            pass
+        return False
 
     def is_working_day(self, date_time: datetime.datetime):
         return self.available_days.filter(
@@ -545,7 +557,7 @@ class Invitation(models.Model):
     accepted_at = models.DateTimeField(null=True, default=None)
 
     created_client = models.ForeignKey(
-        ClientOfStylist, null=True, default=None, on_delete=models.CASCADE
+        Client, null=True, default=None, on_delete=models.CASCADE, related_name='invitations'
     )
 
     class Meta:

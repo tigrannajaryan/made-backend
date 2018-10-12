@@ -26,7 +26,7 @@ from appointment.constants import (
 )
 from appointment.models import Appointment
 from client.models import Client, PreferredStylist
-from salon.models import ClientOfStylist, Salon, Stylist, StylistService
+from salon.models import Salon, Stylist, StylistService
 from salon.tests.test_models import stylist_appointments_data
 
 
@@ -290,32 +290,10 @@ class TestStylistServicesView(object):
 
         preference.delete()
 
-        relation = G(
-            ClientOfStylist,
-            stylist=stylist,
-            client=client_obj
-        )
-
         response = client.get(
             stylist_service_url,
             data={}, HTTP_AUTHORIZATION=auth_token)
-        assert (status.is_success(response.status_code))
-
-        relation.delete()
-
-        stylist_service_url = reverse('api:v1:client:stylist-services', kwargs={
-            'uuid': stylist.uuid
-        })
-        response = client.get(
-            stylist_service_url,
-            data={}, HTTP_AUTHORIZATION=auth_token)
-        assert(response.status_code == status.HTTP_404_NOT_FOUND)
-
-        user, auth_token = authorized_stylist_user
-        response = client.get(
-            stylist_service_url,
-            data={}, HTTP_AUTHORIZATION=auth_token)
-        assert (response.status_code == status.HTTP_403_FORBIDDEN)
+        assert (not status.is_success(response.status_code))
 
 
 class TestStylistServicePriceView(object):
@@ -397,14 +375,14 @@ class TestAppointmentListCreateAPIView(object):
 
         # test list others' appointments
         user, auth_token = authorized_client_user
-        client_of_stylist = G(ClientOfStylist, client=client_obj)
-        foreign_client_of_stylist = G(ClientOfStylist)
+
+        foreign_client = G(Client)
         our_appointment = G(
             Appointment,
-            client=client_of_stylist,
+            client=client_obj,
             created_by=user
         )
-        G(Appointment, client=foreign_client_of_stylist, created_by=user)
+        G(Appointment, client=foreign_client, created_by=user)
         response = client.get(
             appointments_url, HTTP_AUTHORIZATION=auth_token
         )
@@ -431,17 +409,16 @@ class TestAppointmentRetriveUpdateView(object):
         user, auth_token = authorized_client_user
         client_obj = user.client
         stylist = G(Stylist)
-        our_client_of_stylist = G(ClientOfStylist, client=client_obj, stylist=stylist)
-        foreign_client_of_stylist = G(ClientOfStylist, stylist=stylist)
+        foreign_client = G(Client)
         our_appointment = G(
             Appointment,
-            client=our_client_of_stylist,
+            client=client_obj,
             datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
             stylist=stylist
         )
         foreign_appointment = G(
             Appointment,
-            client=foreign_client_of_stylist,
+            client=foreign_client,
             datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
             stylist=stylist
         )
@@ -555,7 +532,31 @@ class TestAvailableTimeSlotView(object):
         response = client.post(availability_url, HTTP_AUTHORIZATION=auth_token, data={
             "date": "2018-05-15",
             "stylist_uuid": our_stylist.uuid})
+        # Return actual slots for tomorrow's date
         assert len(response.data['time_slots']) > 0
+
+        date = datetime.date(2018, 5, 16)
+        our_stylist.available_days.filter(weekday=date.isoweekday()).update(
+            work_start_at="09:00", work_end_at="11:01", is_available=True)
+        response = client.post(availability_url, HTTP_AUTHORIZATION=auth_token, data={
+            "date": "2018-05-16",
+            "stylist_uuid": our_stylist.uuid})
+        assert len(response.data['time_slots']) == 5
+
+        service = our_stylist.services.first()
+        data = {
+            'stylist_uuid': str(our_stylist.uuid),
+            'datetime_start_at': '2018-05-16T11:00:00+00:00',
+            'services': [
+                {'service_uuid': str(service.uuid)}
+            ]
+        }
+        appointments_url = reverse(
+            'api:v1:client:appointments'
+        )
+        response = client.post(appointments_url, HTTP_AUTHORIZATION=auth_token,
+                               data=json.dumps(data), content_type='application/json')
+        assert (status.is_success(response.status_code))
 
 
 class TestClientViewPermissions(object):
@@ -576,11 +577,7 @@ class TestHomeAPIView(object):
     @freeze_time('2018-05-14 14:10:00 UTC')
     def test_get_upcoming_appointments(self, stylist_data, client_data):
         client: Client = client_data
-        client_of_stylist = G(
-            ClientOfStylist,
-            client=client,
-            stylist=stylist_data
-        )
+        G(PreferredStylist, client=client, stylist=stylist_data)
         appointments: Dict[str, Appointment] = stylist_appointments_data(stylist_data)
 
         appointments['past_appointment'].set_status(
@@ -589,7 +586,7 @@ class TestHomeAPIView(object):
             AppointmentStatus.CHECKED_OUT, updated_by=stylist_data.user)
 
         for a in appointments.values():
-            a.client = client_of_stylist
+            a.client = client
             a.save(update_fields=['client', ])
         upcoming_appointments = HomeView.get_upcoming_appointments(client)
 
@@ -598,17 +595,14 @@ class TestHomeAPIView(object):
     @freeze_time('2018-05-14 13:00:00 UTC')
     def test_get_last_visit(self, stylist_data, client_data):
         client: Client = client_data
-        client_of_stylist = G(
-            ClientOfStylist,
-            client=client,
-            stylist=stylist_data
-        )
+        G(PreferredStylist, client=client, stylist=stylist_data)
+
         appointments: Dict[str, Appointment] = stylist_appointments_data(stylist_data)
         appointments['last_week_appointment'].set_status(
             AppointmentStatus.CHECKED_OUT, updated_by=stylist_data.user)
 
         for a in appointments.values():
-            a.client = client_of_stylist
+            a.client = client
             a.save(update_fields=['client', ])
 
         last_appointment = HomeView.get_last_visited_object(client)
@@ -621,16 +615,12 @@ class TestHistoryAPIView(object):
     @freeze_time('2018-05-14 14:00:00 UTC')
     def test_historical_appointments(self, stylist_data, client_data):
         client: Client = client_data
-        client_of_stylist = G(
-            ClientOfStylist,
-            client=client,
-            stylist=stylist_data
-        )
+        G(PreferredStylist, client=client, stylist=stylist_data)
         appointments: Dict[str, Appointment] = stylist_appointments_data(stylist_data)
         appointments['current_appointment'].set_status(status=AppointmentStatus.CHECKED_OUT,
                                                        updated_by=client.user)
         for a in appointments.values():
-            a.client = client_of_stylist
+            a.client = client
             a.save(update_fields=['client', ])
         past_appointments = HistoryView.get_historical_appointments(client)
         assert (past_appointments.count() == 2)

@@ -25,7 +25,7 @@ from appointment.preview import (
     AppointmentServicePreview,
 )
 from appointment.types import AppointmentStatus
-from client.models import Client, ClientOfStylist, PreferredStylist
+from client.models import Client, PreferredStylist
 from core.types import Weekday
 from core.utils import calculate_card_fee, calculate_tax
 from pricing import CalculatedPrice
@@ -47,6 +47,7 @@ class TestAppointmentSerializer(object):
             stylist=stylist_data, duration=datetime.timedelta(minutes=30),
             regular_price=50
         )
+        G(PreferredStylist, stylist=stylist_data, client=client_data)
         stylist_data.available_days.filter(weekday=Weekday.THURSDAY).update(
             is_available=True,
             work_start_at=datetime.time(8, 0),
@@ -103,9 +104,6 @@ class TestAppointmentSerializer(object):
             ],
             'datetime_start_at': available_time.isoformat()
         }
-        G(
-            PreferredStylist, client=client_data, stylist=stylist_data
-        )
         serializer = AppointmentSerializer(
             data=data, context={'stylist': stylist_data, 'user': client_data.user})
         assert (serializer.is_valid(raise_exception=False) is True)
@@ -185,10 +183,10 @@ class TestAppointmentSerializer(object):
         assert(appointment.total_client_price_before_tax == 37.5)
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == client_data.user.first_name)
-        assert(appointment.client is not None)
-        client: ClientOfStylist = appointment.client
-        assert(client.first_name == client_data.user.first_name)
-        assert(client.phone == client_data.user.phone)
+        assert (appointment.client is not None)
+        client: Client = appointment.client
+        assert(client.user.first_name == client_data.user.first_name)
+        assert(client.user.phone == client_data.user.phone)
         assert(appointment.services.count() == 1)
         original_service: AppointmentService = appointment.services.first()
         assert(original_service.is_original is True)
@@ -212,11 +210,7 @@ class TestAppointmentSerializer(object):
         )
         available_time: datetime.datetime = datetime.datetime(
             2018, 5, 17, 16, 00, tzinfo=pytz.utc)
-        client: ClientOfStylist = G(ClientOfStylist, stylist=stylist_data, client=client_data,
-                                    first_name=client_data.user.first_name,
-                                    last_name=client_data.user.last_name,
-                                    phone=client_data.user.phone,
-                                    )
+
         data = {
             'stylist_uuid': stylist_data.uuid,
             'services': [
@@ -234,7 +228,7 @@ class TestAppointmentSerializer(object):
 
         G(
             Appointment,
-            client=client, stylist=stylist_data, created_by=stylist_data.user,
+            client=client_data, stylist=stylist_data, created_by=stylist_data.user,
             datetime_start_at=stylist_data.with_salon_tz(datetime.datetime(2018, 5, 15, 15, 30))
         )
         G(
@@ -249,8 +243,8 @@ class TestAppointmentSerializer(object):
             appointment.total_client_price_before_tax == 37.5
         )
         assert(appointment.duration == service.duration)
-        assert(appointment.client_first_name == client.first_name)
-        assert(appointment.client == client)
+        assert(appointment.client_first_name == client_data.user.first_name)
+        assert(appointment.client == client_data)
 
         assert (appointment.services.count() == 1)
         original_service: AppointmentService = appointment.services.first()
@@ -305,13 +299,10 @@ class TestAppointmentSerializer(object):
 
 
         ]
-        client: ClientOfStylist = G(ClientOfStylist, stylist=stylist_data, client=client_data,
-                                    first_name=client_data.user.first_name,
-                                    last_name=client_data.user.last_name,
-                                    phone=client_data.user.phone,
-                                    )
+
         # associate client with stylist
-        G(Appointment, stylist=stylist_data, client=client,
+        G(PreferredStylist, client=client_data, stylist=stylist_data)
+        G(Appointment, stylist=stylist_data, client=client_data,
           datetime_start_at=stylist_data.with_salon_tz(
               datetime.datetime(2018, 5, 10, 10, 00)
           ))
@@ -320,7 +311,6 @@ class TestAppointmentSerializer(object):
           work_start_at=datetime.time(8, 0), work_end_at=datetime.time(22, 00),
           is_available=True, stylist=stylist_data
           )
-        G(PreferredStylist, client=client_data, stylist=stylist_data)
         for appointment_date in appointment_dates:
             appointment_data = {
                 'stylist_uuid': stylist_data.uuid,
@@ -335,7 +325,7 @@ class TestAppointmentSerializer(object):
             }
 
             calculated_price: CalculatedPrice = calculate_price_and_discount_for_client_on_date(
-                service=service, client=client, date=appointment_date.date()
+                service=service, client=client_data, date=appointment_date.date()
             )
             appointment_serializer = AppointmentSerializer(
                 data=appointment_data, context={'stylist': stylist_data, 'user': client_data.user}
@@ -687,11 +677,7 @@ class TestServicePricingRequestSerializer(object):
             {'code': appointment_errors.ERR_SERVICE_DOES_NOT_EXIST} in
             serializer.errors['field_errors']['service_uuids']
         )
-        preference = G(PreferredStylist, stylist=stylist, client=client)
+        G(PreferredStylist, stylist=stylist, client=client)
 
-        serializer = ServicePricingRequestSerializer(data=data, context={'client': client})
-        assert (serializer.is_valid(raise_exception=False))
-        preference.delete()
-        G(ClientOfStylist, client=client, stylist=stylist)
         serializer = ServicePricingRequestSerializer(data=data, context={'client': client})
         assert (serializer.is_valid(raise_exception=False))

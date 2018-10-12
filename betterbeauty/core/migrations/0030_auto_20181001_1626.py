@@ -422,7 +422,10 @@ def backwards(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
+        ('appointment', '0027_appointment_phone_from_user'),
+        ('client', '0019_client_location_from_zipcode'),
         ('core', '0029_auto_20180927_1112'),
+        ('salon', '0053_auto_20180906_1248')
     ]
 
     operations = [
