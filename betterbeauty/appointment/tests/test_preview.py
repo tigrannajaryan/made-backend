@@ -15,7 +15,7 @@ from appointment.preview import (
     build_appointment_preview_dict,
 )
 from appointment.types import AppointmentStatus
-from client.models import Client, ClientOfStylist
+from client.models import Client
 from pricing import CalculatedPrice
 from salon.models import Stylist, StylistService
 
@@ -38,7 +38,7 @@ class TestBuildAppointmentPreviewDict(object):
         with pytest.raises(Http404):
             build_appointment_preview_dict(
                 stylist=stylist,
-                client_of_stylist=None,
+                client=None,
                 preview_request=preview_request
             )
 
@@ -53,7 +53,7 @@ class TestBuildAppointmentPreviewDict(object):
         )
         preview_dict = build_appointment_preview_dict(
             stylist=stylist,
-            client_of_stylist=None,
+            client=None,
             preview_request=preview_request
         )
         assert(preview_dict.conflicts_with.count() == 0)
@@ -92,7 +92,7 @@ class TestBuildAppointmentPreviewDict(object):
         )
         preview_dict = build_appointment_preview_dict(
             stylist=stylist,
-            client_of_stylist=None,
+            client=None,
             preview_request=preview_request
         )
         assert (preview_dict.conflicts_with.count() == 0)
@@ -162,7 +162,7 @@ class TestBuildAppointmentPreviewDict(object):
         )
         preview_dict = build_appointment_preview_dict(
             stylist=stylist,
-            client_of_stylist=None,
+            client=None,
             preview_request=preview_request
         )
         assert (preview_dict.conflicts_with.count() == 0)
@@ -211,7 +211,6 @@ class TestBuildAppointmentPreviewDict(object):
         stylist: Stylist = G(Stylist)
         service: StylistService = G(StylistService, stylist=stylist)
         client: Client = G(Client)
-        client_of_stylist: ClientOfStylist = G(ClientOfStylist, client=client, stylist=stylist)
         preview_request = AppointmentPreviewRequest(
             services=[
                 {'service_uuid': service.uuid}
@@ -222,7 +221,7 @@ class TestBuildAppointmentPreviewDict(object):
         )
         preview_dict = build_appointment_preview_dict(
             stylist=stylist,
-            client_of_stylist=client_of_stylist,
+            client=client,
             preview_request=preview_request
         )
         assert (preview_dict.conflicts_with.count() == 0)

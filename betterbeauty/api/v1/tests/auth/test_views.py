@@ -140,7 +140,7 @@ class TestVerifyCodeView(object):
         assert (user.client is not None)
 
     @pytest.mark.django_db
-    def test_verify_client_of_stylist_creation(self, client, stylist_data: Stylist):
+    def test_verify_client_creation(self, client, stylist_data: Stylist):
         code = get_code()
         G(Invitation, stylist=stylist_data, phone=code.phone)
         data = {
@@ -153,9 +153,7 @@ class TestVerifyCodeView(object):
         user = User.objects.last()
         client = user.client
         assert (client is not None)
-        client_of_stylist = client.client_of_stylists.last()
-        assert (client_of_stylist.phone == code.phone)
-        assert (client_of_stylist.stylist == stylist_data)
+        assert(user.phone == data['phone'])
 
     @pytest.mark.django_db
     def test_verify_stylist_creation(self, client):

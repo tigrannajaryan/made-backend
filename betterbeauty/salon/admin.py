@@ -115,7 +115,7 @@ class InvitationAdmin(admin.ModelAdmin):
     readonly_fields = ['delivered_at', 'accepted_at', 'created_client', ]
     search_fields = [
         'phone', 'stylist__user__first_name', 'stylist__user__last_name',
-        'created_client__client__user__first_name', 'created_client__client__user__last_name',
+        'created_real_client__user__first_name', 'created_real_client__user__last_name',
     ]
 
 

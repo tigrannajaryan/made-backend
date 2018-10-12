@@ -76,7 +76,7 @@ class Client(models.Model):
         :return: Resulting Appointment queryset
         """
         queryset = apps.get_model('appointment', 'Appointment').objects.filter(
-            client__client=self
+            real_client=self
         )
 
         appointments = get_appointments_in_datetime_range(

@@ -1,5 +1,5 @@
 import datetime
-from typing import List, Optional
+from typing import List
 
 from dateutil.parser import parse
 
@@ -38,7 +38,7 @@ from api.v1.stylist.serializers import StylistSerializer
 from appointment.models import Appointment
 from appointment.preview import AppointmentPreviewRequest, build_appointment_preview_dict
 from appointment.types import AppointmentStatus
-from client.models import Client, ClientOfStylist, StylistSearchRequest
+from client.models import Client, StylistSearchRequest
 from core.utils import post_or_get
 from core.utils import post_or_get_or_data
 from integrations.ipstack import get_lat_lng_for_ip_address
@@ -286,7 +286,7 @@ class AppointmentRetriveUpdateView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         client = self.request.user.client
         appointments = Appointment.objects.filter(
-            client__client=client
+            real_client=client
         )
         return get_object_or_404(
             appointments,
@@ -317,14 +317,11 @@ class AppointmentPreviewView(views.APIView):
             Stylist,
             uuid=serializer.validated_data.pop('stylist_uuid')
         )
-        client_of_stylist: Optional[ClientOfStylist] = stylist.clients_of_stylist.filter(
-            client=client
-        ).last()
         preview_request = AppointmentPreviewRequest(**serializer.validated_data)
         response_serializer = AppointmentPreviewResponseSerializer(
             build_appointment_preview_dict(
                 stylist=stylist,
-                client_of_stylist=client_of_stylist,
+                client=client,
                 preview_request=preview_request
             ),
             context=self.get_serializer_context()

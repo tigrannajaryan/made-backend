@@ -24,7 +24,7 @@ from appointment.preview import (
     build_appointment_preview_dict,
 )
 from appointment.types import AppointmentStatus
-from client.models import Client, ClientOfStylist
+from client.models import Client
 from core.utils import (
     post_or_get,
 )
@@ -303,16 +303,16 @@ class StylistAppointmentPreviewView(views.APIView):
         )
         serializer.is_valid(raise_exception=True)
         client_uuid = serializer.validated_data.pop('client_uuid', None)
-        client_of_stylist: ClientOfStylist = None
+        client: Optional[Client] = None
         if client_uuid:
-            client_of_stylist = stylist.clients_of_stylist.get(
+            client = stylist.get_preferred_clients().get(
                 uuid=client_uuid
             )
         preview_request = AppointmentPreviewRequest(**serializer.validated_data)
         response_serializer = AppointmentPreviewResponseSerializer(
             build_appointment_preview_dict(
                 stylist=stylist,
-                client_of_stylist=client_of_stylist,
+                client=client,
                 preview_request=preview_request
             )
         )
