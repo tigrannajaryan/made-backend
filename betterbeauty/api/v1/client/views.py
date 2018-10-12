@@ -108,8 +108,6 @@ class StylistServicesView(generics.RetrieveAPIView):
         available_stylists = Q(
             preferredstylist__client=client,
             preferredstylist__deleted_at__isnull=True
-        ) | Q(
-            clients_of_stylist__client=client
         )
         return Stylist.objects.filter(available_stylists).distinct('id')
 
@@ -133,8 +131,6 @@ class StylistServicePriceView(views.APIView):
             Q(
                 stylist__preferredstylist__client=client,
                 stylist__preferredstylist__deleted_at__isnull=True
-            ) | Q(
-                stylist__clients_of_stylist__client=client
             )
         ).distinct('id')
         services = []
@@ -286,7 +282,7 @@ class AppointmentRetriveUpdateView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         client = self.request.user.client
         appointments = Appointment.objects.filter(
-            real_client=client
+            client=client
         )
         return get_object_or_404(
             appointments,

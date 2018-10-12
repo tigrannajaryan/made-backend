@@ -35,8 +35,7 @@ class TestClient(object):
 
         for a in appointments.values():
             a.client = client
-            a.real_client = client
-            a.save(update_fields=['client', 'real_client', ])
+            a.save(update_fields=['client', ])
 
         all_appointments = client.get_appointments_in_datetime_range()
 
@@ -91,9 +90,6 @@ class TestClient(object):
             appointments['next_day_appointment'].id,
         ]))
 
-        appointments['future_appointment'].real_client = G(
-            Client
-        )
         appointments['future_appointment'].client = G(
             Client
         )

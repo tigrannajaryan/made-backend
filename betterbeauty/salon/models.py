@@ -559,6 +559,7 @@ class Invitation(models.Model):
     created_client = models.ForeignKey(
         Client, null=True, default=None, on_delete=models.CASCADE, related_name='invitations'
     )
+    # TODO: remove field
     created_real_client = models.ForeignKey(
         Client, null=True, default=None, on_delete=models.CASCADE, related_name='invitations_old'
     )
