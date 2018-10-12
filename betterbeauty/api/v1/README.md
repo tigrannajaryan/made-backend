@@ -2384,7 +2384,8 @@ curl -X GET \
     "zip_code":11104,
     "email": "test@example.com",
     "city": "Queens",
-    "state": "NY"
+    "state": "NY",
+    "privacy": "public"
 }
 ```
 
@@ -2399,7 +2400,8 @@ curl -X POST \
     "profile_photo_id": "a9268764-7fbe-4bea-bc28-6dfdea5a7778",
     "birthday": "1988-09-08",
     "zip_code":12345,
-    "email": "test@example.com"
+    "email": "test@example.com",
+    "privacy": "private"
 
 }'
 ```
@@ -2416,7 +2418,8 @@ curl -X POST \
     "zip_code":12345,
     "email": "test@example.com",
     "city": null,
-    "state": null
+    "state": null,
+    "privacy": "private"
 }
 ```
 
