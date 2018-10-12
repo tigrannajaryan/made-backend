@@ -11,7 +11,7 @@ from freezegun import freeze_time
 
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
-from client.models import Client, ClientOfStylist, PreferredStylist
+from client.models import Client, PreferredStylist
 from core.types import Weekday
 from salon.models import (
     Stylist,
@@ -21,7 +21,7 @@ from salon.models import (
 
 
 def stylist_appointments_data(stylist: Stylist) -> Dict[str, Appointment]:
-    client = G(ClientOfStylist)
+    client = G(Client)
     current_appointment = G(
         Appointment, client=client, stylist=stylist,
         datetime_start_at=stylist.salon.timezone.localize(

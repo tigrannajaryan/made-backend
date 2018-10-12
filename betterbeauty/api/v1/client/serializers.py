@@ -5,7 +5,7 @@ from math import trunc
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import serializers
@@ -30,7 +30,7 @@ from appointment.constants import (
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.constants import END_OF_DAY_BUFFER_TIME_IN_MINUTES
-from client.models import Client, ClientOfStylist, PreferredStylist
+from client.models import Client, PreferredStylist
 from core.models import User
 from core.types import AppointmentPrices
 from core.utils import calculate_appointment_prices
@@ -166,29 +166,12 @@ class AddPreferredClientsSerializer(FormattedErrorMessageMixin, serializers.Mode
                 stylist=stylist, client=client, defaults={
                     'deleted_at': None
                 })
-            client_of_stylist, created = ClientOfStylist.objects.get_or_create(
-                client=client, stylist=stylist, defaults={
-                    'first_name': client.user.first_name,
-                    'last_name': client.user.last_name,
-                    'phone': client.user.phone
-                })
             Invitation.objects.filter(phone=client.user.phone, stylist=stylist,
                                       status=InvitationStatus.INVITED).update(
                 status=InvitationStatus.ACCEPTED, accepted_at=timezone.now(),
-                created_client=client_of_stylist)
+                created_client=client)
             self.instance = preferred_stylist
             return self.instance
-
-
-class ClientOfStylistSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
-    uuid = serializers.UUIDField(read_only=True)
-    first_name = serializers.CharField(source='user.first_name')
-    last_name = serializers.CharField(source='user.last_name')
-    phone = PhoneNumberField(source='user.phone')
-
-    class Meta:
-        model = ClientOfStylist
-        fields = ['first_name', 'last_name', 'phone', 'uuid', ]
 
 
 class StylistServiceListSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
@@ -216,13 +199,10 @@ class ServicePricingRequestSerializer(FormattedErrorMessageMixin, serializers.Se
     def validate_service_uuids(self, service_uuids: List[str]):
         context: Dict = self.context
         client: Client = context['client']
+        # TODO: verify this query
         available_services = StylistService.objects.filter(
-            Q(
-                stylist__preferredstylist__client=client,
-                stylist__preferredstylist__deleted_at__isnull=True
-            ) | Q(
-                stylist__clients_of_stylist__client=client
-            )
+            stylist__preferredstylist__client=client,
+            stylist__preferredstylist__deleted_at__isnull=True
         ).values_list('uuid', flat=True)
         if not all(x in available_services for x in service_uuids):
             raise serializers.ValidationError(
@@ -298,17 +278,22 @@ class AppointmentValidationMixin(object):
             )
 
         # check if there are intersecting appointments
-        if stylist.get_appointments_in_datetime_range(
-            datetime_start_at, datetime_start_at + stylist.service_time_gap,
+        partially_intersecting_appointments = stylist.get_appointments_in_datetime_range(
+            datetime_start_at - (stylist.service_time_gap / 2),
+            datetime_start_at + (stylist.service_time_gap / 2),
             including_to=True,
             exclude_statuses=[
                 AppointmentStatus.CANCELLED_BY_CLIENT,
                 AppointmentStatus.CANCELLED_BY_STYLIST
             ]
-        ).exists():
-            raise serializers.ValidationError(
-                appointment_errors.ERR_APPOINTMENT_INTERSECTION
-            )
+        )
+        for appointment in partially_intersecting_appointments:
+            if (datetime_start_at - (stylist.service_time_gap / 2) < (
+                    appointment.datetime_start_at) <= (
+                    datetime_start_at + (stylist.service_time_gap / 2))):
+                raise serializers.ValidationError(
+                    appointment_errors.ERR_APPOINTMENT_INTERSECTION
+                )
         return datetime_start_at
 
     def validate_service_uuid(self, service_uuid: str):
@@ -418,14 +403,11 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
         client: Client = self.context['user'].client
 
         with transaction.atomic():
-            client_of_stylist, created = ClientOfStylist.objects.get_or_create(
-                stylist=stylist, client=client, defaults={
-                    'first_name': client.user.first_name,
-                    'last_name': client.user.last_name,
-                    'phone': client.user.phone
-                })
+            preferred_stylist, created = PreferredStylist.objects.get_or_create(
+                stylist=stylist, client=client
+            )
 
-            data['client'] = client_of_stylist
+            data['client'] = client
             data['stylist'] = stylist
             data['created_by'] = client.user
             data['client_first_name'] = client.user.first_name
@@ -438,7 +420,7 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
                     uuid=appointment_service['service_uuid']
                 )
                 client_price: CalculatedPrice = calculate_price_and_discount_for_client_on_date(
-                    service=service, client=client_of_stylist, date=datetime_start_at.date()
+                    service=service, client=client, date=datetime_start_at.date()
                 )
                 services_with_client_prices.append((service, client_price))
             appointment: Appointment = super(AppointmentSerializer, self).create(data)

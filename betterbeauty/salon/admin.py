@@ -110,12 +110,14 @@ class StylistAdmin(admin.ModelAdmin):
 
 
 class InvitationAdmin(admin.ModelAdmin):
-    list_display = ['stylist', 'phone', 'created_client', 'status', 'accepted_at', ]
+    list_display = [
+        'stylist', 'phone', 'created_client', 'status', 'accepted_at',
+    ]
     list_filter = ['status', ]
     readonly_fields = ['delivered_at', 'accepted_at', 'created_client', ]
     search_fields = [
         'phone', 'stylist__user__first_name', 'stylist__user__last_name',
-        'created_client__client__user__first_name', 'created_client__client__user__last_name',
+        'created_client__user__first_name', 'created_client__user__last_name',
     ]
 
 
