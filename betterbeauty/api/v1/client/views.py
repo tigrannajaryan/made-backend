@@ -12,11 +12,17 @@ from django.db.models.functions import Concat
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ipware import get_client_ip
-from rest_framework import generics, permissions, status, views
+from rest_framework import (
+    exceptions,
+    generics,
+    permissions,
+    status,
+    views,
+)
 from rest_framework.response import Response
 
 from api.common.permissions import ClientPermission
-from api.v1.client.constants import NEW_YORK_LOCATION
+from api.v1.client.constants import ErrorMessages as client_errors, NEW_YORK_LOCATION
 from api.v1.client.serializers import (
     AddPreferredClientsSerializer,
     AppointmentPreviewRequestSerializer,
@@ -26,6 +32,7 @@ from api.v1.client.serializers import (
     AvailableDateSerializer,
     ClientPreferredStylistSerializer,
     ClientProfileSerializer,
+    FollowerSerializer,
     HistorySerializer,
     HomeSerializer,
     ServicePricingRequestSerializer,
@@ -35,10 +42,12 @@ from api.v1.client.serializers import (
 )
 from api.v1.stylist.constants import MAX_APPOINTMENTS_PER_REQUEST
 from api.v1.stylist.serializers import StylistSerializer
+from appointment.constants import ErrorMessages as appt_constants
 from appointment.models import Appointment
 from appointment.preview import AppointmentPreviewRequest, build_appointment_preview_dict
 from appointment.types import AppointmentStatus
-from client.models import Client, StylistSearchRequest
+from client.models import Client, PreferredStylist, StylistSearchRequest
+from client.types import ClientPrivacy
 from core.utils import post_or_get
 from core.utils import post_or_get_or_data
 from integrations.ipstack import get_lat_lng_for_ip_address
@@ -391,3 +400,38 @@ class HistoryView(generics.ListAPIView):
     @staticmethod
     def get_historical_appointments(client) -> models.QuerySet:
         return client.get_past_appointments()
+
+
+class StylistFollowersView(views.APIView):
+    permission_classes = [ClientPermission, permissions.IsAuthenticated]
+
+    def get(self, request, stylist_uuid):
+        client: Client = request.user.client
+        if client.privacy == ClientPrivacy.PRIVATE:
+            raise exceptions.ValidationError(
+                code=status.HTTP_400_BAD_REQUEST,
+                detail={'non_field_errors': [client_errors.ERR_PRIVACY_SETTING_PRIVATE]}
+            )
+
+        stylist_preference: PreferredStylist = PreferredStylist.objects.filter(
+            client=client,
+            stylist__uuid=stylist_uuid,
+            deleted_at__isnull=True
+        ).last()
+
+        if not stylist_preference:
+            raise exceptions.NotFound(
+                detail={'non_field_errors': [appt_constants.ERR_STYLIST_DOES_NOT_EXIST]}
+            )
+
+        stylist: Stylist = stylist_preference.stylist
+
+        followers = stylist.get_preferred_clients().filter(
+            privacy=ClientPrivacy.PUBLIC
+        ).exclude(id=client.id)
+
+        return Response({
+            'followers': FollowerSerializer(
+                followers, context={'stylist': stylist}, many=True
+            ).data
+        })

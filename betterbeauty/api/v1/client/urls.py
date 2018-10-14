@@ -11,8 +11,10 @@ from api.v1.client.views import (
     PreferredStylistDeleteView,
     PreferredStylistListCreateView,
     SearchStylistView,
+    StylistFollowersView,
     StylistServicePriceView,
-    StylistServicesView)
+    StylistServicesView
+)
 
 
 app_name = 'client'
@@ -28,6 +30,8 @@ urlpatterns = [
         PreferredStylistDeleteView.as_view(), name='preferred-stylist-delete'),
     url('^stylists/(?P<uuid>[0-9a-f\-]+)/services$',
         StylistServicesView.as_view(), name='stylist-services'),
+    url('^stylists/(?P<stylist_uuid>[0-9a-f\-]+)/followers$',
+        StylistFollowersView.as_view(), name='stylist-followers'),
     url('^services/pricing$', StylistServicePriceView.as_view(), name='services-pricing'),
     url('^available-times$', AvailableTimeSlotView.as_view(), name='available-times'),
 
