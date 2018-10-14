@@ -180,7 +180,7 @@ class TestAppointmentSerializer(object):
         assert(serializer.is_valid() is True)
         appointment: Appointment = serializer.save()
 
-        assert(appointment.total_client_price_before_tax == 37.5)
+        assert(appointment.total_client_price_before_tax == 40)
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == client_data.user.first_name)
         assert (appointment.client is not None)
@@ -191,7 +191,7 @@ class TestAppointmentSerializer(object):
         original_service: AppointmentService = appointment.services.first()
         assert(original_service.is_original is True)
         assert(original_service.regular_price == service.regular_price)
-        assert(original_service.client_price == 37.5)
+        assert(original_service.client_price == 40)
         assert(original_service.service_uuid == service.uuid)
         assert(original_service.service_name == service.name)
 
@@ -240,7 +240,7 @@ class TestAppointmentSerializer(object):
         appointment: Appointment = serializer.save()
 
         assert (
-            appointment.total_client_price_before_tax == 37.5
+            appointment.total_client_price_before_tax == 40
         )
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == client_data.user.first_name)
@@ -250,7 +250,7 @@ class TestAppointmentSerializer(object):
         original_service: AppointmentService = appointment.services.first()
         assert (original_service.is_original is True)
         assert (original_service.regular_price == service.regular_price)
-        assert (original_service.client_price == 37.5)
+        assert (original_service.client_price == 40)
         assert (original_service.service_uuid == service.uuid)
         assert (original_service.service_name == service.name)
 
