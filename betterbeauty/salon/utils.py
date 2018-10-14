@@ -1,6 +1,6 @@
 import datetime
+from decimal import Decimal, ROUND_HALF_UP
 from itertools import compress
-from math import trunc
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from django.db import models, transaction
@@ -243,7 +243,7 @@ def generate_client_prices_for_stylist_services(
                 datetime.timedelta(minutes=END_OF_DAY_BUFFER_TIME_IN_MINUTES)):
             client_prices_on_dates.append(ClientPriceOnDate(
                 date=obj.date,
-                price=trunc(obj.calculated_price.price),
+                price=int(Decimal(obj.calculated_price.price).quantize(0, ROUND_HALF_UP)),
                 is_fully_booked=obj.is_fully_booked,
                 is_working_day=obj.is_working_day,
                 discount_type=obj.calculated_price.applied_discount,
@@ -270,7 +270,8 @@ def calculate_price_and_discount_for_client_on_date(
         return prices[date]
     # Return base price if day does not appear to be available for booking
     calculated_price = CalculatedPrice.build(
-        price=trunc(service.regular_price), applied_discount=None, discount_percentage=0
+        price=float(Decimal(service.regular_price).quantize(0, ROUND_HALF_UP)),
+        applied_discount=None, discount_percentage=0
     )
     return calculated_price
 

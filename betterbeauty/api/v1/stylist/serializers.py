@@ -1,7 +1,6 @@
 import datetime
 import uuid
-from decimal import Decimal
-from math import trunc
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Iterable, List, Optional
 
 from django.conf import settings
@@ -1382,7 +1381,7 @@ class StylistServicePricingSerializer(serializers.ModelSerializer):
         )
         return StylistServicePriceSerializer(
             map(lambda m: {'date': m.date,
-                           'price': trunc(m.calculated_price.price),
+                           'price': Decimal(m.calculated_price.price).quantize(0, ROUND_HALF_UP),
                            'is_fully_booked': m.is_fully_booked,
                            'is_working_day': m.is_working_day,
                            'discount_type': m.calculated_price.applied_discount.value
