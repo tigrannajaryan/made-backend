@@ -682,17 +682,22 @@ class AppointmentValidationMixin(object):
             )
 
         # check if there are intersecting appointments
-        if stylist.get_appointments_in_datetime_range(
-            datetime_start_at, datetime_start_at + stylist.service_time_gap,
+        partially_intersecting_appointments = stylist.get_appointments_in_datetime_range(
+            datetime_start_at - (stylist.service_time_gap / 2),
+            datetime_start_at + (stylist.service_time_gap / 2),
             including_to=True,
             exclude_statuses=[
-                AppointmentStatus.CANCELLED_BY_STYLIST,
-                AppointmentStatus.CANCELLED_BY_CLIENT
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+                AppointmentStatus.CANCELLED_BY_STYLIST
             ]
-        ).exists():
-            raise serializers.ValidationError(
-                appointment_errors.ERR_APPOINTMENT_INTERSECTION
-            )
+        )
+        for appointment in partially_intersecting_appointments:
+            if (datetime_start_at - (stylist.service_time_gap / 2) < (
+                    appointment.datetime_start_at) <= (
+                    datetime_start_at + (stylist.service_time_gap / 2))):
+                raise serializers.ValidationError(
+                    appointment_errors.ERR_APPOINTMENT_INTERSECTION
+                )
         return datetime_start_at
 
     def validate_service_uuid(self, service_uuid: str):
@@ -1161,14 +1166,13 @@ class StylistHomeSerializer(serializers.ModelSerializer):
     today_visits_count = serializers.SerializerMethodField()
     upcoming_visits_count = serializers.SerializerMethodField()
     followers = serializers.SerializerMethodField()
-    this_week_earning = serializers.SerializerMethodField()
     today_slots = serializers.SerializerMethodField()
 
     class Meta:
         model = Stylist
         fields = [
             'appointments', 'today_visits_count', 'upcoming_visits_count',
-            'followers', 'this_week_earning', 'today_slots'
+            'followers', 'today_slots'
         ]
 
     def validate(self, attrs):
@@ -1192,25 +1196,6 @@ class StylistHomeSerializer(serializers.ModelSerializer):
 
     def get_followers(self, stylist: Stylist) -> Optional[int]:
         return stylist.get_preferred_clients().count()
-
-    def get_this_week_earning(self, stylist: Stylist) -> Optional[float]:
-        """
-        This function calculates the total earnings from most recent Monday 00:00:00 to
-        upcoming sunday 23:59:59
-        """
-        current_now = stylist.get_current_now()
-        start = (stylist.get_current_now() - datetime.timedelta(
-            days=current_now.weekday())).replace(hour=0, minute=0, second=0)
-        end = (start + datetime.timedelta(days=6)).replace(hour=23, minute=59, second=59)
-        exclude_statuses = [
-            AppointmentStatus.CANCELLED_BY_STYLIST,
-            AppointmentStatus.CANCELLED_BY_CLIENT,
-            AppointmentStatus.NEW
-        ]
-        sum_of_earnings = stylist.get_appointments_in_datetime_range(
-            datetime_from=start, datetime_to=end, exclude_statuses=exclude_statuses).aggregate(
-            Sum('grand_total'))['grand_total__sum']
-        return sum_of_earnings if sum_of_earnings else 0
 
     def get_appointments(self, stylist: Stylist):
         query = self.context['query']

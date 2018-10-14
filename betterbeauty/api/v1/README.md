@@ -1977,7 +1977,6 @@ curl -X GET \
     "upcoming_visits_count": 0,
     "past_visits_count": 41,
     "followers": 2,
-    "this_week_earning": 500,
     "today_slots": 5
 }
 
