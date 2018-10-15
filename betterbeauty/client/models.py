@@ -15,6 +15,8 @@ from core.models import User
 from integrations.gmaps import GeoCode
 from utils.models import SmartModel
 
+from .types import CLIENT_PRIVACY_CHOICES, ClientPrivacy
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,6 +33,10 @@ class Client(models.Model):
 
     is_address_geocoded = models.BooleanField(default=False)
     last_geo_coded = models.DateTimeField(blank=True, null=True, default=None)
+
+    privacy = models.CharField(
+        max_length=16, choices=CLIENT_PRIVACY_CHOICES, default=ClientPrivacy.PUBLIC
+    )
 
     def geo_code_address(self):
         geo_coded_address = GeoCode(self.zip_code).geo_code(country=self.country)
