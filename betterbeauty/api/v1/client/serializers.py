@@ -636,3 +636,27 @@ class AppointmentPreviewResponseSerializer(serializers.Serializer):
     has_tax_included = serializers.BooleanField(read_only=True)
     has_card_fee_included = serializers.BooleanField(read_only=True)
     services = AppointmentServiceSerializer(many=True)
+
+
+class FollowerSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(source='user.first_name')
+    last_name = serializers.CharField(source='user.last_name')
+    booking_count = serializers.SerializerMethodField()
+    photo_url = serializers.CharField(source='get_profile_photo_url', allow_null=True)
+
+    class Meta:
+        model = Client
+        fields = ['uuid', 'first_name', 'last_name', 'booking_count', 'photo_url', ]
+
+    def get_booking_count(self, client: Client):
+        stylist: Stylist = self.context['stylist']
+        return Appointment.objects.filter(
+            stylist=stylist,
+            client=client,
+        ).exclude(
+            status__in=[
+                AppointmentStatus.NO_SHOW,
+                AppointmentStatus.CANCELLED_BY_CLIENT,
+                AppointmentStatus.CANCELLED_BY_STYLIST
+            ]
+        ).count()

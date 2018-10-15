@@ -1,5 +1,6 @@
 import datetime
 import json
+import uuid
 from typing import Dict
 
 import mock
@@ -15,8 +16,9 @@ from freezegun import freeze_time
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
+from api.common.constants import HIGH_LEVEL_API_ERROR_CODES as common_errors
 from api.common.permissions import ClientPermission
-from api.v1.client.constants import NEW_YORK_LOCATION
+from api.v1.client.constants import ErrorMessages as client_errors, NEW_YORK_LOCATION
 from api.v1.client.serializers import AppointmentValidationMixin
 from api.v1.client.urls import urlpatterns
 from api.v1.client.views import HistoryView, HomeView, SearchStylistView
@@ -26,6 +28,7 @@ from appointment.constants import (
 )
 from appointment.models import Appointment
 from client.models import Client, PreferredStylist
+from client.types import ClientPrivacy
 from salon.models import Salon, Stylist, StylistService
 from salon.tests.test_models import stylist_appointments_data
 
@@ -624,3 +627,103 @@ class TestHistoryAPIView(object):
             a.save(update_fields=['client', ])
         past_appointments = HistoryView.get_historical_appointments(client)
         assert (past_appointments.count() == 2)
+
+
+class TestStylistFollowersView(object):
+    @pytest.mark.django_db
+    def test_stylist_validation(self, client, authorized_client_user):
+        """Verify that non-preferred or missing stylist raise 404"""
+        user, auth_token = authorized_client_user
+        client_obj: Client = user.client
+        url = reverse('api:v1:client:stylist-followers', kwargs={'stylist_uuid': uuid.uuid4()})
+        response = client.get(url, HTTP_AUTHORIZATION=auth_token)
+        assert(response.status_code == status.HTTP_404_NOT_FOUND)
+        assert(
+            appointment_errors.ERR_STYLIST_DOES_NOT_EXIST in
+            response.data['non_field_errors']
+        )
+        assert(response.data['code'] == common_errors[404])
+
+        foreign_stylist = G(Stylist)
+        url = reverse(
+            'api:v1:client:stylist-followers', kwargs={'stylist_uuid': foreign_stylist.uuid}
+        )
+        response = client.get(url, HTTP_AUTHORIZATION=auth_token)
+        assert(response.status_code == status.HTTP_404_NOT_FOUND)
+        assert(
+            appointment_errors.ERR_STYLIST_DOES_NOT_EXIST in
+            response.data['non_field_errors']
+        )
+        assert(response.data['code'] == common_errors[404])
+
+        G(PreferredStylist, stylist=foreign_stylist, client=client_obj)
+        response = client.get(url, HTTP_AUTHORIZATION=auth_token)
+        assert(status.is_success(response.status_code))
+
+    @pytest.mark.django_db
+    def test_privacy_setting(self, client, authorized_client_user):
+        """Verify that if current client has private setting, 400 is returned"""
+        user, auth_token = authorized_client_user
+        client_obj: Client = user.client
+        client_obj.privacy = ClientPrivacy.PRIVATE
+        client_obj.save(update_fields=['privacy', ])
+        stylist: Stylist = G(Stylist)
+        G(PreferredStylist, stylist=stylist, client=client_obj)
+        url = reverse('api:v1:client:stylist-followers', kwargs={'stylist_uuid': stylist.uuid})
+        response = client.get(url, HTTP_AUTHORIZATION=auth_token)
+        assert (response.status_code == status.HTTP_400_BAD_REQUEST)
+        assert (response.data['code'] == common_errors[400])
+        assert (
+            client_errors.ERR_PRIVACY_SETTING_PRIVATE in
+            response.data['non_field_errors']
+        )
+
+    @pytest.mark.django_db
+    def test_output(self, client, authorized_client_user):
+        user, auth_token = authorized_client_user
+        client_obj: Client = user.client
+        stylist: Stylist = G(Stylist)
+        G(PreferredStylist, stylist=stylist, client=client_obj)
+
+        client_with_privacy = G(Client, privacy=ClientPrivacy.PRIVATE)
+        G(PreferredStylist, stylist=stylist, client=client_with_privacy)
+        G(
+            Appointment, status=AppointmentStatus.CHECKED_OUT,
+            client=client_with_privacy, stylist=stylist
+        )
+        client_with_cancelled_appointment = G(Client)
+        G(PreferredStylist, stylist=stylist, client=client_with_cancelled_appointment)
+        G(
+            Appointment, status=AppointmentStatus.CANCELLED_BY_CLIENT,
+            client=client_with_cancelled_appointment, stylist=stylist
+        )
+        client_with_successful_appointment = G(Client)
+        G(PreferredStylist, stylist=stylist, client=client_with_successful_appointment)
+        G(
+            Appointment, status=AppointmentStatus.CHECKED_OUT,
+            client=client_with_successful_appointment, stylist=stylist
+        )
+        client_with_new_appointment = G(Client)
+        G(PreferredStylist, stylist=stylist, client=client_with_new_appointment)
+        G(
+            Appointment, status=AppointmentStatus.NEW,
+            client=client_with_new_appointment, stylist=stylist
+        )
+        client_without_appointments = G(Client)
+        G(PreferredStylist, stylist=stylist, client=client_without_appointments)
+
+        url = reverse('api:v1:client:stylist-followers', kwargs={'stylist_uuid': stylist.uuid})
+        response = client.get(url, HTTP_AUTHORIZATION=auth_token)
+        assert(status.is_success(response.status_code))
+        assert(frozenset([r['uuid'] for r in response.data['followers']]) == frozenset([
+            str(client_with_successful_appointment.uuid),
+            str(client_with_new_appointment.uuid),
+            str(client_with_cancelled_appointment.uuid),
+            str(client_without_appointments.uuid)
+        ]))
+
+        appt_count = {u['uuid']: u['booking_count'] for u in response.data['followers']}
+        assert(appt_count[str(client_with_successful_appointment.uuid)] == 1)
+        assert(appt_count[str(client_with_new_appointment.uuid)] == 1)
+        assert(appt_count[str(client_with_cancelled_appointment.uuid)] == 0)
+        assert(appt_count[str(client_without_appointments.uuid)] == 0)

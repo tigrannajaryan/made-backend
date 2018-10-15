@@ -56,6 +56,7 @@
     - [Profile](#client-profile)
     - [Preferred Stylist](#preferred-stylists)
     - [Search Stylists](#search-stylists)
+    - [Stylist followers](#stylist-followers)
     - [Services](#services)
     - [Appointment](#appointment)
     - [Available Slots](#available-slots)
@@ -218,6 +219,7 @@ such specific errors in particular API calls.
 |err_wait_to_rerequest_new_code|Minimum 2 minutes wait required to re-request new code|/api/v1/client/auth/get-code|--|
 |err_invalid_sms_code|Invalid SMS Code|/api/v1/client/confirm-code|code|
 |err_invalid_phone_number|Invalid Phone Number|--|--|
+|err_privacy_setting_private|Unable to retrieve followers while own privacy setting is 'Private'|/api/v1/client/stylist/{uuid}/followers|non-field|
 
 # Authorization
 ## Getting auth token with email/password credentials
@@ -2544,6 +2546,52 @@ curl -X POST \
 }
 ```
 
+
+## Stylist followers
+
+**GET /api/v1/client/stylists/:stylist_uuid/followers**
+
+**Response 200 OK**
+```
+{
+    "followers": [
+        {
+            "uuid": "507a8cb8-8824-49a1-98b5-1927d01fd7e1",
+            "first_name": "Jane",
+            "last_name": "Doe",
+            "booking_count": 0,
+            "photo_url": null
+        },
+        {
+            "uuid": "a8e04303-b677-4bd3-ba0e-b73073038836",
+            "first_name": "Elizabeth",
+            "last_name": "Kromwell",
+            "booking_count": 1,
+            "photo_url": "http://...."
+        }
+    ]
+}
+```
+
+**Response 404 Not Found**
+```
+{
+    "code": "err_not_found",
+    "field_errors": {},
+    "non_field_errors": ["err_stylist_does_not_exist"]
+}
+
+```
+
+**Response 400 Bad Request**
+```
+{
+    "code": "err_api_exception",
+    "field_errors": {},
+    "non_field_errors": ["err_privacy_setting_private"]
+}
+
+```
 
 ## Services
 
