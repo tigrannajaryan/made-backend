@@ -410,7 +410,7 @@ class StylistFollowersView(views.APIView):
         if client.privacy == ClientPrivacy.PRIVATE:
             raise exceptions.ValidationError(
                 code=status.HTTP_400_BAD_REQUEST,
-                detail={'non_field_errors': [client_errors.ERR_PRIVACY_SETTING_PRIVATE]}
+                detail={'non_field_errors': [{'code': client_errors.ERR_PRIVACY_SETTING_PRIVATE}]}
             )
 
         stylist_preference: PreferredStylist = PreferredStylist.objects.filter(
@@ -421,7 +421,7 @@ class StylistFollowersView(views.APIView):
 
         if not stylist_preference:
             raise exceptions.NotFound(
-                detail={'non_field_errors': [appt_constants.ERR_STYLIST_DOES_NOT_EXIST]}
+                detail={'non_field_errors': [{'code': appt_constants.ERR_STYLIST_DOES_NOT_EXIST}]}
             )
 
         stylist: Stylist = stylist_preference.stylist
