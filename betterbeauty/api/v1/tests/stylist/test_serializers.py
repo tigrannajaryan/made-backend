@@ -668,11 +668,7 @@ class TestAppointmentSerializer(object):
             status=AppointmentStatus.NEW,
         )
         serializer = AppointmentSerializer(data=data, context={'stylist': stylist_data})
-        assert (serializer.is_valid(raise_exception=False) is False)
-        assert (
-            {'code': appointment_errors.ERR_APPOINTMENT_INTERSECTION} in
-            serializer.errors['field_errors'].get('datetime_start_at')
-        )
+        assert (serializer.is_valid(raise_exception=False) is True)
         next_appointment.delete()
         # try inner appointment
         G(
@@ -1392,10 +1388,8 @@ class TestHomeAPISerializer(object):
         current_appointment.save()
         G(PreferredStylist, stylist=stylist_data, client=client_data)
         serializer_data = StylistHomeSerializer(stylist_data, context={"query": "today"}).data
-        expected_earning = past_appointment.grand_total + current_appointment.grand_total
         assert(serializer_data['today_visits_count'] == 2)
         assert(serializer_data['upcoming_visits_count'] == 3)
-        assert(serializer_data['this_week_earning'] == expected_earning)
         assert(serializer_data['today_slots'] == 18)
         assert(serializer_data['followers'] == 1)
 

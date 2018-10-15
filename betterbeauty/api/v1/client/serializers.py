@@ -277,17 +277,22 @@ class AppointmentValidationMixin(object):
             )
 
         # check if there are intersecting appointments
-        if stylist.get_appointments_in_datetime_range(
-            datetime_start_at, datetime_start_at + stylist.service_time_gap,
+        partially_intersecting_appointments = stylist.get_appointments_in_datetime_range(
+            datetime_start_at - (stylist.service_time_gap / 2),
+            datetime_start_at + (stylist.service_time_gap / 2),
             including_to=True,
             exclude_statuses=[
                 AppointmentStatus.CANCELLED_BY_CLIENT,
                 AppointmentStatus.CANCELLED_BY_STYLIST
             ]
-        ).exists():
-            raise serializers.ValidationError(
-                appointment_errors.ERR_APPOINTMENT_INTERSECTION
-            )
+        )
+        for appointment in partially_intersecting_appointments:
+            if (datetime_start_at - (stylist.service_time_gap / 2) < (
+                    appointment.datetime_start_at) <= (
+                    datetime_start_at + (stylist.service_time_gap / 2))):
+                raise serializers.ValidationError(
+                    appointment_errors.ERR_APPOINTMENT_INTERSECTION
+                )
         return datetime_start_at
 
     def validate_service_uuid(self, service_uuid: str):
