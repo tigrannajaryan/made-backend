@@ -1,7 +1,6 @@
 import datetime
 import uuid
-from decimal import Decimal
-from math import trunc
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from django.db import transaction
@@ -23,14 +22,16 @@ from api.v1.stylist.serializers import (
     StylistServiceCategoryDetailsSerializer,
     StylistServicePriceSerializer
 )
-
 from appointment.constants import (
     APPOINTMENT_CLIENT_SETTABLE_STATUSES,
-    DEFAULT_HAS_CARD_FEE_INCLUDED, DEFAULT_HAS_TAX_INCLUDED, ErrorMessages as appointment_errors)
+    DEFAULT_HAS_CARD_FEE_INCLUDED, DEFAULT_HAS_TAX_INCLUDED,
+    ErrorMessages as appointment_errors
+)
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.constants import END_OF_DAY_BUFFER_TIME_IN_MINUTES
 from client.models import Client, PreferredStylist
+from client.types import CLIENT_PRIVACY_CHOICES
 from core.models import User
 from core.types import AppointmentPrices
 from core.utils import calculate_appointment_prices
@@ -57,10 +58,16 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
     city = serializers.CharField(source='client.city', read_only=True)
     state = serializers.CharField(source='client.state', read_only=True)
 
+    privacy = serializers.ChoiceField(
+        source='client.privacy', choices=CLIENT_PRIVACY_CHOICES, required=False
+    )
+
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'phone', 'profile_photo_id',
-                  'profile_photo_url', 'zip_code', 'birthday', 'email', 'city', 'state']
+        fields = [
+            'first_name', 'last_name', 'phone', 'profile_photo_id', 'profile_photo_url',
+            'zip_code', 'birthday', 'email', 'city', 'state', 'privacy',
+        ]
 
     def validate_email(self, email: str):
         if email and self.instance and Client.objects.exclude(
@@ -245,7 +252,7 @@ class ServicePricingSerializer(serializers.Serializer):
                     datetime.timedelta(minutes=END_OF_DAY_BUFFER_TIME_IN_MINUTES)):
                 prices_and_dates_list.append({
                     'date': obj.date,
-                    'price': trunc(obj.calculated_price.price),
+                    'price': Decimal(obj.calculated_price.price).quantize(0, ROUND_HALF_UP),
                     'is_fully_booked': obj.is_fully_booked,
                     'is_working_day': obj.is_working_day,
                     'discount_type': obj.calculated_price.applied_discount.value
