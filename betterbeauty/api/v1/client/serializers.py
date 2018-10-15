@@ -1,7 +1,6 @@
 import datetime
 import uuid
-from decimal import Decimal
-from math import trunc
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from django.db import transaction
@@ -253,7 +252,7 @@ class ServicePricingSerializer(serializers.Serializer):
                     datetime.timedelta(minutes=END_OF_DAY_BUFFER_TIME_IN_MINUTES)):
                 prices_and_dates_list.append({
                     'date': obj.date,
-                    'price': trunc(obj.calculated_price.price),
+                    'price': Decimal(obj.calculated_price.price).quantize(0, ROUND_HALF_UP),
                     'is_fully_booked': obj.is_fully_booked,
                     'is_working_day': obj.is_working_day,
                     'discount_type': obj.calculated_price.applied_discount.value
