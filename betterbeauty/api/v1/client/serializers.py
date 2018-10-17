@@ -48,8 +48,8 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
 
     phone = PhoneNumberField(read_only=True)
     profile_photo_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
-    profile_photo_url = serializers.CharField(read_only=True,
-                                              source='client.get_profile_photo_url', default=None)
+    profile_photo_url = serializers.CharField(
+        source='client.get_profile_photo_url', read_only=True)
     birthday = serializers.DateField(source='client.birthday', required=False, )
     zip_code = serializers.CharField(source='client.zip_code',
                                      required=False, allow_blank=True, allow_null=True)
@@ -87,14 +87,16 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
             should_save_photo = True
             profile_photo_id = self.validated_data.pop('profile_photo_id')
         client_data = self.validated_data.pop('client', None)
-        client = self.context['user'].client
+        user: User = self.instance
+        client = user.client
         if client_data:
+            fields_to_save: List[str] = list(client_data.keys())
             if client.zip_code != client_data.get('zip_code', client.zip_code):
-                client.zip_code = client_data.get('zip_code', client.zip_code)
                 client.last_geo_coded = None
-            client.birthday = client_data.get('birthday', client.birthday)
-            client.email = client_data.get('email', client.email)
-            client.save(update_fields=['zip_code', 'birthday', 'email', 'last_geo_coded'])
+                fields_to_save.append('last_geo_coded')
+            for k, v in client_data.items():
+                setattr(client, k, v)
+            client.save(update_fields=fields_to_save)
         user = super(ClientProfileSerializer, self).save(**kwargs)
         if should_save_photo:
             save_profile_photo(
