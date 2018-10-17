@@ -279,3 +279,5 @@ GOOGLE_GEOCODING_API_KEY = os.environ.get(
 
 IPSTACK_API_KEY = os.environ.get(
     'IPSTACK_API_KEY', '<override in local.py>')
+
+DJANGO_SILK_ENABLED = False

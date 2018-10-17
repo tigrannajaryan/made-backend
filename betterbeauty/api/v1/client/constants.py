@@ -2,6 +2,12 @@ from django.contrib.gis.geos import Point
 
 NEW_YORK_LOCATION: Point = Point((-74.0060, 40.7128))
 
+STYLIST_SEARCH_LIMIT = 100
+
+STYLIST_SEARCH_DEFAULT_ACCURACY = 50000
+
+TRIGRAM_SIMILARITY = 0.3
+
 
 class ErrorMessages:
     ERR_STYLIST_IS_ALREADY_IN_PREFERENCE = "err_stylist_is_already_in_preference"

@@ -227,27 +227,30 @@ class TestSearchStylistView(object):
 
         accuracy = 50000
         results = SearchStylistView._search_stylists(
-            '', location=location, accuracy=accuracy)
+            '', '', location=location, accuracy=accuracy)
         assert (len(results) == 1)
 
         results = SearchStylistView._search_stylists(
-            'Fred', location=location, accuracy=accuracy)
+            'Fred', 'los altos', location=location, accuracy=accuracy)
         assert (len(results) == 1)
         assert (results[0] == stylist_data)
         results = SearchStylistView._search_stylists(
-            'mcbob fr', location=location, accuracy=accuracy)
+            'mcbob fr', 'rilma', location=location, accuracy=accuracy)
         assert (len(results) == 1)
         assert (results[0] == stylist_data)
+        results = SearchStylistView._search_stylists(
+            'mcbob fr', 'junk-address', location=location, accuracy=accuracy)
+        assert (len(results) == 0)
         salon = stylist_data_2.salon
         salon.location = location
         salon.save()
         results = SearchStylistView._search_stylists(
-            stylist_data_2.get_full_name(), location=location, accuracy=accuracy)
+            stylist_data_2.get_full_name(), '', location=location, accuracy=accuracy)
         assert (len(results) == 1)
         assert (results[0] == stylist_data_2)
 
         results = SearchStylistView._search_stylists(
-            'some-junk-text', location=location, accuracy=accuracy)
+            'some-junk-text', '', location=location, accuracy=accuracy)
         assert (len(results) == 0)
 
     @pytest.mark.django_db
@@ -258,7 +261,7 @@ class TestSearchStylistView(object):
         accuracy = 50000
 
         results = SearchStylistView._search_stylists(
-            '', location=location, accuracy=accuracy)
+            '', '', location=location, accuracy=accuracy)
         assert (len(results) == 1)
         assert results[0] == stylist_data_2
 
