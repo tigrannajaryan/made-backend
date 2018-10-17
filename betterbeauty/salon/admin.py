@@ -30,8 +30,9 @@ class ServiceTemplateSetAdmin(admin.ModelAdmin):
 
 
 class SalonAdmin(admin.ModelAdmin):
-    # TODO: decide on filter/search fields
-    pass
+    search_fields = ['name', 'address', 'stylist__user__first_name', 'stylist__user__last_name',
+                     'stylist__user__phone']
+    list_display = ['name', 'address']
 
 
 class StylistAvailableDayForm(forms.ModelForm):
@@ -68,6 +69,15 @@ class StylistAvailableDayForm(forms.ModelForm):
 
 
 class StylistAdmin(admin.ModelAdmin):
+    search_fields = ['user__first_name', 'user__last_name',
+                     'user__phone']
+    list_display = ['__str__', 'user_name', 'user_phone']
+
+    def user_phone(self, obj):
+        return obj.user.phone
+
+    def user_name(self, obj):
+        return obj.user.get_full_name()
 
     class StylistAvailableDayInline(admin.TabularInline):
         model = StylistAvailableWeekDay
