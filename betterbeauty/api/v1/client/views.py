@@ -6,6 +6,7 @@ from dateutil.parser import parse
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
+from django.contrib.postgres.search import TrigramSimilarity
 from django.db import models
 from django.db.models import F, Q, Value
 from django.db.models.functions import Concat
@@ -22,7 +23,11 @@ from rest_framework import (
 from rest_framework.response import Response
 
 from api.common.permissions import ClientPermission
-from api.v1.client.constants import ErrorMessages as client_errors, NEW_YORK_LOCATION
+
+from api.v1.client.constants import (ErrorMessages as client_errors, NEW_YORK_LOCATION,
+                                     STYLIST_SEARCH_DEFAULT_ACCURACY,
+                                     STYLIST_SEARCH_LIMIT, TRIGRAM_SIMILARITY
+                                     )
 from api.v1.client.serializers import (
     AddPreferredClientsSerializer,
     AppointmentPreviewRequestSerializer,
@@ -159,9 +164,12 @@ class SearchStylistView(generics.ListAPIView):
     permission_classes = [ClientPermission, permissions.IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        serializer = StylistSerializer(self.get_queryset(), many=True)
+        matching_stylists = self.get_queryset()
+        more_results_available = True if (len(matching_stylists) > STYLIST_SEARCH_LIMIT) else False
+        serializer = StylistSerializer(matching_stylists[:STYLIST_SEARCH_LIMIT], many=True)
         response_dict = {
-            'stylists': serializer.data
+            'stylists': serializer.data,
+            'more_results_available': more_results_available
         }
         return Response(response_dict, status=status.HTTP_200_OK)
 
@@ -175,41 +183,62 @@ class SearchStylistView(generics.ListAPIView):
 
     def get_queryset(self):
         query = post_or_get_or_data(self.request, 'search_like', '')
+        address_query = post_or_get_or_data(self.request, 'search_location', '')
         latitude = post_or_get_or_data(self.request, 'latitude', None)
         longitude = post_or_get_or_data(self.request, 'longitude', None)
-        accuracy = post_or_get_or_data(self.request, 'accuracy', 50000)
+        accuracy = post_or_get_or_data(self.request, 'accuracy', STYLIST_SEARCH_DEFAULT_ACCURACY)
         if latitude and longitude:
             location = Point((longitude, latitude))
         else:
             ip, is_routable = get_client_ip(self.request)
             location = get_lat_lng_for_ip_address(ip)
         self.save_search_request(location)
-        return self._search_stylists(query, location, accuracy)
+        return self._search_stylists(query, address_query, location, accuracy)
 
     @staticmethod
-    def _search_stylists(query: str, location: Point, accuracy: int) -> List:
+    def _search_stylists(query: str, address_query: str, location: Point, accuracy: int) -> List:
 
         queryset = Stylist.objects.annotate(
             full_name=Concat(F('user__first_name'), Value(' '), F('user__last_name')),
             reverse_full_name=Concat(F('user__last_name'), Value(' '), F('user__first_name')),
         ).distinct('id')
 
-        nearby_stylists = SearchStylistView._get_nearby_stylists(queryset, location, accuracy)
-        if len(nearby_stylists) == 0:
+        list_of_stylists = SearchStylistView._get_nearby_stylists(queryset, location, accuracy)
+        if len(list_of_stylists) == 0:
             # if there is no stylist in the area, return stylist from NY
-            nearby_stylists = SearchStylistView._get_nearby_stylists(
+            list_of_stylists = SearchStylistView._get_nearby_stylists(
                 queryset, NEW_YORK_LOCATION, accuracy)
 
-        query_filter = (
-            Q(full_name__icontains=query) |
-            Q(salon__name__icontains=query) |
-            Q(reverse_full_name__icontains=query)
-        )
-        list_of_stylists = nearby_stylists.filter(query_filter)
+        if query:
+            list_of_stylists = list_of_stylists.annotate(
+                full_name_similarity=TrigramSimilarity('full_name', query),
+                salon_name_similarity=TrigramSimilarity('salon__name', query),
+                reverse_full_name_similarity=TrigramSimilarity('reverse_full_name', query),
+                service_name_similarity=TrigramSimilarity('services__name', query)
+            ).filter(
+                Q(full_name_similarity__gt=TRIGRAM_SIMILARITY) |
+                Q(salon_name_similarity__gt=TRIGRAM_SIMILARITY) |
+                Q(service_name_similarity__gt=TRIGRAM_SIMILARITY) |
+                Q(full_name__icontains=query) |
+                Q(salon__name__icontains=query) |
+                Q(reverse_full_name__icontains=query) |
+                Q(services__name__icontains=query)
+            )
+
+        if address_query:
+            list_of_stylists = list_of_stylists.annotate(
+                salon_city_similarity=TrigramSimilarity('salon__city', address_query)
+            ).filter(
+                Q(salon_city_similarity__gt=TRIGRAM_SIMILARITY) |
+                Q(salon__state__icontains=address_query) |
+                Q(salon__address__icontains=address_query) |
+                Q(salon__zip_code__icontains=address_query)
+            )
+
         # we can't use order_by('distance') here since we also need to use distinct('distance') to
         # avoid "SELECT DISTINCT ON expressions must match initial ORDER BY expressions" error,
         # So we get the results and sort by distance manually.
-        return sorted(list_of_stylists, key=lambda x: x.distance)
+        return sorted(list_of_stylists, key=lambda x: x.distance)[:STYLIST_SEARCH_LIMIT + 1]
 
     @staticmethod
     def _get_nearby_stylists(queryset: models.QuerySet,
@@ -405,7 +434,7 @@ class StylistFollowersView(views.APIView):
         if client.privacy == ClientPrivacy.PRIVATE:
             raise exceptions.ValidationError(
                 code=status.HTTP_400_BAD_REQUEST,
-                detail={'non_field_errors': [client_errors.ERR_PRIVACY_SETTING_PRIVATE]}
+                detail={'non_field_errors': [{'code': client_errors.ERR_PRIVACY_SETTING_PRIVATE}]}
             )
 
         stylist_preference: PreferredStylist = PreferredStylist.objects.filter(
@@ -416,7 +445,7 @@ class StylistFollowersView(views.APIView):
 
         if not stylist_preference:
             raise exceptions.NotFound(
-                detail={'non_field_errors': [appt_constants.ERR_STYLIST_DOES_NOT_EXIST]}
+                detail={'non_field_errors': [{'code': appt_constants.ERR_STYLIST_DOES_NOT_EXIST}]}
             )
 
         stylist: Stylist = stylist_preference.stylist

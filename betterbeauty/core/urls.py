@@ -24,6 +24,9 @@ if settings.LEVEL in [EnvLevel.DEVELOPMENT, EnvLevel.TESTS]:
         }),
     ]
 
+if settings.DJANGO_SILK_ENABLED:
+    urlpatterns += [url(r'^silk/', include('silk.urls', namespace='silk'))]
+
 if settings.LEVEL in [EnvLevel.PRODUCTION, EnvLevel.STAGING]:
     urlpatterns += [
         url(r'^healthcheck', HealthCheckView.as_view()),
