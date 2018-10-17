@@ -6,6 +6,7 @@ import pytest
 import pytz
 
 from django.conf import settings
+from django.utils import timezone
 from django_dynamic_fixture import G
 from freezegun import freeze_time
 
@@ -15,6 +16,7 @@ from api.v1.client.serializers import (
     AppointmentSerializer,
     AppointmentUpdateSerializer,
     AppointmentValidationMixin,
+    ClientProfileSerializer,
     ServicePricingRequestSerializer,
 )
 from appointment.constants import ErrorMessages as appointment_errors
@@ -25,8 +27,9 @@ from appointment.preview import (
     AppointmentServicePreview,
 )
 from appointment.types import AppointmentStatus
-from client.models import Client, PreferredStylist
-from core.types import Weekday
+from client.models import Client, ClientPrivacy, PreferredStylist
+from core.models import User
+from core.types import UserRole, Weekday
 from core.utils import calculate_card_fee, calculate_tax
 from pricing import CalculatedPrice
 from salon.models import (
@@ -681,3 +684,48 @@ class TestServicePricingRequestSerializer(object):
 
         serializer = ServicePricingRequestSerializer(data=data, context={'client': client})
         assert (serializer.is_valid(raise_exception=False))
+
+
+class TestClientProfileSerializer(object):
+    @pytest.mark.django_db
+    def test_save_update(self):
+        user: User = G(User, role=[UserRole.CLIENT, ])
+        client: Client = G(Client, user=user)
+        data = {
+            'first_name': 'Jane',
+            'last_name': 'McBob',
+            'birthday': '2018-10-16',
+            'zip_code': '12345',
+            'email': 'client@example.com',
+            'privacy': 'private'
+        }
+
+        serializer = ClientProfileSerializer(data=data, instance=user)
+        assert(serializer.is_valid(raise_exception=False))
+        serializer.save()
+        user.refresh_from_db()
+        assert(user.first_name == 'Jane')
+        assert(user.last_name == 'McBob')
+        assert(client.birthday == datetime.date(2018, 10, 16))
+        assert(client.zip_code == '12345')
+        assert(client.email == 'client@example.com')
+        assert(user.email != 'client@example.com')
+        assert(client.privacy == ClientPrivacy.PRIVATE)
+
+    @pytest.mark.django_db
+    def test_zipcode_update(self):
+        user: User = G(User, role=[UserRole.CLIENT, ])
+        client: Client = G(
+            Client, user=user, zip_code='12345', last_geo_coded=timezone.now()
+        )
+        data = {
+            'zip_code': '54321'
+        }
+        serializer = ClientProfileSerializer(
+            data=data, instance=user, partial=True
+        )
+        assert (serializer.is_valid(raise_exception=False))
+        serializer.save()
+        client.refresh_from_db()
+        assert(client.zip_code == '54321')
+        assert(client.last_geo_coded is None)

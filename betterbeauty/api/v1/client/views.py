@@ -65,11 +65,6 @@ class ClientProfileView(generics.CreateAPIView, generics.RetrieveUpdateAPIView):
     def get_object(self):
         return self.request.user
 
-    def get_serializer_context(self):
-        return {
-            'user': self.request.user
-        }
-
 
 class PreferredStylistListCreateView(generics.ListCreateAPIView):
     permission_classes = [ClientPermission, permissions.IsAuthenticated]
