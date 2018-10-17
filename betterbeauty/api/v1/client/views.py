@@ -40,13 +40,13 @@ from api.v1.client.serializers import (
     FollowerSerializer,
     HistorySerializer,
     HomeSerializer,
+    SearchStylistSerializer,
     ServicePricingRequestSerializer,
     ServicePricingSerializer,
     StylistServiceListSerializer,
     TimeSlotSerializer,
 )
 from api.v1.stylist.constants import MAX_APPOINTMENTS_PER_REQUEST
-from api.v1.stylist.serializers import StylistSerializer
 from appointment.constants import ErrorMessages as appt_constants
 from appointment.models import Appointment
 from appointment.preview import AppointmentPreviewRequest, build_appointment_preview_dict
@@ -166,7 +166,8 @@ class SearchStylistView(generics.ListAPIView):
     def post(self, request, *args, **kwargs):
         matching_stylists = self.get_queryset()
         more_results_available = True if (len(matching_stylists) > STYLIST_SEARCH_LIMIT) else False
-        serializer = StylistSerializer(matching_stylists[:STYLIST_SEARCH_LIMIT], many=True)
+        serializer = SearchStylistSerializer(matching_stylists[:STYLIST_SEARCH_LIMIT],
+                                             context={'user': request.user}, many=True)
         response_dict = {
             'stylists': serializer.data,
             'more_results_available': more_results_available
@@ -198,7 +199,7 @@ class SearchStylistView(generics.ListAPIView):
     @staticmethod
     def _search_stylists(query: str, address_query: str, location: Point, accuracy: int) -> List:
 
-        queryset = Stylist.objects.annotate(
+        queryset = Stylist.objects.select_related('salon', 'user').annotate(
             full_name=Concat(F('user__first_name'), Value(' '), F('user__last_name')),
             reverse_full_name=Concat(F('user__last_name'), Value(' '), F('user__first_name')),
         ).distinct('id')

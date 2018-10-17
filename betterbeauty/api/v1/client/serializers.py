@@ -19,8 +19,9 @@ from api.v1.client.constants import ErrorMessages
 from api.v1.stylist.fields import DurationMinuteField
 from api.v1.stylist.serializers import (
     AppointmentServiceSerializer,
+    StylistSerializer,
     StylistServiceCategoryDetailsSerializer,
-    StylistServicePriceSerializer
+    StylistServicePriceSerializer,
 )
 from appointment.constants import (
     APPOINTMENT_CLIENT_SETTABLE_STATUSES,
@@ -31,7 +32,7 @@ from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.constants import END_OF_DAY_BUFFER_TIME_IN_MINUTES
 from client.models import Client, PreferredStylist
-from client.types import CLIENT_PRIVACY_CHOICES
+from client.types import CLIENT_PRIVACY_CHOICES, ClientPrivacy
 from core.models import User
 from core.types import AppointmentPrices
 from core.utils import calculate_appointment_prices
@@ -662,3 +663,17 @@ class FollowerSerializer(serializers.ModelSerializer):
                 AppointmentStatus.CANCELLED_BY_STYLIST
             ]
         ).count()
+
+
+class SearchStylistSerializer(StylistSerializer):
+    followers_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Stylist
+        fields = StylistSerializer.Meta.fields + ['followers_count', ]
+
+    def get_followers_count(self, stylist: Stylist):
+        client = self.context['user'].client
+        return stylist.get_preferred_clients().filter(
+            privacy=ClientPrivacy.PUBLIC
+        ).exclude(id=client.id).count()
