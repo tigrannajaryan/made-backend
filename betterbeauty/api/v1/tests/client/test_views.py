@@ -641,10 +641,9 @@ class TestStylistFollowersView(object):
         url = reverse('api:v1:client:stylist-followers', kwargs={'stylist_uuid': uuid.uuid4()})
         response = client.get(url, HTTP_AUTHORIZATION=auth_token)
         assert(response.status_code == status.HTTP_404_NOT_FOUND)
-        assert(
-            appointment_errors.ERR_STYLIST_DOES_NOT_EXIST in
-            response.data['non_field_errors']
-        )
+        assert({'code': appointment_errors.ERR_STYLIST_DOES_NOT_EXIST} in
+               response.data['non_field_errors']
+               )
         assert(response.data['code'] == common_errors[404])
 
         foreign_stylist = G(Stylist)
@@ -653,10 +652,9 @@ class TestStylistFollowersView(object):
         )
         response = client.get(url, HTTP_AUTHORIZATION=auth_token)
         assert(response.status_code == status.HTTP_404_NOT_FOUND)
-        assert(
-            appointment_errors.ERR_STYLIST_DOES_NOT_EXIST in
-            response.data['non_field_errors']
-        )
+        assert({'code': appointment_errors.ERR_STYLIST_DOES_NOT_EXIST} in
+               response.data['non_field_errors']
+               )
         assert(response.data['code'] == common_errors[404])
 
         G(PreferredStylist, stylist=foreign_stylist, client=client_obj)
@@ -676,10 +674,9 @@ class TestStylistFollowersView(object):
         response = client.get(url, HTTP_AUTHORIZATION=auth_token)
         assert (response.status_code == status.HTTP_400_BAD_REQUEST)
         assert (response.data['code'] == common_errors[400])
-        assert (
-            client_errors.ERR_PRIVACY_SETTING_PRIVATE in
-            response.data['non_field_errors']
-        )
+        assert ({'code': client_errors.ERR_PRIVACY_SETTING_PRIVATE} in
+                response.data['non_field_errors']
+                )
 
     @pytest.mark.django_db
     def test_output(self, client, authorized_client_user):

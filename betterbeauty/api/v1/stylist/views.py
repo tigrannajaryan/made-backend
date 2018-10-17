@@ -296,7 +296,7 @@ class StylistAppointmentPreviewView(views.APIView):
                 uuid=request.data['appointment_uuid'])
         except Appointment.DoesNotExist:
             raise ValidationError(
-                {'non_field_errors': [ErrorMessages.ERR_INVALID_APPOINTMENT_UUID]})
+                {'non_field_errors': [{'code': ErrorMessages.ERR_INVALID_APPOINTMENT_UUID}]})
         serializer = AppointmentPreviewRequestSerializer(
             data=request.data, context={'stylist': stylist,
                                         'appointment': appointment, 'force_start': True}
@@ -484,7 +484,7 @@ class NearbyClientsView(views.APIView):
                 location=location, accuracy=NEARBY_CLIENTS_ACCURACY)
         else:
             raise ValidationError(
-                {'non_field_errors': [ErrorMessages.ERR_STYLIST_LOCATION_UNAVAILABLE]})
+                {'non_field_errors': [{'code': ErrorMessages.ERR_STYLIST_LOCATION_UNAVAILABLE}]})
 
     @staticmethod
     def _search_clients(location: Point, accuracy: int) -> models.QuerySet:
