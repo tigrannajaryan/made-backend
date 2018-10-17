@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta, tzinfo
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, List, NamedTuple, Optional
 
 from model_utils import Choices
@@ -147,7 +148,7 @@ def calc_client_prices(
 
         max_discount = find_applicable_discount(discounts, last_visit_date, dt)
         if max_discount is None:
-            calculated_price.price = sum(regular_prices)
+            calculated_price.price = float(Decimal(sum(regular_prices)).quantize(1, ROUND_HALF_UP))
             calculated_price.applied_discount = None
             calculated_price.discount_percentage = 0
         else:
@@ -176,7 +177,7 @@ def calc_client_prices(
                 if discounts.is_maximum_discount_enabled and discounts.maximum_discount:
                     price = max(price, (regular_price - discounts.maximum_discount))
 
-                total_price += price
+                total_price += float(Decimal(price).quantize(1, ROUND_HALF_UP))
 
             calculated_price.price = total_price
 

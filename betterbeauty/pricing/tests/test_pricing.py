@@ -1,6 +1,6 @@
 # import pytest
-
 from datetime import date, timedelta
+from decimal import Decimal, ROUND_HALF_UP
 from random import random
 from typing import List
 
@@ -89,7 +89,7 @@ class TestCalcClientPrices(object):
 
         # No discount on any day because no discounts are defined
         for price in prices:
-            assert price.price == regular_price
+            assert price.price == Decimal(regular_price).quantize(1, ROUND_HALF_UP)
             assert price.applied_discount is None
 
     def test_first_visit_discount_zero_demand(self):
@@ -112,7 +112,8 @@ class TestCalcClientPrices(object):
 
         # Full discount on all days because of zero demand
         for price in prices:
-            assert price.price == regular_price * (1 - DISCOUNT / 100.0)
+            assert price.price == Decimal(regular_price * (1 - DISCOUNT / 100.0)
+                                          ).quantize(1, ROUND_HALF_UP)
             assert price.applied_discount == DiscountType.FIRST_BOOKING
 
     def test_partial_demand_with_max_discount(self):
@@ -140,25 +141,33 @@ class TestCalcClientPrices(object):
 
         assert len(prices) == PRICE_BLOCK_SIZE
 
-        assert prices[0].price == _calculate_discount(regular_price, 0.89,
-                                                      DISCOUNT, discounts.maximum_discount)
-        assert prices[1].price == _calculate_discount(regular_price, 0.78,
-                                                      DISCOUNT, discounts.maximum_discount)
-        assert prices[2].price == _calculate_discount(regular_price, 0.67,
-                                                      DISCOUNT, discounts.maximum_discount)
-        assert prices[3].price == _calculate_discount(regular_price, 0.56,
-                                                      DISCOUNT, discounts.maximum_discount)
-        assert prices[4].price == _calculate_discount(regular_price, 0.45,
-                                                      DISCOUNT, discounts.maximum_discount)
-        assert prices[5].price == _calculate_discount(regular_price, 0.05,
-                                                      DISCOUNT, discounts.maximum_discount)
-        assert prices[6].price == _calculate_discount(regular_price, 0,
-                                                      DISCOUNT, discounts.maximum_discount)
+        assert prices[0].price == Decimal(_calculate_discount(regular_price, 0.89,
+                                                              DISCOUNT, discounts.maximum_discount
+                                                              )).quantize(1, ROUND_HALF_UP)
+        assert prices[1].price == Decimal(_calculate_discount(regular_price, 0.78,
+                                                              DISCOUNT, discounts.maximum_discount
+                                                              )).quantize(1, ROUND_HALF_UP)
+        assert prices[2].price == Decimal(_calculate_discount(regular_price, 0.67,
+                                                              DISCOUNT, discounts.maximum_discount
+                                                              )).quantize(1, ROUND_HALF_UP)
+        assert prices[3].price == Decimal(_calculate_discount(regular_price, 0.56,
+                                                              DISCOUNT, discounts.maximum_discount
+                                                              )).quantize(1, ROUND_HALF_UP)
+        assert prices[4].price == Decimal(_calculate_discount(regular_price, 0.45,
+                                                              DISCOUNT, discounts.maximum_discount
+                                                              )).quantize(1, ROUND_HALF_UP)
+        assert prices[5].price == Decimal(_calculate_discount(regular_price, 0.05,
+                                                              DISCOUNT, discounts.maximum_discount
+                                                              )).quantize(1, ROUND_HALF_UP)
+        assert prices[6].price == Decimal(_calculate_discount(regular_price, 0,
+                                                              DISCOUNT, discounts.maximum_discount
+                                                              )).quantize(1, ROUND_HALF_UP)
 
         # Full discount on the rest of days because of zero demand
         for price in prices[7:]:
-            assert price.price == _calculate_discount(regular_price, 1,
-                                                      DISCOUNT, discounts.maximum_discount)
+            assert price.price == Decimal(_calculate_discount(regular_price, 1,
+                                                              DISCOUNT, discounts.maximum_discount)
+                                          ).quantize(1, ROUND_HALF_UP)
             assert price.applied_discount == DiscountType.FIRST_BOOKING
 
     def test_first_visit_discount_full_demand(self):
@@ -180,7 +189,7 @@ class TestCalcClientPrices(object):
 
         # No discount on any day because of full demand
         for price in prices:
-            assert price.price == regular_price
+            assert price.price == Decimal(regular_price).quantize(1, ROUND_HALF_UP)
             assert price.applied_discount is None
 
     def test_first_visit_discount_specific_day_demand(self):
@@ -206,16 +215,18 @@ class TestCalcClientPrices(object):
         assert len(prices) == PRICE_BLOCK_SIZE
 
         # Full discount on zero demand day
-        assert prices[0].price == regular_price * (1 - DISCOUNT / 100.0)
+        assert prices[0].price == Decimal(regular_price * (1 - DISCOUNT / 100.0)
+                                          ).quantize(1, ROUND_HALF_UP)
         assert prices[0].applied_discount == DiscountType.FIRST_BOOKING
 
         # Partial discount on partial demand day
-        assert prices[1].price == regular_price * (1 - DISCOUNT / 100.0 * PARTIAL_DEMAND)
+        assert prices[1].price == Decimal(regular_price * (1 - DISCOUNT / 100.0 * PARTIAL_DEMAND)
+                                          ).quantize(1, ROUND_HALF_UP)
         assert prices[1].applied_discount == DiscountType.FIRST_BOOKING
 
         # No discount on all other days
         for price in prices[2:]:
-            assert price.price == regular_price
+            assert price.price == Decimal(regular_price).quantize(1, ROUND_HALF_UP)
             assert price.applied_discount is None
 
     @freeze_time('2018-06-09 13:30:00 UTC')     # Saturday
@@ -245,11 +256,13 @@ class TestCalcClientPrices(object):
         for i in range(0, PRICE_BLOCK_SIZE):
             if i % 7 == 0:
                 # Full Saturday discount
-                assert prices[i].price == regular_price * (1 - DISCOUNT1 / 100.0)
+                assert prices[i].price == Decimal(regular_price * (1 - DISCOUNT1 / 100.0)
+                                                  ).quantize(1, ROUND_HALF_UP)
                 assert prices[i].applied_discount == DiscountType.WEEKDAY
             else:
                 # First time discount on all other days
-                assert prices[i].price == regular_price * (1 - DISCOUNT2 / 100.0)
+                assert prices[i].price == Decimal(regular_price * (1 - DISCOUNT2 / 100.0)
+                                                  ).quantize(1, ROUND_HALF_UP)
                 assert prices[i].applied_discount == DiscountType.FIRST_BOOKING
 
     @freeze_time('2018-06-09 13:30:00 UTC')     # Saturday
@@ -278,7 +291,8 @@ class TestCalcClientPrices(object):
 
         # First time discount on all days
         for i in range(0, PRICE_BLOCK_SIZE):
-            assert prices[i].price == regular_price * (1 - DISCOUNT2 / 100.0)
+            assert prices[i].price == Decimal(regular_price * (1 - DISCOUNT2 / 100.0)
+                                              ).quantize(1, ROUND_HALF_UP)
             assert prices[i].applied_discount == DiscountType.FIRST_BOOKING
 
     @freeze_time('2018-06-09 13:30:00 UTC')
@@ -309,7 +323,7 @@ class TestCalcClientPrices(object):
 
         # No discount on any days
         for i in range(0, PRICE_BLOCK_SIZE):
-            assert prices[i].price == regular_price
+            assert prices[i].price == Decimal(regular_price).quantize(1, ROUND_HALF_UP)
             assert prices[i].applied_discount is None
 
     @freeze_time('2018-06-09 13:30:00 UTC')
@@ -339,17 +353,19 @@ class TestCalcClientPrices(object):
         assert len(prices) == PRICE_BLOCK_SIZE
 
         # revisit_within_1week_percentage discount on first day
-        assert prices[0].price == regular_price * (1 - DISCOUNT2 / 100.0)
+        assert prices[0].price == Decimal(regular_price * (1 - DISCOUNT2 / 100.0)
+                                          ).quantize(1, ROUND_HALF_UP)
         assert prices[0].applied_discount == DiscountType.REVISIT_WITHIN_1WEEK
 
         # revisit_within_2week_percentage discount on next 7 days
         for i in range(1, min(8, PRICE_BLOCK_SIZE)):
-            assert prices[i].price == regular_price * (1 - DISCOUNT3 / 100.0)
+            assert prices[i].price == Decimal(regular_price * (1 - DISCOUNT3 / 100.0)
+                                              ).quantize(1, ROUND_HALF_UP)
             assert prices[i].applied_discount is DiscountType.REVISIT_WITHIN_2WEEK
 
         # No discount for the rest of days
         for i in range(8, PRICE_BLOCK_SIZE):
-            assert prices[i].price == regular_price
+            assert prices[i].price == Decimal(regular_price).quantize(1, ROUND_HALF_UP)
             assert prices[i].applied_discount is None
 
 
