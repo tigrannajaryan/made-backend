@@ -15,6 +15,7 @@ from rest_framework.validators import UniqueValidator
 from api.common.fields import PhoneNumberField
 from api.common.mixins import FormattedErrorMessageMixin
 from api.common.utils import save_profile_photo
+from api.v1.auth.utils import get_country_code_from_phone
 from appointment.constants import (
     APPOINTMENT_STYLIST_SETTABLE_STATUSES,
     DEFAULT_HAS_CARD_FEE_INCLUDED, DEFAULT_HAS_TAX_INCLUDED, ErrorMessages as appointment_errors,
@@ -211,6 +212,11 @@ class StylistSerializer(
                 )
                 if salon_serializer.is_valid(raise_exception=True):
                     stylist.salon = salon_serializer.save()
+                    salon = stylist.salon
+                    if not salon or not salon.country:
+                        stylist.salon.country = (
+                            get_country_code_from_phone(stylist.user.phone))
+                        stylist.salon.save()
             if 'profile_photo_id' in validated_data:
                 save_profile_photo(
                     stylist.user, validated_data.get('profile_photo_id')
