@@ -45,6 +45,7 @@ class Salon(models.Model):
     address = models.CharField(max_length=255)
     city = models.CharField(max_length=64, null=True, blank=True)
     state = models.CharField(max_length=25, null=True, blank=True)
+    country = models.CharField(max_length=25, null=True, blank=True)
     zip_code = models.CharField(max_length=16, null=True, blank=True)
     location = PointField(geography=True, null=True)
     is_address_geocoded = models.BooleanField(default=False)
