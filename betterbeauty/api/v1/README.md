@@ -2521,7 +2521,8 @@ curl -X POST \
   http://apiserver/api/v1/client/search-stylists \
   -H 'authorization: Token jwt_token' \
   -d '{
-	"search_like":"jane",
+	"search_like":"jane saloon",
+	"search_location": "Brookln",
 	"latitude": 13.0643,
 	"longitude": 80.2853,
 	"accuracy": 150000
@@ -2540,7 +2541,13 @@ curl -X POST \
             "phone": "+19876543210",
             "profile_photo_url": null,
             "salon_name": "Jane Salon",
-            "salon_address": "111"
+            "salon_address": "111",
+            "instagram_url": null,
+            "website_url": null,
+            "salon_city": "Brooklyn",
+            "salon_zipcode": "10005",
+            "salon_state": "NY",
+            "followers_count": 5
         }
     ],
     "more_results_available": false
