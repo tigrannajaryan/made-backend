@@ -1,8 +1,6 @@
 from datetime import timedelta
 
 from django.db import transaction
-from rest_framework import status
-from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_jwt.settings import api_settings
@@ -12,81 +10,20 @@ from api.v1.auth.serializers import PhoneSerializer, PhoneSMSCodeSerializer
 from api.v1.auth.utils import create_client_profile_from_phone, create_stylist_profile_from_phone
 
 from core.models import PhoneSMSCodes, User
-from core.types import FBAccessToken, FBUserID, UserRole
+from core.types import UserRole
 from core.utils.auth import (
     client_jwt_response_payload_handler,
     jwt_response_payload_handler as stylist_jwt_response_payload_handler,
 )
-from core.utils.facebook import verify_fb_token
 from salon.utils import create_stylist_profile_for_user
 
 from .serializers import (
-    CustomJSONWebTokenSerializer,
     CustomRefreshJSONWebTokenSerializer,
-    FacebookAuthTokenSerializer,
-    UserRegistrationSerializer,
 )
 
 
 class CustomRefreshJSONWebToken(JSONWebTokenAPIView):
     serializer_class = CustomRefreshJSONWebTokenSerializer
-
-
-class CustomObtainJWTToken(JSONWebTokenAPIView):
-    serializer_class = CustomJSONWebTokenSerializer
-
-
-class RegisterUserView(CreateAPIView):
-    serializer_class = UserRegistrationSerializer
-
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            user = serializer.save()
-            jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
-            jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
-
-            jwt_response_payload_handler = api_settings.JWT_RESPONSE_PAYLOAD_HANDLER
-
-            payload = jwt_payload_handler(user)
-            token = jwt_encode_handler(payload)
-            return Response(jwt_response_payload_handler(
-                token, user, self.request
-            ))
-
-
-class FBRegisterLoginView(APIView):
-
-    def post(self, request):
-        serializer = FacebookAuthTokenSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        fb_user_id: FBUserID = serializer.validated_data['fb_user_id']
-        fb_access_token: FBAccessToken = serializer.validated_data['fb_access_token']
-
-        is_valid = verify_fb_token(
-            fb_access_token, fb_user_id
-        )
-        if not is_valid:
-            return Response(
-                {'error': 'Facebook token invalid'}, status=status.HTTP_401_UNAUTHORIZED
-            )
-
-        user = User.objects.filter(facebook_id=fb_user_id).last()
-        if not user:
-            user = serializer.save()
-
-        jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
-        jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
-
-        jwt_response_payload_handler = api_settings.JWT_RESPONSE_PAYLOAD_HANDLER
-
-        payload = jwt_payload_handler(user)
-        token = jwt_encode_handler(payload)
-
-        return Response(jwt_response_payload_handler(
-            token, user, self.request
-        ))
 
 
 class SendCodeView(APIView):

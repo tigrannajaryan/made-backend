@@ -18,63 +18,33 @@ from api.v1.stylist.views import ClientPricingView, StylistView
 from appointment.constants import AppointmentStatus, ErrorMessages as appointment_errors
 from appointment.models import Appointment, AppointmentService
 from client.models import Client, PreferredStylist
-from core.models import User
-from core.types import UserRole
 from salon.models import Salon, Stylist, StylistService
 
 
 class TestStylistView(object):
 
-    def _create_and_authorize_user(self, client):
-        user = G(
-            User, email='email@example.com', first_name='Jane', last_name='McBob',
-            role=[UserRole.STYLIST]
-        )
-        user.set_password('password')
-        user.save()
-        auth_url = reverse('api:v1:auth:get_jwt_token')
-        data = client.post(
-            auth_url, data={
-                'email': 'email@example.com', 'password': 'password', 'role': UserRole.STYLIST
-            }
-        ).data
-        token = data['token']
-        return user, token
-
     @pytest.mark.django_db
-    def test_stylist_get_with_existing_stylist(self, client):
-        user, token = self._create_and_authorize_user(client)
-        stylist = G(Stylist, user=user)
+    def test_stylist_get_with_existing_stylist(self, client, authorized_stylist_user):
+        user, token = authorized_stylist_user
+        stylist = user.stylist
         profile_url = reverse('api:v1:stylist:profile')
-        auth_header = 'Token {0}'.format(token)
-        response = client.get(profile_url, data={}, HTTP_AUTHORIZATION=auth_header)
+        response = client.get(profile_url, data={}, HTTP_AUTHORIZATION=token)
         assert(response.status_code == status.HTTP_200_OK)
         data = response.data
-        assert(data['first_name'] == 'Jane')
+        assert(data['first_name'] == user.first_name)
         assert(data['uuid'] == str(stylist.uuid))
-
-    @pytest.mark.django_db
-    def test_stylist_get_without_existing_stylist(self, client):
-        user, token = self._create_and_authorize_user(client)
-        profile_url = reverse('api:v1:stylist:profile')
-        auth_header = 'Token {0}'.format(token)
-        response = client.get(profile_url, data={}, HTTP_AUTHORIZATION=auth_header)
-        assert (response.status_code == status.HTTP_200_OK)
-        data = response.data
-        assert (not data['first_name'])
-        assert ('id' not in data)
 
 
 class TestStylistServiceView(object):
 
     @pytest.mark.django_db
     def test_view_permissions(self, client, authorized_stylist_user):
-        user, auth_token = authorized_stylist_user
+        user, token = authorized_stylist_user
         # verify that a stylist cannot delete others' service
         foreign_service = G(StylistService, duration=datetime.timedelta(0))
         url = reverse('api:v1:stylist:service', kwargs={'uuid': foreign_service.uuid})
         response = client.delete(
-            url, HTTP_AUTHORIZATION=auth_token
+            url, HTTP_AUTHORIZATION=token
         )
         assert(response.status_code == status.HTTP_404_NOT_FOUND)
 

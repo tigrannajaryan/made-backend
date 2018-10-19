@@ -1,13 +1,8 @@
 # BetterBeauty API v.1
 
-- [**Authorization**](#authorization)
-  - [Getting auth token with email/password credentials](#getting-auth-token-with-emailpassword-credentials)
-  - [Getting auth token with Facebook credentials](#getting-auth-token-with-facebook-credentials)
-  - [Using auth token for authorization](#using-auth-token-for-authorization)
+- [**Registration and authorization**](#registration-and-authorization)
+  - [Authorize user with SMS code verification](#authorize-user-with-sms-code-verification)
   - [Refreshing auth token](#refreshing-auth-token)
-- [**Registration**](#registration)
-  - [Register user with Facebook credentials](#register-user-with-facebook-credentials)
-  - [Register user with email and password credentials](#register-user-with-email-and-password-credentials)
 - [**Stylist/Salon API**](#stylistsalon-api)
     - [**Profile**](#profile)
       - [Retrieve profile information](#retrieve-profile-information)
@@ -190,12 +185,8 @@ such specific errors in particular API calls.
 |----------|--------|---------|------|
 |err_signature_expired| Signature has expired| all|non-field|
 |err_invalid_access_token| JWT token is malformed|all|non-field|
-|err_auth_account_disabled| User account is disabled| /api/v1/auth/get-token| non-field|
-|err_auth_unable_to_login_with_credentials| Email/password mismatch or no such user| /api/v1/auth/get-token|non-field|
 |err_refresh_expired| Token is expired and cannot be refreshed| /api/v1/auth/refresh-token|non-field|
 |err_orig_iat_is_required| Indicates malformed token, should not normally happen|all|non-field|
-|err_email_already_taken| Email is already taken| /api/v1/auth/register| email|
-|err_incorrect_user_role| No such user role | auth/register, /api/v1/auth/get-token-fb| role|
 |err_unique_stylist_phone| The phone number is registered to another stylist. Please contact us if you have any questions|/api/v1/stylist/profile|phone|
 |err_unique_client_phone| The phone number belongs to existing client| /api/v1/stylist/appointments| client_phone|
 |err_unique_client_name| A client with the name already exists| /api/v1/stylist/appointments| client_first_name|
@@ -221,172 +212,14 @@ such specific errors in particular API calls.
 |err_invalid_phone_number|Invalid Phone Number|--|--|
 |err_privacy_setting_private|Unable to retrieve followers while own privacy setting is 'Private'|/api/v1/client/stylist/{uuid}/followers|non-field|
 
-# Authorization
-## Getting auth token with email/password credentials
-In order to make requests to the API, client needs a JWT token. There are 2 ways to obtain
-the token - authorize with existing user's credentials, or register new user.
 
-**POST /api/v1/auth/get-token**:
+# Registration and authorization
 
-`curl -X POST -d "email=email@example.com&password=clients_password" http://apiserver/api/v1/auth/get-token`
-
-**Responce 200 OK**:
-
-```
-{
-    "token": "jwt_token",
-    "expires_in": 86400,
-    "role": "stylist",
-    "profile": {
-        "id": 1,
-        "first_name": "Jane",
-        "last_name": "McBob",
-        "phone": "(650) 350-1234",
-        "profile_photo_url": null,
-        "salon_name": "Jane salon",
-        "salon_address": "1234 Front Street"
-    },
-    "profile_status": {
-        "has_personal_data": true,
-        "has_picture_set": false,
-        "has_services_set": false,
-        "has_business_hours_set": false,
-        "has_weekday_discounts_set": false,
-        "has_other_discounts_set": false,
-        "has_invited_clients": false
-    }
-}
-```
-
-Note: if user doesn't have stylist profile - `profile` and `profile_status`
-fields will be `null`
-
-## Getting auth token with Facebook credentials
-
-See [Register user with Facebook credentials](#register-user-with-facebook-credentials)
-
-## Using auth token for authorization
-
-Every subsequent request to the API should have `Authorization` header set with the following string:
-
-`Token jwt_token`
-
-Example call:
-
-`curl -H "Authorization: Token jwt_token" http://apiserver/api/v1/stylist/profile`
-
-## Refreshing auth token
-
-If the token has not yet expired, it can be refreshed to a new one:
-
-**POST /api/v1/auth/refresh-token**
-
-`curl -X POST -H "Content-Type: application/json" -d '{"token": "old_but_not_expired_jwt_token"}' http://apiserver/api/v1/auth/refresh-token`
-
-**Responce 200 OK**
-
-```
-{
-    "token": "refreshed_jwt_token",
-    "expires_in": 86400,
-    "role": "stylist",
-    "profile": null,
-    "profile_status": null
-}
-```
-
-Note: make sure to set proper content type (to `application/json`)
-
-# Registration
-
-Before creating client or stylist, new user must be registered. There will be multiple
-ways of creation of user entity using social networks; section below is about registering
-a user with email credentials. Social network methods are to be added.
-
-## Register user with Facebook credentials
-This endpoint creates a user based on Facebook auth token and returns JWT token back to client.
-If user already exists - endpoint just refreshes the JWT token.
-
-**POST /api/v1/auth/get-token-fb**
-
-```
-curl -X POST http://apiserver/api/v1/auth/get-token-fb \
-  -F 'fbAccessToken=long_facebook_token' \
-  -F 'fbUserID=numeric_facebook_user_id' \
-  -F 'role=stylist'
-```
-
-**Response 200 OK**
-
-```
-{
-    "token": "jwt_token",
-    "expires_in": 86400,
-    "role": "stylist",
-    "profile": {
-        "id": 17,
-        "first_name": "Charlie",
-        "last_name": "Martinazzison",
-        "phone": "",
-        "profile_photo_url": "http://profile_photo_url",
-        "salon_name": null,
-        "salon_address": null,
-        "instagram_url": null,
-        "website_url": "https://example.com",
-    },
-    "profile_status": {
-        "has_personal_data": true,
-        "has_picture_set": false,
-        "has_services_set": false,
-        "has_business_hours_set": false,
-        "has_weekday_discounts_set": false,
-        "has_other_discounts_set": false,
-        "has_invited_clients": false
-    }
-}
-```
-
-## Register user with email and password credentials
-
-This endpoint creates a user, authenticates and returns JWT token back to client.
-
-The endpoint **does not** create a stylist or salon; you should use **profile** API
-(see below) to actually fill in stylist's profile information once after user is created with this API.
-
-**POST /api/v1/auth/register**
-
-```
-curl -X POST http://apiserver//api/v1/auth/register \
-  -F 'email=stylist2@example.com \
-  -F 'password=my_new_password' \
-  -F 'role=stylist'
-```
-
-**Response 200 OK**
-
-```
-{
-    "token": "jwt_token",
-    "expires_in": 86400,
-    "role": "stylist",
-    "profile": null,
-    "profile_status": null
-}
-```
-
-**Error 400 Bad Request**
-```
-{
-    "email": [
-        "This email is already taken"
-    ]
-}
-```
-
-## Register user using phone / SMS code verification
-User (client or stylist) can be registered using 2-step phone-based authentication.
+User (client or stylist) can be registered (or authorized) using 2-step phone-based authentication.
 - Step 1: call `/api/v1/auth/get-code` supplying role and phone
 - Step 2: call `/api/v1/auth/code/confirm` to confirm received code
+
+## Authorize user with SMS code verification
 
 ### Get Code
 
@@ -497,6 +330,28 @@ curl -X POST \
     "non_field_errors": []
 }
 ```
+
+## Refreshing auth token
+
+If the token has not yet expired, it can be refreshed to a new one:
+
+**POST /api/v1/auth/refresh-token**
+
+`curl -X POST -H "Content-Type: application/json" -d '{"token": "old_but_not_expired_jwt_token"}' http://apiserver/api/v1/auth/refresh-token`
+
+**Responce 200 OK**
+
+```
+{
+    "token": "refreshed_jwt_token",
+    "expires_in": 86400,
+    "role": "stylist",
+    "profile": null,
+    "profile_status": null
+}
+```
+
+Note: make sure to set proper content type (to `application/json`)
 
 # Stylist/Salon API
 

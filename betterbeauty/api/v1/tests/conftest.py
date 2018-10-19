@@ -29,7 +29,7 @@ def stylist_data(db) -> Stylist:
     )
     stylist_user = G(
         User,
-        is_staff=False, is_superuser=False, email='test_stylist@example.com',
+        is_staff=False, is_superuser=False,
         first_name='Fred', last_name='McBob', phone='(650) 350-1111'
     )
     stylist: Stylist = create_stylist_profile_for_user(
