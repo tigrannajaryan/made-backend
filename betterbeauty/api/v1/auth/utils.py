@@ -19,7 +19,7 @@ def create_user_from_phone(phone: str, role) -> User:
         last_name="",
         phone=phone,
         is_active=True,
-        role=[UserRole.CLIENT]
+        role=[role]
     )
     user.set_unusable_password()
     return user
