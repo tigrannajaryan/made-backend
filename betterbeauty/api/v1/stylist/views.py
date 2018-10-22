@@ -9,6 +9,7 @@ from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 
 from django.db import models, transaction
+from django.db.models import Q
 
 from rest_framework import generics, permissions, status, views
 from rest_framework.exceptions import ValidationError
@@ -479,26 +480,29 @@ class NearbyClientsView(views.APIView):
 
     def get_queryset(self):
         location = self.request.user.stylist.salon.location
+        country = self.request.user.stylist.salon.country
         if location:
             return NearbyClientsView._search_clients(
-                location=location, accuracy=NEARBY_CLIENTS_ACCURACY)
+                location=location, accuracy=NEARBY_CLIENTS_ACCURACY, country=country)
         else:
             raise ValidationError(
                 {'non_field_errors': [{'code': ErrorMessages.ERR_STYLIST_LOCATION_UNAVAILABLE}]})
 
     @staticmethod
-    def _search_clients(location: Point, accuracy: int) -> models.QuerySet:
+    def _search_clients(location: Point, accuracy: int, country: str) -> models.QuerySet:
         queryset = Client.objects.all()
 
-        nearby_clients = NearbyClientsView._get_nearby_clients(queryset, location, accuracy)
+        nearby_clients = NearbyClientsView._get_nearby_clients(queryset, location,
+                                                               accuracy, country)
 
         return nearby_clients.order_by('distance')[:1000]
 
     @staticmethod
     def _get_nearby_clients(queryset: models.QuerySet,
-                            location: Point, accuracy: int) -> models.QuerySet:
-        return queryset.filter(location__distance_lte=(
-            location, D(m=accuracy))).annotate(distance=Distance('location', location))
+                            location: Point, accuracy: int, country: str) -> models.QuerySet:
+        return queryset.filter(Q(is_address_geocoded=True, country=country) | Q(
+            location__distance_lte=(location, D(m=accuracy)))).annotate(
+            distance=Distance('location', location))
 
 
 class ClientPricingView(views.APIView):
