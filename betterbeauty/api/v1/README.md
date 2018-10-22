@@ -2466,7 +2466,8 @@ curl -X GET \
             "last_name": "asdf",
             "phone": null,
             "preference_uuid": "37d795d6-e2a5-46d2-88e6-c1fbe01f756b",
-            "website_url": "4sw.in"
+            "website_url": "4sw.in",
+            "followers_count": 2
         }
     ]
 }
