@@ -166,8 +166,9 @@ class SearchStylistView(generics.ListAPIView):
     def post(self, request, *args, **kwargs):
         matching_stylists = self.get_queryset()
         more_results_available = True if (len(matching_stylists) > STYLIST_SEARCH_LIMIT) else False
-        serializer = SearchStylistSerializer(matching_stylists[:STYLIST_SEARCH_LIMIT],
-                                             context={'user': request.user}, many=True)
+        serializer = SearchStylistSerializer(
+            matching_stylists[:STYLIST_SEARCH_LIMIT], many=True
+        )
         response_dict = {
             'stylists': serializer.data,
             'more_results_available': more_results_available
@@ -453,7 +454,7 @@ class StylistFollowersView(views.APIView):
 
         followers = stylist.get_preferred_clients().filter(
             privacy=ClientPrivacy.PUBLIC
-        ).exclude(id=client.id)
+        )
 
         return Response({
             'followers': FollowerSerializer(
