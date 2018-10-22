@@ -717,7 +717,8 @@ class TestStylistFollowersView(object):
             str(client_with_successful_appointment.uuid),
             str(client_with_new_appointment.uuid),
             str(client_with_cancelled_appointment.uuid),
-            str(client_without_appointments.uuid)
+            str(client_without_appointments.uuid),
+            str(client_obj.uuid)
         ]))
 
         appt_count = {u['uuid']: u['booking_count'] for u in response.data['followers']}
