@@ -649,11 +649,7 @@ class TestStylistFollowersView(object):
             'api:v1:client:stylist-followers', kwargs={'stylist_uuid': foreign_stylist.uuid}
         )
         response = client.get(url, HTTP_AUTHORIZATION=auth_token)
-        assert(response.status_code == status.HTTP_404_NOT_FOUND)
-        assert({'code': appointment_errors.ERR_STYLIST_DOES_NOT_EXIST} in
-               response.data['non_field_errors']
-               )
-        assert(response.data['code'] == common_errors[404])
+        assert (status.is_success(response.status_code))
 
         G(PreferredStylist, stylist=foreign_stylist, client=client_obj)
         response = client.get(url, HTTP_AUTHORIZATION=auth_token)
