@@ -32,7 +32,8 @@ from salon.models import Stylist, StylistAvailableWeekDay, StylistService
 from salon.types import ClientPriceOnDate, DemandOnDate, PriceOnDate
 
 
-def get_weekday_available_times(stylist: Stylist) -> Dict[int, Tuple[datetime.timedelta, bool]]:
+def get_weekday_available_times(stylist: Stylist) -> Dict[int, Tuple[
+        datetime.timedelta, StylistAvailableWeekDay]]:
 
     weekday_available_times = {}
 
@@ -43,11 +44,11 @@ def get_weekday_available_times(stylist: Stylist) -> Dict[int, Tuple[datetime.ti
         ).last()
         if not available_weekday:
             weekday_available_times.update({
-                weekday: (datetime.timedelta(0), False)
+                weekday: (datetime.timedelta(0), available_weekday)
             })
         else:
             weekday_available_times.update({
-                weekday: (available_weekday.get_available_time(), available_weekday.is_available)
+                weekday: (available_weekday.get_available_time(), available_weekday)
             })
 
     return weekday_available_times
@@ -72,19 +73,47 @@ def generate_demand_list_for_stylist(
     for date in dates:
         midnight = stylist.with_salon_tz(datetime.datetime.combine(date, datetime.time(0, 0)))
         next_midnight = midnight + datetime.timedelta(days=1)
-        work_day_duration = weekday_available_times[date.isoweekday()][0]
+        work_day_duration, stylist_weekday_availability = weekday_available_times[
+            date.isoweekday()]
         load_on_date_duration = stylist.appointments.filter(
             datetime_start_at__gte=midnight, datetime_start_at__lt=next_midnight,
         ).exclude(status__in=[
             AppointmentStatus.CANCELLED_BY_STYLIST,
             AppointmentStatus.CANCELLED_BY_CLIENT]
         ).count() * time_gap
-        is_working_day: bool = weekday_available_times[date.isoweekday()][1]
+        is_working_day: bool = (
+            stylist_weekday_availability.is_available if stylist_weekday_availability else False)
         demand_on_date = (
             load_on_date_duration / work_day_duration
             if work_day_duration > datetime.timedelta(0)
             else COMPLETELY_BOOKED_DEMAND
         )
+
+        # similar to demand_on_date which calculates the demand on the whole day,
+        # we also need to calculate the demand during working hours to determine `is_fully_booked`
+        if is_working_day:
+            weekday_start_time = stylist.with_salon_tz(datetime.datetime.combine(
+                date, stylist_weekday_availability.work_start_at))
+            weekday_end_time = stylist.with_salon_tz(datetime.datetime.combine(
+                date, stylist_weekday_availability.work_end_at))
+
+            load_on_working_date_duration = stylist.appointments.filter(
+                datetime_start_at__gte=weekday_start_time,
+                datetime_start_at__lt=weekday_end_time,
+            ).exclude(status__in=[
+                AppointmentStatus.CANCELLED_BY_STYLIST,
+                AppointmentStatus.CANCELLED_BY_CLIENT]
+            ).count() * time_gap
+
+        else:
+            load_on_working_date_duration = datetime.timedelta(seconds=0)
+
+        demand_on_working_hours = (
+            load_on_working_date_duration / work_day_duration
+            if work_day_duration > datetime.timedelta(0)
+            else COMPLETELY_BOOKED_DEMAND
+        )
+
         is_fully_booked: bool = False
 
         # Technically, there may be a situation of overbooking, which may cause actual
@@ -92,7 +121,7 @@ def generate_demand_list_for_stylist(
         if demand_on_date > 1:
             demand_on_date = 1
 
-        if is_working_day and demand_on_date == COMPLETELY_BOOKED_DEMAND:
+        if is_working_day and demand_on_working_hours == COMPLETELY_BOOKED_DEMAND:
             is_fully_booked = True
 
         demand = DemandOnDate(
