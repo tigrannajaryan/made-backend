@@ -1,11 +1,10 @@
 import datetime
-from typing import List
+from typing import List, Optional
 
 from dateutil.parser import parse
 
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
-from django.contrib.gis.measure import D
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db import models
 from django.db.models import F, Q, Value
@@ -25,7 +24,6 @@ from rest_framework.response import Response
 from api.common.permissions import ClientPermission
 
 from api.v1.client.constants import (ErrorMessages as client_errors, NEW_YORK_LOCATION,
-                                     STYLIST_SEARCH_DEFAULT_ACCURACY,
                                      STYLIST_SEARCH_LIMIT, TRIGRAM_SIMILARITY
                                      )
 from api.v1.client.serializers import (
@@ -166,8 +164,9 @@ class SearchStylistView(generics.ListAPIView):
     def post(self, request, *args, **kwargs):
         matching_stylists = self.get_queryset()
         more_results_available = True if (len(matching_stylists) > STYLIST_SEARCH_LIMIT) else False
-        serializer = SearchStylistSerializer(matching_stylists[:STYLIST_SEARCH_LIMIT],
-                                             context={'user': request.user}, many=True)
+        serializer = SearchStylistSerializer(
+            matching_stylists[:STYLIST_SEARCH_LIMIT], many=True
+        )
         response_dict = {
             'stylists': serializer.data,
             'more_results_available': more_results_available
@@ -183,32 +182,33 @@ class SearchStylistView(generics.ListAPIView):
         )
 
     def get_queryset(self):
-        query = post_or_get_or_data(self.request, 'search_like', '')
-        address_query = post_or_get_or_data(self.request, 'search_location', '')
-        latitude = post_or_get_or_data(self.request, 'latitude', None)
-        longitude = post_or_get_or_data(self.request, 'longitude', None)
-        accuracy = post_or_get_or_data(self.request, 'accuracy', STYLIST_SEARCH_DEFAULT_ACCURACY)
+        query: str = post_or_get_or_data(self.request, 'search_like', '')
+        address_query: str = post_or_get_or_data(self.request, 'search_location', '')
+        latitude: Optional[float] = post_or_get_or_data(self.request, 'latitude', None)
+        longitude: Optional[float] = post_or_get_or_data(self.request, 'longitude', None)
+        country: Optional[str] = self.request.user.client.country
         if latitude and longitude:
             location = Point((longitude, latitude))
         else:
             ip, is_routable = get_client_ip(self.request)
             location = get_lat_lng_for_ip_address(ip)
         self.save_search_request(location)
-        return self._search_stylists(query, address_query, location, accuracy)
+        return self._search_stylists(query, address_query, location, country)
 
     @staticmethod
-    def _search_stylists(query: str, address_query: str, location: Point, accuracy: int) -> List:
+    def _search_stylists(query: str, address_query: str, location: Point, country: str) -> List:
 
-        queryset = Stylist.objects.select_related('salon', 'user').annotate(
+        queryset = Stylist.objects.select_related('salon', 'user').filter(
+            salon__country__iexact=country, salon__location__isnull=False).annotate(
             full_name=Concat(F('user__first_name'), Value(' '), F('user__last_name')),
             reverse_full_name=Concat(F('user__last_name'), Value(' '), F('user__first_name')),
         ).distinct('id')
 
-        list_of_stylists = SearchStylistView._get_nearby_stylists(queryset, location, accuracy)
+        list_of_stylists = SearchStylistView._get_nearby_stylists(queryset, location)
         if len(list_of_stylists) == 0:
             # if there is no stylist in the area, return stylist from NY
             list_of_stylists = SearchStylistView._get_nearby_stylists(
-                queryset, NEW_YORK_LOCATION, accuracy)
+                queryset, NEW_YORK_LOCATION)
 
         if query:
             list_of_stylists = list_of_stylists.annotate(
@@ -243,10 +243,8 @@ class SearchStylistView(generics.ListAPIView):
 
     @staticmethod
     def _get_nearby_stylists(queryset: models.QuerySet,
-                             location: Point, accuracy: int) -> models.QuerySet:
-        return queryset.filter(salon__location__distance_lte=(
-            location, D(m=accuracy))).annotate(distance=Distance('salon__location', location)
-                                               )
+                             location: Point,) -> models.QuerySet:
+        return queryset.annotate(distance=Distance('salon__location', location))
 
 
 class AppointmentListCreateAPIView(generics.ListCreateAPIView):
@@ -453,7 +451,7 @@ class StylistFollowersView(views.APIView):
 
         followers = stylist.get_preferred_clients().filter(
             privacy=ClientPrivacy.PUBLIC
-        ).exclude(id=client.id)
+        )
 
         return Response({
             'followers': FollowerSerializer(

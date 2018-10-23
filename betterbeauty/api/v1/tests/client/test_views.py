@@ -224,46 +224,44 @@ class TestSearchStylistView(object):
         location = stylist_data.salon.location
         G(Salon, location=location)
         stylist_data_2 = G(Stylist)
-
-        accuracy = 50000
         results = SearchStylistView._search_stylists(
-            '', '', location=location, accuracy=accuracy)
+            '', '', location=location, country='US')
         assert (len(results) == 1)
 
         results = SearchStylistView._search_stylists(
-            'Fred', 'los altos', location=location, accuracy=accuracy)
+            'Fred', 'los altos', location=location, country='US')
         assert (len(results) == 1)
         assert (results[0] == stylist_data)
         results = SearchStylistView._search_stylists(
-            'mcbob fr', 'rilma', location=location, accuracy=accuracy)
+            'mcbob fr', 'rilma', location=location, country='US')
         assert (len(results) == 1)
         assert (results[0] == stylist_data)
         results = SearchStylistView._search_stylists(
-            'mcbob fr', 'junk-address', location=location, accuracy=accuracy)
+            'mcbob fr', 'junk-address', location=location, country='US')
         assert (len(results) == 0)
         salon = stylist_data_2.salon
         salon.location = location
+        salon.country = 'US'
         salon.save()
         results = SearchStylistView._search_stylists(
-            stylist_data_2.get_full_name(), '', location=location, accuracy=accuracy)
+            stylist_data_2.get_full_name(), '', location=location, country='US')
         assert (len(results) == 1)
         assert (results[0] == stylist_data_2)
 
         results = SearchStylistView._search_stylists(
-            'some-junk-text', '', location=location, accuracy=accuracy)
+            'some-junk-text', '', location=location, country='US')
         assert (len(results) == 0)
 
     @pytest.mark.django_db
     def test_search_stylists_when_no_results(self, stylist_data: Stylist):
-        salon_2 = G(Salon, location=NEW_YORK_LOCATION)
-        stylist_data_2 = G(Stylist, salon=salon_2)
-        location = Point(77.303474, 11.1503445)
-        accuracy = 50000
+        salon_2 = G(Salon, location=NEW_YORK_LOCATION, country='CA')
+        G(Stylist, salon=salon_2)
+        location = Point(77.303474, 11.1503445, srid=4326)
 
         results = SearchStylistView._search_stylists(
-            '', '', location=location, accuracy=accuracy)
+            '', '', location=location, country='US')
         assert (len(results) == 1)
-        assert results[0] == stylist_data_2
+        assert results[0] == stylist_data
 
     @pytest.mark.django_db
     def test_view_permissions(self, client, authorized_stylist_user):
@@ -719,7 +717,8 @@ class TestStylistFollowersView(object):
             str(client_with_successful_appointment.uuid),
             str(client_with_new_appointment.uuid),
             str(client_with_cancelled_appointment.uuid),
-            str(client_without_appointments.uuid)
+            str(client_without_appointments.uuid),
+            str(client_obj.uuid)
         ]))
 
         appt_count = {u['uuid']: u['booking_count'] for u in response.data['followers']}
