@@ -673,7 +673,6 @@ class SearchStylistSerializer(StylistSerializer):
         fields = StylistSerializer.Meta.fields + ['followers_count', ]
 
     def get_followers_count(self, stylist: Stylist):
-        client = self.context['user'].client
         return stylist.get_preferred_clients().filter(
             privacy=ClientPrivacy.PUBLIC
-        ).exclude(id=client.id).count()
+        ).count()
