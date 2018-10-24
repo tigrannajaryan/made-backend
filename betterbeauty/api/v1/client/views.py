@@ -49,7 +49,7 @@ from appointment.constants import ErrorMessages as appt_constants
 from appointment.models import Appointment
 from appointment.preview import AppointmentPreviewRequest, build_appointment_preview_dict
 from appointment.types import AppointmentStatus
-from client.models import Client, PreferredStylist, StylistSearchRequest
+from client.models import Client, StylistSearchRequest
 from client.types import ClientPrivacy
 from core.utils import post_or_get
 from core.utils import post_or_get_or_data
@@ -436,18 +436,12 @@ class StylistFollowersView(views.APIView):
                 detail={'non_field_errors': [{'code': client_errors.ERR_PRIVACY_SETTING_PRIVATE}]}
             )
 
-        stylist_preference: PreferredStylist = PreferredStylist.objects.filter(
-            client=client,
-            stylist__uuid=stylist_uuid,
-            deleted_at__isnull=True
-        ).last()
-
-        if not stylist_preference:
+        try:
+            stylist: Stylist = Stylist.objects.get(uuid=stylist_uuid)
+        except Stylist.DoesNotExist:
             raise exceptions.NotFound(
                 detail={'non_field_errors': [{'code': appt_constants.ERR_STYLIST_DOES_NOT_EXIST}]}
             )
-
-        stylist: Stylist = stylist_preference.stylist
 
         followers = stylist.get_preferred_clients().filter(
             privacy=ClientPrivacy.PUBLIC
