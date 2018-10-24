@@ -118,16 +118,26 @@ class StylistAvailableWeekDay(models.Model):
     def get_all_slots(self, current_time: Optional[datetime.time] = None) -> List[
             TimeSlot]:
         available_slots: List[TimeSlot] = []
+        today = self.stylist.get_current_now().date()
         if not self.is_available:
             return available_slots
-        start_at = self.work_start_at
-        while start_at < self.work_end_at:
-            slot_end_time = (datetime.datetime.combine(
-                datetime.date.today(), start_at) + self.stylist.service_time_gap).time()
-            if (not current_time or (current_time and start_at > current_time)) and (
-                    slot_end_time <= self.get_slot_end_time()):
-                available_slots.append((start_at, slot_end_time))
-            start_at = slot_end_time
+        current_datetime: Optional[datetime.datetime] = None
+        if current_time:
+            current_datetime = (datetime.datetime.combine(
+                today, current_time))
+        slot_start_at: datetime.datetime = (datetime.datetime.combine(
+            today, self.work_start_at))
+        last_slot_end_time: datetime.datetime = (datetime.datetime.combine(
+            today, self.get_slot_end_time()))
+        day_end_at: datetime.datetime = (datetime.datetime.combine(
+            today, self.work_end_at))
+        while slot_start_at < day_end_at:
+            slot_end_time = slot_start_at + self.stylist.service_time_gap
+            if (not current_datetime or (
+                    current_datetime and slot_start_at > current_datetime)) and (
+                    slot_end_time <= last_slot_end_time):
+                available_slots.append((slot_start_at.time(), slot_end_time.time()))
+            slot_start_at = slot_end_time
         return available_slots
 
 

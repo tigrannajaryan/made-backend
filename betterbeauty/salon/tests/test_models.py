@@ -15,7 +15,6 @@ from client.models import Client, PreferredStylist
 from core.types import Weekday
 from salon.models import (
     Stylist,
-    StylistAvailableWeekDay,
     StylistService,
 )
 
@@ -261,17 +260,20 @@ class TestAvailableSlots(object):
 class TestGetAvailableTime():
 
     @pytest.mark.django_db
-    def test_demand_in_timeslot_after_endtime(self):
-        stylist_available_weekday = G(StylistAvailableWeekDay,
-                                      work_start_at=datetime.time(9, 0, 0),
-                                      work_end_at=datetime.time(11, 1, 0),
-                                      is_available=True)
+    def test_demand_in_timeslot_after_endtime(self, stylist_data):
+        stylist_data.available_days.filter(
+            weekday=1).update(
+            work_start_at=datetime.time(9, 0, 0),
+            work_end_at=datetime.time(11, 1, 0),
+            is_available=True)
+        stylist_available_weekday = stylist_data.available_days.get(weekday=1)
         assert (stylist_available_weekday.get_available_time() == datetime.timedelta(
             hours=2, minutes=30))
 
-        stylist_available_weekday2 = G(StylistAvailableWeekDay,
-                                       work_start_at=datetime.time(9, 0, 0),
-                                       work_end_at=datetime.time(11, 0, 0),
-                                       is_available=True)
+        stylist_data.available_days.filter(
+            weekday=2).update(work_start_at=datetime.time(9, 0, 0),
+                              work_end_at=datetime.time(11, 0, 0),
+                              is_available=True)
+        stylist_available_weekday2 = stylist_data.available_days.get(weekday=2)
         assert (stylist_available_weekday2.get_available_time() == datetime.timedelta(
             hours=2, minutes=00))
