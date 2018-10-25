@@ -175,7 +175,6 @@ class TestStylistSerializer(object):
     def test_stylist_create(self):
         user: User = G(
             User,
-            email='stylist@example.com',
             role=[USER_ROLE.stylist],
         )
         assert(user.is_stylist() is True)
@@ -206,7 +205,6 @@ class TestStylistSerializer(object):
     def test_stylist_create_without_salon_name(self):
         user: User = G(
             User,
-            email='stylist@example.com',
             role=[USER_ROLE.stylist],
         )
         assert (user.is_stylist() is True)

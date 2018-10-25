@@ -61,7 +61,7 @@ class AppointmentAdmin(admin.ModelAdmin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == 'stylist':
-            kwargs['queryset'] = Stylist.objects.order_by('user__email')
+            kwargs['queryset'] = Stylist.objects.order_by('user__phone')
         if db_field.name == 'client':
             kwargs['queryset'] = Client.objects.order_by('user__first_name', 'user__last_name')
         return super(AppointmentAdmin, self).formfield_for_foreignkey(db_field, request, **kwargs)

@@ -21,7 +21,6 @@ class Weekday(IntEnum):
 
 
 FBUserID = NewType('FBUserID', str)
-FBAccessToken = NewType('FBAccessToken', str)
 
 
 class UserRole(StrEnum):
