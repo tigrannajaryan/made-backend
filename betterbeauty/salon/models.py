@@ -70,13 +70,14 @@ class Salon(models.Model):
             self.state = geo_coded_address.state
             self.zip_code = geo_coded_address.zip_code
             self.location = geo_coded_address.location
+            self.country = geo_coded_address.country
             self.is_address_geocoded = True
             logger.info('Geo-coding Success', exc_info=True)
         else:
             logger.info("Geo-coding returned None")
         self.last_geo_coded = timezone.now()
-        self.save(update_fields=[
-            'city', 'state', 'zip_code', 'location', 'is_address_geocoded', 'last_geo_coded'])
+        self.save(update_fields=['city', 'state', 'zip_code',
+                                 'location', 'country', 'is_address_geocoded', 'last_geo_coded'])
 
 
 class StylistAvailableWeekDay(models.Model):

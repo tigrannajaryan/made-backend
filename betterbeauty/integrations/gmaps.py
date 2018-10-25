@@ -20,6 +20,7 @@ class GeoCodedAddress(NamedTuple):
     lat: Optional[float]
     lng: Optional[float]
     location: Optional[Point]
+    country: Optional[str]
 
 
 class GeoCode:
@@ -53,13 +54,13 @@ class GeoCode:
                 'partial_match' in geocode_result and geocode_result['partial_match']):
             return None
         address_components = geocode_result['address_components']
-        # address component is a list of dicts with type containing array of types.
+        # address_components is a list of dicts with type containing array of types.
         locality = None
         sublocality_level_1 = None
         country = None
         zip_code = None
         state = None
-        # We iterate the address components to find the specific items that matches required type.
+        # We iterate the address_components to find the specific items that matches required type.
         for item in address_components:
             if 'locality' in item["types"]:
                 locality = item['short_name']
@@ -86,7 +87,8 @@ class GeoCode:
             zip_code=zip_code,
             lat=lat,
             lng=lng,
-            location=location
+            location=location,
+            country=country
         )
 
 
