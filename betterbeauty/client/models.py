@@ -27,7 +27,7 @@ class Client(models.Model):
     birthday = models.DateField(blank=True, null=True)
     email = models.EmailField(null=True)
     city = models.CharField(blank=True, null=True, max_length=64)
-    state = models.CharField(blank=True, null=True, max_length=2)
+    state = models.CharField(blank=True, null=True, max_length=25)
     country = models.CharField(max_length=20, blank=True, null=True)
     location = PointField(geography=True, null=True)
 

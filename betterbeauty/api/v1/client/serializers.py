@@ -52,7 +52,7 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
     profile_photo_url = serializers.CharField(
         source='client.get_profile_photo_url', read_only=True)
     birthday = serializers.DateField(source='client.birthday', required=False, )
-    zip_code = serializers.CharField(source='client.zip_code',
+    zip_code = serializers.CharField(source='client.zip_code', max_length=10,
                                      required=False, allow_blank=True, allow_null=True)
     email = serializers.CharField(source='client.email',
                                   required=False, allow_blank=True, allow_null=True)
