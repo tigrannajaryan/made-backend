@@ -240,7 +240,11 @@ class Stylist(models.Model):
     @property
     def is_profile_bookable(self):
         """Return True if has phone, working hours and services"""
-        return self.user.phone and self.has_services_set and self.has_business_hours_set
+        return bool(
+            self.user.phone and
+            self.has_services_set and
+            self.has_business_hours_set
+        )
 
     def get_preferred_clients(self) -> models.QuerySet:
         preferences = PreferredStylist.objects.filter(
