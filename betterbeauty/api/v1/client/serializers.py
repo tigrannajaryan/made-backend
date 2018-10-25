@@ -125,12 +125,18 @@ class PreferredStylistSerializer(FormattedErrorMessageMixin, serializers.ModelSe
     first_name = serializers.CharField(source='stylist.user.first_name')
     last_name = serializers.CharField(source='stylist.user.last_name')
     phone = PhoneNumberField(source='stylist.user.phone', )
+    followers_count = serializers.SerializerMethodField()
 
     class Meta:
         model = PreferredStylist
         fields = ['uuid', 'salon_name', 'salon_address', 'profile_photo_url',
                   'first_name', 'last_name', 'phone', 'preference_uuid', 'instagram_url',
-                  'website_url']
+                  'website_url', 'followers_count']
+
+    def get_followers_count(self, preferred_stylist: PreferredStylist):
+        return preferred_stylist.stylist.get_preferred_clients().filter(
+            privacy=ClientPrivacy.PUBLIC
+        ).count()
 
 
 class ClientPreferredStylistSerializer(serializers.ModelSerializer):
