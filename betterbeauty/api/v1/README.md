@@ -333,6 +333,7 @@ curl -X POST http://apiserver/api/v1/auth/get-token-fb \
         "salon_address": null,
         "instagram_url": null,
         "website_url": "https://example.com",
+        "is_profile_bookable": true
     },
     "profile_status": {
         "has_personal_data": true,
@@ -453,7 +454,8 @@ curl -X POST \
             "salon_address": "111 Front Street",
             "instagram_url": null,
             "website_url": "https://example.com",
-            "invitation_created_at": "2018-07-09T11:35:39.441844-04:00"
+            "invitation_created_at": "2018-07-09T11:35:39.441844-04:00",
+            "is_profile_bookable": true
         },
         {
             "id": 13,
@@ -465,7 +467,8 @@ curl -X POST \
             "salon_address": "1234 Back Street",
             "instagram_url": null,
             "website_url": "https://example.com",
-            "invitation_created_at": "2018-07-09T11:35:39.441844-04:00"
+            "invitation_created_at": "2018-07-09T11:35:39.441844-04:00",
+            "is_profile_bookable": false
         }
     ]
 }
@@ -549,7 +552,8 @@ Note: all fields listed above are required.
     "salon_name": "Jane salon",
     "salon_address": "1234 Front Street",
     "instagram_url": null,
-    "website_url": "https://example.com"
+    "website_url": "https://example.com",
+    "is_profile_bookable": false
 }
 ```
 
@@ -590,7 +594,8 @@ Note: all fields listed above are required.
     "salon_name": "Jane salon",
     "salon_address": "1234 Front Street",
     "instagram_url": null,
-    "website_url": "https://example.com"
+    "website_url": "https://example.com",
+    "is_profile_bookable": false
 }
 ```
 
@@ -628,7 +633,8 @@ Note: you can patch individual fields with PATCH.
     "salon_name": "Jane salon",
     "salon_address": "1234 Front Street",
     "instagram_url": null,
-    "website_url": "https://example.com"
+    "website_url": "https://example.com",
+    "is_profile_bookable": false
 }
 ```
 
@@ -659,7 +665,8 @@ curl -X PATCH \
     "salon_name": "Jane salon",
     "salon_address": "1234 Front Street",
     "instagram_url": null,
-    "website_url": "https://example.com"
+    "website_url": "https://example.com",
+    "is_profile_bookable": true
 }
 ```
 
@@ -693,7 +700,8 @@ Note: all fields listed above are required.
     "salon_name": "Jane salon",
     "salon_address": "1234 Front Street",
     "instagram_url": null,
-    "website_url": "https://example.com"
+    "website_url": "https://example.com",
+    "is_profile_bookable": true
 }
 ```
 
@@ -2467,7 +2475,8 @@ curl -X GET \
             "phone": null,
             "preference_uuid": "37d795d6-e2a5-46d2-88e6-c1fbe01f756b",
             "website_url": "4sw.in",
-            "followers_count": 2
+            "followers_count": 2,
+            "is_profile_bookable": true
         }
     ]
 }
@@ -2548,7 +2557,8 @@ curl -X POST \
             "salon_city": "Brooklyn",
             "salon_zipcode": "10005",
             "salon_state": "NY",
-            "followers_count": 5
+            "followers_count": 5,
+            "is_profile_bookable": true
         }
     ],
     "more_results_available": false
