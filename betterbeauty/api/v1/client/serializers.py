@@ -36,6 +36,7 @@ from client.types import CLIENT_PRIVACY_CHOICES, ClientPrivacy
 from core.models import User
 from core.types import AppointmentPrices
 from core.utils import calculate_appointment_prices
+from integrations.slack import send_slack_client_profile_update
 from pricing import CalculatedPrice
 from salon.models import Invitation, ServiceCategory, Stylist, StylistService
 from salon.types import InvitationStatus, PriceOnDate
@@ -103,6 +104,7 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
             save_profile_photo(
                 user, profile_photo_id
             )
+        send_slack_client_profile_update(client)
         return user
 
 

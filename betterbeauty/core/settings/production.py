@@ -42,6 +42,9 @@ INSTALLED_APPS += ['raven.contrib.django.raven_compat', ]  # noqa
 # Twilio
 TWILIO_SMS_ENABLED = True
 TWILIO_SLACK_MOCK_ENABLED = True
-TWILLIO_SLACK_CHANNEL = '#auto-twilio'
 
 IS_GEOCODING_ENABLED = True
+
+# slack channels
+TWILLIO_SLACK_CHANNEL = '#auto-twilio'
+AUTO_SIGNUP_SLACK_CHANNEL = '#auto-signup'

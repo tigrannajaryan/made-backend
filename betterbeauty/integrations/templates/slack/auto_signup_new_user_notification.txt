@@ -1,0 +1,2 @@
+:tada: {% if user.is_stylist %}:scissors: New *Stylist*{% elif user.is_client %}:woman-getting-haircut::skin-tone-4: New *Client*{% endif %} signup
+Phone: *{{ user.phone }}*

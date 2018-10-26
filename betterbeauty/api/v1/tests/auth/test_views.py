@@ -117,7 +117,8 @@ class TestSendCodeView(object):
 class TestVerifyCodeView(object):
 
     @pytest.mark.django_db
-    def test_verify_correct_code(self, client):
+    def test_verify_correct_code(self, client, mocker):
+        slack_mock = mocker.patch('api.v1.auth.views.send_slack_new_user_signup')
         code = get_code(role=UserRole.CLIENT)
         data = {
             'phone': code.phone,
@@ -138,6 +139,7 @@ class TestVerifyCodeView(object):
         assert (response.status_code == status.HTTP_200_OK)
         user = User.objects.last()
         assert (user.client is not None)
+        assert(slack_mock.called_once_with(user))
 
     @pytest.mark.django_db
     def test_verify_client_creation(self, client, stylist_data: Stylist):

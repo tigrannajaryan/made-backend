@@ -1,0 +1,9 @@
+:scissors: *Stylist* profile update
+
+Name: {{ stylist.get_full_name }}
+Phone: {% if stylist.user %}{{ stylist.user.phone}}{% else %}N/A{% endif %}
+
+Address: {{ stylist.salon.address }}
+City: {{ stylist.salon.city }}
+State: {{ stylist.salon.state }}
+Country: {{ stylist.salon.country }}

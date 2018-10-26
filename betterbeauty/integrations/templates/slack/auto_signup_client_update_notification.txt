@@ -1,0 +1,7 @@
+:woman-getting-haircut::skin-tone-4: *Client* profile update
+
+Phone: {{ client.user.phone }}
+Name: {% if client.user.get_full_name %}{{ client.user.get_full_name }}{% else %}N/A{% endif %}
+City: {{ client.city }}
+State: {{ client.state }}
+Country: {{ client.country }}
