@@ -364,7 +364,10 @@ class TestStylistProfileCompletenessSerializer(object):
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_services_set'] is False
         )
-        G(StylistService, stylist=stylist_data, duration=datetime.timedelta(0))
+        G(
+            StylistService, stylist=stylist_data, duration=datetime.timedelta(0),
+            is_enabled=True
+        )
         assert (
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_services_set'] is True

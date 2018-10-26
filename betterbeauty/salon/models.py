@@ -222,6 +222,31 @@ class Stylist(models.Model):
             return self.user.photo.url
         return None
 
+    @property
+    def has_services_set(self):
+        """Return True if at least one service exists and enabled"""
+        return self.services.filter(
+            is_enabled=True, deleted_at__isnull=True
+        ).exists()
+
+    @property
+    def has_business_hours_set(self):
+        """Return True if at least some time on a day is marked as available"""
+        return self.available_days.filter(
+            is_available=True,
+            work_start_at__isnull=False,
+            work_end_at__isnull=False
+        ).exists()
+
+    @property
+    def is_profile_bookable(self):
+        """Return True if has phone, working hours and services"""
+        return bool(
+            self.user.phone and
+            self.has_services_set and
+            self.has_business_hours_set
+        )
+
     def get_preferred_clients(self) -> models.QuerySet:
         preferences = PreferredStylist.objects.filter(
             stylist=self, deleted_at__isnull=True
