@@ -1,0 +1,8 @@
+:calendar: New booking
+Client: *{{ appointment.client.user.get_full_name }} {{ appointment.client.user.phone }}*
+Stylist: *{{ appointment.stylist.get_full_name }} {{ appointment.stylist.user.phone }}*
+Booked for: *{{ appointment.datetime_start_at }}*
+
+Services: {% for service in appointment.services.all %}
+  - *{{ service.service_name }}*
+{% endfor %}
