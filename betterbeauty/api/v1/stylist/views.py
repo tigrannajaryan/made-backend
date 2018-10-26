@@ -479,30 +479,41 @@ class NearbyClientsView(views.APIView):
         return Response(response_dict, status=status.HTTP_200_OK)
 
     def get_queryset(self):
-        location = self.request.user.stylist.salon.location
-        country = self.request.user.stylist.salon.country
-        if location:
-            return NearbyClientsView._search_clients(
-                location=location, accuracy=NEARBY_CLIENTS_ACCURACY, country=country)
-        else:
-            raise ValidationError(
-                {'non_field_errors': [{'code': ErrorMessages.ERR_STYLIST_LOCATION_UNAVAILABLE}]})
+        salon = self.request.user.stylist.salon
+        if salon:
+            location = salon.location
+            if location:
+                return NearbyClientsView._search_clients(
+                    location=location, country=salon.country)
+
+        raise ValidationError(
+            {'non_field_errors': [{'code': ErrorMessages.ERR_STYLIST_LOCATION_UNAVAILABLE}]})
 
     @staticmethod
-    def _search_clients(location: Point, accuracy: int, country: str) -> models.QuerySet:
+    def _search_clients(location: Point, country: str) -> models.QuerySet:
         queryset = Client.objects.all()
 
         nearby_clients = NearbyClientsView._get_nearby_clients(queryset, location,
-                                                               accuracy, country)
+                                                               country)
 
         return nearby_clients.order_by('distance')[:1000]
 
     @staticmethod
     def _get_nearby_clients(queryset: models.QuerySet,
-                            location: Point, accuracy: int, country: str) -> models.QuerySet:
-        return queryset.filter(Q(is_address_geocoded=True, country=country) | Q(
-            location__distance_lte=(location, D(m=accuracy)))).annotate(
+                            location: Point, country: str) -> models.QuerySet:
+        """
+        Filter conditions
+        =================
+        Has no zip code but same country
+        Attempted to geocode invalid zip-code but same country
+        Has latitude and longitude which and is within NEARBY_CLIENTS_ACCURACY.
+
+        """
+        queryset = queryset.filter(Q(zip_code__isnull=True, country=country) | Q(
+            last_geo_coded__isnull=False, country=country) | Q(
+            location__distance_lte=(location, D(m=NEARBY_CLIENTS_ACCURACY)))).annotate(
             distance=Distance('location', location))
+        return queryset
 
 
 class ClientPricingView(views.APIView):
