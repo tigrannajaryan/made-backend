@@ -36,7 +36,10 @@ from client.types import CLIENT_PRIVACY_CHOICES, ClientPrivacy
 from core.models import User
 from core.types import AppointmentPrices
 from core.utils import calculate_appointment_prices
-from integrations.slack import send_slack_client_profile_update
+from integrations.slack import (
+    send_slack_auto_booking_notification,
+    send_slack_client_profile_update,
+)
 from pricing import CalculatedPrice
 from salon.models import Invitation, ServiceCategory, Stylist, StylistService
 from salon.types import InvitationStatus, PriceOnDate
@@ -476,7 +479,7 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
                 setattr(appointment, k, v)
             appointment.save()
             appointment.append_status_history(updated_by=stylist.user)
-
+        send_slack_auto_booking_notification(appointment)
         return appointment
 
 

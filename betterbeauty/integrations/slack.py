@@ -39,7 +39,8 @@ def send_slack_twilio_message_notification(from_phone, to_phone, message):
             'message': message,
         })
     send_slack_message(
-        channel=settings.TWILLIO_SLACK_CHANNEL, slack_url=settings.TWILLIO_SLACK_HOOK,
+        channel=settings.TWILLIO_SLACK_CHANNEL,
+        slack_url=settings.TWILLIO_SLACK_HOOK,
         bot_name='twilio-bot', message=message
     )
 
@@ -52,7 +53,8 @@ def send_slack_new_user_signup(user):
                 'user': user,
             })
         send_slack_message(
-            channel=settings.AUTO_SIGNUP_SLACK_CHANNEL, slack_url=settings.AUTO_SIGNUP_SLACK_HOOK,
+            channel=settings.AUTO_SIGNUP_SLACK_CHANNEL,
+            slack_url=settings.AUTO_SIGNUP_SLACK_HOOK,
             bot_name='auto-signup-bot', message=message
         )
     except:  # noqa we *really* don't want any issues here
@@ -67,7 +69,8 @@ def send_slack_client_profile_update(client):
                 'client': client,
             })
         send_slack_message(
-            channel=settings.AUTO_SIGNUP_SLACK_CHANNEL, slack_url=settings.AUTO_SIGNUP_SLACK_HOOK,
+            channel=settings.AUTO_SIGNUP_SLACK_CHANNEL,
+            slack_url=settings.AUTO_SIGNUP_SLACK_HOOK,
             bot_name='auto-signup-bot', message=message
         )
     except:  # noqa we *really* don't want any issues here
@@ -82,8 +85,25 @@ def send_slack_stylist_profile_update(stylist):
                 'stylist': stylist,
             })
         send_slack_message(
-            channel=settings.AUTO_SIGNUP_SLACK_CHANNEL, slack_url=settings.AUTO_SIGNUP_SLACK_HOOK,
+            channel=settings.AUTO_SIGNUP_SLACK_CHANNEL,
+            slack_url=settings.AUTO_SIGNUP_SLACK_HOOK,
             bot_name='auto-signup-bot', message=message
+        )
+    except:  # noqa we *really* don't want any issues here
+        pass
+
+
+def send_slack_auto_booking_notification(appointment):
+    try:
+        message = render_to_string(
+            'slack/auto_booking_notification.txt',
+            context={
+                'appointment': appointment,
+            })
+        send_slack_message(
+            channel=settings.AUTO_BOOKING_SLACK_CHANNEL,
+            slack_url=settings.AUTO_BOOKING_SLACK_HOOK,
+            bot_name='auto-booking-bot', message=message
         )
     except:  # noqa we *really* don't want any issues here
         pass

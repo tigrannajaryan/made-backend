@@ -201,6 +201,9 @@ class TestAppointmentSerializer(object):
     @freeze_time('2018-05-17 15:30:00 UTC')
     @pytest.mark.django_db
     def test_create_with_client(self, stylist_data: Stylist, client_data: Client, mocker):
+        slack_mock = mocker.patch(
+            'api.v1.client.serializers.send_slack_auto_booking_notification'
+        )
         service: StylistService = G(
             StylistService,
             stylist=stylist_data, duration=datetime.timedelta(minutes=30),
@@ -256,6 +259,7 @@ class TestAppointmentSerializer(object):
         assert (original_service.client_price == 40)
         assert (original_service.service_uuid == service.uuid)
         assert (original_service.service_name == service.name)
+        assert(slack_mock.called_once_with(appointment))
 
     @freeze_time('2018-05-17 10:30:00 UTC')
     @pytest.mark.django_db
