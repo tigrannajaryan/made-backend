@@ -36,7 +36,8 @@ from salon.tests.test_models import stylist_appointments_data
 class TestClientProfileView:
 
     @pytest.mark.django_db
-    def test_submit_profile(self, client, authorized_client_user):
+    def test_submit_profile(self, client, authorized_client_user, mocker):
+        slack_mock = mocker.patch('api.v1.client.serializers.send_slack_client_profile_update')
         user, auth_token = authorized_client_user
         data = {
             'phone': user.phone,
@@ -50,9 +51,13 @@ class TestClientProfileView:
         data = response.data
         assert (data['first_name'] == 'Tom')
         assert (data['last_name'] == 'Cruise')
+        user.refresh_from_db()
+        assert(user.client is not None)
+        slack_mock.assert_called_once_with(user.client)
 
     @pytest.mark.django_db
-    def test_update_profile(self, client, authorized_client_user):
+    def test_update_profile(self, client, authorized_client_user, mocker):
+        slack_mock = mocker.patch('api.v1.client.serializers.send_slack_client_profile_update')
         user, auth_token = authorized_client_user
         data = {
             'first_name': 'Tom',
@@ -69,6 +74,10 @@ class TestClientProfileView:
         updated_data = {
             'first_name': 'Tommy'
         }
+        user.refresh_from_db()
+        assert (user.client is not None)
+        slack_mock.assert_called_once_with(user.client)
+        slack_mock.reset_mock()
 
         response = client.patch(profile_url, data=json.dumps(updated_data),
                                 HTTP_AUTHORIZATION=auth_token,
@@ -77,6 +86,8 @@ class TestClientProfileView:
         data = response.data
         assert (data['first_name'] == 'Tommy')
         assert (data['last_name'] == 'Cruise')
+        user.refresh_from_db()
+        slack_mock.assert_called_once_with(user.client)
 
     @pytest.mark.django_db
     def test_view_permissions(

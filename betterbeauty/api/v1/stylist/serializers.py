@@ -27,6 +27,7 @@ from core.types import AppointmentPrices, Weekday
 from core.utils import (
     calculate_appointment_prices,
 )
+from integrations.slack import send_slack_stylist_profile_update
 from salon.models import (
     Invitation,
     Salon,
@@ -216,7 +217,9 @@ class StylistSerializer(
                 save_profile_photo(
                     stylist.user, validated_data.get('profile_photo_id')
                 )
-        return super(StylistSerializer, self).update(stylist, validated_data)
+        stylist = super(StylistSerializer, self).update(stylist, validated_data)
+        send_slack_stylist_profile_update(stylist)
+        return stylist
 
     def create(self, validated_data) -> Stylist:
         user: User = self.context['user']
@@ -247,6 +250,7 @@ class StylistSerializer(
             stylist = create_stylist_profile_for_user(user, salon=salon)
             if should_save_photo:
                 save_profile_photo(user, profile_photo_id)
+            send_slack_stylist_profile_update(stylist)
             return stylist
 
 

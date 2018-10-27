@@ -262,14 +262,9 @@ DEBUG = False
 
 CATCH_ALL_EXCEPTIONS = False
 
-# Twilio
-TWILLIO_SLACK_HOOK = (
-    'https://hooks.slack.com/services/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'
-)
 TWILIO_SMS_ENABLED = False
 TWILIO_SLACK_MOCK_ENABLED = False
 TWILIO_FROM_TEL = '+13477516233'
-TWILLIO_SLACK_CHANNEL = '#auto-twilio-dev'
 
 GOOGLE_AUTOCOMPLETE_API_KEY = os.environ.get(
     'GOOGLE_AUTOCOMPLETE_API_KEY', '<override in local.py>')
@@ -281,3 +276,17 @@ IPSTACK_API_KEY = os.environ.get(
     'IPSTACK_API_KEY', '<override in local.py>')
 
 DJANGO_SILK_ENABLED = False
+
+IS_SLACK_ENABLED = True
+
+# slack channels
+TWILLIO_SLACK_CHANNEL = '#auto-twilio-dev'
+AUTO_SIGNUP_SLACK_CHANNEL = '#auto-signup-dev'
+
+# slack hooks
+TWILLIO_SLACK_HOOK = (
+    'https://hooks.slack.com/services/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'
+)
+AUTO_SIGNUP_SLACK_HOOK = (
+    'https://hooks.slack.com/services/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'
+)

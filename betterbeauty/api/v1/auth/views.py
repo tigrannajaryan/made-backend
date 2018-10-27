@@ -18,6 +18,7 @@ from core.utils.auth import (
     jwt_response_payload_handler as stylist_jwt_response_payload_handler,
 )
 from core.utils.facebook import verify_fb_token
+from integrations.slack import send_slack_new_user_signup
 from salon.utils import create_stylist_profile_for_user
 
 from .serializers import (
@@ -130,6 +131,7 @@ class VerifyCodeView(APIView):
                 user = create_stylist_profile_from_phone(data['phone'])
             else:
                 user = create_client_profile_from_phone(data['phone'])
+            send_slack_new_user_signup(user)
 
         api_settings.user_settings['JWT_EXPIRATION_DELTA'] = timedelta(days=365)
         jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
