@@ -180,14 +180,15 @@ class StylistSerializer(
 
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
-    phone = PhoneNumberField(source='user.phone',)
+    phone = PhoneNumberField(source='user.phone')
+    is_profile_bookable = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Stylist
         fields = [
             'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url',
             'salon_name', 'salon_address', 'profile_photo_id', 'instagram_url',
-            'website_url', 'salon_city', 'salon_zipcode', 'salon_state'
+            'website_url', 'salon_city', 'salon_zipcode', 'salon_state', 'is_profile_bookable',
         ]
 
     def validate_salon_address(self, salon_address: str) -> str:
@@ -283,16 +284,19 @@ class StylistSerializerWithInvitation(
     )
     first_name = serializers.CharField(source='stylist.user.first_name')
     last_name = serializers.CharField(source='stylist.user.last_name')
-    phone = PhoneNumberField(source='stylist.user.phone', )
+    phone = PhoneNumberField(source='stylist.user.phone')
     website_url = serializers.DateTimeField(
         source='stylist.created_at', read_only=True)
+    is_profile_bookable = serializers.BooleanField(
+        read_only=True, source='stylist.is_profile_bookable'
+    )
 
     class Meta:
         model = Invitation
         fields = [
             'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url',
             'salon_name', 'salon_address', 'instagram_url',
-            'website_url', 'invitation_created_at'
+            'website_url', 'invitation_created_at', 'is_profile_bookable'
         ]
 
 
@@ -439,8 +443,8 @@ class StylistServiceListSerializer(
 class StylistProfileStatusSerializer(serializers.ModelSerializer):
     has_personal_data = serializers.SerializerMethodField()
     has_picture_set = serializers.SerializerMethodField()
-    has_services_set = serializers.SerializerMethodField()
-    has_business_hours_set = serializers.SerializerMethodField()
+    has_services_set = serializers.BooleanField(read_only=True)
+    has_business_hours_set = serializers.BooleanField(read_only=True)
     has_weekday_discounts_set = serializers.SerializerMethodField()
     has_other_discounts_set = serializers.SerializerMethodField()
 
@@ -461,16 +465,6 @@ class StylistProfileStatusSerializer(serializers.ModelSerializer):
 
     def get_has_picture_set(self, stylist: Stylist) -> bool:
         return stylist.get_profile_photo_url() is not None
-
-    def get_has_services_set(self, stylist: Stylist) -> bool:
-        return stylist.services.exists()
-
-    def get_has_business_hours_set(self, stylist: Stylist) -> bool:
-        return stylist.available_days.filter(
-            is_available=True,
-            work_start_at__isnull=False,
-            work_end_at__isnull=False
-        ).exists()
 
     def get_has_weekday_discounts_set(self, stylist: Stylist) -> bool:
         return stylist.is_discount_configured
