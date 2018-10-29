@@ -71,6 +71,7 @@ class SalonSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
         model = Salon
         fields = [
             'name', 'address', 'city', 'zip_code', 'state', 'full_address', 'profile_photo_url',
+            'public_phone'
         ]
 
     def update(self, instance, validated_data):
@@ -181,13 +182,15 @@ class StylistSerializer(
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
     phone = PhoneNumberField(source='user.phone')
+    public_phone = PhoneNumberField(source='salon.public_phone', allow_null=True,
+                                    allow_blank=True, required=False)
     is_profile_bookable = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Stylist
         fields = [
             'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url',
-            'salon_name', 'salon_address', 'profile_photo_id', 'instagram_url',
+            'salon_name', 'salon_address', 'profile_photo_id', 'instagram_url', 'public_phone',
             'website_url', 'salon_city', 'salon_zipcode', 'salon_state', 'is_profile_bookable',
         ]
 
