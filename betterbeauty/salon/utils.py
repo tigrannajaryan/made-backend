@@ -16,8 +16,6 @@ from core.constants import (
     DEFAULT_REBOOK_WITHIN_2_WEEKS_DISCOUNT_PERCENT,
     DEFAULT_REBOOK_WITHIN_3_WEEKS_DISCOUNT_PERCENT,
     DEFAULT_REBOOK_WITHIN_4_WEEKS_DISCOUNT_PERCENT,
-    DEFAULT_REBOOK_WITHIN_5_WEEKS_DISCOUNT_PERCENT,
-    DEFAULT_REBOOK_WITHIN_6_WEEKS_DISCOUNT_PERCENT,
     DEFAULT_WEEKDAY_DISCOUNT_PERCENTS,
 )
 from core.models import User
@@ -183,12 +181,6 @@ def generate_discount_settings_for_stylist(
     discounts.revisit_within_4week_percentage = (
         stylist.rebook_within_4_weeks_discount_percent
     )
-    discounts.revisit_within_5week_percentage = (
-        stylist.rebook_within_5_weeks_discount_percent
-    )
-    discounts.revisit_within_6week_percentage = (
-        stylist.rebook_within_6_weeks_discount_percent
-    )
     discounts.maximum_discount = stylist.maximum_discount
     discounts.is_maximum_discount_enabled = (
         stylist.is_maximum_discount_enabled
@@ -317,10 +309,6 @@ def create_stylist_profile_for_user(user: User, **kwargs) -> Stylist:
                     DEFAULT_REBOOK_WITHIN_3_WEEKS_DISCOUNT_PERCENT,
                 'rebook_within_4_weeks_discount_percent':
                     DEFAULT_REBOOK_WITHIN_4_WEEKS_DISCOUNT_PERCENT,
-                'rebook_within_5_weeks_discount_percent':
-                    DEFAULT_REBOOK_WITHIN_5_WEEKS_DISCOUNT_PERCENT,
-                'rebook_within_6_weeks_discount_percent':
-                    DEFAULT_REBOOK_WITHIN_6_WEEKS_DISCOUNT_PERCENT,
                 'first_time_book_discount_percent':
                     DEFAULT_FIRST_TIME_BOOK_DISCOUNT_PERCENT
             }
