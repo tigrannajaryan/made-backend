@@ -383,10 +383,19 @@ class TestStylistProfileCompletenessSerializer(object):
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_business_hours_set'] is False
         )
-        stylist_data.available_days.filter(weekday=2).update(
-            weekday=2, is_available=True,
-            work_start_at=datetime.time(8, 0), work_end_at=datetime.time(15, 0)
-        )
+        data = [
+            {
+                "weekday_iso": 2,
+                "is_available": True,
+                "work_start_at": "08:30:00",
+                "work_end_at": "15:00:00"
+            }
+        ]
+        serializer = StylistAvailableWeekDaySerializer(data=data, many=True, context={
+            'user': stylist_data.user
+        })
+        serializer.is_valid()
+        serializer.save()
         assert (
             StylistProfileStatusSerializer(
                 instance=stylist_data).data['has_business_hours_set'] is True
