@@ -19,7 +19,6 @@ from api.v1.client.constants import ErrorMessages
 from api.v1.stylist.fields import DurationMinuteField
 from api.v1.stylist.serializers import (
     AppointmentServiceSerializer,
-    StylistSerializer,
     StylistServiceCategoryDetailsSerializer,
     StylistServicePriceSerializer,
 )
@@ -130,7 +129,7 @@ class PreferredStylistSerializer(FormattedErrorMessageMixin, serializers.ModelSe
     )
     first_name = serializers.CharField(source='stylist.user.first_name')
     last_name = serializers.CharField(source='stylist.user.last_name')
-    phone = PhoneNumberField(source='stylist.user.phone')
+    phone = serializers.CharField(source='stylist.public_phone_or_user_phone', read_only=True)
     followers_count = serializers.SerializerMethodField()
     is_profile_bookable = serializers.BooleanField(
         source='stylist.is_profile_bookable', read_only=True
@@ -373,7 +372,8 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
     services = AppointmentServiceSerializer(many=True)
     stylist_first_name = serializers.CharField(read_only=True, source='stylist.first_name')
     stylist_last_name = serializers.CharField(read_only=True, source='stylist.last_name')
-    stylist_phone = serializers.CharField(read_only=True, source='stylist.phone')
+    stylist_phone = serializers.CharField(read_only=True,
+                                          source='stylist.public_phone_or_user_phone')
     profile_photo_url = serializers.CharField(
         read_only=True, source='stylist.get_profile_photo_url')
     salon_name = serializers.CharField(
@@ -618,7 +618,8 @@ class AppointmentPreviewResponseSerializer(serializers.Serializer):
     stylist_uuid = serializers.UUIDField(source='stylist.uuid', read_only=True)
     stylist_first_name = serializers.CharField(source='stylist.user.first_name', read_only=True)
     stylist_last_name = serializers.CharField(source='stylist.user.last_name', read_only=True)
-    stylist_phone = serializers.CharField(source='stylist.user.phone', read_only=True)
+    stylist_phone = serializers.CharField(source='stylist.public_phone_or_user_phone',
+                                          read_only=True)
     datetime_start_at = serializers.DateTimeField(read_only=True)
     status = serializers.CharField(read_only=True)
     salon_name = serializers.CharField(
@@ -680,12 +681,38 @@ class FollowerSerializer(serializers.ModelSerializer):
         ).count()
 
 
-class SearchStylistSerializer(StylistSerializer):
+class SearchStylistSerializer(
+    FormattedErrorMessageMixin,
+    serializers.ModelSerializer
+):
+    uuid = serializers.UUIDField(read_only=True)
+
+    salon_name = serializers.CharField(
+        source='salon.name', allow_null=True, required=False
+    )
+    salon_address = serializers.CharField(source='salon.address', allow_null=True)
+
+    salon_city = serializers.CharField(source='salon.city', required=False)
+    salon_zipcode = serializers.CharField(source='salon.zip_code', required=False)
+    salon_state = serializers.CharField(source='salon.state', required=False)
+
+    profile_photo_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    profile_photo_url = serializers.CharField(read_only=True, source='get_profile_photo_url')
+
+    first_name = serializers.CharField(source='user.first_name')
+    last_name = serializers.CharField(source='user.last_name')
+    phone = PhoneNumberField(source='public_phone_or_user_phone')
+    is_profile_bookable = serializers.BooleanField(read_only=True)
     followers_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Stylist
-        fields = StylistSerializer.Meta.fields + ['followers_count', ]
+        fields = [
+            'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url',
+            'salon_name', 'salon_address', 'profile_photo_id', 'instagram_url',
+            'website_url', 'salon_city', 'salon_zipcode', 'salon_state', 'is_profile_bookable',
+            'followers_count',
+        ]
 
     def get_followers_count(self, stylist: Stylist):
         return stylist.get_preferred_clients().filter(

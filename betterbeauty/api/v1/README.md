@@ -481,8 +481,31 @@ curl -X POST \
     "token": "jwt_token",
     "expires_in": 86400,
     "role": "stylist",
-    "profile": null,
-    "profile_status": null
+    "profile": {
+        "uuid": "3c1cc23e-2a36-43cf-a865-55b078bcae77",
+        "first_name": "John",
+        "last_name": "Doe",
+        "phone": "+11234567890",
+        "profile_photo_url": "/media/user_uploads/78fcfeb3-cf7f-4416-a149-85c1ffe55052/bed27dd1-4282-4bb7-bb3d-b403aff1f15d-f_7WI6I1d.png",
+        "salon_name": "Mir",
+        "salon_address": "100-01 Metropolitan Ave, Flushing, NY 11375, СA",
+        "instagram_url": "john_doe",
+        "public_phone": "+19876543210",
+        "website_url": "example.com",
+        "salon_city": "Queens",
+        "salon_zipcode": "11375",
+        "salon_state": "NY",
+        "is_profile_bookable": true
+    },
+    "profile_status": {
+        "has_personal_data": true,
+        "has_picture_set": true,
+        "has_services_set": true,
+        "has_business_hours_set": true,
+        "has_weekday_discounts_set": true,
+        "has_other_discounts_set": true,
+        "has_invited_clients": true
+    },
 }
 ```
 
@@ -547,12 +570,16 @@ Note: all fields listed above are required.
     "id": 1,
     "first_name": "Jane",
     "last_name": "McBob",
-    "phone": "(650) 350-1234",
+    "phone": "+13216549870",
+    "public_phone": "+19876543210",
     "profile_photo_url": null,
     "salon_name": "Jane salon",
-    "salon_address": "1234 Front Street",
+    "salon_address": "100-01 Metropolitan Ave, Flushing, NY 11375, USA",
     "instagram_url": null,
     "website_url": "https://example.com",
+    "salon_city": "Queens",
+    "salon_zipcode": "11375",
+    "salon_state": "NY",
     "is_profile_bookable": false
 }
 ```
@@ -589,12 +616,16 @@ Note: all fields listed above are required.
     "id": 1,
     "first_name": "Jane",
     "last_name": "McBob",
-    "phone": "(650) 350-1234",
+    "phone": "+13216549870",
+    "public_phone": "+19876543210",
     "profile_photo_url": null,
     "salon_name": "Jane salon",
-    "salon_address": "1234 Front Street",
+    "salon_address": "100-01 Metropolitan Ave, Flushing, NY 11375, USA",
     "instagram_url": null,
     "website_url": "https://example.com",
+    "salon_city": "Queens",
+    "salon_zipcode": "11375",
+    "salon_state": "NY",
     "is_profile_bookable": false
 }
 ```
@@ -628,12 +659,16 @@ Note: you can patch individual fields with PATCH.
     "id": 1,
     "first_name": "Jane",
     "last_name": "McBob",
-    "phone": "(650) 350-1234",
+    "phone": "+13216549870",
+    "public_phone": "+19876543210",
     "profile_photo_url": null,
     "salon_name": "Jane salon",
-    "salon_address": "1234 Front Street",
+    "salon_address": "100-01 Metropolitan Ave, Flushing, NY 11375, USA",
     "instagram_url": null,
     "website_url": "https://example.com",
+    "salon_city": "Queens",
+    "salon_zipcode": "11375",
+    "salon_state": "NY",
     "is_profile_bookable": false
 }
 ```
@@ -660,13 +695,17 @@ curl -X PATCH \
     "id": 1,
     "first_name": "Jane",
     "last_name": "McBob",
-    "phone": "(650) 350-1234",
-    "profile_photo_url": "http://example.com/your_image.jpg",
+    "phone": "+13216549870",
+    "public_phone": "+19876543210",
+    "profile_photo_url": "http://example.com/your_image.jpg",,
     "salon_name": "Jane salon",
-    "salon_address": "1234 Front Street",
+    "salon_address": "100-01 Metropolitan Ave, Flushing, NY 11375, USA",
     "instagram_url": null,
     "website_url": "https://example.com",
-    "is_profile_bookable": true
+    "salon_city": "Queens",
+    "salon_zipcode": "11375",
+    "salon_state": "NY",
+    "is_profile_bookable": false
 }
 ```
 
@@ -695,13 +734,17 @@ Note: all fields listed above are required.
     "id": 1,
     "first_name": "Jane",
     "last_name": "McBob",
-    "phone": "(650) 350-1234",
-    "profile_photo_url": "http://example.com/your_image.jpg",
+    "phone": "+13216549870",
+    "public_phone": "+19876543210",
+    "profile_photo_url": "http://example.com/your_image.jpg",,
     "salon_name": "Jane salon",
-    "salon_address": "1234 Front Street",
+    "salon_address": "100-01 Metropolitan Ave, Flushing, NY 11375, USA",
     "instagram_url": null,
     "website_url": "https://example.com",
-    "is_profile_bookable": true
+    "salon_city": "Queens",
+    "salon_zipcode": "11375",
+    "salon_state": "NY",
+    "is_profile_bookable": false
 }
 ```
 
