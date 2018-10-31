@@ -48,6 +48,7 @@ class GeoCode:
                 address=self.str_to_geocode)
         logger.info("Geocoding result: {0}".format(json.dumps(geocode_results)))
         if len(geocode_results) != 1:
+            logger.info("Exiting, More than 1 result")
             return None
         geocode_result = geocode_results[0]
         if 'country' in geocode_result['types'] or (
