@@ -9,7 +9,7 @@ from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 
 from django.db import models, transaction
-from django.db.models import Q
+from django.db.models import Case, IntegerField, Q, Value, When
 
 from rest_framework import generics, permissions, status, views
 from rest_framework.exceptions import ValidationError
@@ -491,11 +491,30 @@ class NearbyClientsView(views.APIView):
 
     @staticmethod
     def _search_clients(location: Point, country: str) -> models.QuerySet:
+        """
+        Ordering
+        ========
+        We are ordering clients by profile_completeness and then by distance
+
+        Profile completeness ranking is calculated in the following order
+         1. Has first name, has photo
+         2. Has first name, no photo
+         3. No first name, has photo
+         4. No first name, No photo
+        """
         queryset = Client.objects.filter(country__iexact=country)
 
         nearby_clients = NearbyClientsView._get_nearby_clients(queryset, location)
 
-        return nearby_clients.order_by('distance')[:1000]
+        queryset = nearby_clients.annotate(profile_completeness=Case(
+            When((Q(user__first_name='', user__photo='')), then=Value(4)),
+            When((Q(user__first_name='') & ~Q(user__photo='')), then=Value(3)),
+            When(Q(user__first_name__isnull=False, user__photo=''), then=Value(2)),
+            When(Q(user__first_name__isnull=False) & ~Q(user__photo=''), then=Value(1)),
+            output_field=IntegerField(),
+        )).order_by('profile_completeness', 'distance')[:1000]
+
+        return queryset
 
     @staticmethod
     def _get_nearby_clients(queryset: models.QuerySet,
