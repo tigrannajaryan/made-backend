@@ -491,26 +491,25 @@ class NearbyClientsView(views.APIView):
 
     @staticmethod
     def _search_clients(location: Point, country: str) -> models.QuerySet:
-        queryset = Client.objects.all()
+        queryset = Client.objects.filter(country__iexact=country)
 
-        nearby_clients = NearbyClientsView._get_nearby_clients(queryset, location,
-                                                               country)
+        nearby_clients = NearbyClientsView._get_nearby_clients(queryset, location)
 
         return nearby_clients.order_by('distance')[:1000]
 
     @staticmethod
     def _get_nearby_clients(queryset: models.QuerySet,
-                            location: Point, country: str) -> models.QuerySet:
+                            location: Point) -> models.QuerySet:
         """
         Filter conditions
         =================
-        Has no zip code but same country
-        Attempted to geocode invalid zip-code but same country
+        Has no zip code
+        Attempted to geocode invalid zip-code
         Has latitude and longitude which and is within NEARBY_CLIENTS_ACCURACY.
 
         """
-        queryset = queryset.filter(Q(zip_code__isnull=True, country=country) | Q(
-            last_geo_coded__isnull=False, country=country) | Q(
+        queryset = queryset.filter(Q(zip_code__isnull=True) | Q(
+            last_geo_coded__isnull=False) | Q(
             location__distance_lte=(location, D(m=NEARBY_CLIENTS_ACCURACY)))).annotate(
             distance=Distance('location', location))
         return queryset
