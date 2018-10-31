@@ -49,6 +49,7 @@ class Salon(models.Model):
     zip_code = models.CharField(max_length=16, null=True, blank=True)
     location = PointField(geography=True, null=True)
     is_address_geocoded = models.BooleanField(default=False)
+    public_phone = models.CharField(max_length=20, unique=True, null=True, default=None)
     last_geo_coded = models.DateTimeField(blank=True, null=True, default=None)
 
     class Meta:
@@ -202,6 +203,10 @@ class Stylist(models.Model):
     @property
     def phone(self) -> Optional[str]:
         return self.user.phone
+
+    @property
+    def public_phone_or_user_phone(self) -> Optional[str]:
+        return self.salon.public_phone or self.user.phone
 
     @property
     def first_name(self) -> Optional[str]:
