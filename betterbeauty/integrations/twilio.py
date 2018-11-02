@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from django.conf import settings
 from django.template.loader import render_to_string
@@ -22,8 +23,11 @@ def render_one_time_sms_for_phone(code: str):
     )
 
 
-def send_sms_message(to_phone: str, body: str, role: str, status_callback=None):
+def send_sms_message(
+        to_phone: str, body: str, role: str, status_callback=None
+) -> Optional[str]:
     # TODO: implement status callback handler
+    result_sid: Optional[str] = None
     if settings.TWILIO_SMS_ENABLED:
         try:
             client = Client()
@@ -33,7 +37,7 @@ def send_sms_message(to_phone: str, body: str, role: str, status_callback=None):
                 body=body,
                 status_callback=status_callback
             )
-            return result.sid
+            result_sid = result.sid
         except TwilioRestException as e:
             logger.exception('Cannot send SMS through twilio', exc_info=True)
             raise HttpCodeException(status_code=status.HTTP_504_GATEWAY_TIMEOUT)
@@ -46,3 +50,4 @@ def send_sms_message(to_phone: str, body: str, role: str, status_callback=None):
             to_phone=to_phone,
             message=body
         )
+    return result_sid
