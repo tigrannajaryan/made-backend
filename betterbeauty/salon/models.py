@@ -47,9 +47,9 @@ class Salon(models.Model):
     state = models.CharField(max_length=25, null=True, blank=True)
     country = models.CharField(max_length=25, null=True, blank=True)
     zip_code = models.CharField(max_length=16, null=True, blank=True)
-    location = PointField(geography=True, null=True)
+    location = PointField(geography=True, null=True, blank=True)
     is_address_geocoded = models.BooleanField(default=False)
-    public_phone = models.CharField(max_length=20, unique=True, null=True, default=None)
+    public_phone = models.CharField(max_length=20, blank=True, null=True, default=None)
     last_geo_coded = models.DateTimeField(blank=True, null=True, default=None)
 
     class Meta:
