@@ -171,12 +171,6 @@ class Stylist(models.Model):
     rebook_within_4_weeks_discount_percent = models.PositiveIntegerField(
         default=0, validators=[MaxValueValidator(100)]
     )
-    rebook_within_5_weeks_discount_percent = models.PositiveIntegerField(
-        default=0, validators=[MaxValueValidator(100)]
-    )
-    rebook_within_6_weeks_discount_percent = models.PositiveIntegerField(
-        default=0, validators=[MaxValueValidator(100)]
-    )
     first_time_book_discount_percent = models.PositiveIntegerField(
         default=0, validators=[MaxValueValidator(100)]
     )

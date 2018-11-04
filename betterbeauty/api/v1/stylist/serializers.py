@@ -617,14 +617,6 @@ class StylistDiscountsSerializer(
         source='rebook_within_4_weeks_discount_percent',
         min_value=0, max_value=100
     )
-    rebook_within_5_weeks = serializers.IntegerField(
-        source='rebook_within_5_weeks_discount_percent',
-        min_value=0, max_value=100
-    )
-    rebook_within_6_weeks = serializers.IntegerField(
-        source='rebook_within_6_weeks_discount_percent',
-        min_value=0, max_value=100
-    )
 
     def update(self, stylist: Stylist, validated_data):
         with transaction.atomic():
@@ -644,8 +636,7 @@ class StylistDiscountsSerializer(
         model = Stylist
         fields = [
             'weekdays', 'first_booking', 'rebook_within_1_week', 'rebook_within_2_weeks',
-            'rebook_within_3_weeks', 'rebook_within_4_weeks', 'rebook_within_5_weeks',
-            'rebook_within_6_weeks',
+            'rebook_within_3_weeks', 'rebook_within_4_weeks',
         ]
 
 
