@@ -10,7 +10,9 @@ CERT_PATH="push_certificates"
 # and appropriate push notifications certificates are injected into each of
 # the bundles.
 
-# 1. Create staging and production bundles *without* decripted certificates.
+# 1. Create staging and production bundles only with developer (local build)
+# certificates, filtering out staging/and production; we'll add them later.
+
 # We're going to use current git local copy file list - since this is
 # the default behavior of travis's elasticbeanstalk provider, which
 # uses `git ls-files` in the default mode of operation. We will exclude
@@ -23,7 +25,7 @@ cp $TRAVIS_BUILD_DIR/$BUNDLE_PATH/$STAGING_BUNDLE_NAME $TRAVIS_BUILD_DIR/$BUNDLE
 
 # 2. Decrypt certificates
 
-# there are 4 server certificates to decrypt; local certificates are store unencrypted
+# there are 4 server certificates to decrypt; local certificates are stored unencrypted
 openssl aes-256-cbc -d -a -K $encrypted_69fcb918905c_key -iv $encrypted_69fcb918905c_iv -in $CERT_PATH/server-client-staging.pem.enc -out $CERT_PATH/server-client-staging.pem
 openssl aes-256-cbc -d -a -K $encrypted_69fcb918905c_key -iv $encrypted_69fcb918905c_iv -in $CERT_PATH/server-stylist-staging.pem.enc -out $CERT_PATH/server-stylist-staging.pem
 openssl aes-256-cbc -d -a -K $encrypted_69fcb918905c_key -iv $encrypted_69fcb918905c_iv -in $CERT_PATH/server-client-production.pem.enc -out $CERT_PATH/server-client-production.pem
