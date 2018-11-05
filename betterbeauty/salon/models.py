@@ -228,6 +228,14 @@ class Stylist(models.Model):
             is_enabled=True, deleted_at__isnull=True
         ).exists()
 
+    def delete(self, using=None, keep_parents=False):
+        preferences = PreferredStylist.objects.filter(
+            stylist=self
+        )
+        for preference in preferences:
+            preference.safe_hard_delete()
+        return super(Stylist, self).delete(using, keep_parents)
+
     @property
     def has_business_hours_set(self):
         """Return True if at least some time on a day is marked as available"""

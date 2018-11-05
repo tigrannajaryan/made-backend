@@ -72,6 +72,7 @@ class StylistAdmin(admin.ModelAdmin):
     search_fields = ['user__first_name', 'user__last_name',
                      'user__phone']
     list_display = ['__str__', 'user_name', 'user_phone']
+    raw_id_fields = ['user', 'salon']
 
     def user_phone(self, obj):
         return obj.user.phone
@@ -93,6 +94,10 @@ class StylistAdmin(admin.ModelAdmin):
         extra = 0
         readonly_fields = ['deleted_at', 'uuid', ]
         # TODO: add custom form here, to add photo samples
+
+        def get_queryset(self, request):
+            return super(StylistAdmin.StylistServiceInline, self).get_queryset(
+                request).select_related('stylist__user', 'category')
 
     class StylistServicePhotosampleInline(admin.TabularInline):
         model = StylistServicePhotoSample
