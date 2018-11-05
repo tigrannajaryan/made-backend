@@ -23,6 +23,13 @@ class ClientPermission(permissions.BasePermission):
         return request.user.is_authenticated and request.user.is_client()
 
 
+class ClientOrStylistPermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and (
+            request.user.is_client() or request.user.is_stylist()
+        )
+
+
 class BackdoorPermission(permissions.BasePermission):
     @staticmethod
     def _get_backdoor_api_key():

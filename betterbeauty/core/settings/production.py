@@ -1,8 +1,13 @@
 from typing import List
 
 from core.constants import EnvLevel
-
 from .defaults import *  # noqa
+from .defaults import (
+    IOS_PUSH_CERTIFICATES_PATH,
+    MobileAppIdType,
+    Path,
+    PUSH_NOTIFICATIONS_SETTINGS,
+)
 from .utils import (
     get_ec2_instance_id,
     get_ec2_instance_ip_address,
@@ -49,3 +54,17 @@ IS_GEOCODING_ENABLED = True
 TWILLIO_SLACK_CHANNEL = '#auto-twilio'
 AUTO_SIGNUP_SLACK_CHANNEL = '#auto-signup'
 AUTO_BOOKING_SLACK_CHANNEL = '#auto-booking'
+
+# push notifications
+PUSH_NOTIFICATIONS_SETTINGS['APPLICATIONS'].update({  # type: ignore
+    # certificate settings for iOS apps built with distribution certificate,
+    # e.g. those from TestFlight or AppStore
+    MobileAppIdType.IOS_STYLIST.value: {
+        'PLATFORM': 'APNS',
+        'CERTIFICATE': Path(IOS_PUSH_CERTIFICATES_PATH / 'server-stylist-production.pem'),
+    },
+    MobileAppIdType.IOS_CLIENT.value: {
+        'PLATFORM': 'APNS',
+        'CERTIFICATE': Path(IOS_PUSH_CERTIFICATES_PATH / 'server-client-production.pem')
+    },
+})
