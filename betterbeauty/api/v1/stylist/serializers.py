@@ -200,6 +200,9 @@ class StylistSerializer(
         return salon_address
 
     def update(self, stylist: Stylist, validated_data) -> Stylist:
+        is_profile_already_complete = False
+        if stylist.is_profile_bookable:
+            is_profile_already_complete = True
         with transaction.atomic():
             user_data = validated_data.pop('user', {})
             if user_data:
@@ -221,7 +224,8 @@ class StylistSerializer(
                     stylist.user, validated_data.get('profile_photo_id')
                 )
         stylist = super(StylistSerializer, self).update(stylist, validated_data)
-        send_slack_stylist_profile_update(stylist)
+        if not is_profile_already_complete:
+            send_slack_stylist_profile_update(stylist)
         return stylist
 
     def create(self, validated_data) -> Stylist:
