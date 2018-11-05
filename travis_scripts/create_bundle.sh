@@ -18,7 +18,10 @@ CERT_PATH="push_certificates"
 # uses `git ls-files` in the default mode of operation. We will exclude
 # any encrypted push certificates at this time
 
-mkdir $TRAVIS_BUILD_DIR/$BUNDLE_PATH
+# create bundle directory if it doesn't exist yet. If it exists - this means
+# that bundles are already created, so just exit.
+
+mkdir $TRAVIS_BUILD_DIR/$BUNDLE_PATH || exit 0
 zip $TRAVIS_BUILD_DIR/$BUNDLE_PATH/$STAGING_BUNDLE_NAME `git ls-files` --exclude $CERT_PATH/*.pem.enc
 # at this point staging and production bundles must be equal
 cp $TRAVIS_BUILD_DIR/$BUNDLE_PATH/$STAGING_BUNDLE_NAME $TRAVIS_BUILD_DIR/$BUNDLE_PATH/$PRODUCTION_BUNDLE_NAME
