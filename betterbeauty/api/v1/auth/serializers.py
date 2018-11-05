@@ -110,9 +110,15 @@ class UserRegistrationSerializer(
 class AuthTokenSerializer(serializers.Serializer):
     token = serializers.CharField(read_only=True)
     expires_in = serializers.IntegerField(read_only=True)
+    created_at = serializers.IntegerField(read_only=True)
     profile = serializers.SerializerMethodField()
     profile_status = serializers.SerializerMethodField()
     role = serializers.ChoiceField(read_only=True, choices=USER_ROLE)
+    user_uuid = serializers.SerializerMethodField()
+
+    def get_user_uuid(self, data):
+        user = self.context['user']
+        return user.uuid
 
     def get_profile(self, data):
         user = self.context['user']
@@ -129,9 +135,15 @@ class AuthTokenSerializer(serializers.Serializer):
 
 class ClientAuthTokenSerializer(FormattedErrorMessageMixin, serializers.Serializer):
     token = serializers.CharField(read_only=True)
+    expires_in = serializers.IntegerField(read_only=True)
     created_at = serializers.IntegerField(read_only=True)
     role = serializers.ChoiceField(read_only=True, choices=USER_ROLE)
     stylist_invitation = serializers.SerializerMethodField()
+    user_uuid = serializers.SerializerMethodField()
+
+    def get_user_uuid(self, data):
+        user = self.context['user']
+        return user.uuid
 
     def get_stylist_invitation(self, data):
         user = self.context['user']

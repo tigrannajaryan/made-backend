@@ -147,7 +147,7 @@ class VerifyCodeView(APIView):
         elif role == UserRole.STYLIST:
             jwt_response_payload_handler = stylist_jwt_response_payload_handler
             response_payload = jwt_response_payload_handler(
-                token, user, self.request
+                token, user, request=self.request, orig_iat=payload['orig_iat']
             )
 
         return Response(response_payload)

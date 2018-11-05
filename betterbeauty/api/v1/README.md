@@ -289,9 +289,12 @@ If the token has not yet expired, it can be refreshed to a new one:
 {
     "token": "refreshed_jwt_token",
     "expires_in": 86400,
+    "created_at": 1541089104,
     "role": "stylist",
     "profile": null,
-    "profile_status": null
+    "profile_status": null,
+    "user_uuid": "0ad92eca-2eae-4bef-b6d4-a3323597108c"
+    
 }
 ```
 
@@ -440,6 +443,7 @@ curl -X POST \
 {
     "token": "jwt_token",
     "created_at": 1531204345,
+    "expires_in": 2592000,
     "role": [
         "client"
     ],
@@ -470,16 +474,18 @@ curl -X POST \
             "invitation_created_at": "2018-07-09T11:35:39.441844-04:00",
             "is_profile_bookable": false
         }
-    ]
+    ],
+     "user_uuid": "0ad92eca-2eae-4bef-b6d4-a3323597108c"
 }
 ```
 
 **Response 200 OK** (in case of stylist user)
 
-```
+```json
 {
     "token": "jwt_token",
     "expires_in": 86400,
+    "created_at": 1541089104,
     "role": "stylist",
     "profile": {
         "uuid": "3c1cc23e-2a36-43cf-a865-55b078bcae77",
@@ -506,6 +512,7 @@ curl -X POST \
         "has_other_discounts_set": true,
         "has_invited_clients": true
     },
+     "user_uuid": "0ad92eca-2eae-4bef-b6d4-a3323597108c"
 }
 ```
 
@@ -1298,8 +1305,6 @@ curl -H 'Authorization: Token jwt_token' http://apiserver/api/v1/stylist/discoun
     "rebook_within_2_weeks": 0,
     "rebook_within_3_weeks": 0,
     "rebook_within_4_weeks": 0,
-    "rebook_within_5_weeks": 0,
-    "rebook_within_6_weeks": 0
 }
 ```
 
@@ -1326,7 +1331,9 @@ curl -X POST \
     ],
     "first_booking": 10,
     "rebook_within_1_week": 20,
-    "rebook_within_2_weeks": 30
+    "rebook_within_2_weeks": 30,
+    "rebook_within_3_weeks": 0,
+    "rebook_within_4_weeks": 0
 }'
 ```
 
@@ -1375,9 +1382,7 @@ curl -X POST \
     "rebook_within_1_week": 20,
     "rebook_within_2_weeks": 30,
     "rebook_within_3_weeks": 0,
-    "rebook_within_4_weeks": 0,
-    "rebook_within_5_weeks": 0,
-    "rebook_within_6_weeks": 0
+    "rebook_within_4_weeks": 0
 }
 
 ```
