@@ -3259,7 +3259,8 @@ registration id associated with given user and user role
             }
         ]
     }
-}```
+}
+```
 
 ## Unregister device
 Unregister a mobile device of authorized client or stylist
@@ -3310,3 +3311,4 @@ stylist app for client user or vice versa).
         ]
     }
 }
+```
