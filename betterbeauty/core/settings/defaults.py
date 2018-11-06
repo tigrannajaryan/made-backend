@@ -154,6 +154,7 @@ INSTALLED_APPS = [
     'client',
     'core',
     'integrations',
+    'notifications',
     'salon',
 ]
 
