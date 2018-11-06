@@ -7,6 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('salon', '0063_auto_20181031_1409'),
+        ('core', '0035_auto_20181018_1218'),
     ]
 
     operations = [
