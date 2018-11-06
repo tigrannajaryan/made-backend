@@ -1,8 +1,9 @@
 from uuid import uuid4
 
-from django.db import models
 from django.conf import settings
 from django.contrib.postgres.fields import JSONField
+from django.db import models
+
 from timezone_field import TimeZoneField
 
 from core.choices import CLIENT_OR_STYLIST_ROLE
