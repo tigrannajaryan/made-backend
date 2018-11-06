@@ -229,6 +229,14 @@ class Stylist(models.Model):
             is_enabled=True, deleted_at__isnull=True
         ).exists()
 
+    def delete(self, using=None, keep_parents=False):
+        preferences = PreferredStylist.objects.filter(
+            stylist=self
+        )
+        for preference in preferences:
+            preference.safe_hard_delete()
+        return super(Stylist, self).delete(using, keep_parents)
+
     @property
     def is_profile_bookable(self):
         """Return True if has phone, working hours and services"""
