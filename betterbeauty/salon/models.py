@@ -22,7 +22,7 @@ from core.models import User
 from core.types import Weekday
 from integrations.gmaps import GeocodeValidAddress
 from .choices import INVITATION_STATUS_CHOICES
-from .contstants import DEFAULT_SERVICE_GAP_TIME_MINUTES
+from .contstants import DEFAULT_SERVICE_GAP_TIME_MINUTES, DEFAULT_WORKING_HOURS
 from .types import InvitationStatus, TimeSlot, TimeSlotAvailability
 
 logger = logging.getLogger(__name__)
@@ -176,6 +176,7 @@ class Stylist(models.Model):
     )
 
     is_discount_configured = models.BooleanField(default=False)
+    has_business_hours_set = models.NullBooleanField(default=False)
     has_invited_clients = models.BooleanField(default=False)
 
     service_time_gap = models.DurationField(
@@ -235,15 +236,6 @@ class Stylist(models.Model):
         for preference in preferences:
             preference.safe_hard_delete()
         return super(Stylist, self).delete(using, keep_parents)
-
-    @property
-    def has_business_hours_set(self):
-        """Return True if at least some time on a day is marked as available"""
-        return self.available_days.filter(
-            is_available=True,
-            work_start_at__isnull=False,
-            work_end_at__isnull=False
-        ).exists()
 
     @property
     def is_profile_bookable(self):
@@ -314,7 +306,12 @@ class Stylist(models.Model):
     def get_or_create_weekday_availability(
             self, weekday: Weekday
     ) -> StylistAvailableWeekDay:
-        return self.available_days.get_or_create(weekday=weekday)[0]
+        start, end, is_available = DEFAULT_WORKING_HOURS[weekday]
+        return self.available_days.get_or_create(weekday=weekday, defaults={
+            "work_start_at": start,
+            "work_end_at": end,
+            "is_available": is_available
+        })[0]
 
     def get_or_create_weekday_discount(
             self, weekday: Weekday
