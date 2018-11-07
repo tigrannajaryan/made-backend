@@ -157,7 +157,7 @@ class ClientAuthTokenSerializer(FormattedErrorMessageMixin, serializers.Serializ
 
     def get_profile_status(self, data):
         user = self.context['user']
-        if user.is_stylist():
+        if user.is_client():
             return ClientProfileStatusSerializer(getattr(user, 'client', None)).data
         return []
 
