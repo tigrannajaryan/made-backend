@@ -29,3 +29,13 @@ class SmartModel(models.Model):
             self.save(update_fields=['deleted_at'])
         else:
             raise self.DoesNotExist
+
+    def hard_delete(self, using=None, keep_parents=False):
+        return super(SmartModel, self).delete(using, keep_parents)
+
+    def safe_hard_delete(self, using=None, keep_parents=False):
+        # hard_deletes only if it is already soft deleted
+        if self.deleted_at:
+            return self.hard_delete(using, keep_parents)
+        else:
+            return None

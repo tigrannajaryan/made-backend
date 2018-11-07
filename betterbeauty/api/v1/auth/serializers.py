@@ -12,6 +12,7 @@ from rest_framework_jwt.serializers import (
 
 from api.common.fields import PhoneNumberField
 from api.common.mixins import FormattedErrorMessageMixin
+from api.v1.client.serializers import ClientProfileStatusSerializer
 from api.v1.stylist.serializers import (
     StylistProfileStatusSerializer,
     StylistSerializer,
@@ -140,6 +141,7 @@ class ClientAuthTokenSerializer(FormattedErrorMessageMixin, serializers.Serializ
     role = serializers.ChoiceField(read_only=True, choices=USER_ROLE)
     stylist_invitation = serializers.SerializerMethodField()
     user_uuid = serializers.SerializerMethodField()
+    profile_status = serializers.SerializerMethodField()
 
     def get_user_uuid(self, data):
         user = self.context['user']
@@ -152,6 +154,12 @@ class ClientAuthTokenSerializer(FormattedErrorMessageMixin, serializers.Serializ
                 phone=user.phone).exclude(
                 status=InvitationStatus.ACCEPTED).order_by('-created_at')[:5]
             return StylistSerializerWithInvitation(invitations, many=True).data
+
+    def get_profile_status(self, data):
+        user = self.context['user']
+        if user.is_stylist():
+            return ClientProfileStatusSerializer(getattr(user, 'client', None)).data
+        return []
 
 
 class FacebookAuthTokenSerializer(

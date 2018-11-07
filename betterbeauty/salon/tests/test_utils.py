@@ -34,6 +34,11 @@ def test_generate_demand_list_for_stylist():
         work_start_at=datetime.time(8, 0),
         work_end_at=datetime.time(12, 0)
     )
+    stylist.available_days.filter(weekday=Weekday.MONDAY).update(
+        is_available=False,
+        work_start_at=None,
+        work_end_at=None
+    )
     stylist.available_days.filter(weekday=Weekday.TUESDAY).delete()
     dates = [
         datetime.date(2018, 6, 15),  # Friday - available, half loaded

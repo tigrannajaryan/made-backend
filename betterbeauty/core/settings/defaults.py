@@ -4,6 +4,7 @@ import os
 from path import Path
 
 from core.settings.utils import get_file_handler_dict, get_logger_dict
+from integrations.push.types import MobileAppIdType
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 PATH = Path(__file__).parent
@@ -143,6 +144,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'custom_user',
     'django_extensions',
+    'push_notifications',
     'rest_framework',
     'storages',
 
@@ -152,6 +154,7 @@ INSTALLED_APPS = [
     'client',
     'core',
     'integrations',
+    'notifications',
     'salon',
 ]
 
@@ -294,3 +297,33 @@ AUTO_SIGNUP_SLACK_HOOK = (
 AUTO_BOOKING_SLACK_HOOK = (
     'https://hooks.slack.com/services/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'
 )
+
+# push notifications
+IOS_PUSH_CERTIFICATES_PATH = Path(ROOT_PATH.parent / 'push_certificates')
+
+PUSH_NOTIFICATIONS_SETTINGS = {
+    'CONFIG': 'push_notifications.conf.AppConfig',
+    'APPLICATIONS': {
+        # TODO: verify topic settings
+        MobileAppIdType.ANDROID_CLIENT.value: {
+            'PLATFORM': 'FCM',
+            'API_KEY': os.environ.get('FCM_SERVER_KEY', ''),
+        },
+        MobileAppIdType.ANDROID_STYLIST.value: {
+            'PLATFORM': 'FCM',
+            'API_KEY': os.environ.get('FCM_SERVER_KEY', ''),
+        },
+        # certificate settings for iOS apps built locally,
+        # with development certificate
+        MobileAppIdType.IOS_STYLIST_DEV.value: {
+            'PLATFORM': 'APNS',
+            'CERTIFICATE': Path(IOS_PUSH_CERTIFICATES_PATH / 'local-stylist-staging.pem'),
+            'USE_SANDBOX': True
+        },
+        MobileAppIdType.IOS_CLIENT_DEV.value: {
+            'PLATFORM': 'APNS',
+            'CERTIFICATE': Path(IOS_PUSH_CERTIFICATES_PATH / 'local-client-staging.pem'),
+            'USE_SANDBOX': True
+        },
+    }
+}
