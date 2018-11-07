@@ -115,6 +115,14 @@ class User(BaseEmailUser):
     class Meta:
         db_table = 'user'
 
+    def __str__(self):
+        full_name = self.get_full_name()
+        if full_name:
+            return '{0} {1}'.format(full_name, self.phone)
+        elif self.phone:
+            return self.phone
+        return self.email
+
 
 def generate_upload_file_name(instance: 'TemporaryFile', filename: str) -> str:
     uploaded_by: User = instance.uploaded_by
