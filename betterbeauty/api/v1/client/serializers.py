@@ -96,6 +96,11 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
         if client_data:
             fields_to_save: List[str] = list(client_data.keys())
             if client.zip_code != client_data.get('zip_code', client.zip_code):
+                if not client.zip_code:
+                    client.city = None
+                    client.state = None
+                    client.location = None
+                    client.is_address_geocoded = False
                 client.last_geo_coded = None
                 fields_to_save.append('last_geo_coded')
             for k, v in client_data.items():
