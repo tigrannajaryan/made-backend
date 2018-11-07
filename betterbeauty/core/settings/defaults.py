@@ -96,6 +96,8 @@ LOGGING = {
             ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
         'integrations': get_logger_dict(
             ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
+        'notifications': get_logger_dict(
+            ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
         'pricing': get_logger_dict(
             ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
         'salon': get_logger_dict(
@@ -299,6 +301,8 @@ AUTO_BOOKING_SLACK_HOOK = (
 )
 
 # push notifications
+PUSH_NOTIFICATIONS_ENABLED = True
+
 IOS_PUSH_CERTIFICATES_PATH = Path(ROOT_PATH.parent / 'push_certificates')
 
 PUSH_NOTIFICATIONS_SETTINGS = {

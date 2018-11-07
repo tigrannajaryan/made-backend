@@ -56,6 +56,9 @@ AUTO_SIGNUP_SLACK_CHANNEL = '#auto-signup'
 AUTO_BOOKING_SLACK_CHANNEL = '#auto-booking'
 
 # push notifications
+# TODO: enable notifications on production after certain level of QA
+PUSH_NOTIFICATIONS_ENABLED = False
+
 PUSH_NOTIFICATIONS_SETTINGS['APPLICATIONS'].update({  # type: ignore
     # certificate settings for iOS apps built with distribution certificate,
     # e.g. those from TestFlight or AppStore
