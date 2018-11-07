@@ -51,17 +51,13 @@ class Notification(models.Model):
 
     def can_send_now(self) -> bool:
         if not self.pending_to_send:
-            print('not pending')
             return False
         if timezone.now() > self.discard_after:
             self.pending_to_send = False
             self.save(update_fields=['pending_to_send', ])
-            print('potracheno')
             return False
         current_time = timezone.now().astimezone(self.send_time_window_tz).time()
         if not self.send_time_window_start <= current_time <= self.send_time_window_end:
-            print('not in window', self.send_time_window_start,
-                  current_time, self.send_time_window_end)
             return False
         return True
 
