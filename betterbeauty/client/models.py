@@ -30,7 +30,7 @@ class Client(models.Model):
     state = models.CharField(blank=True, null=True, max_length=25)
     country = models.CharField(max_length=20, blank=True, null=True)
     location = PointField(geography=True, null=True, blank=True)
-
+    profile_completeness = models.FloatField(default=0.0, blank=True, null=True)
     is_address_geocoded = models.BooleanField(default=False)
     last_geo_coded = models.DateTimeField(blank=True, null=True, default=None)
 
@@ -134,6 +134,24 @@ class Client(models.Model):
         self.save(update_fields=[
             'google_access_token', 'google_refresh_token', 'google_integration_added_at'
         ])
+
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
+        fields = [self.user.first_name,
+                  self.user.last_name,
+                  self.user.photo,
+                  self.email,
+                  self.zip_code]
+        complete_fields = 0
+        total_fields = len(fields)
+        for field in fields:
+            if field:
+                complete_fields += 1
+        self.profile_completeness = float(complete_fields / total_fields)
+        if update_fields:
+            update_fields.append('profile_completeness')
+        return super(Client, self).save(force_insert=force_insert, force_update=force_update,
+                                        using=using, update_fields=update_fields)
 
 
 class PreferredStylist(SmartModel):
