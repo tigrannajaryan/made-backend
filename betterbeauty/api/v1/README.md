@@ -49,9 +49,6 @@
       - [Home](#user-content-home-screen)
       - [Today](#user-content-today-screen)
       - [Settings](#user-content-settings-screen)
-    - **Uploads**
-      - [Files](#user-content-files-upload)
-      - [Images](#user-content-image-upload)
 - [**Client API**](#client-api)
     - [Profile](#client-profile)
     - [Preferred Stylist](#preferred-stylists)
@@ -60,6 +57,13 @@
     - [Services](#services)
     - [Appointment](#appointment)
     - [Available Slots](#available-slots)
+- **Uploads**
+    - [Files](#user-content-files-upload)
+    - [Images](#user-content-image-upload)
+
+- **Push notifications**
+    - [Register device](#register-device)
+    - [Unregister device](#unregister-device)
 
 
 # Error handling
@@ -220,7 +224,8 @@ such specific errors in particular API calls.
 |err_invalid_sms_code|Invalid SMS Code|/api/v1/client/confirm-code|code|
 |err_invalid_phone_number|Invalid Phone Number|--|--|
 |err_privacy_setting_private|Unable to retrieve followers while own privacy setting is 'Private'|/api/v1/client/stylist/{uuid}/followers|non-field|
-
+|err_duplicate_push_token|Device with this APNS token already registered for different user or app type|/api/v1/common/register-device|device_registration_id|
+|err_device_not_found|Device with given registration_id not found for give user and application type||/api/v1/common/unregister-device|non-field|
 # Authorization
 ## Getting auth token with email/password credentials
 In order to make requests to the API, client needs a JWT token. There are 2 ways to obtain
@@ -2367,58 +2372,6 @@ curl -X GET \
 ]
 ```
 
-
-# Files upload
-## Image upload
-
-It may require to upload an image file for future use. Common use case is when
-a client uploads an image multiple times (looking for better picture) before actually
-assigning it to a parent object.
-
-Uploading an image to this endpoint will return a UUID string which may further be used
-to assign uploaded image to an entity (e.g. stylist profile, or a service).
-
-The endpoint accepts only image files less than 5MB in size.
-
-Note: image uploads will have limited lifetime, so after some time after uploading UUID
-will no longer be valid.
-
-**POST /api/v1/common/image/upload**
-
-```
-curl -X POST \
-  http://apiserver/api/v1/common/image/upload \
-  -H 'Authorization: Token jwt_token' \
-  -H 'content-type: multipart/form-data' \
-  -F file=@path_to_your_file
-```
-
-**Response 201 Created**
-```
-{
-    "uuid": "83a7d4e8-0462-4f9d-bb04-c51c47047318"
-}
-```
-
-**Response 400 Bad Request**
-```
-{
-    "file": [
-        "Upload a valid image. The file you uploaded was either not an image or a corrupted image."
-    ]
-}
-```
-
-**Response 400 Bad Request**
-```
-{
-    "file": [
-        "File is too big, max. size 5242880 bytes"
-    ]
-}
-```
-
-
 # Client API
 
 ## Client Profile
@@ -3157,5 +3110,205 @@ curl -X POST \
             "has_card_fee_included": false
         }
     ]
+}
+```
+
+# Files upload
+## Image upload
+
+It may require to upload an image file for future use. Common use case is when
+a client uploads an image multiple times (looking for better picture) before actually
+assigning it to a parent object.
+
+Uploading an image to this endpoint will return a UUID string which may further be used
+to assign uploaded image to an entity (e.g. stylist profile, or a service).
+
+The endpoint accepts only image files less than 5MB in size.
+
+Note: image uploads will have limited lifetime, so after some time after uploading UUID
+will no longer be valid.
+
+**POST /api/v1/common/image/upload**
+
+```
+curl -X POST \
+  http://apiserver/api/v1/common/image/upload \
+  -H 'Authorization: Token jwt_token' \
+  -H 'content-type: multipart/form-data' \
+  -F file=@path_to_your_file
+```
+
+**Response 201 Created**
+```
+{
+    "uuid": "83a7d4e8-0462-4f9d-bb04-c51c47047318"
+}
+```
+
+**Response 400 Bad Request**
+```
+{
+    "file": [
+        "Upload a valid image. The file you uploaded was either not an image or a corrupted image."
+    ]
+}
+```
+
+**Response 400 Bad Request**
+```
+{
+    "file": [
+        "File is too big, max. size 5242880 bytes"
+    ]
+}
+```
+
+# Push notifications
+## Register device
+Registers a mobile, push-enabled device for authorized client or stylist
+
+**POST /api/v1/common/register-device**
+
+- **device_registration_id** (required, string) - APNS or FCM token. All spaces
+  will be striped out on hte backend
+- **device_type** - (required, string) - can take values **apns** and **fcm**
+- **user_role** - (required, string) - **client** or **stylist**, depending on type
+  of the app this API is called from. Authorized user must also possess this role
+- **is_development_build** (optional, defaults to false) - whether or not the calling application
+  was built locally, on developer's machine with **development** certificate. Should only
+  be set to **true** if you're testing with locally built app. For applications in
+  TestFlight and AppStore this should either be omitted or set to **false**.
+
+```
+curl -X POST \
+  'http://apiserver/api/v1/common/register-device' \
+  -H 'Authorization: Token {{auth_token}}' \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "device_registration_id": "token token",
+        "device_type": "apns",
+        "user_role": "client",
+        "is_development_build": true
+      }'
+```
+
+**Response 201 Created** (new device added)
+```
+{}
+```
+
+**Response 200 OK** (device is already registered, no changes made)
+```
+{}
+```
+
+**Response 400 Bad Request**
+
+Will be raised on attempt to register already registered APNS token
+with different type of application (e.g. if it was already registered for
+the client app, it cannot be registered for stylist app). Generally speaking,
+if you got this error - you have messed up with application types or user roles.
+
+```
+{
+    "code": "err_api_exception",
+    "non_field_errors": [],
+    "field_errors": {
+        "device_registration_id": [
+            {
+                "code": "err_duplicate_push_token"
+            }
+        ]
+    }
+}
+```
+
+**Response 400 Bad Request**
+
+Will be raised on attempt to register a device for a role which
+authorized user does not currently bear (e.g. when trying to register
+stylist app for client user or vice versa).
+
+```
+{
+    "code": "err_api_exception",
+    "non_field_errors": [],
+    "field_errors": {
+        "user_role": [
+            {
+                "code": "err_incorrect_user_role"
+            }
+        ]
+    }
+}
+```
+
+**Response 404 Not found**
+
+Will be raised on attempt to unregister a device if there's no such
+registration id associated with given user and user role
+
+```
+{
+    "code": "err_not_found",
+    "non_field_errors": [],
+    "field_errors": {
+        "user_role": [
+            {
+                "code": "err_device_not_found"
+            }
+        ]
+    }
+}
+```
+
+## Unregister device
+Unregister a mobile device of authorized client or stylist
+
+- **device_registration_id** (required, string) - APNS or FCM token. All spaces
+  will be striped out on hte backend
+- **device_type** - (required, string) - can take values **apns** and **fcm**
+- **user_role** - (required, string) - **client** or **stylist**, depending on type
+  of the app this API is called from. Authorized user must also possess this role
+- **is_development_build** (optional, defaults to false) - whether or not the calling application
+  was built locally, on developer's machine with **development** certificate. Should only
+  be set to **true** if you're testing with locally built app. For applications in
+  TestFlight and AppStore this should either be omitted or set to **false**.
+
+```
+curl -X POST \
+  'http://apiserver/api/v1/common/register-device' \
+  -H 'Authorization: Token {{auth_token}}' \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "device_registration_id": "token token",
+        "device_type": "apns",
+        "user_role": "client",
+        "is_development_build": true
+      }'
+```
+
+**Response 204 No Content** (device deleted)
+```
+{}
+```
+
+**Response 400 Bad Request**
+
+Will be raised on attempt to unregister a device for a role which
+authorized user does not currently bear (e.g. when trying to register
+stylist app for client user or vice versa).
+
+```
+{
+    "code": "err_api_exception",
+    "non_field_errors": [],
+    "field_errors": {
+        "user_role": [
+            {
+                "code": "err_incorrect_user_role"
+            }
+        ]
+    }
 }
 ```

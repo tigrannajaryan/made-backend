@@ -501,12 +501,17 @@ class StylistAvailableWeekDaySerializer(
         stylist: Stylist = self.context['user'].stylist
         weekday_db = stylist.available_days.filter(weekday=weekday).last()
         if weekday_db:
-            return self.update(weekday_db, validated_data)
-
-        validated_data.update({
-            'stylist': stylist
-        })
-        return super(StylistAvailableWeekDaySerializer, self).create(validated_data)
+            stylist_available_weekday = self.update(weekday_db, validated_data)
+        else:
+            validated_data.update({
+                'stylist': stylist
+            })
+            stylist_available_weekday = super(
+                StylistAvailableWeekDaySerializer, self).create(validated_data)
+        if not stylist.has_business_hours_set:
+            stylist.has_business_hours_set = True
+            stylist.save(update_fields=['has_business_hours_set'])
+        return stylist_available_weekday
 
     class Meta:
         model = StylistAvailableWeekDay
