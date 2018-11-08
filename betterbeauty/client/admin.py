@@ -1,12 +1,16 @@
 from django.contrib import admin
 
+from core.admin import SoftDeletedFilter
 from .models import Client, PreferredStylist
 
 
 class PreferredStylistAdmin(admin.ModelAdmin):
-    list_display = ['stylist', 'stylist_phone', 'client', 'client_phone']
+    list_display = [
+        'stylist', 'stylist_phone', 'client', 'client_phone', 'deleted_at',
+    ]
     search_fields = ['stylist__user__phone', 'client__user__phone']
     raw_id_fields = ['client', 'stylist']
+    list_filter = (SoftDeletedFilter, )
 
     def client_phone(self, obj):
         return obj.client.user.phone
@@ -15,7 +19,11 @@ class PreferredStylistAdmin(admin.ModelAdmin):
         return obj.stylist.user.phone
 
     def get_queryset(self, request):
-        return super(PreferredStylistAdmin, self).get_queryset(request).select_related(
+        ordering = self.get_ordering(request)
+        qs = self.model.all_objects.get_queryset()
+        if ordering:
+            qs = qs.order_by(*ordering)
+        return qs.select_related(
             'stylist__user', 'client__user')
 
     def delete_model(self, request, obj: PreferredStylist):

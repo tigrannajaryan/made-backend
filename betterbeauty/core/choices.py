@@ -20,3 +20,8 @@ USER_ROLE = Choices(
     (UserRole.STYLIST.value, 'stylist', _('Stylist')),
     (UserRole.STAFF.value, 'staff', _('Staff')),
 )
+
+CLIENT_OR_STYLIST_ROLE = Choices(
+    (UserRole.CLIENT.value, 'client', _('Client')),
+    (UserRole.STYLIST.value, 'stylist', _('Stylist')),
+)

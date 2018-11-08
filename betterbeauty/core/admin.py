@@ -5,6 +5,23 @@ from django.contrib import admin
 from core.models import User
 
 
+class SoftDeletedFilter(admin.SimpleListFilter):
+    title = 'Is Deleted'
+    parameter_name = 'deleted_at'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('active', 'Active'),
+            ('deleted', 'Deleted'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'active':
+            return queryset.filter(deleted_at__isnull=True)
+        if self.value() == 'deleted':
+            return queryset.filter(deleted_at__isnull=False)
+
+
 class RoleListFilter(admin.SimpleListFilter):
     """This is a list filter based on the values
     from a model's `keywords` ArrayField. """

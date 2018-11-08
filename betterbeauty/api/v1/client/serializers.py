@@ -85,6 +85,9 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
 
     @transaction.atomic
     def save(self, **kwargs):
+        is_profile_already_complete = False
+        if self.instance.first_name and self.instance.photo:
+            is_profile_already_complete = True
         should_save_photo = False
         profile_photo_id = None
         if 'profile_photo_id' in self.validated_data:
@@ -106,8 +109,55 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
             save_profile_photo(
                 user, profile_photo_id
             )
-        send_slack_client_profile_update(client)
+        if not is_profile_already_complete:
+            send_slack_client_profile_update(client)
         return user
+
+
+class ClientProfileStatusSerializer(serializers.ModelSerializer):
+    has_name = serializers.SerializerMethodField()
+    has_zipcode = serializers.SerializerMethodField()
+    has_email = serializers.SerializerMethodField()
+    has_picture_set = serializers.SerializerMethodField()
+    has_preferred_stylist_set = serializers.SerializerMethodField()
+    has_booked_appointment = serializers.SerializerMethodField()
+    has_past_visit = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Client
+        fields = [
+            'has_name', 'has_zipcode', 'has_email', 'has_picture_set',
+            'has_preferred_stylist_set', 'has_booked_appointment', 'has_past_visit',
+        ]
+
+    def get_has_name(self, client: Client) -> bool:
+        full_name = client.user.get_full_name()
+        has_name = full_name and len(full_name) > 1
+        return bool(has_name)
+
+    def get_has_zipcode(self, client: Client) -> bool:
+        return bool(client.zip_code)
+
+    def get_has_email(self, client: Client) -> bool:
+        return bool(client.email)
+
+    def get_has_picture_set(self, client: Client) -> bool:
+        return bool(client.user.photo)
+
+    def get_has_preferred_stylist_set(self, client: Client) -> bool:
+        has_pref_stylist = PreferredStylist.objects.filter(
+            client=client, deleted_at__isnull=True).exists()
+        return has_pref_stylist
+
+    def get_has_booked_appointment(self, client: Client) -> bool:
+        has_appointments = client.get_appointments_in_datetime_range(exclude_statuses=[
+            AppointmentStatus.CANCELLED_BY_STYLIST,
+            AppointmentStatus.CANCELLED_BY_CLIENT,
+        ]).exists()
+        return has_appointments
+
+    def get_has_past_visit(self, client: Client) -> bool:
+        return client.get_past_appointments().exists()
 
 
 class PreferredStylistSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
