@@ -47,6 +47,10 @@ class Client(models.Model):
             self.is_address_geocoded = True
             logger.info('Geo-coding Success', exc_info=True)
         else:
+            self.city = None
+            self.state = None
+            self.location = None
+            self.is_address_geocoded = False
             logger.info("Geo-coding returned None")
         self.last_geo_coded = timezone.now()
         self.save(update_fields=[
