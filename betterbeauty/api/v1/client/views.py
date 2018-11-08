@@ -112,12 +112,7 @@ class StylistServicesView(generics.RetrieveAPIView):
     serializer_class = StylistServiceListSerializer
 
     def get_queryset(self):
-        client = self.request.user.client
-        available_stylists = Q(
-            preferredstylist__client=client,
-            preferredstylist__deleted_at__isnull=True
-        )
-        return Stylist.objects.filter(available_stylists).distinct('id')
+        return Stylist.objects.all()
 
     def get_object(self):
         return get_object_or_404(
