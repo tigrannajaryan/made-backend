@@ -225,7 +225,10 @@ such specific errors in particular API calls.
 |err_invalid_phone_number|Invalid Phone Number|--|--|
 |err_privacy_setting_private|Unable to retrieve followers while own privacy setting is 'Private'|/api/v1/client/stylist/{uuid}/followers|non-field|
 |err_duplicate_push_token|Device with this APNS token already registered for different user or app type|/api/v1/common/register-device|device_registration_id|
-|err_device_not_found|Device with given registration_id not found for give user and application type||/api/v1/common/unregister-device|non-field|
+|err_device_not_found|Device with given registration_id not found for give user and application type|/api/v1/common/unregister-device|non-field|
+|err_notification_not_found|Notification with this UUID is either not found or doesn't belong to the user|/api/v1/common/ack-push|message_uuids|
+|err_bad_notification_type|Notification with this UUID is not a PUSH notification|/api/v1/common/ack-push|message_uuids|
+
 # Authorization
 ## Getting auth token with email/password credentials
 In order to make requests to the API, client needs a JWT token. There are 2 ways to obtain
@@ -3243,27 +3246,10 @@ stylist app for client user or vice versa).
 }
 ```
 
-**Response 404 Not found**
-
-Will be raised on attempt to unregister a device if there's no such
-registration id associated with given user and user role
-
-```
-{
-    "code": "err_not_found",
-    "non_field_errors": [],
-    "field_errors": {
-        "user_role": [
-            {
-                "code": "err_device_not_found"
-            }
-        ]
-    }
-}
-```
-
 ## Unregister device
 Unregister a mobile device of authorized client or stylist
+
+**POST /api/v1/common/unregister-device**
 
 - **device_registration_id** (required, string) - APNS or FCM token. All spaces
   will be striped out on hte backend
@@ -3307,6 +3293,95 @@ stylist app for client user or vice versa).
         "user_role": [
             {
                 "code": "err_incorrect_user_role"
+            }
+        ]
+    }
+}
+```
+
+**Response 404 Not found**
+
+Will be raised on attempt to unregister a device if there's no such
+registration id associated with given user and user role
+
+```
+{
+    "code": "err_not_found",
+    "non_field_errors": [],
+    "field_errors": {
+        "user_role": [
+            {
+                "code": "err_device_not_found"
+            }
+        ]
+    }
+}
+```
+
+## Acknowledge notification
+
+**POST /api/v1/common/ack-push**
+
+When a push notification is sent to device, it's payload contains`uuid`
+entry which can be further used to **acknowledge** the message (i.e.
+mark it as `read`). Applicaiton must call acknowledge endpoint with one
+or multiple message uuids to acknowledge them
+
+```
+curl -X POST \
+  'http://apiserver/api/v1/common/ack-push' \
+  -H 'Authorization: Token {{auth_token}}' \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "message_uuids": [
+            "uuid_1",
+            "uuid_2"
+        ]
+      }'
+```
+
+
+**Response 200 OK** (at least one message acknowledged)
+```
+{}
+```
+**Response 204 No Content** (no changes made, e.g. if messages were previously acknowledged)
+```
+{}
+```
+
+**Response 400 Bad Request**
+
+Will be raised on attempt to acknowledge a message that either does not
+exist, or does not belong to authorized user
+
+```
+{
+    "code": "err_api_exception",
+    "non_field_errors": [],
+    "field_errors": {
+        "user_role": [
+            {
+                "code": "err_notification_not_found"
+            }
+        ]
+    }
+}
+```
+
+**Response 400 Bad Request**
+
+Will be raised on attempt to acknowledge a message that is not a
+push notificaiton (e.g. on attempt to acknowledge an SMS)
+
+```
+{
+    "code": "err_api_exception",
+    "non_field_errors": [],
+    "field_errors": {
+        "user_role": [
+            {
+                "code": "err_bad_notification_type"
             }
         ]
     }
