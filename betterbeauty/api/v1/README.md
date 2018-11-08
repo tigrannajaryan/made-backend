@@ -2668,8 +2668,14 @@ curl -X POST \
   "services_uuids": [
     "11a37320-c320-4d43-8d9d-b8f03147e54f",
     "12345678-c320-4d43-8d9d-b8f0314abcde"
+  ],
+  "stylist_uuid": "<uuid>"
 }'
 ```
+
+Either "service_uuids" or "stylist_uuid" must be present. 
+"service_uuids" can be empty array, but required
+"stylist_uuid" is optional and will be considered only when "services_uuids" is empty
 
 **Response 200 OK**
 
@@ -2678,7 +2684,7 @@ curl -X POST \
     "11a37320-c320-4d43-8d9d-b8f03147e54f",
     "12345678-c320-4d43-8d9d-b8f0314abcde"
     ],
-    "service_name": "Crochet braids",
+    "stylist_uuid": "3c1cc23e-2a36-43cf-a865-55b078bcae77",
     "prices": [
         {
             "date": "2018-07-19",

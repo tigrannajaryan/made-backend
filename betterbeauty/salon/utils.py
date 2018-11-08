@@ -1,4 +1,5 @@
 import datetime
+import uuid
 from decimal import Decimal, ROUND_HALF_UP
 from itertools import compress
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -343,3 +344,34 @@ def get_most_popular_service(stylist: Stylist) -> Optional[StylistService]:
         ).exists():
             return stylist.services.get(uuid=service['service_uuid'])
     return None
+
+
+def get_default_service_uuids(
+        stylist: Stylist, client: Optional[Client]
+) -> List[uuid.UUID]:
+    """
+    Return services to display initial pricing for, if services list is not explicitly
+    provided, using the following rules:
+    1) last service client booked. If they haven’t booked yet, then
+    2) service most often booked for that stylist. If stylist hasn’t had
+       anything booked yet, then
+    3) first service on the stylist list of services
+    """
+    if client:
+        last_appointment: Optional[Appointment] = get_last_appointment_for_client(
+            stylist=stylist, client=client
+        )
+        if last_appointment:
+            service_uuids = [
+                s.service_uuid for s in last_appointment.services.all()
+                if stylist.services.filter(uuid=s.service_uuid).exists()]
+            if service_uuids:
+                return service_uuids
+    most_popular_service: Optional[
+        StylistService
+    ] = get_most_popular_service(stylist=stylist)
+    if most_popular_service:
+        return [most_popular_service.uuid, ]
+    if stylist.services.count():
+        return [stylist.services.first().uuid, ]
+    return []
