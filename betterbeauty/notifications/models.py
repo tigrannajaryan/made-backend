@@ -26,7 +26,10 @@ def default_json_field_value():
 
 class Notification(models.Model):
     uuid = models.UUIDField(unique=True, default=uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='notifications',
+        related_query_name='notification'
+    )
     target = models.CharField(choices=CLIENT_OR_STYLIST_ROLE, max_length=16)
     code = models.CharField(max_length=64, verbose_name='Notification code')
     message = models.CharField(max_length=512)
