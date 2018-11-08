@@ -1,3 +1,5 @@
+from typing import List
+
 from model_utils import Choices
 
 from core.types import StrEnum
@@ -21,3 +23,16 @@ class MobileAppIdType(StrEnum):
     IOS_STYLIST_DEV = 'ios_stylist_dev'  # stylist app built with dev cert (local build)
     ANDROID_CLIENT = 'android_client'
     ANDROID_STYLIST = 'android_stylist'
+
+
+CLIENT_APP_IDS: List[MobileAppIdType] = [
+    MobileAppIdType.IOS_CLIENT,
+    MobileAppIdType.IOS_CLIENT_DEV,
+    MobileAppIdType.ANDROID_CLIENT
+]
+
+STYLIST_APP_IDS: List[MobileAppIdType] = [
+    MobileAppIdType.IOS_STYLIST,
+    MobileAppIdType.IOS_STYLIST_DEV,
+    MobileAppIdType.ANDROID_STYLIST
+]

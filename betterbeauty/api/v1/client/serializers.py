@@ -85,6 +85,9 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
 
     @transaction.atomic
     def save(self, **kwargs):
+        is_profile_already_complete = False
+        if self.instance.first_name and self.instance.photo:
+            is_profile_already_complete = True
         should_save_photo = False
         profile_photo_id = None
         if 'profile_photo_id' in self.validated_data:
@@ -111,7 +114,8 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
             save_profile_photo(
                 user, profile_photo_id
             )
-        send_slack_client_profile_update(client)
+        if not is_profile_already_complete:
+            send_slack_client_profile_update(client)
         return user
 
 
