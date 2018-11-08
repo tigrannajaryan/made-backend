@@ -1,6 +1,7 @@
 from django.conf.urls import url
 
 from .views import (
+    AppointmentsOnADayView,
     ClientListView,
     ClientPricingView,
     ClientView,
@@ -41,6 +42,7 @@ urlpatterns = [
     url('^today$', StylistTodayView.as_view(), name='today'),
     url('^home$', StylistHomeView.as_view(), name='home'),
     url('^appointments$', StylistAppointmentListCreateView.as_view(), name='appointments'),
+    url('^appointments/oneday$', AppointmentsOnADayView.as_view(), name='one-day-appointments'),
     url('^appointments/preview$', StylistAppointmentPreviewView.as_view(),
         name='appointment-preview'),
     url('^appointments/(?P<appointment_uuid>[0-9a-f\-]+)$',
