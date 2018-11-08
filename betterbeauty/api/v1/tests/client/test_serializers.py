@@ -678,13 +678,6 @@ class TestServicePricingRequestSerializer(object):
         data = {
             'service_uuids': [str(service.uuid)]
         }
-        serializer = ServicePricingRequestSerializer(data=data, context={'client': client})
-        assert(not serializer.is_valid(raise_exception=False))
-        assert (
-            {'code': appointment_errors.ERR_SERVICE_DOES_NOT_EXIST} in
-            serializer.errors['field_errors']['service_uuids']
-        )
-        G(PreferredStylist, stylist=stylist, client=client)
 
         serializer = ServicePricingRequestSerializer(data=data, context={'client': client})
         assert (serializer.is_valid(raise_exception=False))

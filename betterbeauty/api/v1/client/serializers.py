@@ -274,20 +274,25 @@ class StylistServiceListSerializer(FormattedErrorMessageMixin, serializers.Model
 
 class ServicePricingRequestSerializer(FormattedErrorMessageMixin, serializers.Serializer):
     service_uuids = serializers.ListField(child=serializers.UUIDField())
+    stylist_uuid = serializers.UUIDField(required=False, allow_null=True)
 
     def validate_service_uuids(self, service_uuids: List[str]):
-        context: Dict = self.context
-        client: Client = context['client']
-        # TODO: verify this query
-        available_services = StylistService.objects.filter(
-            stylist__preferredstylist__client=client,
-            stylist__preferredstylist__deleted_at__isnull=True
-        ).values_list('uuid', flat=True)
-        if not all(x in available_services for x in service_uuids):
+        if not StylistService.objects.filter(uuid__in=service_uuids).count() == len(service_uuids):
             raise serializers.ValidationError(
                 appointment_errors.ERR_SERVICE_DOES_NOT_EXIST
             )
         return service_uuids
+
+    def validate_stylist_uuid(self, stylist_uuid: str):
+        is_valid_stylist = Stylist.objects.filter(uuid=stylist_uuid).exists()
+        if is_valid_stylist:
+            return stylist_uuid
+        raise serializers.ValidationError(ErrorMessages.ERR_INVALID_STYLIST_UUID)
+
+    def validate(self, attrs):
+        if len(attrs['service_uuids']) or attrs['stylist_uuid']:
+            return attrs
+        raise ValidationError(ErrorMessages.ERR_NO_STYLIST_OR_SERVICE_UUIDS)
 
 
 class ServicePricingSerializer(serializers.Serializer):
