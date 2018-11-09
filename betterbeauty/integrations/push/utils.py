@@ -194,7 +194,16 @@ def send_message_to_fcm_devices_of_user(
     fcm_devices = user.gcmdevice_set.filter(
         application_id__in=eligible_app_ids, active=True, cloud_message_type='FCM')
     try:
-        fcm_devices.send_message(message=message, extra=extra, badge=badge_count)
+        # Although we're dealing with FCM here, pure FCM format doesn't seem to work,
+        # so here we're rolling back to native GCM and adding `body` key to extra, so
+        # that it will end up in the payload's `data` part. More info can be found at
+        # https://github.com/jazzband/django-push-notifications/blob/
+        # 8c73a77131be2259f961a997cc3ca8945028f519/README.rst#
+        # firebase-vs-google-cloud-messaging
+        extra.update({'body': message})
+        fcm_devices.send_message(
+            message=None, extra=extra, badge=badge_count, use_fcm_notifications=False
+        )
         return True
     except NotificationError:
         logger.exception('Failed FCM notification(s) to {0} user {1}'.format(
