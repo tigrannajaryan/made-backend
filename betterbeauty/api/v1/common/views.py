@@ -1,16 +1,26 @@
-from django.db import IntegrityError
+from typing import List
+from uuid import UUID
 
+from django.db import IntegrityError
+from django.utils import timezone
 from rest_framework import generics, parsers, permissions, status, views
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from api.common.constants import HIGH_LEVEL_API_ERROR_CODES
 from api.common.permissions import ClientOrStylistPermission
+from core.models import User
 from integrations.push.constants import ErrorMessages as push_errors
 from integrations.push.types import PushRegistrationIdType
 from integrations.push.utils import register_device, unregister_device
+from notifications.models import Notification
+from notifications.types import NotificationChannel
 
-from .serializers import PushNotificationTokenSerializer, TemporaryImageSerializer
+from .serializers import (
+    NotificationAckSerializer,
+    PushNotificationTokenSerializer,
+    TemporaryImageSerializer,
+)
 
 
 class TemporaryImageUploadView(generics.CreateAPIView):
@@ -73,3 +83,21 @@ class UnregisterDeviceView(views.APIView):
                 {'code': push_errors.ERR_DEVICE_NOT_FOUND}
             ]
         }, status=status.HTTP_404_NOT_FOUND)
+
+
+class NotificationAckView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, ClientOrStylistPermission, ]
+
+    def post(self, request):
+        user: User = self.request.user
+        serializer = NotificationAckSerializer(
+            data=request.data, context={'user': user}
+        )
+        serializer.is_valid(raise_exception=True)
+        uuids: List[UUID] = serializer.data['message_uuids']
+        row_count = Notification.objects.filter(
+            user=user, uuid__in=uuids, channel=NotificationChannel.PUSH
+        ).update(device_acked_at=timezone.now())
+        if row_count > 0:
+            return Response({}, status=status.HTTP_200_OK)
+        return Response({}, status=status.HTTP_204_NO_CONTENT)
