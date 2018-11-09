@@ -375,3 +375,34 @@ def get_default_service_uuids(
     if stylist.services.count():
         return [stylist.services.first().uuid, ]
     return []
+
+
+def has_bookable_slots_with_discounts(stylist: Stylist, max_dates_to_look: int=7):
+    """
+    Return True if stylist is bookable and has at least one available slot
+    with non-zero discounts in the next `max_dates_to_look` days (excluding today)
+    :param stylist: Stylist to check
+    :param max_dates_to_look: for how many days in the future to look
+    :return: True if has bookable discounted slots, False otherwise
+    """
+
+    today = stylist.with_salon_tz(timezone.now()).date()
+    has_available_slots_with_discounts = False
+    day_count = 0
+    # go over next 7 days, and find first available slot on a day for which stylist
+    # has non-zero discount
+    while not has_available_slots_with_discounts and day_count <= max_dates_to_look:
+        day_count += 1
+        date_to_verify = today + datetime.timedelta(days=day_count)
+        available_slots = list(filter(
+            lambda a: not a.is_booked,
+            stylist.get_available_slots(date=date_to_verify)
+        ))
+        available_slot_count = len(available_slots)
+        if available_slot_count:
+            has_discount_on_this_day = stylist.get_weekday_discount_percent(
+                Weekday(date_to_verify.isoweekday())
+            ) > 0
+            if has_discount_on_this_day:
+                has_available_slots_with_discounts = True
+    return has_available_slots_with_discounts
