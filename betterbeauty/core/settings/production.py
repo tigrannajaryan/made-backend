@@ -65,11 +65,11 @@ PUSH_NOTIFICATIONS_SETTINGS['APPLICATIONS'].update({  # type: ignore
     MobileAppIdType.IOS_STYLIST.value: {
         'PLATFORM': 'APNS',
         'CERTIFICATE': Path(IOS_PUSH_CERTIFICATES_PATH / 'server-stylist-production.pem'),
-        'APNS_TOPIC': 'com.madebeauty.stylist.production',
+        'TOPIC': 'com.madebeauty.stylist.production',
     },
     MobileAppIdType.IOS_CLIENT.value: {
         'PLATFORM': 'APNS',
         'CERTIFICATE': Path(IOS_PUSH_CERTIFICATES_PATH / 'server-client-production.pem'),
-        'APNS_TOPIC': 'com.madebeauty.client.production',
+        'TOPIC': 'com.madebeauty.client.production',
     },
 })
