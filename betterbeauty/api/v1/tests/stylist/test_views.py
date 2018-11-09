@@ -14,13 +14,14 @@ from rest_framework.permissions import IsAuthenticated
 from api.common.permissions import StylistPermission, StylistRegisterUpdatePermission
 from api.v1.stylist.serializers import AppointmentValidationMixin
 from api.v1.stylist.urls import urlpatterns
-from api.v1.stylist.views import ClientPricingView, StylistView
+from api.v1.stylist.views import StylistView
 from appointment.constants import AppointmentStatus, ErrorMessages as appointment_errors
 from appointment.models import Appointment, AppointmentService
 from client.models import Client, PreferredStylist
 from core.models import User
 from core.types import UserRole
 from salon.models import Salon, Stylist, StylistService
+from salon.utils import get_default_service_uuids
 
 
 class TestStylistView(object):
@@ -316,15 +317,15 @@ class TestClientPricingView(object):
         assert(response.data['service_uuids'] == [str(our_service.uuid), ])
 
     @pytest.mark.django_db
-    def test__get_initial_service_uuids(self):
+    def test__get_default_service_uuids(self):
         stylist: Stylist = G(Stylist)
         client: Client = G(Client)
         G(PreferredStylist, stylist=stylist, client=client)
 
-        assert(ClientPricingView._get_initial_service_uuids(
+        assert(get_default_service_uuids(
             stylist=stylist, client=client) == [])
         service = G(StylistService, stylist=stylist)
-        assert (ClientPricingView._get_initial_service_uuids(
+        assert (get_default_service_uuids(
             stylist=stylist, client=client) == [service.uuid, ])
         popular_service = G(StylistService, stylist=stylist)
         appointment = G(
@@ -333,7 +334,7 @@ class TestClientPricingView(object):
             status=AppointmentStatus.CHECKED_OUT
         )
         G(AppointmentService, service_uuid=popular_service.uuid, appointment=appointment)
-        assert (ClientPricingView._get_initial_service_uuids(
+        assert (get_default_service_uuids(
             stylist=stylist, client=client) == [popular_service.uuid, ])
         last_appointment = G(
             Appointment, stylist=stylist, client=client,
@@ -342,7 +343,7 @@ class TestClientPricingView(object):
         )
         G(AppointmentService, service_uuid=popular_service.uuid, appointment=last_appointment)
         G(AppointmentService, service_uuid=service.uuid, appointment=last_appointment)
-        assert (sorted(ClientPricingView._get_initial_service_uuids(
+        assert (sorted(get_default_service_uuids(
             stylist=stylist, client=client)) == sorted(
             [popular_service.uuid, service.uuid]
         ))

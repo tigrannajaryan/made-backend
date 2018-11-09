@@ -292,8 +292,6 @@ class TestStylistServicesView(object):
     ):
         stylist = G(Stylist)
         user, auth_token = authorized_client_user
-        client_obj = user.client
-        preference = G(PreferredStylist, client=client_obj, stylist=stylist)
 
         stylist_service_url = reverse('api:v1:client:stylist-services', kwargs={
             'uuid': stylist.uuid
@@ -302,13 +300,6 @@ class TestStylistServicesView(object):
             stylist_service_url,
             data={}, HTTP_AUTHORIZATION=auth_token)
         assert (status.is_success(response.status_code))
-
-        preference.delete()
-
-        response = client.get(
-            stylist_service_url,
-            data={}, HTTP_AUTHORIZATION=auth_token)
-        assert (not status.is_success(response.status_code))
 
 
 class TestStylistServicePriceView(object):
@@ -335,14 +326,10 @@ class TestStylistServicePriceView(object):
         response = client.post(
             client_service_pricing_url,
             data={
-                'service_uuids': [our_service.uuid,
-                                  foreign_service.uuid]
+                'stylist_uuid': foreign_stylist.uuid
             }, HTTP_AUTHORIZATION=auth_token)
-        assert (response.status_code == status.HTTP_400_BAD_REQUEST)
-        assert (
-            {'code': appointment_errors.ERR_SERVICE_DOES_NOT_EXIST} in
-            response.data['field_errors']['service_uuids']
-        )
+        assert (status.is_success(response.status_code))
+        assert (response.data['service_uuids'][0] == str(foreign_service.uuid))
 
         user, auth_token = authorized_stylist_user
         response = client.post(

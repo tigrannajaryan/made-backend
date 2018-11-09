@@ -93,10 +93,17 @@ def register_device(
         model.objects.filter(
             registration_id=registration_id,
         ).exclude(user=user).delete()
-        device, created = model.objects.get_or_create(
-            user=user, registration_id=registration_id,
-            application_id=application_id
-        )
+        if registration_id_type == PushRegistrationIdType.FCM:
+            device, created = model.objects.get_or_create(
+                user=user, registration_id=registration_id,
+                application_id=application_id,
+                cloud_message_type='FCM'
+            )
+        else:
+            device, created = model.objects.get_or_create(
+                user=user, registration_id=registration_id,
+                application_id=application_id
+            )
     return device, created
 
 

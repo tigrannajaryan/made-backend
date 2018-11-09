@@ -55,6 +55,7 @@ from core.utils import post_or_get
 from core.utils import post_or_get_or_data
 from integrations.ipstack import get_lat_lng_for_ip_address
 from salon.models import Stylist, StylistService
+from salon.utils import get_default_service_uuids
 
 
 class ClientProfileView(generics.CreateAPIView, generics.RetrieveUpdateAPIView):
@@ -111,12 +112,7 @@ class StylistServicesView(generics.RetrieveAPIView):
     serializer_class = StylistServiceListSerializer
 
     def get_queryset(self):
-        client = self.request.user.client
-        available_stylists = Q(
-            preferredstylist__client=client,
-            preferredstylist__deleted_at__isnull=True
-        )
-        return Stylist.objects.filter(available_stylists).distinct('id')
+        return Stylist.objects.all()
 
     def get_object(self):
         return get_object_or_404(
@@ -134,12 +130,11 @@ class StylistServicePriceView(views.APIView):
         serializer.is_valid(raise_exception=True)
         client = self.request.user.client
         service_uuids = serializer.validated_data.get('service_uuids')
-        service_queryset = StylistService.objects.filter(
-            Q(
-                stylist__preferredstylist__client=client,
-                stylist__preferredstylist__deleted_at__isnull=True
-            )
-        ).distinct('id')
+        if not service_uuids:
+            stylist_uuid = serializer.validated_data.get('stylist_uuid')
+            stylist = Stylist.objects.get(uuid=stylist_uuid)
+            service_uuids = get_default_service_uuids(stylist, client)
+        service_queryset = StylistService.objects.all()
         services = []
         for service_uuid in service_uuids:
             services.append(service_queryset.get(

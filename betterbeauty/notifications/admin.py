@@ -12,6 +12,7 @@ class NotificationAdmin(admin.ModelAdmin):
     list_filter = ['code', 'target', 'channel', ]
     readonly_fields = ['sent_at', 'device_acked_at', ]
     actions = ['send_push_notification', ]
+    raw_id_fields = ['user', ]
 
     class Meta:
         model = Notification

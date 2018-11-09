@@ -12,3 +12,4 @@ class ErrorMessages:
     ERR_INVALID_STYLIST_UUID = "err_invalid_stylist_uuid"
     ERR_UNIQUE_CLIENT_EMAIL = "err_unique_client_email"
     ERR_PRIVACY_SETTING_PRIVATE = "err_privacy_setting_private"
+    ERR_NO_STYLIST_OR_SERVICE_UUIDS = "err_no_stylist_or_service_uuids"
