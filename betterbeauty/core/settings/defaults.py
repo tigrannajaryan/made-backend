@@ -322,12 +322,14 @@ PUSH_NOTIFICATIONS_SETTINGS = {
         MobileAppIdType.IOS_STYLIST_DEV.value: {
             'PLATFORM': 'APNS',
             'CERTIFICATE': Path(IOS_PUSH_CERTIFICATES_PATH / 'local-stylist-staging.pem'),
-            'USE_SANDBOX': True
+            'USE_SANDBOX': True,
+            'APNS_TOPIC': 'com.madebeauty.stylist.beta',
         },
         MobileAppIdType.IOS_CLIENT_DEV.value: {
             'PLATFORM': 'APNS',
             'CERTIFICATE': Path(IOS_PUSH_CERTIFICATES_PATH / 'local-client-staging.pem'),
-            'USE_SANDBOX': True
+            'USE_SANDBOX': True,
+            'APNS_TOPIC': 'com.madebeauty.client.staging',
         },
     }
 }
