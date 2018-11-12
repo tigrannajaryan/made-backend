@@ -49,6 +49,7 @@ def generate_hint_to_first_book_notifications(dry_run=False) -> int:
     Find clients who have 0 appointments in the system, and more than 48 hours has
     passed since a client has saved/selected a preferred stylist (by checking
     preferred_stylist.created_at field). Other conditions that must be met:
+    - Client must have at least one device configured
     - Stylist is bookable and has at least one available slot in the next 7 days.
     - Stylist has a discount on at least one day/service within the next 7 days.
     - Notification table does not contain a record with code="hint_to_first_book"
@@ -74,6 +75,10 @@ def generate_hint_to_first_book_notifications(dry_run=False) -> int:
     # Since we can't use select for update on query with aggregation, we'll just take
     # the list of ids, and will make another select based on these ids
 
+    client_has_registered_devices = Q(
+        client__user__apnsdevice__active=True) | Q(
+        client__user__gcmdevice__active=True)
+
     pref_client_stylist_records_ids = PreferredStylist.objects.filter(
         created_at__gte=cutoff_datetime,
         created_at__lte=earliest_creation_datetime
@@ -84,10 +89,13 @@ def generate_hint_to_first_book_notifications(dry_run=False) -> int:
             )
         )
     ).filter(
+        client_has_registered_devices,
         client__appointments__isnull=True,
         notification_cnt=0,
         stylist__services__is_enabled=True,
         stylist__user__phone__isnull=False,
+        stylist__user__is_active=True,
+        client__user__is_active=True,
         stylist__has_business_hours_set=True,
     ).values_list('id', flat=True)
     # actual queryset that we can lock for update on the time of
