@@ -251,8 +251,9 @@ class TestAvailableSlots(object):
             work_start_at="09:00", work_end_at="18:00", is_available=True)
         all_slots = stylist.get_available_slots(date)
         unavailable_slots = list(filter(lambda x: x.is_booked, all_slots))
-        assert (len(unavailable_slots) == 2)
+        assert (len(unavailable_slots) == 3)
         unavailable_slot_times = list(map(lambda x: x.start, unavailable_slots))
+        assert (parser.parse('2018-05-14 12:30:00+0000') in unavailable_slot_times)
         assert (parser.parse('2018-05-14 13:30:00+0000') in unavailable_slot_times)
         assert (parser.parse('2018-05-14 14:30:00+0000') in unavailable_slot_times)
 
