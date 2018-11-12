@@ -7,6 +7,8 @@ from api.v1.auth.constants import ErrorMessages
 from core.models import TemporaryFile, User
 from core.types import UserRole
 from integrations.push.types import PUSH_NOTIFICATION_TOKEN_CHOICES
+from notifications import ErrorMessages as NotificationErrors
+from notifications.models import Notification, NotificationChannel
 
 
 class TemporaryImageSerializer(serializers.ModelSerializer):
@@ -44,3 +46,23 @@ class PushNotificationTokenSerializer(FormattedErrorMessageMixin, serializers.Se
         if role not in user.role or role not in [UserRole.STYLIST, UserRole.CLIENT]:
             raise serializers.ValidationError(ErrorMessages.ERR_INCORRECT_USER_ROLE)
         return role
+
+
+class NotificationAckSerializer(FormattedErrorMessageMixin, serializers.Serializer):
+    message_uuids = serializers.ListField(child=serializers.UUIDField())
+
+    def validate_message_uuids(self, message_uuids):
+        user: User = self.context['user']
+        errors = []
+        for uuid in message_uuids:
+            notification = Notification.objects.filter(
+                uuid=str(uuid), user=user
+            ).last()
+            if not notification:
+                errors.append(NotificationErrors.ERR_NOTIFICATION_NOT_FOUND)
+                continue
+            if notification.channel != NotificationChannel.PUSH:
+                errors.append(NotificationErrors.ERR_BAD_NOTIFICATION_TYPE)
+        if errors:
+            raise serializers.ValidationError(errors)
+        return message_uuids

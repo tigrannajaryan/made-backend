@@ -26,7 +26,10 @@ def default_json_field_value():
 
 class Notification(models.Model):
     uuid = models.UUIDField(unique=True, default=uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='notifications',
+        related_query_name='notification'
+    )
     target = models.CharField(choices=CLIENT_OR_STYLIST_ROLE, max_length=16)
     code = models.CharField(max_length=64, verbose_name='Notification code')
     message = models.CharField(max_length=512)
@@ -76,21 +79,14 @@ class Notification(models.Model):
         if self.data:
             extra.update(self.data)
 
-        # calculate new badge count (i.e. how many unacknowledged messages
-        # user has for given target) + 1 (current message)
-        badge_count = Notification.objects.filter(
-            user=self.user, target=self.target, device_acked_at__isnull=True,
-            sent_at__isnull=False, channel=NotificationChannel.PUSH
-        ).count() + 1
-
         # bulk send message to all configured APNS and GCM/FCM installed apps matching target
         send_message_to_apns_devices_of_user(
             user=user, user_role=self.target, message=self.message,
-            badge_count=badge_count, extra=extra
+            badge_count=0, extra=extra
         )
         send_message_to_fcm_devices_of_user(
             user=user, user_role=self.target, message=self.message,
-            badge_count=badge_count, extra=extra
+            badge_count=0, extra=extra
         )
 
         # mark message as sent

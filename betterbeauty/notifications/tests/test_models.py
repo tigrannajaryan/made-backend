@@ -79,7 +79,7 @@ class TestNotification(object):
             user=our_user,
             user_role=notification.target,
             message=notification.message,
-            badge_count=2,
+            badge_count=0,
             extra={
                 'code': notification.code,
                 'gaga': 'roo',
@@ -90,7 +90,7 @@ class TestNotification(object):
             user=our_user,
             user_role=notification.target,
             message=notification.message,
-            badge_count=2,
+            badge_count=0,
             extra={
                 'code': notification.code,
                 'gaga': 'roo',
