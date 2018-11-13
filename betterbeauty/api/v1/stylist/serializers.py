@@ -1,4 +1,5 @@
 import datetime
+import logging
 import uuid
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Iterable, List, Optional
@@ -48,6 +49,9 @@ from salon.utils import (
 )
 from .constants import ErrorMessages, MAX_SERVICE_TEMPLATE_PREVIEW_COUNT, MIN_VALID_ADDR_LEN
 from .fields import DurationMinuteField
+
+
+logger = logging.getLogger(__name__)
 
 
 class StylistUserSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
@@ -438,6 +442,17 @@ class StylistServiceListSerializer(
                 uuid = service_item.pop('uuid', None)
                 if uuid:
                     service_object = instance.services.filter(uuid=uuid).last()
+                if uuid and not service_object:
+                    # this means that the stylist doesn't have such service. Log the problem
+                    # so that we know there are still old versions of the app in the field,
+                    # and just skip this service
+                    # TODO: add proper error handling here after Dec 1, 2018
+                    logger.warning(
+                        'Stylist {0} tried to add service with invalid uuid {1}'.format(
+                            instance.uuid, uuid
+                        )
+                    )
+                    continue
                 if not uuid or not service_object:
                     service_object = StylistService(stylist=instance)
                 service_serializer = StylistServiceSerializer(
