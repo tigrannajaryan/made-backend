@@ -6,7 +6,7 @@ from typing import List, Optional, Tuple
 
 from django.conf import settings
 from django.contrib.gis.db.models.fields import PointField
-from django.contrib.postgres.fields import DateRangeField
+from django.contrib.postgres.fields import ArrayField, DateRangeField
 from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Q
@@ -143,6 +143,18 @@ class StylistAvailableWeekDay(models.Model):
         return available_slots
 
 
+class Speciality(models.Model):
+    name = models.CharField(max_length=30, )
+    keywords = ArrayField(models.CharField(max_length=30), default=list, blank=True, null=True)
+
+    class Meta:
+        db_table = 'speciality'
+        verbose_name_plural = "Specialities"
+
+    def __str__(self):
+        return self.name
+
+
 class StylistWeekdayDiscount(models.Model):
     stylist = models.ForeignKey(
         'Stylist', on_delete=models.CASCADE, related_name='weekday_discounts')
@@ -182,6 +194,7 @@ class Stylist(models.Model):
     service_time_gap = models.DurationField(
         default=datetime.timedelta(minutes=DEFAULT_SERVICE_GAP_TIME_MINUTES)
     )
+    specialities = models.ManyToManyField(to='Speciality')
 
     maximum_discount = models.IntegerField(default=None, blank=True, null=True)
     is_maximum_discount_enabled = models.BooleanField(default=False)
@@ -245,6 +258,12 @@ class Stylist(models.Model):
             self.has_services_set and
             self.has_business_hours_set
         )
+
+    def get_specialities_list(self):
+        specialities_list = []
+        for speciality in self.specialities.all():
+            specialities_list.append(speciality.name)
+        return specialities_list
 
     def get_preferred_clients(self) -> models.QuerySet:
         preferences = PreferredStylist.objects.filter(

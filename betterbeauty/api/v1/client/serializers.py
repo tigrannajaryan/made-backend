@@ -189,12 +189,13 @@ class PreferredStylistSerializer(FormattedErrorMessageMixin, serializers.ModelSe
     is_profile_bookable = serializers.BooleanField(
         source='stylist.is_profile_bookable', read_only=True
     )
+    specialities = serializers.ListField(source='stylist.get_specialities_list', read_only=True)
 
     class Meta:
         model = PreferredStylist
         fields = ['uuid', 'salon_name', 'salon_address', 'profile_photo_url',
                   'first_name', 'last_name', 'phone', 'preference_uuid', 'instagram_url',
-                  'website_url', 'followers_count', 'is_profile_bookable', ]
+                  'website_url', 'followers_count', 'is_profile_bookable', 'specialities']
 
     def get_followers_count(self, preferred_stylist: PreferredStylist):
         return preferred_stylist.stylist.get_preferred_clients().filter(
@@ -764,6 +765,7 @@ class SearchStylistSerializer(
     phone = PhoneNumberField(source='public_phone_or_user_phone')
     is_profile_bookable = serializers.BooleanField(read_only=True)
     followers_count = serializers.SerializerMethodField()
+    specialities = serializers.ListField(source='get_specialities_list', read_only=True)
 
     class Meta:
         model = Stylist
@@ -771,7 +773,7 @@ class SearchStylistSerializer(
             'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url',
             'salon_name', 'salon_address', 'profile_photo_id', 'instagram_url',
             'website_url', 'salon_city', 'salon_zipcode', 'salon_state', 'is_profile_bookable',
-            'followers_count',
+            'followers_count', 'specialities'
         ]
 
     def get_followers_count(self, stylist: Stylist):
