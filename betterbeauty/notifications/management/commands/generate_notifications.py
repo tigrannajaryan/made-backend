@@ -33,6 +33,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         dry_run = options['dry_run']
         force_send = options['force_send']
+        if not settings.PUSH_NOTIFICATIONS_ENABLED:
+            self.stdout.write('Push notifications are disabled, exiting')
+            return
 
         self.stdout.write(
             'Generating {0} notifications'.format(NotificationCode.HINT_TO_FIRST_BOOK)
@@ -43,7 +46,7 @@ class Command(BaseCommand):
         self.stdout.write('...{0} notifications generated; took {1} seconds'.format(
             notification_count, (time_end - time_start).total_seconds()
         ))
-        if force_send and settings.PUSH_NOTIFICATIONS_ENABLED:
+        if force_send:
             self.stdout.write('Going to send push notifications now')
             sent, skipped = send_all_push_notifications(stdout=self.stdout, dry_run=dry_run)
             self.stdout.write('{0} notifications sent, {1} skipped'.format(sent, skipped))

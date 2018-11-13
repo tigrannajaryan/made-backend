@@ -5,6 +5,7 @@ import pytz
 from django.conf import settings
 from django_dynamic_fixture import G
 from freezegun import freeze_time
+from push_notifications.models import APNSDevice, GCMDevice
 
 from appointment.models import Appointment
 from client.models import Client
@@ -89,6 +90,9 @@ class TestGenerateHintToFirstBookNotification(object):
         assert(Notification.objects.count() == 0)  # appointment sill exists
         preexisting_appointment.delete()
         generate_hint_to_first_book_notifications()
+        assert (Notification.objects.count() == 0)  # client has no devices
+        G(APNSDevice, user=client.user)
+        generate_hint_to_first_book_notifications()
         assert (Notification.objects.count() == 1)
         notification: Notification = Notification.objects.last()
         assert(notification.code == NotificationCode.HINT_TO_FIRST_BOOK)
@@ -102,6 +106,7 @@ class TestGenerateHintToFirstBookNotification(object):
     @freeze_time('2018-11-9 20:30:00 UTC')
     def test_non_bookable_stylist(self, busy_stylist):
         client = G(Client)
+        G(GCMDevice, user=client.user, active=True)
         G(
             PreferredStylist, client=client, stylist=busy_stylist,
             created_at=datetime.datetime(2018, 11, 5, 0, 0, tzinfo=pytz.UTC)

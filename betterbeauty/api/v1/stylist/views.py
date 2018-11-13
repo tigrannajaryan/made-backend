@@ -29,7 +29,7 @@ from client.models import Client
 from core.utils import (
     post_or_get,
 )
-from salon.models import ServiceTemplateSet, Stylist, StylistService
+from salon.models import ServiceTemplateSet, Stylist, StylistAvailableWeekDay, StylistService
 from salon.types import ClientPriceOnDate
 from salon.utils import (
     generate_client_prices_for_stylist_services,
@@ -39,6 +39,7 @@ from .serializers import (
     AppointmentPreviewRequestSerializer,
     AppointmentPreviewResponseSerializer,
     AppointmentSerializer,
+    AppointmentsOnADaySerializer,
     AppointmentUpdateSerializer,
     ClientDetailsSerializer,
     ClientSerializer,
@@ -283,6 +284,37 @@ class StylistAppointmentListCreateView(generics.ListCreateAPIView):
             datetime_from, datetime_to,
             exclude_statuses=exclude_statuses
         )[:limit]
+
+
+class AppointmentsOnADayView(views.APIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+
+    def get(self, request):
+        stylist: Stylist = self.request.user.stylist
+        date_str = post_or_get(request, 'date', None)
+        if date_str:
+            date = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+        else:
+            date = stylist.get_current_now().date()
+        appointments: models.QuerySet = stylist.get_appointments_in_datetime_range(
+            datetime_from=datetime.datetime.combine(date, datetime.datetime.min.time(),
+                                                    tzinfo=stylist.salon.timezone),
+            datetime_to=datetime.datetime.combine(date, datetime.datetime.max.time(),
+                                                  tzinfo=stylist.salon.timezone),
+            exclude_statuses=[AppointmentStatus.CANCELLED_BY_STYLIST],
+            including_to=True
+        ).order_by('datetime_start_at')
+        available_weekday: StylistAvailableWeekDay = stylist.available_days.get(
+            weekday=date.isoweekday(),
+        )
+        response_serializer = AppointmentsOnADaySerializer(
+            {}, context={
+                'stylist': stylist,
+                'appointments': appointments,
+                'available_weekday': available_weekday
+            }
+        )
+        return Response(response_serializer.data)
 
 
 class StylistAppointmentPreviewView(views.APIView):

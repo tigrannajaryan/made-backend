@@ -21,6 +21,7 @@ from client.models import Client, PreferredStylist
 from core.models import User
 from core.types import UserRole
 from salon.models import Salon, Stylist, StylistService
+from salon.tests.test_models import stylist_appointments_data
 from salon.utils import get_default_service_uuids
 
 
@@ -367,3 +368,29 @@ class TestStylistViewPermissions(object):
                         StylistPermission, IsAuthenticated
                     ])
                 )
+
+
+class TestAppointmentsOnADaySerializer(object):
+
+    @pytest.mark.django_db
+    def test_appointments_on_a_day(self, client, authorized_stylist_user):
+        user, auth_token = authorized_stylist_user
+        stylist = user.stylist
+        salon = G(Salon, timezone=pytz.utc)
+        stylist.salon = salon
+        stylist.save(update_fields=['salon', ])
+        G(StylistService, stylist=stylist)
+        appointments = stylist_appointments_data(stylist)
+        url = reverse('api:v1:stylist:one-day-appointments')
+        response_data = client.get(url, data={
+            'date': '2018-05-14'
+        }, HTTP_AUTHORIZATION=auth_token).data
+
+        assert (len(response_data['appointments']) == 4)
+        assert (response_data['first_slot_start_time'] == appointments[
+            'past_appointment'].datetime_start_at)
+        assert(response_data['service_time_gap'] == '0:30:00')
+        assert(response_data['total_slot_count'] == 14)
+        assert(response_data['work_start_at'] == datetime.time(hour=12))
+        assert(response_data['work_end_at'] == datetime.time(hour=19))
+        assert(response_data['is_day_available'])
