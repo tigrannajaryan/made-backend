@@ -1611,6 +1611,60 @@ curl -X GET -H 'Authorization: Token jwt_token' \
 ]
 ```
 
+### Retrive appointments on a for OneDay
+**GET /api/v1/stylist/appointments/oneday**?date_from=yyyy-mm-dd
+
+```
+curl -X GET -H 'Authorization: Token jwt_token' \
+    http://apiserver//api/v1/stylist/appointments/oneday?date=<yyyy-mm-dd>
+```
+
+**Response 200 OK**
+
+```json
+{
+    "appointments": [
+        {
+            "uuid": "8c6980fb-a5f8-4f47-b610-f26c49fe5207",
+            "client_first_name": "Self",
+            "client_last_name": "",
+            "client_phone": "",
+            "datetime_start_at": "2018-11-02T09:00:00-04:00",
+            "duration_minutes": 60,
+            "status": "checked_out",
+            "total_tax": 3.25,
+            "total_card_fee": 1.46,
+            "total_client_price_before_tax": 50,
+            "services": [
+                {
+                    "uuid": "543b3424-ccc2-49d7-b6da-471cc7ee511c",
+                    "service_name": "Root touch up color",
+                    "service_uuid": "c0e786a6-7fcf-4b91-9031-5eb0c8c7e14a",
+                    "client_price": 50,
+                    "regular_price": 50,
+                    "is_original": true
+                }
+            ],
+            "grand_total": 53,
+            "has_tax_included": true,
+            "has_card_fee_included": false,
+            "tax_percentage": 6.5,
+            "card_fee_percentage": 2.75,
+            "client_profile_photo_url": null,
+            "created_at": "2018-11-02T04:12:08.690148-04:00"
+        }
+    ],
+    "first_slot_start_time": "2018-11-02T13:00:00Z",
+    "service_time_gap": "1:00:00",
+    "total_slot_count": 2,
+    "work_start_at": "13:00:00",
+    "work_end_at": "15:00:00",
+    "is_day_available": true
+}
+```
+
+
+
 ### Retrieve single appointment
 **GET /api/v1/appointments/{appointment_uuid}**
 
