@@ -5,7 +5,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Iterable, List, Optional
 
 from django.conf import settings
-from django.db import transaction
+from django.db import models, transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce, ExtractWeekDay
 from django.shortcuts import get_object_or_404
@@ -1431,3 +1431,54 @@ class ClientServicePricingSerializer(FormattedErrorMessageMixin, serializers.Ser
             data = data.copy()
             data['client_uuid'] = None
         return data
+
+
+class AppointmentsOnADaySerializer(serializers.Serializer):
+
+    appointments = serializers.SerializerMethodField()
+    first_slot_start_time = serializers.SerializerMethodField()
+    service_time_gap = serializers.SerializerMethodField()
+    total_slot_count = serializers.SerializerMethodField()
+    work_start_at = serializers.SerializerMethodField()
+    work_end_at = serializers.SerializerMethodField()
+    is_day_available = serializers.SerializerMethodField()
+
+    class Meta:
+        fields = [
+            "appointments",
+            "first_slot_start_time",
+            "service_time_gap",
+            "total_slot_count",
+            "work_start_at",
+            "work_end_at",
+            "is_day_available",
+        ]
+
+    def get_appointments(self, data):
+        appointments: models.QuerySet = self.context['appointments']
+        return AppointmentSerializer(appointments, many=True).data
+
+    def get_first_slot_start_time(self, data):
+        appointments: models.QuerySet = self.context['appointments']
+        stylist: Stylist = self.context['stylist']
+        return stylist.with_salon_tz(appointments.first().datetime_start_at)
+
+    def get_service_time_gap(self, data):
+        stylist: Stylist = self.context['stylist']
+        return str(stylist.service_time_gap)
+
+    def get_total_slot_count(self, data):
+        available_weekday: StylistAvailableWeekDay = self.context['available_weekday']
+        return len(available_weekday.get_all_slots())
+
+    def get_work_start_at(self, data):
+        available_weekday: StylistAvailableWeekDay = self.context['available_weekday']
+        return available_weekday.work_start_at
+
+    def get_work_end_at(self, data):
+        available_weekday: StylistAvailableWeekDay = self.context['available_weekday']
+        return available_weekday.work_end_at
+
+    def get_is_day_available(self, data):
+        available_weekday: StylistAvailableWeekDay = self.context['available_weekday']
+        return available_weekday.is_available

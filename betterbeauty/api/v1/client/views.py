@@ -7,7 +7,7 @@ from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db import models
-from django.db.models import F, Q, Value
+from django.db.models import Case, F, IntegerField, Q, Value, When
 from django.db.models.functions import Concat
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -438,9 +438,26 @@ class StylistFollowersView(views.APIView):
                 detail={'non_field_errors': [{'code': appt_constants.ERR_STYLIST_DOES_NOT_EXIST}]}
             )
 
+        """
+        Ordering
+        ========
+        We are ordering clients by profile_completeness and then by distance
+
+        Profile completeness ranking is calculated in the following order
+         1. Has first name, has photo
+         2. Has first name, no photo
+         3. No first name, has photo
+         4. No first name, No photo
+        """
         followers = stylist.get_preferred_clients().filter(
             privacy=ClientPrivacy.PUBLIC
-        )
+        ).annotate(profile_completeness=Case(
+            When((Q(user__first_name='', user__photo='')), then=Value(4)),
+            When((Q(user__first_name='') & ~Q(user__photo='')), then=Value(3)),
+            When(Q(user__first_name__isnull=False, user__photo=''), then=Value(2)),
+            When(Q(user__first_name__isnull=False) & ~Q(user__photo=''), then=Value(1)),
+            output_field=IntegerField(),
+        )).order_by('profile_completeness')
 
         return Response({
             'followers': FollowerSerializer(

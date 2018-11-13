@@ -2,6 +2,7 @@
 
 Phone: {{ client.user.phone }}
 Name: {% if client.user.get_full_name %}{{ client.user.get_full_name }}{% else %}N/A{% endif %}
-City: {{ client.city }}
-State: {{ client.state }}
-Country: {{ client.country }}
+Email: {% if client.email %}{{ client.email }}{% else %}N/A{% endif %}
+City: {% if client.city %}{{ client.city }}{% else %}N/A{% endif %}
+State: {% if client.state %}{{ client.state }}{% else %}N/A{% endif %}
+Country: {% if client.country %}{{ client.country }}{% else %}N/A{% endif %}
