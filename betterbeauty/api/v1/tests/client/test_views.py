@@ -720,3 +720,41 @@ class TestStylistFollowersView(object):
         assert(appt_count[str(client_with_new_appointment.uuid)] == 1)
         assert(appt_count[str(client_with_cancelled_appointment.uuid)] == 0)
         assert(appt_count[str(client_without_appointments.uuid)] == 0)
+
+    @pytest.mark.django_db
+    def test_sorted_output(self, client, authorized_client_user):
+        user, auth_token = authorized_client_user
+        stylist: Stylist = G(Stylist)
+
+        client_with_privacy = G(Client, privacy=ClientPrivacy.PRIVATE)
+        G(PreferredStylist, stylist=stylist, client=client_with_privacy)
+
+        client_with_name_and_photo = G(Client)
+        G(PreferredStylist, stylist=stylist, client=client_with_name_and_photo)
+
+        client_without_name_or_photo = G(Client)
+        G(PreferredStylist, stylist=stylist, client=client_without_name_or_photo)
+        client_without_name_or_photo.user.first_name = ""
+        client_without_name_or_photo.user.last_name = ""
+        client_without_name_or_photo.user.photo = None
+        client_without_name_or_photo.user.save()
+
+        client_with_name_without_photo = G(Client)
+        G(PreferredStylist, stylist=stylist, client=client_with_name_without_photo)
+        client_with_name_without_photo.user.photo = None
+        client_with_name_without_photo.user.save()
+
+        client_without_name_with_photo = G(Client)
+        G(PreferredStylist, stylist=stylist, client=client_without_name_with_photo)
+        client_without_name_with_photo.user.first_name = ""
+        client_without_name_with_photo.user.last_name = ""
+        client_without_name_with_photo.user.save()
+
+        url = reverse('api:v1:client:stylist-followers', kwargs={'stylist_uuid': stylist.uuid})
+        response = client.get(url, HTTP_AUTHORIZATION=auth_token)
+        assert (status.is_success(response.status_code))
+
+        assert (response.data['followers'][0]['uuid'] == str(client_with_name_and_photo.uuid))
+        assert (response.data['followers'][1]['uuid'] == str(client_with_name_without_photo.uuid))
+        assert (response.data['followers'][2]['uuid'] == str(client_without_name_with_photo.uuid))
+        assert (response.data['followers'][3]['uuid'] == str(client_without_name_or_photo.uuid))
