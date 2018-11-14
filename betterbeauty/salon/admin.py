@@ -9,6 +9,7 @@ from .models import (
     ServiceCategory,
     ServiceTemplate,
     ServiceTemplateSet,
+    Speciality,
     Stylist,
     StylistAvailableWeekDay,
     StylistService,
@@ -104,7 +105,7 @@ class StylistAdmin(admin.ModelAdmin):
         extra = 0
 
     fieldsets = (
-        (None, {'fields': ('user', 'salon', )}),
+        (None, {'fields': ('user', 'salon', 'specialities')}),
         ('Discounts', {'fields': ('first_time_book_discount_percent',
                                   'rebook_within_1_week_discount_percent',
                                   'rebook_within_2_weeks_discount_percent',
@@ -137,6 +138,7 @@ class InvitationAdmin(admin.ModelAdmin):
 admin.site.register(Invitation, InvitationAdmin)
 admin.site.register(Salon, SalonAdmin)
 admin.site.register(ServiceCategory)
+admin.site.register(Speciality)
 admin.site.register(ServiceTemplate, ServiceTemplateAdmin)
 admin.site.register(ServiceTemplateSet, ServiceTemplateSetAdmin)
 admin.site.register(Stylist, StylistAdmin)

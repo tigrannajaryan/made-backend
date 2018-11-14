@@ -1437,7 +1437,7 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
 
     appointments = serializers.SerializerMethodField()
     first_slot_start_time = serializers.SerializerMethodField()
-    service_time_gap = serializers.SerializerMethodField()
+    service_time_gap_in_minutes = serializers.SerializerMethodField()
     total_slot_count = serializers.SerializerMethodField()
     work_start_at = serializers.SerializerMethodField()
     work_end_at = serializers.SerializerMethodField()
@@ -1447,38 +1447,42 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
         fields = [
             "appointments",
             "first_slot_start_time",
-            "service_time_gap",
+            "service_time_gap_in_minutes",
             "total_slot_count",
             "work_start_at",
             "work_end_at",
             "is_day_available",
         ]
 
-    def get_appointments(self, data):
+    def get_appointments(self, data) -> List:
         appointments: models.QuerySet = self.context['appointments']
         return AppointmentSerializer(appointments, many=True).data
 
-    def get_first_slot_start_time(self, data):
+    def get_first_slot_start_time(self, data) -> Optional[str]:
         appointments: models.QuerySet = self.context['appointments']
         stylist: Stylist = self.context['stylist']
-        return stylist.with_salon_tz(appointments.first().datetime_start_at)
+        if len(appointments):
+            return stylist.with_salon_tz(
+                appointments.first().datetime_start_at).strftime('%H:%M:%S')
+        else:
+            return None
 
-    def get_service_time_gap(self, data):
+    def get_service_time_gap_in_minutes(self, data) -> int:
         stylist: Stylist = self.context['stylist']
-        return str(stylist.service_time_gap)
+        return stylist.service_time_gap.total_seconds() / 60
 
-    def get_total_slot_count(self, data):
+    def get_total_slot_count(self, data) -> int:
         available_weekday: StylistAvailableWeekDay = self.context['available_weekday']
         return len(available_weekday.get_all_slots())
 
-    def get_work_start_at(self, data):
+    def get_work_start_at(self, data) -> Optional[datetime.time]:
         available_weekday: StylistAvailableWeekDay = self.context['available_weekday']
         return available_weekday.work_start_at
 
-    def get_work_end_at(self, data):
+    def get_work_end_at(self, data) -> Optional[datetime.time]:
         available_weekday: StylistAvailableWeekDay = self.context['available_weekday']
         return available_weekday.work_end_at
 
-    def get_is_day_available(self, data):
+    def get_is_day_available(self, data) -> bool:
         available_weekday: StylistAvailableWeekDay = self.context['available_weekday']
         return available_weekday.is_available
