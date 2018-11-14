@@ -321,10 +321,10 @@ class ServicePricingSerializer(serializers.Serializer):
             availability_on_day = stylist.available_days.filter(
                 weekday=obj.date.isoweekday(),
                 is_available=True).last() if obj.date == stylist.get_current_now().date() else None
-            stylist_eod = datetime.datetime.combine(date=obj.date,
-                                                    time=availability_on_day.work_end_at,
-                                                    tzinfo=stylist.salon.timezone
-                                                    ) if availability_on_day else None
+            stylist_eod = stylist.salon.timezone.localize(
+                datetime.datetime.combine(
+                    date=obj.date, time=availability_on_day.work_end_at)
+            ) if availability_on_day else None
             if not stylist_eod or stylist.get_current_now() < (
                     stylist_eod - stylist.service_time_gap -
                     datetime.timedelta(minutes=END_OF_DAY_BUFFER_TIME_IN_MINUTES)):

@@ -290,8 +290,8 @@ class Stylist(models.Model):
         for slot in slots:
             available_slots.append(
                 TimeSlotAvailability(
-                    start=(datetime.datetime.combine(date, slot[0], tzinfo=self.salon.timezone)),
-                    end=(datetime.datetime.combine(date, slot[1], tzinfo=self.salon.timezone)),
+                    start=self.salon.timezone.localize(datetime.datetime.combine(date, slot[0])),
+                    end=self.salon.timezone.localize(datetime.datetime.combine(date, slot[1])),
                     is_booked=False))
         appointments = self.get_appointments_in_datetime_range(
             datetime_from, datetime_to, exclude_statuses=[
@@ -446,9 +446,10 @@ class Stylist(models.Model):
                 weekday=date_time.isoweekday(),
                 work_start_at__lte=date_time.time(),
             )
-            last_slot_end_time = datetime.datetime.combine(
-                datetime.date.today(), available_weekday.get_slot_end_time(),
-                tzinfo=self.salon.timezone).time()
+            last_slot_end_time = self.salon.timezone.localize(
+                datetime.datetime.combine(
+                    datetime.date.today(), available_weekday.get_slot_end_time(),
+                )).time()
             if (date_time + self.service_time_gap).time() <= last_slot_end_time:
                 return True
         except StylistAvailableWeekDay.DoesNotExist:
