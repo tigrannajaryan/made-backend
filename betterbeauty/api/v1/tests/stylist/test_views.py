@@ -380,16 +380,15 @@ class TestAppointmentsOnADaySerializer(object):
         stylist.salon = salon
         stylist.save(update_fields=['salon', ])
         G(StylistService, stylist=stylist)
-        appointments = stylist_appointments_data(stylist)
+        stylist_appointments_data(stylist)
         url = reverse('api:v1:stylist:one-day-appointments')
         response_data = client.get(url, data={
             'date': '2018-05-14'
         }, HTTP_AUTHORIZATION=auth_token).data
 
         assert (len(response_data['appointments']) == 4)
-        assert (response_data['first_slot_start_time'] == appointments[
-            'past_appointment'].datetime_start_at)
-        assert(response_data['service_time_gap'] == '0:30:00')
+        assert (response_data['first_slot_start_time'] == '12:20:00')
+        assert(response_data['service_time_gap_in_minutes'] == 30)
         assert(response_data['total_slot_count'] == 14)
         assert(response_data['work_start_at'] == datetime.time(hour=12))
         assert(response_data['work_end_at'] == datetime.time(hour=19))
