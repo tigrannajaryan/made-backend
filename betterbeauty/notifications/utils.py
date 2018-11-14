@@ -27,7 +27,7 @@ def send_all_push_notifications(stdout: TextIOBase, dry_run: bool=True) -> Tuple
     pending_notifications = Notification.objects.filter(
         user__is_active=True, pending_to_send=True, sent_at__isnull=True,
         channel=NotificationChannel.PUSH
-    )
+    ).select_for_update(skip_locked=True)
     for notification in pending_notifications.iterator():
         stdout.write('Going to send {0}'.format(notification.__str__()))
         if not dry_run:
