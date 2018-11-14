@@ -271,8 +271,8 @@ class Stylist(models.Model):
         for slot in slots:
             available_slots.append(
                 TimeSlotAvailability(
-                    start=self.with_salon_tz(datetime.datetime.combine(date, slot[0])),
-                    end=self.with_salon_tz(datetime.datetime.combine(date, slot[1])),
+                    start=(datetime.datetime.combine(date, slot[0], tzinfo=self.salon.timezone)),
+                    end=(datetime.datetime.combine(date, slot[1], tzinfo=self.salon.timezone)),
                     is_booked=False))
         appointments = self.get_appointments_in_datetime_range(
             datetime_from, datetime_to, exclude_statuses=[
