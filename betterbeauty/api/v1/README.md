@@ -2534,7 +2534,8 @@ curl -X GET \
             "preference_uuid": "37d795d6-e2a5-46d2-88e6-c1fbe01f756b",
             "website_url": "4sw.in",
             "followers_count": 2,
-            "is_profile_bookable": true
+            "is_profile_bookable": true,
+            "specialities": ["cut", "color"]
         }
     ]
 }
@@ -2616,7 +2617,8 @@ curl -X POST \
             "salon_zipcode": "10005",
             "salon_state": "NY",
             "followers_count": 5,
-            "is_profile_bookable": true
+            "is_profile_bookable": true,
+            "specialities": ["cut", "color"]
         }
     ],
     "more_results_available": false
