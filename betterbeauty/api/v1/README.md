@@ -1654,8 +1654,8 @@ curl -X GET -H 'Authorization: Token jwt_token' \
             "created_at": "2018-11-02T04:12:08.690148-04:00"
         }
     ],
-    "first_slot_start_time": "2018-11-02T13:00:00Z",
-    "service_time_gap": "1:00:00",
+    "first_slot_start_time": "09:00:00",
+    "service_time_gap_in_minutes": 60,
     "total_slot_count": 2,
     "work_start_at": "13:00:00",
     "work_end_at": "15:00:00",
