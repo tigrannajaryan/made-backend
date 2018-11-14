@@ -427,9 +427,10 @@ class Stylist(models.Model):
                 weekday=date_time.isoweekday(),
                 work_start_at__lte=date_time.time(),
             )
-            last_slot_end_time = datetime.datetime.combine(
-                datetime.date.today(), available_weekday.get_slot_end_time(),
-                tzinfo=self.salon.timezone).time()
+            last_slot_end_time = self.salon.timezone.localize(
+                datetime.datetime.combine(
+                    datetime.date.today(), available_weekday.get_slot_end_time(),
+                )).time()
             if (date_time + self.service_time_gap).time() <= last_slot_end_time:
                 return True
         except StylistAvailableWeekDay.DoesNotExist:

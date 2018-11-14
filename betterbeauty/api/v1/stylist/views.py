@@ -297,10 +297,10 @@ class AppointmentsOnADayView(views.APIView):
         else:
             date = stylist.get_current_now().date()
         appointments: models.QuerySet = stylist.get_appointments_in_datetime_range(
-            datetime_from=datetime.datetime.combine(date, datetime.datetime.min.time(),
-                                                    tzinfo=stylist.salon.timezone),
-            datetime_to=datetime.datetime.combine(date, datetime.datetime.max.time(),
-                                                  tzinfo=stylist.salon.timezone),
+            datetime_from=stylist.salon.timezone.localize(
+                datetime.datetime.combine(date, datetime.datetime.min.time())),
+            datetime_to=stylist.salon.timezone.localize(
+                datetime.datetime.combine(date, datetime.datetime.max.time())),
             exclude_statuses=[AppointmentStatus.CANCELLED_BY_STYLIST],
             including_to=True
         ).order_by('datetime_start_at')
