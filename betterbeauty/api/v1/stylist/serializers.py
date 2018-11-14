@@ -190,12 +190,18 @@ class StylistSerializer(
                                     allow_blank=True, required=False)
     is_profile_bookable = serializers.BooleanField(read_only=True)
 
+    google_calendar_auth_code = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, write_only=True)
+    google_calendar_refresh_code = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, write_only=True)
+
     class Meta:
         model = Stylist
         fields = [
             'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url',
             'salon_name', 'salon_address', 'profile_photo_id', 'instagram_url', 'public_phone',
             'website_url', 'salon_city', 'salon_zipcode', 'salon_state', 'is_profile_bookable',
+            'google_calendar_auth_code', 'google_calendar_refresh_code',
         ]
 
     def validate_salon_address(self, salon_address: str) -> str:

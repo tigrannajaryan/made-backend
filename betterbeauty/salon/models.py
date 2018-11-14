@@ -189,6 +189,9 @@ class Stylist(models.Model):
     instagram_url = models.CharField(max_length=2084, blank=True, null=True)
     website_url = models.CharField(max_length=2084, blank=True, null=True)
 
+    google_calendar_auth_code = models.CharField(max_length=1024, blank=True, null=True)
+    google_calendar_refresh_code = models.CharField(max_length=1024, blank=True, null=True)
+
     class Meta:
         db_table = 'stylist'
 
