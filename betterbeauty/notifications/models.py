@@ -47,6 +47,9 @@ class Notification(models.Model):
         default=NotificationChannel.PUSH
     )
 
+    class Meta:
+        db_table = 'notification'
+
     def __str__(self):
         return '{0} -> {1} {2}'.format(
             self.code, self.target, self.user.__str__()
