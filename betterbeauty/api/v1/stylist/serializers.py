@@ -1441,7 +1441,7 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
 
     appointments = serializers.SerializerMethodField()
     first_slot_start_time = serializers.SerializerMethodField()
-    service_time_gap_in_minutes = serializers.SerializerMethodField()
+    service_time_gap_minutes = serializers.SerializerMethodField()
     total_slot_count = serializers.SerializerMethodField()
     work_start_at = serializers.SerializerMethodField()
     work_end_at = serializers.SerializerMethodField()
@@ -1451,7 +1451,7 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
         fields = [
             "appointments",
             "first_slot_start_time",
-            "service_time_gap_in_minutes",
+            "service_time_gap_minutes",
             "total_slot_count",
             "work_start_at",
             "work_end_at",
@@ -1471,7 +1471,7 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
         else:
             return None
 
-    def get_service_time_gap_in_minutes(self, data) -> int:
+    def get_service_time_gap_minutes(self, data) -> int:
         stylist: Stylist = self.context['stylist']
         return stylist.service_time_gap.total_seconds() / 60
 
