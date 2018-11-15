@@ -13,7 +13,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from core.models import User, UserRole
-from salon.models import Salon, Stylist
+from salon.models import Salon, Speciality, Stylist
 
 
 def save_photo_to_profile(source_image_url: str, user: User, stdout: TextIOBase) -> bool:
@@ -54,6 +54,8 @@ def import_profile(line: List, dry_run: bool, stdout: TextIOBase) -> bool:
     last_name: str = str(line[4]).strip()
     address: str = str(line[5]).strip()
     salon_name: str = str(line[6]).strip()
+    speciality_string_1: str = str(line[7]).strip()
+    speciality_string_2: str = str(line[8]).strip()
     website_url: str = str(line[9]).strip()
     photo_url: str = str(line[10]).strip()
     phone_number: str = str(line[11]).strip()
@@ -76,9 +78,24 @@ def import_profile(line: List, dry_run: bool, stdout: TextIOBase) -> bool:
         user__first_name=first_name, user__last_name=last_name,
         salon__public_phone=phone_number
     ).last()
+    try:
+        speciality_1 = Speciality.objects.get(name=speciality_string_1)
+    except Speciality.DoesNotExist:
+        speciality_1 = None
+    try:
+        speciality_2 = Speciality.objects.get(name=speciality_string_2)
+    except Speciality.DoesNotExist:
+        speciality_2 = None
     if stylist:
         # stylist already exists, we'll not update, so just skip
-        stdout.write('Stylist already exists, skipping')
+        stdout.write('Stylist already exists, updating')
+        if not dry_run:
+            if speciality_1:
+                stdout.write('Upserting speciality {0}'.format(speciality_1.name))
+                stylist.specialities.add(speciality_1)
+            if speciality_2:
+                stdout.write('Upserting speciality {0}'.format(speciality_2.name))
+                stylist.specialities.add(speciality_2)
         return False
     stdout.write('Stylist does not exist yet, creating')
     if dry_run:
@@ -102,6 +119,12 @@ def import_profile(line: List, dry_run: bool, stdout: TextIOBase) -> bool:
             user=user, salon=salon, instagram_url=instagram,
             website_url=website_url
         )
+        if speciality_1:
+            stdout.write('Adding speciality 1')
+            stylist.specialities.add(speciality_1)
+        if speciality_2:
+            stdout.write('Adding speciality 2')
+            stylist.specialities.add(speciality_2)
         assert not stylist.is_profile_bookable
         if photo_url and not save_photo_to_profile(photo_url, user, stdout):
             stdout.write('Error downloading photo, skipping stylist creation')
@@ -112,11 +135,7 @@ def import_profile(line: List, dry_run: bool, stdout: TextIOBase) -> bool:
 
 class Command(BaseCommand):
     """
-    Custom command to create superuser in non-interactive mode, with password
-    set in the environment variable. We need to be able to automatically create
-    a superuser for staging and production, yet standard Django's createsuperuser
-    command is not capable of running in non-interactive mode, nor it is able to
-    amend existing superuser's password. This command aims to solve this.
+    Custom command to import partial stylist profiles from csv.
     """
     def add_arguments(self, parser):
         parser.add_argument(
@@ -135,7 +154,7 @@ class Command(BaseCommand):
         dry_run = options['dry_run']
 
         num_imported = 0
-        num_skipped = 0
+        num_updated = 0
         num_processed = 0
 
         infile = options.get('infile')
@@ -152,9 +171,9 @@ class Command(BaseCommand):
                 if result:
                     num_imported += 1
                 else:
-                    num_skipped += 1
+                    num_updated += 1
             self.stdout.write(
-                '{0} profiles were processed; {1} imported, {2} skipped'.format(
-                    num_processed, num_imported, num_skipped
+                '{0} profiles were processed; {1} imported, {2} updated'.format(
+                    num_processed, num_imported, num_updated
                 )
             )
