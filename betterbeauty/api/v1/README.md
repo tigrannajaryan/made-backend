@@ -1655,7 +1655,7 @@ curl -X GET -H 'Authorization: Token jwt_token' \
         }
     ],
     "first_slot_start_time": "09:00:00",
-    "service_time_gap_in_minutes": 60,
+    "service_time_gap_minutes": 60,
     "total_slot_count": 2,
     "work_start_at": "13:00:00",
     "work_end_at": "15:00:00",
