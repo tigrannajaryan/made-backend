@@ -7,6 +7,7 @@ from .defaults import (
     MobileAppIdType,
     Path,
     PUSH_NOTIFICATIONS_SETTINGS,
+    ROOT_PATH,
 )
 from .utils import (
     get_ec2_instance_id,
@@ -73,3 +74,6 @@ PUSH_NOTIFICATIONS_SETTINGS['APPLICATIONS'].update({  # type: ignore
         'TOPIC': 'com.madebeauty.client.production',
     },
 })
+
+GOOGLE_OAUTH_CREDENTIALS_FILE_PATH = Path(
+    ROOT_PATH.parent / 'google_credentials' / 'webclient-production.json')

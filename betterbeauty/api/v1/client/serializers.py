@@ -66,12 +66,21 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
         source='client.privacy', choices=CLIENT_PRIVACY_CHOICES, required=False
     )
 
+    google_calendar_integrated = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
             'first_name', 'last_name', 'phone', 'profile_photo_id', 'profile_photo_url',
             'zip_code', 'birthday', 'email', 'city', 'state', 'privacy',
+            'google_calendar_integrated',
         ]
+
+    def get_google_calendar_integrated(self, instance: User) -> bool:
+        return bool(
+            instance.client.google_access_token and
+            instance.client.google_refresh_token
+        )
 
     def validate_email(self, email: str):
         if email and self.instance and Client.objects.exclude(
