@@ -8,8 +8,8 @@ def forward(app, schema_editor):
         DO $$
         BEGIN
           IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname = 'readonly_user') THEN
-            GRANT SELECT ON ALL TABLES IN SCHEMA  public, pg_catalog TO readonly_user;
-            GRANT SELECT ON ALL SEQUENCES IN SCHEMA public, pg_catalog TO readonly_user;
+            GRANT SELECT ON ALL TABLES IN SCHEMA  public TO readonly_user;
+            GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO readonly_user;
             ALTER DEFAULT PRIVILEGES GRANT SELECT ON TABLES TO readonly_user;
             ALTER DEFAULT PRIVILEGES GRANT SELECT ON SEQUENCES TO readonly_user;
           END IF;
