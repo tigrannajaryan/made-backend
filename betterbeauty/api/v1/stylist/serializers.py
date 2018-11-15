@@ -189,11 +189,12 @@ class StylistSerializer(
     public_phone = PhoneNumberField(source='salon.public_phone', allow_null=True,
                                     allow_blank=True, required=False)
     is_profile_bookable = serializers.BooleanField(read_only=True)
+    followers_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Stylist
         fields = [
-            'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url',
+            'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url', 'followers_count',
             'salon_name', 'salon_address', 'profile_photo_id', 'instagram_url', 'public_phone',
             'website_url', 'salon_city', 'salon_zipcode', 'salon_state', 'is_profile_bookable',
         ]
@@ -263,6 +264,9 @@ class StylistSerializer(
                 save_profile_photo(user, profile_photo_id)
             send_slack_stylist_profile_update(stylist)
             return stylist
+
+    def get_followers_count(self, stylist: Stylist) -> Optional[int]:
+        return stylist.get_preferred_clients().count()
 
 
 class StylistSerializerWithGoogleAPIKey(StylistSerializer):
