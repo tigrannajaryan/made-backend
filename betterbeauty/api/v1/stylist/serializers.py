@@ -1231,6 +1231,7 @@ class StylistHomeSerializer(serializers.ModelSerializer):
                     AppointmentStatus.CHECKED_OUT
                 ]
             )
+        appointments = appointments.prefetch_related('services').select_related('client__user')
         return AppointmentSerializer(
             appointments, many=True
         ).data

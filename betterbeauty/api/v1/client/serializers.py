@@ -763,7 +763,7 @@ class SearchStylistSerializer(
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
     phone = PhoneNumberField(source='public_phone_or_user_phone')
-    is_profile_bookable = serializers.BooleanField(read_only=True)
+    is_profile_bookable = serializers.SerializerMethodField()
     followers_count = serializers.SerializerMethodField()
     specialities = serializers.ListField(source='get_specialities_list', read_only=True)
 
@@ -780,3 +780,10 @@ class SearchStylistSerializer(
         return stylist.get_preferred_clients().filter(
             privacy=ClientPrivacy.PUBLIC
         ).count()
+
+    def get_is_profile_bookable(self, stylist: Stylist):
+        return bool(
+            stylist.user.phone and
+            stylist.has_valid_service and
+            stylist.has_business_hours_set
+        )
