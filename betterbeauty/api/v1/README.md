@@ -220,6 +220,7 @@ such specific errors in particular API calls.
 |err_unique_client_email|The email belongs to the existing client|/api/v1/client/profile|field|
 |err_stylist_is_already_in_preference|The stylist is already a preference| /api/v1/client/preferred-stylists|stylist_uuid|
 |err_invalid_stylist_uuid|Invalid Stylist UUID|/api/v1/client/preferred-stylists|stylist_uuid|
+|err_no_stylist_or_service_uuids|Either stylist UUID or service UUIDs must be present|/api/v1/client/services/pricing|--|
 |err_wait_to_rerequest_new_code|Minimum 2 minutes wait required to re-request new code|/api/v1/client/auth/get-code|--|
 |err_invalid_sms_code|Invalid SMS Code|/api/v1/client/confirm-code|code|
 |err_invalid_phone_number|Invalid Phone Number|--|--|
