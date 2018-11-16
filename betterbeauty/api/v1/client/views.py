@@ -216,12 +216,14 @@ class SearchStylistView(generics.ListAPIView):
                 full_name_similarity=TrigramSimilarity('full_name', query),
                 salon_name_similarity=TrigramSimilarity('salon__name', query),
                 reverse_full_name_similarity=TrigramSimilarity('reverse_full_name', query),
-                service_name_similarity=TrigramSimilarity('services__name', query)
+                service_name_similarity=TrigramSimilarity('services__name', query),
             ).filter(
                 Q(full_name_similarity__gt=TRIGRAM_SIMILARITY) |
                 Q(salon_name_similarity__gt=TRIGRAM_SIMILARITY) |
                 Q(service_name_similarity__gt=TRIGRAM_SIMILARITY) |
                 Q(full_name__icontains=query) |
+                Q(specialities__keywords__icontains=query) |
+                Q(specialities__name__icontains=query) |
                 Q(salon__name__icontains=query) |
                 Q(reverse_full_name__icontains=query) |
                 Q(services__name__icontains=query)

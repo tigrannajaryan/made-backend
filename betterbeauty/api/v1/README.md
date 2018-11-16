@@ -552,13 +552,22 @@ curl -X POST \
 
 ```
 {
-    "id": 1,
-    "first_name": "Freya",
+    "uuid": "3c1cc23e-2a36-43cf-a865-55b078bcae77",
+    "first_name": "Jane",
     "last_name": "McBob",
-    "phone": "(650) 350-1234",
-    "profile_photo_url": "http://example.com/profile_photo.jpg",
-    "salon_name": "Jane's Beauty",
-    "salon_address": "3945 El Camino Real"
+    "phone": "+13216549870",
+    "public_phone": "+19876543210",
+    "profile_photo_url": null,
+    "followers_count": 6,
+    "salon_name": "Jane salon",
+    "salon_address": "100-01 Metropolitan Ave, Flushing, NY 11375, USA",
+    "instagram_url": null,
+    "website_url": "https://example.com",
+    "salon_city": "Queens",
+    "salon_zipcode": "11375",
+    "salon_state": "NY",
+    "is_profile_bookable": false,
+    "google_api_key": "<api_key>"
 }
 ```
 
@@ -582,12 +591,13 @@ Note: all fields listed above are required.
 
 ```
 {
-    "id": 1,
+    "uuid": "3c1cc23e-2a36-43cf-a865-55b078bcae77",
     "first_name": "Jane",
     "last_name": "McBob",
     "phone": "+13216549870",
     "public_phone": "+19876543210",
     "profile_photo_url": null,
+    "followers_count": 6,
     "salon_name": "Jane salon",
     "salon_address": "100-01 Metropolitan Ave, Flushing, NY 11375, USA",
     "instagram_url": null,
@@ -595,7 +605,8 @@ Note: all fields listed above are required.
     "salon_city": "Queens",
     "salon_zipcode": "11375",
     "salon_state": "NY",
-    "is_profile_bookable": false
+    "is_profile_bookable": false,
+    "google_api_key": "<api_key>"
 }
 ```
 
@@ -628,12 +639,13 @@ Note: all fields listed above are required.
 
 ```
 {
-    "id": 1,
+    "uuid": "3c1cc23e-2a36-43cf-a865-55b078bcae77",
     "first_name": "Jane",
     "last_name": "McBob",
     "phone": "+13216549870",
     "public_phone": "+19876543210",
     "profile_photo_url": null,
+    "followers_count": 6,
     "salon_name": "Jane salon",
     "salon_address": "100-01 Metropolitan Ave, Flushing, NY 11375, USA",
     "instagram_url": null,
@@ -641,7 +653,8 @@ Note: all fields listed above are required.
     "salon_city": "Queens",
     "salon_zipcode": "11375",
     "salon_state": "NY",
-    "is_profile_bookable": false
+    "is_profile_bookable": false,
+    "google_api_key": "<api_key>"
 }
 ```
 
@@ -1655,7 +1668,7 @@ curl -X GET -H 'Authorization: Token jwt_token' \
         }
     ],
     "first_slot_start_time": "09:00:00",
-    "service_time_gap_in_minutes": 60,
+    "service_time_gap_minutes": 60,
     "total_slot_count": 2,
     "work_start_at": "13:00:00",
     "work_end_at": "15:00:00",

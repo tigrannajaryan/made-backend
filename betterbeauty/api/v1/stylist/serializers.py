@@ -189,11 +189,12 @@ class StylistSerializer(
     public_phone = PhoneNumberField(source='salon.public_phone', allow_null=True,
                                     allow_blank=True, required=False)
     is_profile_bookable = serializers.BooleanField(read_only=True)
+    followers_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Stylist
         fields = [
-            'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url',
+            'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url', 'followers_count',
             'salon_name', 'salon_address', 'profile_photo_id', 'instagram_url', 'public_phone',
             'website_url', 'salon_city', 'salon_zipcode', 'salon_state', 'is_profile_bookable',
         ]
@@ -263,6 +264,9 @@ class StylistSerializer(
                 save_profile_photo(user, profile_photo_id)
             send_slack_stylist_profile_update(stylist)
             return stylist
+
+    def get_followers_count(self, stylist: Stylist) -> Optional[int]:
+        return stylist.get_preferred_clients().count()
 
 
 class StylistSerializerWithGoogleAPIKey(StylistSerializer):
@@ -1438,7 +1442,7 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
 
     appointments = serializers.SerializerMethodField()
     first_slot_start_time = serializers.SerializerMethodField()
-    service_time_gap_in_minutes = serializers.SerializerMethodField()
+    service_time_gap_minutes = serializers.SerializerMethodField()
     total_slot_count = serializers.SerializerMethodField()
     work_start_at = serializers.SerializerMethodField()
     work_end_at = serializers.SerializerMethodField()
@@ -1448,7 +1452,7 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
         fields = [
             "appointments",
             "first_slot_start_time",
-            "service_time_gap_in_minutes",
+            "service_time_gap_minutes",
             "total_slot_count",
             "work_start_at",
             "work_end_at",
@@ -1468,7 +1472,7 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
         else:
             return None
 
-    def get_service_time_gap_in_minutes(self, data) -> int:
+    def get_service_time_gap_minutes(self, data) -> int:
         stylist: Stylist = self.context['stylist']
         return stylist.service_time_gap.total_seconds() / 60
 
