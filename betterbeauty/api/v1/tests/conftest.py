@@ -23,7 +23,8 @@ from salon.utils import create_stylist_profile_for_user
 def stylist_data(db) -> Stylist:
     salon = G(
         Salon,
-        name='Test salon', address='2000 Rilma Lane', city='Los Altos', state='CA',
+        name='Test salon', address='2000, Rilma Lane, Los Altos, US 94022',
+        city='Los Altos', state='CA',
         zip_code='94022', location=Point(x=-122.1185007, y=37.4009997), country='US',
         timezone=pytz.utc
     )
