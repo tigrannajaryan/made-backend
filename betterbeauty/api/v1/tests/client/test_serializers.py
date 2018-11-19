@@ -648,7 +648,7 @@ class TestAppointmentPreviewResponseSerializer(object):
             'status': AppointmentStatus.NEW,
             'total_tax': 4,
             'total_card_fee': 1,
-            'tax_percentage': 6.5,
+            'tax_percentage': 4.5,
             'card_fee_percentage': 2.75,
             'total_client_price_before_tax': 10,
             'profile_photo_url': stylist.get_profile_photo_url(),

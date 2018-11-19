@@ -333,3 +333,5 @@ PUSH_NOTIFICATIONS_SETTINGS = {
         },
     }
 }
+
+GOOGLE_OAUTH_CREDENTIALS_FILE_PATH = '<override in local.py>'

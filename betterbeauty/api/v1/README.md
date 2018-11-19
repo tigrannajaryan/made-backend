@@ -65,6 +65,8 @@
     - [Register device](#register-device)
     - [Unregister device](#unregister-device)
 
+- [**Google Auth Integration**](#google-auth-integration)
+   - [Add integration](#add-integration)
 
 # Error handling
 
@@ -229,6 +231,8 @@ such specific errors in particular API calls.
 |err_device_not_found|Device with given registration_id not found for give user and application type|/api/v1/common/unregister-device|non-field|
 |err_notification_not_found|Notification with this UUID is either not found or doesn't belong to the user|/api/v1/common/ack-push|message_uuids|
 |err_bad_notification_type|Notification with this UUID is not a PUSH notification|/api/v1/common/ack-push|message_uuids|
+|err_bad_integration_type|Passed integration type is not (yet) supported|/api/v1/common/integrations|integration_type|
+|err_failure_to_setup_oauth|General problem with setting up oauth credentials|/api/v1/common/integrations|non-field|
 
 # Authorization
 ## Getting auth token with email/password credentials
@@ -3383,14 +3387,12 @@ registration id associated with given user and user role
 ```
 {
     "code": "err_not_found",
-    "non_field_errors": [],
-    "field_errors": {
-        "user_role": [
-            {
-                "code": "err_device_not_found"
-            }
-        ]
-    }
+    "non_field_errors": [
+        {
+            "code": "err_device_not_found"
+        }
+    ]
+    "field_errors": {}
 }
 ```
 
@@ -3436,7 +3438,7 @@ exist, or does not belong to authorized user
     "code": "err_api_exception",
     "non_field_errors": [],
     "field_errors": {
-        "user_role": [
+        "message_uuids": [
             {
                 "code": "err_notification_not_found"
             }
@@ -3455,11 +3457,93 @@ push notificaiton (e.g. on attempt to acknowledge an SMS)
     "code": "err_api_exception",
     "non_field_errors": [],
     "field_errors": {
-        "user_role": [
+        "message_uuids": [
             {
                 "code": "err_bad_notification_type"
             }
         ]
     }
+}
+```
+
+# Google Auth Integration
+## Add integration
+To add an integration, frontend passes serverAuthCode obtained through
+frontend flow of Google authorization. On the backend, this server code
+is exchanged to access token and refresh token from Google API, and later
+is used on the backend. Server code is a one-time entity, and it will be
+invalidate after the first use, even if it was successful. Access and refresh
+tokens, however, are more or less persistent, so they're saved into Stylist
+or Client models (depending on user role)
+
+**POST http://apiserver/api/v1/common/integrations**
+
+- **user_role** (required, string) - "stylist" or "client"
+- **integration_type** (required, string) - type of integration, currently only
+`google_calendar` is valid choice
+- **server_auth_code** (required, string) - auth code from google
+```
+curl -X POST \
+  'http://apiserver/api/v1/common/ack-push' \
+  -H 'Authorization: Token {{auth_token}}' \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "user_role": "stylist",
+        "integration_type": "google_calendar",
+        "server_auth_code": "long-string"
+      }'
+```
+
+**Response 200 OK**
+```
+{}
+```
+
+**Response 400 Bad Request**
+Will be raised in case passing user role which
+authorized user does not currently bear.
+
+```
+{
+    "code": "err_api_exception",
+    "non_field_errors": [],
+    "field_errors": {
+        "user_role": [
+            {
+                "code": "err_incorrect_user_role"
+            }
+        ]
+    }
+}
+```
+
+**Response 400 Bad Request**
+Will be raised in case passing wrong integration type
+
+```
+{
+    "code": "err_api_exception",
+    "non_field_errors": [],
+    "field_errors": {
+        "integration_type": [
+            {
+                "code": "err_bad_integration_type"
+            }
+        ]
+    }
+}
+```
+
+**Response 400 Bad Request**
+Will be raised in case if something generally went wrong while
+trying to validate server auth code
+
+```
+{
+    "code": "err_api_exception",
+    "non_field_errors": [
+        {"code": "err_failure_to_setup_oauth"}
+    ],
+    "field_errors": {}
 }
 ```

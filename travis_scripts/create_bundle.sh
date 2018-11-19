@@ -2,6 +2,7 @@
 set -evx
 
 CERT_PATH="push_certificates"
+GOOGLE_OAUTH_PATH="google_credentials"
 
 # This script prepares .zip bundles to be deployed to Elastic Beanstalk.
 # It prepares 2 bundles: bundles/staging.zip and bundles/production.zip
@@ -22,7 +23,7 @@ CERT_PATH="push_certificates"
 # that bundles are already created, so just exit.
 
 mkdir $TRAVIS_BUILD_DIR/$BUNDLE_PATH || exit 0
-zip $TRAVIS_BUILD_DIR/$BUNDLE_PATH/$STAGING_BUNDLE_NAME `git ls-files` --exclude $CERT_PATH/*.pem.enc
+zip $TRAVIS_BUILD_DIR/$BUNDLE_PATH/$STAGING_BUNDLE_NAME `git ls-files` --exclude $CERT_PATH/*.pem.enc --exclude $GOOGLE_OAUTH_PATH/*.json.enc
 # at this point staging and production bundles must be equal
 cp $TRAVIS_BUILD_DIR/$BUNDLE_PATH/$STAGING_BUNDLE_NAME $TRAVIS_BUILD_DIR/$BUNDLE_PATH/$PRODUCTION_BUNDLE_NAME
 
@@ -34,10 +35,14 @@ openssl aes-256-cbc -d -a -K $encrypted_69fcb918905c_key -iv $encrypted_69fcb918
 openssl aes-256-cbc -d -a -K $encrypted_69fcb918905c_key -iv $encrypted_69fcb918905c_iv -in $CERT_PATH/server-client-production.pem.enc -out $CERT_PATH/server-client-production.pem
 openssl aes-256-cbc -d -a -K $encrypted_69fcb918905c_key -iv $encrypted_69fcb918905c_iv -in $CERT_PATH/server-stylist-production.pem.enc -out $CERT_PATH/server-stylist-production.pem
 
+# 3. Decrypt google credentials
+openssl aes-256-cbc -d -a -K $encrypted_69fcb918905c_key -iv $encrypted_69fcb918905c_iv -in $GOOGLE_OAUTH_PATH/webclient-staging.json.enc -out $GOOGLE_OAUTH_PATH/webclient-staging.json
+openssl aes-256-cbc -d -a -K $encrypted_69fcb918905c_key -iv $encrypted_69fcb918905c_iv -in $GOOGLE_OAUTH_PATH/webclient-production.json.enc -out $GOOGLE_OAUTH_PATH/webclient-production.json
+
 # add previously decrypted staging keys to the staging archive
-zip $TRAVIS_BUILD_DIR/$BUNDLE_PATH/$STAGING_BUNDLE_NAME $CERT_PATH/server-*-staging.pem
+zip $TRAVIS_BUILD_DIR/$BUNDLE_PATH/$STAGING_BUNDLE_NAME $CERT_PATH/server-*-staging.pem $GOOGLE_OAUTH_PATH/webclient-staging.json
 # add production keys to the production archive
-zip $TRAVIS_BUILD_DIR/$BUNDLE_PATH/$PRODUCTION_BUNDLE_NAME $CERT_PATH/server-*-production.pem
+zip $TRAVIS_BUILD_DIR/$BUNDLE_PATH/$PRODUCTION_BUNDLE_NAME $CERT_PATH/server-*-production.pem $GOOGLE_OAUTH_PATH/webclient-production.json
 
 # 3. Cleanup certificates
 rm -rf $CERT_PATH/server*.pem
