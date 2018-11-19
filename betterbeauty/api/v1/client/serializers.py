@@ -767,7 +767,7 @@ class SearchStylistSerializer(
     salon_zipcode = serializers.CharField(source='salon__zip_code', required=False)
     salon_state = serializers.CharField(source='salon__state', required=False)
 
-    profile_photo_url = serializers.CharField(source='user__photo')
+    profile_photo_url = serializers.CharField(source='get_profile_photo_url')
 
     first_name = serializers.CharField(source='user__first_name')
     last_name = serializers.CharField(source='user__last_name')
