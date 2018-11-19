@@ -300,9 +300,10 @@ class ServicePricingRequestSerializer(FormattedErrorMessageMixin, serializers.Se
         raise serializers.ValidationError(ErrorMessages.ERR_INVALID_STYLIST_UUID)
 
     def validate(self, attrs):
-        if len(attrs['service_uuids']) or attrs['stylist_uuid']:
+        if ('service_uuids' in attrs and len(attrs['service_uuids'])) or (
+                'stylist_uuid' in attrs and attrs['stylist_uuid']):
             return attrs
-        raise ValidationError(ErrorMessages.ERR_NO_STYLIST_OR_SERVICE_UUIDS)
+        raise serializers.ValidationError(ErrorMessages.ERR_NO_STYLIST_OR_SERVICE_UUIDS)
 
 
 class ServicePricingSerializer(serializers.Serializer):
