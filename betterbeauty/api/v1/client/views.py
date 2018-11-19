@@ -1,14 +1,11 @@
 import datetime
-from typing import List, Optional
+from typing import Optional
 
 from dateutil.parser import parse
 
-from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
-from django.contrib.postgres.search import TrigramSimilarity
 from django.db import models
-from django.db.models import BooleanField, Case, F, IntegerField, Q, Value, When
-from django.db.models.functions import Concat
+from django.db.models import Case, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ipware import get_client_ip
@@ -23,8 +20,8 @@ from rest_framework.response import Response
 
 from api.common.permissions import ClientPermission
 
-from api.v1.client.constants import (ErrorMessages as client_errors, NEW_YORK_LOCATION,
-                                     STYLIST_SEARCH_LIMIT, TRIGRAM_SIMILARITY
+from api.v1.client.constants import (ErrorMessages as client_errors,
+                                     STYLIST_SEARCH_LIMIT
                                      )
 from api.v1.client.serializers import (
     AddPreferredClientsSerializer,
@@ -181,73 +178,109 @@ class SearchStylistView(generics.ListAPIView):
         address_query: str = post_or_get_or_data(self.request, 'search_location', '')
         latitude: Optional[float] = post_or_get_or_data(self.request, 'latitude', None)
         longitude: Optional[float] = post_or_get_or_data(self.request, 'longitude', None)
-        country: Optional[str] = self.request.user.client.country
         if latitude and longitude:
             location = Point((longitude, latitude))
         else:
             ip, is_routable = get_client_ip(self.request)
             location = get_lat_lng_for_ip_address(ip)
         self.save_search_request(location)
-        return self._search_stylists(query, address_query, location, country)
+        country: Optional[str] = self.request.user.client.country or 'US'
+        return SearchStylistView._search_stylists(query, address_query, location, country)
 
     @staticmethod
-    def _search_stylists(query: str, address_query: str, location: Point, country: str) -> List:
-
-        queryset = Stylist.objects.select_related('salon', 'user').prefetch_related(
-            'specialities').filter(
-            salon__country__iexact=country, salon__location__isnull=False).annotate(
-            full_name=Concat(F('user__first_name'), Value(' '), F('user__last_name')),
-            reverse_full_name=Concat(F('user__last_name'), Value(' '), F('user__first_name')),
-            has_valid_service=Case(
-                When(Q(services__is_enabled=True, services__deleted_at__isnull=True), then=True),
-                default=False,
-                output_field=BooleanField()
-            )
-        ).distinct('id')
-
-        list_of_stylists = SearchStylistView._get_nearby_stylists(queryset, location)
-        if len(list_of_stylists) == 0:
-            # if there is no stylist in the area, return stylist from NY
-            list_of_stylists = SearchStylistView._get_nearby_stylists(
-                queryset, NEW_YORK_LOCATION)
-
-        if query:
-            list_of_stylists = list_of_stylists.annotate(
-                full_name_similarity=TrigramSimilarity('full_name', query),
-                salon_name_similarity=TrigramSimilarity('salon__name', query),
-                reverse_full_name_similarity=TrigramSimilarity('reverse_full_name', query),
-                service_name_similarity=TrigramSimilarity('services__name', query),
-            ).filter(
-                Q(full_name_similarity__gt=TRIGRAM_SIMILARITY) |
-                Q(salon_name_similarity__gt=TRIGRAM_SIMILARITY) |
-                Q(service_name_similarity__gt=TRIGRAM_SIMILARITY) |
-                Q(full_name__icontains=query) |
-                Q(specialities__keywords__icontains=query) |
-                Q(specialities__name__icontains=query) |
-                Q(salon__name__icontains=query) |
-                Q(reverse_full_name__icontains=query) |
-                Q(services__name__icontains=query)
-            )
-
-        if address_query:
-            list_of_stylists = list_of_stylists.annotate(
-                salon_city_similarity=TrigramSimilarity('salon__city', address_query)
-            ).filter(
-                Q(salon_city_similarity__gt=TRIGRAM_SIMILARITY) |
-                Q(salon__state__icontains=address_query) |
-                Q(salon__address__icontains=address_query) |
-                Q(salon__zip_code__icontains=address_query)
-            )
-
-        # we can't use order_by('distance') here since we also need to use distinct('distance') to
-        # avoid "SELECT DISTINCT ON expressions must match initial ORDER BY expressions" error,
-        # So we get the results and sort by distance manually.
-        return sorted(list_of_stylists, key=lambda x: x.distance)[:STYLIST_SEARCH_LIMIT + 1]
-
-    @staticmethod
-    def _get_nearby_stylists(queryset: models.QuerySet,
-                             location: Point,) -> models.QuerySet:
-        return queryset.annotate(distance=Distance('salon__location', location))
+    def _search_stylists(query: str, address_query: str, location: Point, country: str
+                         ) -> models.query.RawQuerySet:
+        '''
+        :param location: This is a required parameter. If omitted the function will fail.
+        '''
+        point_str: str = 'POINT({0} {1})'.format(str(location.x), str(location.y))
+        stylists = Stylist.objects.raw(
+            '''
+            SELECT
+                -- Add/remove fields that are needed in the API response
+                st.id as id,
+                st.uuid as uuid,
+                st.website_url,
+                st.instagram_url,
+                st.has_business_hours_set,
+                first_name as user__first_name,
+                last_name as user__last_name,
+                "user".photo as user__photo,
+                "user".phone as user__phone,
+                "salon"."public_phone" as "salon__public_phone",
+                salon.name AS salon__name,
+                salon.address AS salon__address,
+                salon.city AS salon__city,
+                salon.state AS salon__state,
+                salon.zip_code AS salon__zip_code,
+                sp.text AS sp_text,
+                services_count,
+                followers_count
+            FROM
+                stylist as st
+            JOIN "user" on
+                "user".id = st.user_id
+            JOIN salon on
+                salon.id = st.salon_id
+            LEFT JOIN (
+                SELECT
+                    se.stylist_id,
+                    string_agg(se."name", ',') AS text,
+                    COUNT(se."id") AS services_count
+                FROM
+                    stylist_service as se
+                WHERE
+                    se.deleted_at ISNULL AND
+                    se.is_enabled IS TRUE
+                GROUP BY
+                    se.stylist_id ) se ON
+                st.id = se.stylist_id
+            LEFT JOIN (
+                    SELECT
+                        COUNT(ps.id) AS followers_count,
+                        ps.stylist_id
+                    FROM
+                        preferred_stylist as ps
+                    LEFT JOIN client cli on ps.client_id = cli.id
+                    WHERE
+                        cli.privacy = 'public'
+                    GROUP BY
+                        ps.stylist_id
+                    ) ps ON
+                    st.id = ps.stylist_id
+            LEFT JOIN (
+                SELECT
+                    sp.stylist_id,
+                    string_agg(speciality."name", ',') AS text,
+                    string_agg(array_to_string(speciality.keywords, ' '), ' ') AS keywords
+                FROM
+                    stylist_specialities AS sp
+                JOIN speciality ON
+                    speciality.id = sp.speciality_id
+                GROUP BY
+                    sp.stylist_id ) sp ON
+                st.id = sp.stylist_id
+            WHERE
+                (
+                    (coalesce(TRIM('{0}'), '') = '') IS TRUE OR
+                    '{0}' <%% (concat_ws(' ',
+                        first_name,
+                        last_name,
+                        first_name,
+                        salon.name,
+                        sp.text,
+                        sp.keywords,
+                        se.text))
+                )
+                AND ((coalesce(TRIM('{1}'), '') = '') IS TRUE  OR
+                  '{1}' <%% address)
+                AND '{2}' = salon."country"
+            ORDER BY
+                ST_Distance(salon.location,
+                ST_GeogFromText('{3}'))
+            LIMIT 100;'''.format(query, address_query, country, point_str)
+        )
+        return stylists
 
 
 class AppointmentListCreateAPIView(generics.ListCreateAPIView):

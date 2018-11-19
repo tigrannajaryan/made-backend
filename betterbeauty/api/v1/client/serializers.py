@@ -759,41 +759,43 @@ class SearchStylistSerializer(
     uuid = serializers.UUIDField(read_only=True)
 
     salon_name = serializers.CharField(
-        source='salon.name', allow_null=True, required=False
+        source='salon__name', allow_null=True, required=False
     )
-    salon_address = serializers.CharField(source='salon.address', allow_null=True)
+    salon_address = serializers.CharField(source='salon__address', allow_null=True)
 
-    salon_city = serializers.CharField(source='salon.city', required=False)
-    salon_zipcode = serializers.CharField(source='salon.zip_code', required=False)
-    salon_state = serializers.CharField(source='salon.state', required=False)
+    salon_city = serializers.CharField(source='salon__city', required=False)
+    salon_zipcode = serializers.CharField(source='salon__zip_code', required=False)
+    salon_state = serializers.CharField(source='salon__state', required=False)
 
-    profile_photo_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
-    profile_photo_url = serializers.CharField(read_only=True, source='get_profile_photo_url')
+    profile_photo_url = serializers.CharField(source='user__photo')
 
-    first_name = serializers.CharField(source='user.first_name')
-    last_name = serializers.CharField(source='user.last_name')
-    phone = PhoneNumberField(source='public_phone_or_user_phone')
+    first_name = serializers.CharField(source='user__first_name')
+    last_name = serializers.CharField(source='user__last_name')
+    phone = serializers.SerializerMethodField()
     is_profile_bookable = serializers.SerializerMethodField()
-    followers_count = serializers.SerializerMethodField()
-    specialities = serializers.ListField(source='get_specialities_list', read_only=True)
+    followers_count = serializers.IntegerField()
+    specialities = serializers.SerializerMethodField()
 
     class Meta:
         model = Stylist
         fields = [
             'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url',
-            'salon_name', 'salon_address', 'profile_photo_id', 'instagram_url',
+            'salon_name', 'salon_address', 'instagram_url',
             'website_url', 'salon_city', 'salon_zipcode', 'salon_state', 'is_profile_bookable',
             'followers_count', 'specialities'
         ]
 
-    def get_followers_count(self, stylist: Stylist):
-        return stylist.get_preferred_clients().filter(
-            privacy=ClientPrivacy.PUBLIC
-        ).count()
+    def get_phone(self, stylist: Stylist):
+        return stylist.salon__public_phone or stylist.user__phone
+
+    def get_specialities(self, stylist: Stylist):
+        if stylist.sp_text:
+            return [x.strip() for x in stylist.sp_text.split(',')]
+        return []
 
     def get_is_profile_bookable(self, stylist: Stylist):
         return bool(
-            stylist.user.phone and
-            stylist.has_valid_service and
+            stylist.user__phone and
+            stylist.services_count and
             stylist.has_business_hours_set
         )
