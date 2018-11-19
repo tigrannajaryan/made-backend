@@ -202,6 +202,10 @@ class Stylist(models.Model):
     instagram_url = models.CharField(max_length=2084, blank=True, null=True)
     website_url = models.CharField(max_length=2084, blank=True, null=True)
 
+    google_integration_added_at = models.DateTimeField(null=True, default=None)
+    google_access_token = models.CharField(max_length=1024, null=True, default=None)
+    google_refresh_token = models.CharField(max_length=1024, null=True, default=None)
+
     class Meta:
         db_table = 'stylist'
 
