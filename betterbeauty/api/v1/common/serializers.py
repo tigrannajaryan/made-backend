@@ -6,6 +6,10 @@ from api.common.mixins import FormattedErrorMessageMixin
 from api.v1.auth.constants import ErrorMessages
 from core.models import TemporaryFile, User
 from core.types import UserRole
+from integrations.google.types import (
+    GoogleIntegrationErrors,
+    GoogleIntegrationType,
+)
 from integrations.push.types import PUSH_NOTIFICATION_TOKEN_CHOICES
 from notifications import ErrorMessages as NotificationErrors
 from notifications.models import Notification, NotificationChannel
@@ -66,3 +70,22 @@ class NotificationAckSerializer(FormattedErrorMessageMixin, serializers.Serializ
         if errors:
             raise serializers.ValidationError(errors)
         return message_uuids
+
+
+class IntegrationAddSerializer(FormattedErrorMessageMixin, serializers.Serializer):
+    server_auth_code = serializers.CharField(required=True, write_only=True)
+    user_role = serializers.CharField(required=True)
+    integration_type = serializers.CharField(required=True)
+
+    def validate_integration_type(self, integration_type: str) -> str:
+        if integration_type != GoogleIntegrationType.GOOGLE_CALENDAR:
+            raise serializers.ValidationError(
+                GoogleIntegrationErrors.ERR_BAD_INTEGRATION_TYPE
+            )
+        return integration_type
+
+    def validate_user_role(self, user_role: UserRole) -> UserRole:
+        user: User = self.context['user']
+        if user_role not in user.role:
+            raise serializers.ValidationError(ErrorMessages.ERR_INCORRECT_USER_ROLE)
+        return user_role

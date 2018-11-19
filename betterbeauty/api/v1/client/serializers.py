@@ -66,12 +66,21 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
         source='client.privacy', choices=CLIENT_PRIVACY_CHOICES, required=False
     )
 
+    google_calendar_integrated = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
             'first_name', 'last_name', 'phone', 'profile_photo_id', 'profile_photo_url',
             'zip_code', 'birthday', 'email', 'city', 'state', 'privacy',
+            'google_calendar_integrated',
         ]
+
+    def get_google_calendar_integrated(self, instance: User) -> bool:
+        return bool(
+            instance.client.google_access_token and
+            instance.client.google_refresh_token
+        )
 
     def validate_email(self, email: str):
         if email and self.instance and Client.objects.exclude(
@@ -763,7 +772,7 @@ class SearchStylistSerializer(
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
     phone = PhoneNumberField(source='public_phone_or_user_phone')
-    is_profile_bookable = serializers.BooleanField(read_only=True)
+    is_profile_bookable = serializers.SerializerMethodField()
     followers_count = serializers.SerializerMethodField()
     specialities = serializers.ListField(source='get_specialities_list', read_only=True)
 
@@ -780,3 +789,10 @@ class SearchStylistSerializer(
         return stylist.get_preferred_clients().filter(
             privacy=ClientPrivacy.PUBLIC
         ).count()
+
+    def get_is_profile_bookable(self, stylist: Stylist):
+        return bool(
+            stylist.user.phone and
+            stylist.has_valid_service and
+            stylist.has_business_hours_set
+        )

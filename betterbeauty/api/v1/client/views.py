@@ -7,7 +7,7 @@ from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db import models
-from django.db.models import Case, F, IntegerField, Q, Value, When
+from django.db.models import BooleanField, Case, F, IntegerField, Q, Value, When
 from django.db.models.functions import Concat
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -193,10 +193,16 @@ class SearchStylistView(generics.ListAPIView):
     @staticmethod
     def _search_stylists(query: str, address_query: str, location: Point, country: str) -> List:
 
-        queryset = Stylist.objects.select_related('salon', 'user').filter(
+        queryset = Stylist.objects.select_related('salon', 'user').prefetch_related(
+            'specialities').filter(
             salon__country__iexact=country, salon__location__isnull=False).annotate(
             full_name=Concat(F('user__first_name'), Value(' '), F('user__last_name')),
             reverse_full_name=Concat(F('user__last_name'), Value(' '), F('user__first_name')),
+            has_valid_service=Case(
+                When(Q(services__is_enabled=True, services__deleted_at__isnull=True), then=True),
+                default=False,
+                output_field=BooleanField()
+            )
         ).distinct('id')
 
         list_of_stylists = SearchStylistView._get_nearby_stylists(queryset, location)

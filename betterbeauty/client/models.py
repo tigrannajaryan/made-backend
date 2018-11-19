@@ -37,6 +37,9 @@ class Client(models.Model):
     privacy = models.CharField(
         max_length=16, choices=CLIENT_PRIVACY_CHOICES, default=ClientPrivacy.PUBLIC
     )
+    google_integration_added_at = models.DateTimeField(null=True, default=None)
+    google_access_token = models.CharField(max_length=1024, null=True, default=None)
+    google_refresh_token = models.CharField(max_length=1024, null=True, default=None)
 
     def geo_code_address(self):
         geo_coded_address = GeoCode(self.zip_code).geo_code(country=self.country)
