@@ -223,6 +223,7 @@ class SearchStylistView(generics.ListAPIView):
             JOIN salon on
                 salon.id = st.salon_id
             LEFT JOIN (
+            --	select denormalized list of all services for all stylists
                 SELECT
                     se.stylist_id,
                     string_agg(se."name", ',') AS text,
@@ -236,6 +237,7 @@ class SearchStylistView(generics.ListAPIView):
                     se.stylist_id ) se ON
                 st.id = se.stylist_id
             LEFT JOIN (
+            --	select count of all preferred clients/followers
                     SELECT
                         COUNT(ps.id) AS followers_count,
                         ps.stylist_id
@@ -249,6 +251,7 @@ class SearchStylistView(generics.ListAPIView):
                     ) ps ON
                     st.id = ps.stylist_id
             LEFT JOIN (
+            --	select denormalized list of all specialty names and their keywords for all stylists
                 SELECT
                     sp.stylist_id,
                     string_agg(speciality."name", ',') AS text,
@@ -260,8 +263,8 @@ class SearchStylistView(generics.ListAPIView):
                 GROUP BY
                     sp.stylist_id ) sp ON
                 st.id = sp.stylist_id
-            WHERE
-                (
+            WHERE (
+            -- Fuzzy search query term (omit if query is NULL)
                     (coalesce(TRIM('{0}'), '') = '') IS TRUE OR
                     '{0}' <%% (concat_ws(' ',
                         first_name,
@@ -271,14 +274,16 @@ class SearchStylistView(generics.ListAPIView):
                         sp.text,
                         sp.keywords,
                         se.text))
-                )
-                AND ((coalesce(TRIM('{1}'), '') = '') IS TRUE  OR
+            ) AND (
+            --  Fuzzy search address term (omit if address query is NULL)
+                (coalesce(TRIM('{1}'), '') = '') IS TRUE  OR
                   '{1}' <%% address)
                 AND '{2}' = salon."country"
             ORDER BY
                 ST_Distance(salon.location,
                 ST_GeogFromText('{3}'))
-            LIMIT 100;'''.format(query, address_query, country, point_str)
+            LIMIT {4};'''.format(query, address_query, country, point_str,
+                                 STYLIST_SEARCH_LIMIT + 1)
         )
         return stylists
 

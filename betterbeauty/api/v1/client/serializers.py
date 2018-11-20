@@ -3,6 +3,7 @@ import uuid
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from django.core.files.storage import default_storage
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
@@ -767,7 +768,7 @@ class SearchStylistSerializer(
     salon_zipcode = serializers.CharField(source='salon__zip_code', required=False)
     salon_state = serializers.CharField(source='salon__state', required=False)
 
-    profile_photo_url = serializers.CharField(source='get_profile_photo_url')
+    profile_photo_url = serializers.SerializerMethodField()
 
     first_name = serializers.CharField(source='user__first_name')
     last_name = serializers.CharField(source='user__last_name')
@@ -799,3 +800,6 @@ class SearchStylistSerializer(
             stylist.services_count and
             stylist.has_business_hours_set
         )
+
+    def get_profile_photo_url(self, stylist: Stylist):
+        return default_storage.url(stylist.user__photo) if stylist.user__photo else None
