@@ -111,7 +111,6 @@ class UserRegistrationSerializer(
 class AuthTokenSerializer(serializers.Serializer):
     token = serializers.CharField(read_only=True)
     expires_in = serializers.IntegerField(read_only=True)
-    created_at = serializers.IntegerField(read_only=True)
     profile = serializers.SerializerMethodField()
     profile_status = serializers.SerializerMethodField()
     role = serializers.ChoiceField(read_only=True, choices=USER_ROLE)
@@ -137,7 +136,6 @@ class AuthTokenSerializer(serializers.Serializer):
 class ClientAuthTokenSerializer(FormattedErrorMessageMixin, serializers.Serializer):
     token = serializers.CharField(read_only=True)
     expires_in = serializers.IntegerField(read_only=True)
-    created_at = serializers.IntegerField(read_only=True)
     role = serializers.ChoiceField(read_only=True, choices=USER_ROLE)
     stylist_invitation = serializers.SerializerMethodField()
     user_uuid = serializers.SerializerMethodField()
