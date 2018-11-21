@@ -294,22 +294,91 @@ If the token has not yet expired, it can be refreshed to a new one:
 
 **POST /api/v1/auth/refresh-token**
 
-`curl -X POST -H "Content-Type: application/json" -d '{"token": "old_but_not_expired_jwt_token"}' http://apiserver/api/v1/auth/refresh-token`
+**Stylist**
+
+`curl -X POST -H "Content-Type: application/json" -d '{"token": "old_but_not_expired_jwt_token", "role":"stylist"}' http://apiserver/api/v1/auth/refresh-token`
 
 **Responce 200 OK**
 
 ```
 {
     "token": "refreshed_jwt_token",
-    "expires_in": 86400,
-    "created_at": 1541089104,
-    "role": "stylist",
-    "profile": null,
-    "profile_status": null,
-    "user_uuid": "0ad92eca-2eae-4bef-b6d4-a3323597108c"
-    
+    "expires_in": 2592000,
+    "profile": {
+        "uuid": "c7657124-8c54-45f4-8884-e027914a80c5",
+        "first_name": "John",
+        "last_name": "Doe",
+        "phone": "+12233445566",
+        "profile_photo_url": null,
+        "followers_count": 0,
+        "salon_name": "Asd",
+        "salon_address": "Stafford Superstore, Stafford ST16 3TA, UK",
+        "instagram_url": null,
+        "public_phone": null,
+        "website_url": null,
+        "salon_city": null,
+        "salon_zipcode": null,
+        "salon_state": null,
+        "is_profile_bookable": false,
+        "google_calendar_integrated": false
+    },
+    "profile_status": {
+        "has_personal_data": true,
+        "has_picture_set": false,
+        "has_services_set": false,
+        "has_business_hours_set": false,
+        "has_weekday_discounts_set": false,
+        "has_other_discounts_set": false,
+        "has_invited_clients": false
+    },
+    "role": [
+        "stylist"
+    ],
+    "user_uuid": "ad7ee945-adc5-4c83-90c3-537236410259"
 }
 ```
+
+**Client**
+
+`curl -X POST -H "Content-Type: application/json" -d '{"token": "old_but_not_expired_jwt_token", "role":"client"}' http://apiserver/api/v1/auth/refresh-token`
+
+**Responce 200 OK**
+
+```
+{
+    "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjozMDYsInVzZXJuYW1lIjoidGlncmFuQGJldHRlcmJlYXV0eS5pbyIsImV4cCI6MTU0NTM3NzQwMywiZW1haWwiOiJ0aWdyYW5AYmV0dGVyYmVhdXR5LmlvIiwib3JpZ19pYXQiOjE1NDI3ODMyMTJ9.IxLbyipQ1ijNNTWLHgmG1gvfrNAJL_oAEPQjQfqBX2M",
+    "expires_in": 2592000,
+    "role": [
+        "stylist",
+        "client"
+    ],
+    "stylist_invitation": [
+        {
+            "uuid": "abecdbea-117f-410a-a3fc-477356966303",
+            "first_name": "John",
+            "last_name": "Doe",
+            "phone": "+14166523526",
+            "profile_photo_url": "/media/user_uploads/a434538b-39f7-4e56-af84-e810f8a1edec/fbeb9083-b38f-4497-b706-6f813cacaff1-f_Ql7Kjiw.png",
+            "salon_name": "Mauritania",
+            "salon_address": "New York Stock Exchange, New York, NY 10005, USA",
+            "instagram_url": null,
+            "invitation_created_at": "2018-09-02T16:16:33.456120-04:00",
+            "is_profile_bookable": true
+        }
+    ],
+    "user_uuid": "2d592b04-1b26-49cd-86dd-130510e8dd65",
+    "profile_status": {
+        "has_name": true,
+        "has_zipcode": true,
+        "has_email": true,
+        "has_picture_set": true,
+        "has_preferred_stylist_set": true,
+        "has_booked_appointment": true,
+        "has_past_visit": true
+    }
+}
+```
+
 
 Note: make sure to set proper content type (to `application/json`)
 
@@ -473,19 +542,6 @@ curl -X POST \
             "website_url": "https://example.com",
             "invitation_created_at": "2018-07-09T11:35:39.441844-04:00",
             "is_profile_bookable": true
-        },
-        {
-            "id": 13,
-            "first_name": "Mark",
-            "last_name": "Zuck",
-            "phone": "+11131131131",
-            "profile_photo_url": null,
-            "salon_name": "Mark Salon",
-            "salon_address": "1234 Back Street",
-            "instagram_url": null,
-            "website_url": "https://example.com",
-            "invitation_created_at": "2018-07-09T11:35:39.441844-04:00",
-            "is_profile_bookable": false
         }
     ],
      "user_uuid": "0ad92eca-2eae-4bef-b6d4-a3323597108c"

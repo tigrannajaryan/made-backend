@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.db import transaction
 from rest_framework import status
@@ -13,6 +13,7 @@ from api.v1.auth.utils import create_client_profile_from_phone, create_stylist_p
 
 from core.models import PhoneSMSCodes, User
 from core.types import FBAccessToken, FBUserID, UserRole
+from core.utils import post_or_get_or_data
 from core.utils.auth import (
     client_jwt_response_payload_handler,
     jwt_response_payload_handler as stylist_jwt_response_payload_handler,
@@ -31,6 +32,35 @@ from .serializers import (
 
 class CustomRefreshJSONWebToken(JSONWebTokenAPIView):
     serializer_class = CustomRefreshJSONWebTokenSerializer
+
+    def post(self, request, *args, **kwargs):
+
+        # role denotes which app the use user is making the request from.
+        # Response API structure will change based on the role
+        role: str = post_or_get_or_data(request, 'role', None)
+        serializer = self.get_serializer(data=request.data)
+
+        serializer.is_valid(raise_exception=True)
+        user = serializer.object.get('user') or request.user
+        token = serializer.object.get('token')
+        # Consider as client if either the 'role' in the request is "client"
+        # or User.role is ["client"]
+        if (role == UserRole.CLIENT) or user.role == [UserRole.CLIENT]:
+            jwt_response_payload_handler = client_jwt_response_payload_handler
+        elif (role == UserRole.STYLIST) or UserRole.STYLIST in user.role:
+            # Consider as stylist if either the 'role' in the request is "stylist"
+            # or User.role contains "stylist"
+            jwt_response_payload_handler = stylist_jwt_response_payload_handler
+        response_data = jwt_response_payload_handler(token, user, request)
+        response = Response(response_data)
+        if api_settings.JWT_AUTH_COOKIE:
+            expiration = (datetime.utcnow() +
+                          api_settings.JWT_EXPIRATION_DELTA)
+            response.set_cookie(api_settings.JWT_AUTH_COOKIE,
+                                token,
+                                expires=expiration,
+                                httponly=True)
+        return response
 
 
 class CustomObtainJWTToken(JSONWebTokenAPIView):
@@ -52,7 +82,7 @@ class RegisterUserView(CreateAPIView):
             payload = jwt_payload_handler(user)
             token = jwt_encode_handler(payload)
             return Response(jwt_response_payload_handler(
-                token, user, self.request
+                token=token, user=user, request=self.request
             ))
 
 
@@ -142,12 +172,12 @@ class VerifyCodeView(APIView):
         if role == UserRole.CLIENT:
             jwt_response_payload_handler = client_jwt_response_payload_handler
             response_payload = jwt_response_payload_handler(
-                token, user, payload['orig_iat'], self.request
+                token, user, self.request
             )
         elif role == UserRole.STYLIST:
             jwt_response_payload_handler = stylist_jwt_response_payload_handler
             response_payload = jwt_response_payload_handler(
-                token, user, request=self.request, orig_iat=payload['orig_iat']
+                token, user, request=self.request
             )
 
         return Response(response_payload)
