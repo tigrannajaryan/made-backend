@@ -45,9 +45,11 @@ class CustomRefreshJSONWebToken(JSONWebTokenAPIView):
         token = serializer.object.get('token')
         # Consider as client if either the 'role' in the request is "client"
         # or User.role is ["client"]
-        if (role == UserRole.CLIENT) or user.role == [UserRole.CLIENT]:
+        if (role == UserRole.CLIENT) or (not role and (
+                UserRole.CLIENT in user.role) and UserRole.STYLIST not in user.role):
             jwt_response_payload_handler = client_jwt_response_payload_handler
-        elif (role == UserRole.STYLIST) or UserRole.STYLIST in user.role:
+        elif (role == UserRole.STYLIST) or (not role and (
+                UserRole.STYLIST in user.role)):
             # Consider as stylist if either the 'role' in the request is "stylist"
             # or User.role contains "stylist"
             jwt_response_payload_handler = stylist_jwt_response_payload_handler
