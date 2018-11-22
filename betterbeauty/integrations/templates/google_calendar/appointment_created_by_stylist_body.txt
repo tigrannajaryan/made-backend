@@ -1,0 +1,6 @@
+{% load phone_format %}You have an appointment from Made.
+
+Total before tax: ${{ appointment.total_client_price_before_tax }}
+{% if appointment.services.count %}Services: {% for service in appointment.services.all %}{{ service.service_name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}
+{% if appointment.client %}Client: {{ appointment.client.user.get_full_name }} ({{ appointment.client.user.phone|to_international:appointment.client.country }}){% endif %}
+At: {{ appointment.stylist.salon.name }} ({{ appointment.stylist.salon.get_full_address }})

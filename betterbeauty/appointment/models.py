@@ -1,18 +1,33 @@
 import datetime
+import logging
 from decimal import Decimal
-
+from typing import List, Optional
 from uuid import uuid4
 
 from django.db import models, transaction
+from django.template.loader import render_to_string
+from django.utils import timezone
 
 from client.models import Client
 from core.constants import DEFAULT_CARD_FEE, DEFAULT_TAX_RATE
 from core.models import User
+from core.utils.phone import to_international_format
+from integrations.google.types import GoogleCalendarAttendee
+from integrations.google.utils import (
+    build_oauth_http_object_from_tokens,
+    cancel_calendar_event,
+    create_calendar_event,
+    GoogleAuthException,
+    Http,
+)
 from pricing import DISCOUNT_TYPE_CHOICES
 from salon.models import Stylist
 
 from .choices import APPOINTMENT_STATUS_CHOICES
 from .types import AppointmentStatus
+
+
+logger = logging.getLogger(__file__)
 
 
 class AppointmentManager(models.Manager):
@@ -71,6 +86,13 @@ class Appointment(models.Model):
     has_tax_included = models.NullBooleanField(null=True, default=None)
     has_card_fee_included = models.NullBooleanField(null=True, default=None)
 
+    client_google_calendar_id = models.CharField(
+        max_length=512, null=True, blank=True, default=None)
+    client_google_calendar_added_at = models.DateTimeField(null=True, default=None)
+    stylist_google_calendar_id = models.CharField(
+        max_length=512, null=True, blank=True, default=None)
+    stylist_google_calendar_added_at = models.DateTimeField(null=True, default=None)
+
     objects = AppointmentManager()
     all_objects = AppointmentAllObjectsManager()
 
@@ -107,6 +129,125 @@ class Appointment(models.Model):
     @property
     def duration(self) -> datetime.timedelta:
         return self.stylist.service_time_gap
+
+    def create_stylist_google_calendar_event(self):
+        """Add event to google calendar of a stylist"""
+        stylist: Stylist = self.stylist
+        client: Optional[Client] = self.client
+        if self.stylist_google_calendar_id:  # event already created
+            return
+        if not (stylist.google_access_token and stylist.google_refresh_token):  # no credentials
+            return
+        if self.status not in [
+            AppointmentStatus.NEW, AppointmentStatus.CHECKED_OUT
+        ]:  # we should only allow creation for new and checked out states
+            return
+        # build list of attendees for the calendar event. Stylist will be there
+        # by default, and we'll add client if client is present in the appointment
+        attendees: List[GoogleCalendarAttendee] = [
+            GoogleCalendarAttendee(
+                display_name='{0} ({1})'.format(
+                    stylist.get_full_name(),
+                    to_international_format(
+                        stylist.public_phone_or_user_phone,
+                        stylist.salon.country)
+                ),
+                email=None  # we don't have email of the stylist
+            )]
+        if client:
+            attendees.append(GoogleCalendarAttendee(
+                display_name='{0} ({1})'.format(
+                    client.user.get_full_name(),
+                    to_international_format(
+                        client.user.phone, client.country)
+                ),
+                email=client.email))
+
+        # build event notes/description from the template. Potentially there will
+        # be slightly different templates for client's and stylist's calendars
+        if client and self.created_by == client.user:
+            # appointment was created by Client
+            description = render_to_string(
+                'google_calendar/appointment_created_by_client_body.txt',
+                context={'appointment': self})
+            summary = render_to_string(
+                'google_calendar/appointment_created_by_client_title.txt',
+                context={'appointment': self})
+        else:
+            description = render_to_string(
+                'google_calendar/appointment_created_by_stylist_body.txt',
+                context={'appointment': self})
+            summary = render_to_string(
+                'google_calendar/appointment_created_by_stylist_title.txt',
+                context={'appointment': self})
+        try:
+            # actually try to create calendar event
+            http_auth: Http = build_oauth_http_object_from_tokens(
+                access_token=stylist.google_access_token,
+                refresh_token=stylist.google_refresh_token,
+                model_object_to_update=stylist,
+                access_token_field='google_access_token'
+            )
+            if not http_auth:
+                logger.error('Could not get Google auth for stylist {0}'.format(stylist.uuid))
+                return
+            event_id = create_calendar_event(
+                oauth_http_object=http_auth, start_at=self.datetime_start_at,
+                end_at=self.datetime_start_at + stylist.service_time_gap,
+                attendees=attendees, summary=summary, description=description,
+                location=self.stylist.salon.get_full_address())
+            if event_id:
+                # save event to DB for future use if operation was successful
+                self.stylist_google_calendar_id = event_id
+                self.stylist_google_calendar_added_at = timezone.now()
+                self.save(update_fields=[
+                    'stylist_google_calendar_id', 'stylist_google_calendar_added_at']
+                )
+        except GoogleAuthException:
+            logger.exception(
+                'Could not add Google Calendar event for appointment {0}'.format(
+                    self.uuid))
+
+    def cancel_stylist_google_calendar_event(self):
+        """
+        Cancel google calendar event in stylist's calendar (if exists) and clean up
+        event id value from DB
+        :return: None
+        """
+        if not self.stylist_google_calendar_id:
+            return
+        if not (self.stylist.google_access_token and self.stylist.google_refresh_token):
+            return
+        if self.status not in [
+            AppointmentStatus.CANCELLED_BY_CLIENT, AppointmentStatus.CANCELLED_BY_STYLIST
+        ]:
+            return
+        try:
+            stylist: Stylist = self.stylist
+            http_auth: Http = build_oauth_http_object_from_tokens(
+                access_token=stylist.google_access_token,
+                refresh_token=stylist.google_refresh_token,
+                model_object_to_update=stylist,
+                access_token_field='google_access_token'
+            )
+            if not http_auth:
+                logger.error('Could not get Google auth for stylist {0}'.format(
+                    stylist.uuid
+                ))
+                return
+            if cancel_calendar_event(
+                    oauth_http_object=http_auth,
+                    event_id=self.stylist_google_calendar_id
+            ):
+                self.stylist_google_calendar_id = None
+                self.save(update_fields=['stylist_google_calendar_id', ])
+
+        except GoogleAuthException:
+            logger.exception(
+                'Could not cancel Google Calendar event for appointment {0}'.format(
+                    self.uuid
+                )
+            )
 
 
 class AppointmentStatusHistory(models.Model):
