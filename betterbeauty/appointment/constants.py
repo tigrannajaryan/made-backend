@@ -1,6 +1,6 @@
 from .types import AppointmentStatus
 
-DEFAULT_HAS_TAX_INCLUDED = True
+DEFAULT_HAS_TAX_INCLUDED = False
 
 DEFAULT_HAS_CARD_FEE_INCLUDED = False
 
