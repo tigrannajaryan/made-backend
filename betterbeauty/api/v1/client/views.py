@@ -109,7 +109,7 @@ class StylistServicesView(generics.RetrieveAPIView):
     serializer_class = StylistServiceListSerializer
 
     def get_queryset(self):
-        return Stylist.objects.all()
+        return Stylist.objects.filter(deactivated_at=None)
 
     def get_object(self):
         return get_object_or_404(
@@ -263,7 +263,8 @@ class SearchStylistView(generics.ListAPIView):
                 GROUP BY
                     sp.stylist_id ) sp ON
                 st.id = sp.stylist_id
-            WHERE (
+            WHERE
+            st.deactivated_at ISNULL AND (
             -- Fuzzy search query term (omit if query is NULL)
                     (coalesce(TRIM('{0}'), '') = '') IS TRUE OR
                     '{0}' <%% (concat_ws(' ',
@@ -384,6 +385,7 @@ class AppointmentPreviewView(views.APIView):
         serializer.is_valid(raise_exception=True)
         stylist: Stylist = get_object_or_404(
             Stylist,
+            deactivated_at=None,
             uuid=serializer.validated_data.pop('stylist_uuid')
         )
         preview_request = AppointmentPreviewRequest(**serializer.validated_data)
@@ -407,7 +409,8 @@ class AvailableTimeSlotView(views.APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         stylist = get_object_or_404(
-            Stylist.objects.filter(preferredstylist__client=request.user.client).distinct('id'),
+            Stylist.objects.filter(preferredstylist__client=request.user.client,
+                                   deactivated_at=None).distinct('id'),
             uuid=data['stylist_uuid'])
         date = data['date']
         available_slots = stylist.get_available_slots(date)
@@ -478,7 +481,7 @@ class StylistFollowersView(views.APIView):
             )
 
         try:
-            stylist: Stylist = Stylist.objects.get(uuid=stylist_uuid)
+            stylist: Stylist = Stylist.objects.get(uuid=stylist_uuid, deactivated_at=None)
         except Stylist.DoesNotExist:
             raise exceptions.NotFound(
                 detail={'non_field_errors': [{'code': appt_constants.ERR_STYLIST_DOES_NOT_EXIST}]}

@@ -598,6 +598,24 @@ class TestAppointmentPreviewRequestSerializer(object):
             }
         )
         assert (not serializer.is_valid(raise_exception=False))
+        # Test deactivated stylist
+        stylist.deactivated_at = timezone.now()
+        stylist.save()
+
+        data = {
+            'stylist_uuid': stylist.uuid,
+            'datetime_start_at': datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
+            'services': [
+                {'service_uuid': service.uuid},
+            ]
+        }
+        serializer = AppointmentPreviewRequestSerializer(
+            data=data, context={
+                'user': client.user,
+                'stylist': stylist
+            }
+        )
+        assert (not serializer.is_valid(raise_exception=False))
 
 
 class TestAppointmentPreviewResponseSerializer(object):
