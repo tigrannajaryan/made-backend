@@ -521,7 +521,7 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
                 )
                 services_with_client_prices.append((service, client_price))
             appointment: Appointment = super(AppointmentSerializer, self).create(data)
-            total_client_price_before_tax: Decimal = 0
+            total_client_price_before_tax: Decimal = Decimal(0)
             for (service, client_price) in services_with_client_prices:
                 AppointmentService.objects.create(
                     appointment=appointment,
