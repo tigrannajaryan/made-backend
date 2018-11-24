@@ -25,6 +25,7 @@ class Command(BaseCommand):
                 'is disabled in {0} environment'.format(
                     settings.LEVEL
                 ))
+            return 
         dry_run = options['dry_run']
         generate_stylist_calendar_events_for_new_appointments(
             stdout=self.stdout, dry_run=dry_run
