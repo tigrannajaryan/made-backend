@@ -75,5 +75,6 @@ PUSH_NOTIFICATIONS_SETTINGS['APPLICATIONS'].update({  # type: ignore
     },
 })
 
+GOOGLE_CALENDAR_STYLIST_SYNC_ENABLED = False
 GOOGLE_OAUTH_CREDENTIALS_FILE_PATH = Path(
     ROOT_PATH.parent / 'google_credentials' / 'webclient-production.json')
