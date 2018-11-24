@@ -879,7 +879,7 @@ class AppointmentSerializer(
             appointment_services = data.pop('services', [])
 
             appointment: Appointment = super(AppointmentSerializer, self).create(data)
-            total_client_price_before_tax: Decimal = 0
+            total_client_price_before_tax: Decimal = Decimal(0)
             for service_dict in appointment_services:
                 service: StylistService = stylist.services.get(
                     uuid=service_dict['service_uuid']

@@ -28,6 +28,10 @@ def calculate_appointment_prices(
         include_tax: bool
 ) -> AppointmentPrices:
     grand_total: Decimal = price_before_tax
+    # HOTFIX: if grand_total is passed as int or float - cast it
+    # explicitly to Decimal
+    if not isinstance(grand_total, Decimal):
+        grand_total = Decimal(grand_total)
     total_tax = calculate_tax(price_before_tax)
     if include_tax:
         grand_total += total_tax
