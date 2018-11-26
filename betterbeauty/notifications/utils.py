@@ -140,3 +140,77 @@ def generate_hint_to_first_book_notifications(dry_run=False) -> int:
     if notifications_to_create_list and not dry_run:
         Notification.objects.bulk_create(notifications_to_create_list)
     return len(notifications_to_create_list)
+
+
+@transaction.atomic()
+def generate_hint_to_select_stylist_notifications(dry_run=False) -> int:
+    """
+    Generate hint_to_select_stylist notifications
+    Find all clients where it's been more than 72 hours since registered and
+    no stylist is selected and we have at least 1 stylist that is bookable.
+    :param dry_run: if set to False, no sending will actually occur
+    :param dry_run: if set to True, don't actually create notifications
+    :return: number of notifications created
+    """
+    code = NotificationCode.HINT_TO_SELECT_STYLIST
+    send_time_window_start = datetime.time(19, 0)
+    send_time_window_end = datetime.time(21, 0)
+    discard_after = timezone.now() + datetime.timedelta(days=30)
+    cutoff_datetime = timezone.now() - datetime.timedelta(days=32)
+    client_joined_before_datetime = timezone.now() - datetime.timedelta(hours=72)
+    target = UserRole.CLIENT
+    message = (
+        'We noticed that you registered but did not select a stylist. '
+        'We have {0} stylists available for booking. Tap to see them.'
+    )
+    client_has_registered_devices = Q(
+        user__apnsdevice__active=True) | Q(
+        user__gcmdevice__active=True)
+
+    client_does_not_have_preferred_stylists = Q(
+        preferred_stylists__deleted_at__isnull=False
+    ) | Q(preferred_stylists__isnull=True)
+
+    bookable_stylists = Stylist.objects.filter(
+        services__is_enabled=True,
+        user__phone__isnull=False,
+        user__is_active=True,
+        has_business_hours_set=True,
+        deactivated_at__isnull=True
+    ).distinct('id')
+    if not bookable_stylists.exists():
+        # there are no bookable stylists, so we won't be sending anything
+        return 0
+
+    message = message.format(bookable_stylists.count())
+    eligible_clients_ids = Client.objects.filter(
+        client_has_registered_devices,
+        client_does_not_have_preferred_stylists,
+        created_at__lt=client_joined_before_datetime,
+        created_at__gte=cutoff_datetime,
+        user__is_active=True,
+        # TODO: add is_active=True
+    ).annotate(
+        notification_cnt=Count(
+            'user__notification', filter=Q(
+                user__notification__code=code
+            )
+        )
+    ).filter(notification_cnt=0).values_list('id', flat=True)
+    eligible_clients = Client.objects.filter(
+        id__in=eligible_clients_ids
+    ).select_for_update(skip_locked=True)
+
+    notifications_to_create_list: List[Notification] = []
+    for client in eligible_clients.iterator():
+        notifications_to_create_list.append(Notification(
+            user=client.user, target=target, code=code,
+            channel=NotificationChannel.PUSH, message=message,
+            discard_after=discard_after,
+            send_time_window_start=send_time_window_start,
+            send_time_window_end=send_time_window_end,
+        ))
+    # if any notifications were generated - bulk created them
+    if notifications_to_create_list and not dry_run:
+        Notification.objects.bulk_create(notifications_to_create_list)
+    return len(notifications_to_create_list)
