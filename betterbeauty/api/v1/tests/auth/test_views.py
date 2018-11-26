@@ -2,6 +2,7 @@ from datetime import timedelta
 
 import mock
 import pytest
+from django.test import override_settings
 
 from django.urls import reverse
 from django.utils import timezone
@@ -86,6 +87,7 @@ class TestSendCodeView(object):
         assert (new_code.redeemed_at is None)
 
     @pytest.mark.django_db
+    @override_settings(MINUTES_BEFORE_REQUESTING_NEW_CODE=2)
     @pytest.mark.parametrize('role', [UserRole.CLIENT, UserRole.STYLIST])
     def test_code_successive_attempt(self, client, role):
         phone_number = '+19876543210'
