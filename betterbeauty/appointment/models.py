@@ -7,6 +7,7 @@ from uuid import uuid4
 from django.db import models, transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
+from oauth2client import client as google_client
 
 from client.models import Client
 from core.constants import DEFAULT_CARD_FEE, DEFAULT_TAX_RATE
@@ -203,7 +204,7 @@ class Appointment(models.Model):
                 self.save(update_fields=[
                     'stylist_google_calendar_id', 'stylist_google_calendar_added_at']
                 )
-        except GoogleAuthException:
+        except (GoogleAuthException, google_client.Error):
             logger.exception(
                 'Could not add Google Calendar event for appointment {0}'.format(
                     self.uuid))
@@ -242,7 +243,7 @@ class Appointment(models.Model):
                 self.stylist_google_calendar_id = None
                 self.save(update_fields=['stylist_google_calendar_id', ])
 
-        except GoogleAuthException:
+        except (GoogleAuthException, google_client.Error):
             logger.exception(
                 'Could not cancel Google Calendar event for appointment {0}'.format(
                     self.uuid
