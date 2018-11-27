@@ -245,7 +245,8 @@ class SearchStylistView(generics.ListAPIView):
                         preferred_stylist as ps
                     LEFT JOIN client cli on ps.client_id = cli.id
                     WHERE
-                        cli.privacy = 'public'
+                        cli.privacy = 'public' AND
+                        ps.deleted_at IS NULL
                     GROUP BY
                         ps.stylist_id
                     ) ps ON
