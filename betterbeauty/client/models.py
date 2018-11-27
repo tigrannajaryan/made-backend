@@ -88,7 +88,7 @@ class Client(models.Model):
         :return: Resulting Appointment queryset
         """
         queryset = apps.get_model('appointment', 'Appointment').objects.filter(
-            client=self
+            client=self, stylist__deactivated_at=None
         )
 
         appointments = get_appointments_in_datetime_range(
