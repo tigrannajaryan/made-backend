@@ -3,9 +3,11 @@ from io import TextIOBase
 from typing import Dict, List, Tuple
 
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Max, Q
 from django.utils import timezone
 
+from appointment.models import Appointment
+from appointment.types import AppointmentStatus
 from client.models import Client
 from core.models import UserRole
 from salon.models import PreferredStylist, Stylist
@@ -90,7 +92,7 @@ def generate_hint_to_first_book_notifications(dry_run=False) -> int:
         )
     ).filter(
         client_has_registered_devices,
-        client__appointments__isnull=True,
+        client__appointment__isnull=True,
         notification_cnt=0,
         stylist__services__is_enabled=True,
         stylist__user__phone__isnull=False,
@@ -203,6 +205,86 @@ def generate_hint_to_select_stylist_notifications(dry_run=False) -> int:
 
     notifications_to_create_list: List[Notification] = []
     for client in eligible_clients.iterator():
+        notifications_to_create_list.append(Notification(
+            user=client.user, target=target, code=code,
+            channel=NotificationChannel.PUSH, message=message,
+            discard_after=discard_after,
+            send_time_window_start=send_time_window_start,
+            send_time_window_end=send_time_window_end,
+        ))
+    # if any notifications were generated - bulk created them
+    if notifications_to_create_list and not dry_run:
+        Notification.objects.bulk_create(notifications_to_create_list)
+    return len(notifications_to_create_list)
+
+
+@transaction.atomic()
+def generate_hint_to_rebook_notifications(dry_run=False) -> int:
+    """
+    Generate hint_to_rebook notifications
+    Find all clients where it's been more than 4 weeks since last
+    booking
+    :param dry_run: if set to False, no sending will actually occur
+    :param dry_run: if set to True, don't actually create notifications
+    :return: number of notifications created
+    """
+    code = NotificationCode.HINT_TO_REBOOK
+    send_time_window_start = datetime.time(19, 0)
+    send_time_window_end = datetime.time(21, 0)
+    discard_after = timezone.now() + datetime.timedelta(days=30)
+    cutoff_datetime = timezone.now() - datetime.timedelta(days=32)
+    earliest_last_booking_datetime = timezone.now() - datetime.timedelta(weeks=4)
+    target = UserRole.CLIENT
+    message = (
+        'We noticed you haven\'t booked an appointment '
+        'for {0} weeks. Tap too book now.'
+    )
+
+    bookable_stylists = Stylist.objects.filter(
+        services__is_enabled=True,
+        user__phone__isnull=False,
+        user__is_active=True,
+        has_business_hours_set=True,
+        deactivated_at__isnull=True
+    ).distinct('id')
+    if not bookable_stylists.exists():
+        # there are no bookable stylists, so we won't be sending anything
+        return 0
+
+    client_has_registered_devices = Q(
+        user__apnsdevice__active=True) | Q(
+        user__gcmdevice__active=True)
+
+    eligible_clients_ids = Client.objects.filter(
+        client_has_registered_devices,
+        created_at__gte=cutoff_datetime,
+        user__is_active=True,
+        appointment__status__in=[AppointmentStatus.NEW, AppointmentStatus.CHECKED_OUT]
+    ).annotate(
+        last_visit_datetime=Max('appointment__datetime_start_at'),
+        notification_cnt=Count(
+            'user__notification', filter=Q(
+                user__notification__code=code
+            )
+        )
+    ).filter(
+        last_visit_datetime__lt=earliest_last_booking_datetime, notification_cnt=0
+    ).values_list('id', flat=True)
+
+    eligible_clients = Client.objects.filter(
+        id__in=eligible_clients_ids
+    ).select_for_update(skip_locked=True)
+
+    notifications_to_create_list: List[Notification] = []
+    for client in eligible_clients.iterator():
+        last_visit = Appointment.objects.filter(
+            status__in=[AppointmentStatus.CHECKED_OUT, AppointmentStatus.NEW],
+            client=client, datetime_start_at__lte=timezone.now()
+        ).order_by('datetime_start_at').last()
+        if not last_visit or last_visit.datetime_start_at >= earliest_last_booking_datetime:
+            continue
+        week_count = int((timezone.now() - last_visit.datetime_start_at).days / 7)
+        message = message.format(week_count)
         notifications_to_create_list.append(Notification(
             user=client.user, target=target, code=code,
             channel=NotificationChannel.PUSH, message=message,

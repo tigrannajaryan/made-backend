@@ -49,12 +49,14 @@ class AppointmentAllObjectsManager(models.Manager):
 class Appointment(models.Model):
     uuid = models.UUIDField(unique=True, default=uuid4, editable=False)
     stylist = models.ForeignKey(
-        Stylist, related_name='appointments', on_delete=models.CASCADE
+        Stylist, related_name='appointments', related_query_name='appointment',
+        on_delete=models.CASCADE
     )
 
     # client can be null in case if stylist adds an appointment for someone not in the system
     client = models.ForeignKey(
-        Client, related_name='appointments', null=True, on_delete=models.PROTECT
+        Client, related_name='appointments', related_query_name='appointment',
+        null=True, on_delete=models.PROTECT
     )
     client_first_name = models.CharField(max_length=255, null=True, blank=True)
     client_last_name = models.CharField(max_length=255, null=True, blank=True)
