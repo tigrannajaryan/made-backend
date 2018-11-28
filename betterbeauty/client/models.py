@@ -41,6 +41,8 @@ class Client(models.Model):
     google_access_token = models.CharField(max_length=1024, null=True, default=None)
     google_refresh_token = models.CharField(max_length=1024, null=True, default=None)
 
+    created_at = models.DateTimeField(null=True, auto_now_add=True)
+
     def geo_code_address(self):
         geo_coded_address = GeoCode(self.zip_code).geo_code(country=self.country)
         if geo_coded_address:
@@ -88,7 +90,7 @@ class Client(models.Model):
         :return: Resulting Appointment queryset
         """
         queryset = apps.get_model('appointment', 'Appointment').objects.filter(
-            client=self
+            client=self, stylist__deactivated_at=None
         )
 
         appointments = get_appointments_in_datetime_range(

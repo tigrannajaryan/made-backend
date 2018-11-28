@@ -169,6 +169,7 @@ class StylistWeekdayDiscount(models.Model):
 class Stylist(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    deactivated_at = models.DateTimeField(default=None, blank=True, null=True)
     salon = models.ForeignKey(Salon, on_delete=models.PROTECT, null=True)
 
     rebook_within_1_week_discount_percent = models.PositiveIntegerField(
@@ -499,6 +500,15 @@ class Stylist(models.Model):
                 datetime_start_at__lt=next_midnight,
                 status=AppointmentStatus.CHECKED_OUT)),
         )
+
+    def remove_google_oauth_token(self):
+        """Completely remove access and refresh tokens to allow to re-add integration"""
+        self.google_access_token = None
+        self.google_refresh_token = None
+        self.google_integration_added_at = None
+        self.save(update_fields=[
+            'google_access_token', 'google_refresh_token', 'google_integration_added_at'
+        ])
 
 
 class ServiceCategory(models.Model):

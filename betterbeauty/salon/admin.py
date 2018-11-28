@@ -105,7 +105,7 @@ class StylistAdmin(admin.ModelAdmin):
         extra = 0
 
     fieldsets = (
-        (None, {'fields': ('user', 'salon', 'specialities')}),
+        (None, {'fields': ('user', 'salon', 'deactivated_at', 'specialities')}),
         ('Discounts', {'fields': ('first_time_book_discount_percent',
                                   'rebook_within_1_week_discount_percent',
                                   'rebook_within_2_weeks_discount_percent',
