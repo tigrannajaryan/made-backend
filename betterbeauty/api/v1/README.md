@@ -374,7 +374,8 @@ If the token has not yet expired, it can be refreshed to a new one:
         "has_picture_set": true,
         "has_preferred_stylist_set": true,
         "has_booked_appointment": true,
-        "has_past_visit": true
+        "has_past_visit": true,
+        "has_invitation": true
     }
 }
 ```
@@ -544,7 +545,17 @@ curl -X POST \
             "is_profile_bookable": true
         }
     ],
-     "user_uuid": "0ad92eca-2eae-4bef-b6d4-a3323597108c"
+     "user_uuid": "0ad92eca-2eae-4bef-b6d4-a3323597108c",
+     "profile_status": {
+        "has_name": true,
+        "has_zipcode": true,
+        "has_email": true,
+        "has_picture_set": true,
+        "has_preferred_stylist_set": true,
+        "has_booked_appointment": true,
+        "has_past_visit": true,
+        "has_invitation": true
+    }
 }
 ```
 
