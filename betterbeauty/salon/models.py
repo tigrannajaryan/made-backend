@@ -169,6 +169,7 @@ class StylistWeekdayDiscount(models.Model):
 class Stylist(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    deactivated_at = models.DateTimeField(default=None, blank=True, null=True)
     salon = models.ForeignKey(Salon, on_delete=models.PROTECT, null=True)
 
     rebook_within_1_week_discount_percent = models.PositiveIntegerField(

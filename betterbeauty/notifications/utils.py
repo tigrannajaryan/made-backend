@@ -97,6 +97,7 @@ def generate_hint_to_first_book_notifications(dry_run=False) -> int:
         stylist__user__is_active=True,
         client__user__is_active=True,
         stylist__has_business_hours_set=True,
+        stylist__deactivated_at=None,
     ).values_list('id', flat=True)
     # actual queryset that we can lock for update on the time of
     # notifications creation

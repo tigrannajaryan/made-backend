@@ -215,11 +215,15 @@ class PreferredStylistSerializer(FormattedErrorMessageMixin, serializers.ModelSe
 
 class ClientPreferredStylistSerializer(serializers.ModelSerializer):
 
-    stylists = PreferredStylistSerializer(source='preferred_stylists', many=True)
+    stylists = serializers.SerializerMethodField()
 
     class Meta:
         model = Client
         fields = ['stylists', ]
+
+    def get_stylists(self, client: Client):
+        preferred_stylists = client.preferred_stylists.filter(stylist__deactivated_at=None)
+        return PreferredStylistSerializer(preferred_stylists, many=True).data
 
 
 class AddPreferredClientsSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
@@ -288,14 +292,15 @@ class ServicePricingRequestSerializer(FormattedErrorMessageMixin, serializers.Se
     stylist_uuid = serializers.UUIDField(required=False, allow_null=True)
 
     def validate_service_uuids(self, service_uuids: List[str]):
-        if not StylistService.objects.filter(uuid__in=service_uuids).count() == len(service_uuids):
+        if not StylistService.objects.filter(uuid__in=service_uuids, stylist__deactivated_at=None
+                                             ).count() == len(service_uuids):
             raise serializers.ValidationError(
                 appointment_errors.ERR_SERVICE_DOES_NOT_EXIST
             )
         return service_uuids
 
     def validate_stylist_uuid(self, stylist_uuid: str):
-        is_valid_stylist = Stylist.objects.filter(uuid=stylist_uuid).exists()
+        is_valid_stylist = Stylist.objects.filter(uuid=stylist_uuid, deactivated_at=None).exists()
         if is_valid_stylist:
             return stylist_uuid
         raise serializers.ValidationError(ErrorMessages.ERR_INVALID_STYLIST_UUID)
@@ -417,16 +422,17 @@ class AppointmentValidationMixin(object):
     def validate_stylist_uuid(self, stylist_uuid: Optional[str]):
         context: Dict = getattr(self, 'context', {})
         user: User = context['user']
-        user.client.preferred_stylists.filter(stylist__uuid=stylist_uuid).exists()
         if stylist_uuid:
             if not Stylist.objects.filter(
                     uuid=stylist_uuid,
+                    deactivated_at=None
             ).exists():
                 raise serializers.ValidationError(
                     appointment_errors.ERR_STYLIST_DOES_NOT_EXIST
                 )
             if not user.client.preferred_stylists.filter(
-                    stylist__uuid=stylist_uuid
+                    stylist__uuid=stylist_uuid,
+                    stylist__deactivated_at=None
             ).exists():
                 raise serializers.ValidationError(
                     appointment_errors.ERR_NOT_A_PREFERRED_STYLIST

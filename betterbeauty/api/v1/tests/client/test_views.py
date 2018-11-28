@@ -262,6 +262,12 @@ class TestSearchStylistView(object):
         results = SearchStylistView._search_stylists(
             'some-junk-text', '', location=location, country='US')
         assert (len(results) == 0)
+        # Test with deactivated stylist
+        stylist_data.deactivated_at = timezone.now()
+        stylist_data.save()
+        results = SearchStylistView._search_stylists(
+            'Fred', 'los altos', location=location, country='US')
+        assert (len(results) == 0)
 
     @pytest.mark.django_db
     def test_search_stylists_when_no_results(self, stylist_data: Stylist):
@@ -300,6 +306,13 @@ class TestStylistServicesView(object):
             stylist_service_url,
             data={}, HTTP_AUTHORIZATION=auth_token)
         assert (status.is_success(response.status_code))
+        # Test with deactivated stylist
+        stylist.deactivated_at = timezone.now()
+        stylist.save()
+        response = client.get(
+            stylist_service_url,
+            data={}, HTTP_AUTHORIZATION=auth_token)
+        assert (status.is_client_error(response.status_code))
 
 
 class TestStylistServicePriceView(object):
@@ -331,13 +344,22 @@ class TestStylistServicePriceView(object):
         assert (status.is_success(response.status_code))
         assert (response.data['service_uuids'][0] == str(foreign_service.uuid))
 
-        user, auth_token = authorized_stylist_user
+        user, stylist_auth_token = authorized_stylist_user
         response = client.post(
             client_service_pricing_url,
             data={
                 'service_uuid': our_service.uuid
-            }, HTTP_AUTHORIZATION=auth_token)
+            }, HTTP_AUTHORIZATION=stylist_auth_token)
         assert (response.status_code == status.HTTP_403_FORBIDDEN)
+        # Test with deactivated stylist
+        our_stylist.deactivated_at = timezone.now()
+        our_stylist.save()
+        response = client.post(
+            client_service_pricing_url,
+            data={
+                'service_uuids': [our_service.uuid]
+            }, HTTP_AUTHORIZATION=auth_token)
+        assert (response.status_code == status.HTTP_400_BAD_REQUEST)
 
 
 class TestAppointmentListCreateAPIView(object):
@@ -492,6 +514,13 @@ class TestAvailableTimeSlotView(object):
             "date": "2018-05-14",
             "stylist_uuid": foreign_stylist.uuid})
         assert (response.status_code == status.HTTP_404_NOT_FOUND)
+        # Test with deactivated stylist
+        our_stylist.deactivated_at = timezone.now()
+        our_stylist.save()
+        response = client.post(availability_url, HTTP_AUTHORIZATION=auth_token, data={
+            "date": "2018-05-14",
+            "stylist_uuid": our_stylist.uuid})
+        assert (status.is_client_error(response.status_code))
 
     @pytest.mark.django_db
     @freeze_time('2018-05-14 22:30:00 UTC')
@@ -593,6 +622,11 @@ class TestHomeAPIView(object):
         upcoming_appointments = HomeView.get_upcoming_appointments(client)
 
         assert (upcoming_appointments.count() == 4)
+        # Test with deactivated stylist
+        stylist_data.deactivated_at = timezone.now()
+        stylist_data.save()
+        upcoming_appointments = HomeView.get_upcoming_appointments(client)
+        assert (upcoming_appointments.count() == 0)
 
     @freeze_time('2018-05-14 13:00:00 UTC')
     def test_get_last_visit(self, stylist_data, client_data):
@@ -626,6 +660,11 @@ class TestHistoryAPIView(object):
             a.save(update_fields=['client', ])
         past_appointments = HistoryView.get_historical_appointments(client)
         assert (past_appointments.count() == 2)
+        # Test with deactivated stylist
+        stylist_data.deactivated_at = timezone.now()
+        stylist_data.save()
+        past_appointments = HistoryView.get_historical_appointments(client)
+        assert (past_appointments.count() == 0)
 
 
 class TestStylistFollowersView(object):
