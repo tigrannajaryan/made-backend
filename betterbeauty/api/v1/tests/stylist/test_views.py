@@ -387,7 +387,6 @@ class TestAppointmentsOnADaySerializer(object):
         }, HTTP_AUTHORIZATION=auth_token).data
 
         assert (len(response_data['appointments']) == 4)
-        assert (response_data['first_slot_start_time'] == '12:20:00')
         assert(response_data['service_time_gap_minutes'] == 30)
         assert(response_data['total_slot_count'] == 14)
         assert(response_data['work_start_at'] == datetime.time(hour=12))
