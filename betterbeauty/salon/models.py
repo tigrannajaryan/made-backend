@@ -81,6 +81,28 @@ class Salon(models.Model):
                                  'location', 'country', 'is_address_geocoded', 'last_geo_coded'])
 
 
+class StylistSpecialAvailableDate(models.Model):
+    stylist = models.ForeignKey(
+        'salon.Stylist', on_delete=models.CASCADE, related_name='special_available_dates'
+    )
+    date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_available = models.BooleanField(default=False)
+
+    def __str__(self):
+        availability_str = ' not'
+        if self.is_available:
+            availability_str = ''
+        return '{0}:{1} available on {2}'.format(
+            self.stylist, availability_str, self.get_weekday_display(),
+            self.date
+        )
+
+    class Meta:
+        db_table = 'stylist_special_available_date'
+        unique_together = ('stylist', 'date', )
+
+
 class StylistAvailableWeekDay(models.Model):
     stylist = models.ForeignKey(
         'salon.Stylist', on_delete=models.CASCADE, related_name='available_days'
@@ -109,10 +131,18 @@ class StylistAvailableWeekDay(models.Model):
         )
 
     def get_slot_end_time(self) -> Optional[datetime.time]:
+        """Return end of day time on particular date if day is available"""
+        # we don't need to case time to salon's timezone here; reason being is that
+        # we only need to use an arbitrary date as a supplementary to be able to
+        # calculate the sum of datetime.time and timedelta. So the date can really
+        # be any date - we're not using it per se
+        if not self.is_available:
+            return None
         return (datetime.datetime.combine(
             datetime.date.today(), self.work_end_at) + self.stylist.service_time_gap).time()
 
     def get_available_time(self) -> Optional[datetime.timedelta]:
+        """Return total timedelta between begin of the day and end of last slot"""
         if not self.is_available:
             return datetime.timedelta(0)
         return len(self.get_all_slots()) * self.stylist.service_time_gap
@@ -124,14 +154,16 @@ class StylistAvailableWeekDay(models.Model):
         if not self.is_available:
             return available_slots
         current_datetime: Optional[datetime.datetime] = None
+        stylist: Stylist = self.stylist
+        salon: Salon = stylist.salon
         if current_time:
-            current_datetime = (datetime.datetime.combine(
+            current_datetime = salon.timezone.localize(datetime.datetime.combine(
                 today, current_time))
-        slot_start_at: datetime.datetime = (datetime.datetime.combine(
+        slot_start_at: datetime.datetime = salon.timezone.localize(datetime.datetime.combine(
             today, self.work_start_at))
-        last_slot_end_time: datetime.datetime = (datetime.datetime.combine(
+        last_slot_end_time: datetime.datetime = salon.timezone.localize(datetime.datetime.combine(
             today, self.get_slot_end_time()))
-        day_end_at: datetime.datetime = (datetime.datetime.combine(
+        day_end_at: datetime.datetime = salon.timezone.localize(datetime.datetime.combine(
             today, self.work_end_at))
         while slot_start_at < day_end_at:
             slot_end_time = slot_start_at + self.stylist.service_time_gap
@@ -281,6 +313,11 @@ class Stylist(models.Model):
         datetime_to = self.with_salon_tz(datetime.datetime(
             date.year, date.month, date.day) + datetime.timedelta(days=1))
         available_slots: List[TimeSlotAvailability] = []
+        if self.special_available_dates.filter(
+                date=date, is_available=False
+        ).exists():
+            # stylist has specifically marked this date unavailable
+            return available_slots
         try:
             shift = self.available_days.get(
                 weekday=date.isoweekday(), is_available=True)
@@ -446,10 +483,16 @@ class Stylist(models.Model):
         # FIXME: There should be extra logic to check if start and end time fall to
         # FIXME: different dates. But I guess it should be an extremely rare case for now.
         date_time = self.with_salon_tz(date_time)
+        if self.special_available_dates.filter(
+                date=date_time.date(), is_available=False
+        ).exists():
+            # stylist has specifically marked this date as unavailable
+            return False
         try:
             available_weekday: StylistAvailableWeekDay = self.available_days.get(
                 weekday=date_time.isoweekday(),
                 work_start_at__lte=date_time.time(),
+                is_available=True
             )
             last_slot_end_time = self.salon.timezone.localize(
                 datetime.datetime.combine(
@@ -462,8 +505,12 @@ class Stylist(models.Model):
         return False
 
     def is_working_day(self, date_time: datetime.datetime):
-        return self.available_days.filter(
+        is_working_day: bool = self.available_days.filter(
             weekday=date_time.isoweekday(), is_available=True).exists()
+        is_special_non_working_day = self.special_available_dates.filter(
+            date=self.with_salon_tz(date_time).date(), is_available=False
+        ).exists()
+        return is_working_day and not is_special_non_working_day
 
     def get_upcoming_visits(self):
 
