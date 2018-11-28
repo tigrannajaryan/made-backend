@@ -7,7 +7,10 @@ from uuid import uuid4
 from django.db import models, transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
-from oauth2client import client as google_client
+from oauth2client.client import (
+    AccessTokenRefreshError,
+    FlowExchangeError,
+)
 
 from client.models import Client
 from core.constants import DEFAULT_CARD_FEE, DEFAULT_TAX_RATE
@@ -18,7 +21,7 @@ from integrations.google.utils import (
     build_oauth_http_object_from_tokens,
     cancel_calendar_event,
     create_calendar_event,
-    GoogleAuthException,
+    GoogleHttpErrorException,
     Http,
 )
 from pricing import DISCOUNT_TYPE_CHOICES
@@ -204,10 +207,18 @@ class Appointment(models.Model):
                 self.save(update_fields=[
                     'stylist_google_calendar_id', 'stylist_google_calendar_added_at']
                 )
-        except (GoogleAuthException, google_client.Error):
+        except GoogleHttpErrorException:
+            # an exception caused by http transfer, e.g. a timeout or no connection
             logger.exception(
                 'Could not add Google Calendar event for appointment {0}'.format(
                     self.uuid))
+        except (AccessTokenRefreshError, FlowExchangeError) as e:
+            # an exception due to bad token. Log error and remove stylist's token
+            # to stop retrying and allow to re-add the integration
+            logger.exception(
+                'Unable to use stylist token when trying to cancel appointment {0}'.format(
+                    self.uuid))
+            self.stylist.remove_google_oauth_token(e)
 
     def cancel_stylist_google_calendar_event(self):
         """
@@ -243,12 +254,20 @@ class Appointment(models.Model):
                 self.stylist_google_calendar_id = None
                 self.save(update_fields=['stylist_google_calendar_id', ])
 
-        except (GoogleAuthException, google_client.Error):
+        except GoogleHttpErrorException:
+            # an exception caused by http transfer, e.g. a timeout or no connection
             logger.exception(
                 'Could not cancel Google Calendar event for appointment {0}'.format(
                     self.uuid
                 )
             )
+        except (AccessTokenRefreshError, FlowExchangeError) as e:
+            # an exception due to bad token. Log error and remove stylist's token
+            # to stop retrying and allow to re-add the integration
+            logger.exception(
+                'Unable to use stylist token when trying to cancel appointment {0}'.format(
+                    self.uuid))
+            self.stylist.remove_google_oauth_token()
 
 
 class AppointmentStatusHistory(models.Model):

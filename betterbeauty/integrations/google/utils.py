@@ -20,7 +20,7 @@ from .types import GoogleCalendarAttendee, GoogleIntegrationScope
 
 logger = logging.getLogger(__name__)
 
-GoogleAuthException = HttpError
+GoogleHttpErrorException = HttpError
 
 GOOGLE_JSON_CREDENTIALS: Optional[client.OAuth2Credentials] = None
 
