@@ -20,7 +20,10 @@ from salon.models import (
     StylistService,
     StylistWeekdayDiscount,
 )
-from ..utils import generate_hint_to_first_book_notifications
+from ..utils import (
+    generate_hint_to_first_book_notifications,
+    generate_hint_to_select_stylist_notifications,
+)
 
 
 @pytest.fixture
@@ -115,4 +118,69 @@ class TestGenerateHintToFirstBookNotification(object):
         assert (Notification.objects.count() == 0)
         Appointment.objects.all().delete()  # free up the slot
         generate_hint_to_first_book_notifications()
+        assert (Notification.objects.count() == 1)
+
+
+class TestGenerateHintToSelectStylistNotification(object):
+
+    @pytest.mark.django_db
+    @freeze_time('2018-11-26 20:30:00 UTC')
+    def test_without_bookable_stylists(self):
+        client = G(Client, created_at=pytz.UTC.localize(
+            datetime.datetime(2018, 11, 20, 0, 0)))
+        G(APNSDevice, user=client.user)
+        assert (Notification.objects.count() == 0)
+        generate_hint_to_select_stylist_notifications()
+        assert(Notification.objects.count() == 0)
+        stylist = bookable_stylist()
+        G(StylistService, stylist=stylist, is_enabled=True)
+        generate_hint_to_select_stylist_notifications()
+        assert (Notification.objects.count() == 1)
+
+    @pytest.mark.django_db
+    @freeze_time('2018-11-26 20:30:00 UTC')
+    def test_with_bookable_stylist(self, bookable_stylist):
+        G(StylistService, stylist=bookable_stylist, is_enabled=True)
+        client = G(Client, created_at=pytz.UTC.localize(
+            datetime.datetime(2018, 11, 20, 0, 0)))
+        G(APNSDevice, user=client.user)
+        p = G(PreferredStylist, client=client, stylist=bookable_stylist)
+        generate_hint_to_select_stylist_notifications()
+        assert (Notification.objects.count() == 0)
+        p.delete()
+        generate_hint_to_select_stylist_notifications()
+        assert (Notification.objects.count() == 1)
+        notification: Notification = Notification.objects.last()
+        assert(notification.code == NotificationCode.HINT_TO_SELECT_STYLIST)
+        assert(notification.target == UserRole.CLIENT)
+        assert(notification.pending_to_send is True)
+        assert(notification.user == client.user)
+        assert('We have 1 stylists' in notification.message)
+
+    @pytest.mark.django_db
+    @freeze_time('2018-11-26 20:30:00 UTC')
+    def test_with_recently_added_client(self, bookable_stylist):
+        G(StylistService, stylist=bookable_stylist, is_enabled=True)
+        client = G(Client, created_at=pytz.UTC.localize(
+            datetime.datetime(2018, 11, 24, 0, 0)))
+        G(APNSDevice, user=client.user)
+        generate_hint_to_select_stylist_notifications()
+        assert (Notification.objects.count() == 0)
+        client.created_at = pytz.UTC.localize(
+            datetime.datetime(2018, 11, 20, 0, 0))
+        client.save()
+        generate_hint_to_select_stylist_notifications()
+        assert (Notification.objects.count() == 1)
+
+    @pytest.mark.django_db
+    @freeze_time('2018-11-26 20:30:00 UTC')
+    def test_with_existing_notification(self, bookable_stylist):
+        G(StylistService, stylist=bookable_stylist, is_enabled=True)
+        client = G(Client, created_at=pytz.UTC.localize(
+            datetime.datetime(2018, 11, 20, 0, 0)))
+        G(APNSDevice, user=client.user)
+        generate_hint_to_select_stylist_notifications()
+        assert (Notification.objects.count() == 1)
+
+        generate_hint_to_select_stylist_notifications()
         assert (Notification.objects.count() == 1)
