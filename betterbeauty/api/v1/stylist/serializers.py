@@ -1446,7 +1446,6 @@ class ClientServicePricingSerializer(FormattedErrorMessageMixin, serializers.Ser
 class AppointmentsOnADaySerializer(serializers.Serializer):
 
     appointments = serializers.SerializerMethodField()
-    first_slot_start_time = serializers.SerializerMethodField()
     service_time_gap_minutes = serializers.SerializerMethodField()
     total_slot_count = serializers.SerializerMethodField()
     work_start_at = serializers.SerializerMethodField()
@@ -1456,7 +1455,6 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
     class Meta:
         fields = [
             "appointments",
-            "first_slot_start_time",
             "service_time_gap_minutes",
             "total_slot_count",
             "work_start_at",
@@ -1467,15 +1465,6 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
     def get_appointments(self, data) -> List:
         appointments: models.QuerySet = self.context['appointments']
         return AppointmentSerializer(appointments, many=True).data
-
-    def get_first_slot_start_time(self, data) -> Optional[str]:
-        appointments: models.QuerySet = self.context['appointments']
-        stylist: Stylist = self.context['stylist']
-        if len(appointments):
-            return stylist.with_salon_tz(
-                appointments.first().datetime_start_at).strftime('%H:%M:%S')
-        else:
-            return None
 
     def get_service_time_gap_minutes(self, data) -> int:
         stylist: Stylist = self.context['stylist']
