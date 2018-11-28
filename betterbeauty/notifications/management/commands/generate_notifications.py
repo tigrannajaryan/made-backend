@@ -1,12 +1,26 @@
+import logging
+from io import TextIOBase
+
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
+from core.constants import EnvLevel
 from notifications.types import NotificationCode
 from notifications.utils import (
     generate_hint_to_first_book_notifications,
+    generate_hint_to_select_stylist_notifications,
     send_all_push_notifications,
 )
+
+
+logger = logging.getLogger(__name__)
+
+
+def stdout_and_log(message: str, stdout: TextIOBase):
+    """Output message to both stdout and configured logger"""
+    stdout.write(message)
+    logger.info(message)
 
 
 class Command(BaseCommand):
@@ -37,15 +51,31 @@ class Command(BaseCommand):
             self.stdout.write('Push notifications are disabled, exiting')
             return
 
-        self.stdout.write(
-            'Generating {0} notifications'.format(NotificationCode.HINT_TO_FIRST_BOOK)
+        stdout_and_log(
+            'Generating {0} notifications'.format(NotificationCode.HINT_TO_FIRST_BOOK),
+            self.stdout
         )
         time_start = timezone.now()
         notification_count = generate_hint_to_first_book_notifications(dry_run=dry_run)
         time_end = timezone.now()
-        self.stdout.write('...{0} notifications generated; took {1} seconds'.format(
+        stdout_and_log('...{0} notifications generated; took {1} seconds'.format(
             notification_count, (time_end - time_start).total_seconds()
-        ))
+        ), self.stdout)
+
+        # TODO: enable on production
+        if settings.LEVEL != EnvLevel.PRODUCTION:
+            # Don't generate on production yet until tested
+            stdout_and_log(
+                'Generating {0} notifications'.format(NotificationCode.HINT_TO_SELECT_STYLIST),
+                self.stdout
+            )
+            time_start = timezone.now()
+            notification_count = generate_hint_to_select_stylist_notifications(dry_run=dry_run)
+            time_end = timezone.now()
+            stdout_and_log('...{0} notifications generated; took {1} seconds'.format(
+                notification_count, (time_end - time_start).total_seconds()
+            ), self.stdout)
+
         if force_send:
             self.stdout.write('Going to send push notifications now')
             sent, skipped = send_all_push_notifications(stdout=self.stdout, dry_run=dry_run)
