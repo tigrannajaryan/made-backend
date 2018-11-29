@@ -640,7 +640,7 @@ class StylistSpecialAvailabilityDateView(views.APIView):
             'code': HIGH_LEVEL_API_ERROR_CODES[404],
             'field_errors': {},
             'non_field_errors': [
-                {'code': 'err_special_availability_date_not_found'}
+                {'code': ErrorMessages.ERR_STYLIST_SPECIAL_DATE_NOT_FOUND}
             ]
         }, status=status.HTTP_404_NOT_FOUND)
 
@@ -661,6 +661,9 @@ class StylistSpecialAvailabilityDateView(views.APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request, date: str):
+        return self.put(request, date)
+
+    def patch(self, request, date: str):
         return self.put(request, date)
 
     def get(self, request, date: str):
