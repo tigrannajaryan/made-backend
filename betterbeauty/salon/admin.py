@@ -81,7 +81,7 @@ class StylistAdmin(admin.ModelAdmin):
 
     def is_profile_bookable(self, obj):
         return obj.is_profile_bookable
-    is_profile_bookable.boolean = True
+    is_profile_bookable.boolean = True  # type: ignore
 
     # TODO: remove as soon as we have created_at in Stylist model
     def created_at(self, obj):
