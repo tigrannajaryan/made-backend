@@ -75,9 +75,10 @@ def generate_demand_list_for_stylist(
         work_day_duration, stylist_weekday_availability = weekday_available_times[
             date.isoweekday()]
         # if stylist has specifically marked date as unavailable - reflect it
-        if stylist.special_available_dates.filter(
-                date=date, is_available=False
-        ).exists():
+        has_special_date_unavailable = stylist.special_available_dates.filter(
+            date=date, is_available=False
+        ).exists()
+        if has_special_date_unavailable:
             work_day_duration = datetime.timedelta(0)
             stylist_weekday_availability = None
         load_on_date_duration = stylist.appointments.filter(
@@ -88,9 +89,6 @@ def generate_demand_list_for_stylist(
         ).count() * time_gap
         is_stylist_weekday_available: bool = (
             stylist_weekday_availability.is_available if stylist_weekday_availability else False)
-        has_special_date_unavailable = stylist.special_available_dates.filter(
-            date=date, is_available=False
-        ).exists()
         is_working_day: bool = is_stylist_weekday_available and not has_special_date_unavailable
 
         demand_on_date = (

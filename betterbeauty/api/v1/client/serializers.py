@@ -41,7 +41,12 @@ from integrations.slack import (
     send_slack_client_profile_update,
 )
 from pricing import CalculatedPrice
-from salon.models import Invitation, ServiceCategory, Stylist, StylistService
+from salon.models import (
+    Invitation,
+    ServiceCategory,
+    Stylist,
+    StylistService,
+)
 from salon.types import InvitationStatus, PriceOnDate
 from salon.utils import (
     calculate_price_and_discount_for_client_on_date,
@@ -341,13 +346,9 @@ class ServicePricingSerializer(serializers.Serializer):
         )
         prices_and_dates_list = []
         for obj in prices_and_dates:
-            availability_on_day = (
-                stylist.available_days.filter(
-                    weekday=obj.date.isoweekday(), is_available=True
-                ).exists() and not stylist.special_available_dates.filter(
-                    date=obj.date, is_available=False
-                ).exists() if obj.date == stylist.get_current_now().date() else None
-            )
+            availability_on_day = stylist.available_days.filter(
+                weekday=obj.date.isoweekday(),
+                is_available=True).last() if obj.date == stylist.get_current_now().date() else None
             stylist_eod = stylist.salon.timezone.localize(
                 datetime.datetime.combine(
                     date=obj.date, time=availability_on_day.work_end_at)
