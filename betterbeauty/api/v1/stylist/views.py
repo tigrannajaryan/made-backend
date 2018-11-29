@@ -304,9 +304,13 @@ class AppointmentsOnADayView(views.APIView):
             exclude_statuses=[AppointmentStatus.CANCELLED_BY_STYLIST],
             including_to=True
         ).order_by('datetime_start_at')
-        available_weekday: StylistAvailableWeekDay = stylist.available_days.get(
+        available_weekday: Optional[StylistAvailableWeekDay] = stylist.available_days.get(
             weekday=date.isoweekday(),
         )
+        if stylist.special_available_dates.filter(
+            date=date, is_available=False
+        ).exists():
+            available_weekday = None
         response_serializer = AppointmentsOnADaySerializer(
             {}, context={
                 'stylist': stylist,

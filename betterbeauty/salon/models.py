@@ -147,12 +147,34 @@ class StylistAvailableWeekDay(models.Model):
             return datetime.timedelta(0)
         return len(self.get_all_slots()) * self.stylist.service_time_gap
 
-    def get_all_slots(self, current_time: Optional[datetime.time] = None) -> List[
-            TimeSlot]:
+    def get_all_slots(
+            self,
+            current_time: Optional[datetime.time] = None,
+            for_date: Optional[datetime.date] = None
+    ) -> List[TimeSlot]:
+        """
+        Return list of TimeSlot objects
+        :param current_time: should be set if we want to get remainder of the slots
+        on a day starting from particular time. E.g. if we want to get slots starting
+        from noon onwards
+        :param for_date: should be set if we want to get slots for particular date
+        honoring the special dates, when all day can be unavailable
+        :return:
+        """
         available_slots: List[TimeSlot] = []
         today = self.stylist.get_current_now().date()
         if not self.is_available:
             return available_slots
+        if for_date is not None:
+            # check if stylist has marked this day as unavailable
+
+            # if date's weekday doesn't match - it doesn't make sense
+            assert for_date.isoweekday() == self.weekday
+
+            if self.stylist.special_available_dates.filter(
+                date=for_date, is_available=False
+            ).exists():
+                return available_slots
         current_datetime: Optional[datetime.datetime] = None
         stylist: Stylist = self.stylist
         salon: Salon = stylist.salon
@@ -313,11 +335,6 @@ class Stylist(models.Model):
         datetime_to = self.with_salon_tz(datetime.datetime(
             date.year, date.month, date.day) + datetime.timedelta(days=1))
         available_slots: List[TimeSlotAvailability] = []
-        if self.special_available_dates.filter(
-                date=date, is_available=False
-        ).exists():
-            # stylist has specifically marked this date unavailable
-            return available_slots
         try:
             shift = self.available_days.get(
                 weekday=date.isoweekday(), is_available=True)
@@ -326,9 +343,12 @@ class Stylist(models.Model):
         if date < self.get_current_now().date():
             return available_slots
         if date == self.get_current_now().date():
-            slots = shift.get_all_slots(current_time=self.get_current_now().time())
+            slots = shift.get_all_slots(
+                current_time=self.get_current_now().time(),
+                for_date=date
+            )
         else:
-            slots = shift.get_all_slots()
+            slots = shift.get_all_slots(for_date=date)
         for slot in slots:
             available_slots.append(
                 TimeSlotAvailability(

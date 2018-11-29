@@ -20,7 +20,12 @@ from appointment.models import Appointment, AppointmentService
 from client.models import Client, PreferredStylist
 from core.models import User
 from core.types import UserRole
-from salon.models import Salon, Stylist, StylistService
+from salon.models import (
+    Salon,
+    Stylist,
+    StylistService,
+    StylistSpecialAvailableDate,
+)
 from salon.tests.test_models import stylist_appointments_data
 from salon.utils import get_default_service_uuids
 
@@ -392,3 +397,25 @@ class TestAppointmentsOnADaySerializer(object):
         assert(response_data['work_start_at'] == datetime.time(hour=12))
         assert(response_data['work_end_at'] == datetime.time(hour=19))
         assert(response_data['is_day_available'])
+
+    @pytest.mark.django_db
+    def test_appointments_on_a_special_date(self, client, authorized_stylist_user):
+        user, auth_token = authorized_stylist_user
+        stylist = user.stylist
+        salon = G(Salon, timezone=pytz.utc)
+        stylist.salon = salon
+        stylist.save(update_fields=['salon', ])
+        G(StylistService, stylist=stylist)
+        G(StylistSpecialAvailableDate, stylist=stylist, date=datetime.date(2018, 5, 14))
+        stylist_appointments_data(stylist)
+        url = reverse('api:v1:stylist:one-day-appointments')
+        response_data = client.get(url, data={
+            'date': '2018-05-14'
+        }, HTTP_AUTHORIZATION=auth_token).data
+
+        assert (len(response_data['appointments']) == 4)
+        assert (response_data['service_time_gap_minutes'] == 30)
+        assert (response_data['total_slot_count'] == 0)
+        assert (response_data['work_start_at'] is None)
+        assert (response_data['work_end_at'] is None)
+        assert (response_data['is_day_available'] is False)

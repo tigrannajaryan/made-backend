@@ -534,3 +534,11 @@ class TestStylistAvailableWeekDay(object):
         last_slot_start, last_slot_end = slots_slightly_after_noon[-1]
         assert (last_slot_start == datetime.time(17, 30))
         assert (last_slot_end == datetime.time(18, 0))
+
+        # test with special date
+        special_date = datetime.date(2018, 11, 26)  # Monday
+        G(StylistSpecialAvailableDate, date=special_date, stylist=stylist, is_available=False)
+        special_date_slots: List[TimeSlot] = available_weekday.get_all_slots(
+            for_date=special_date
+        )
+        assert(len(special_date_slots) == 0)
