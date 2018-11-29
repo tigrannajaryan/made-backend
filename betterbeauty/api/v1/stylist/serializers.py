@@ -438,7 +438,7 @@ class StylistServiceListSerializer(
         ).data
 
     def update(self, instance: Stylist, validated_data: Dict):
-        services = self.initial_data.get('services')
+        services = self.initial_data.get('services', [])
         validated_data.pop('services', [])
         with transaction.atomic():
             # check if this is initial population during registration. In that case,
