@@ -74,14 +74,25 @@ def generate_demand_list_for_stylist(
         next_midnight = midnight + datetime.timedelta(days=1)
         work_day_duration, stylist_weekday_availability = weekday_available_times[
             date.isoweekday()]
+        # if stylist has specifically marked date as unavailable - reflect it
+        if stylist.special_available_dates.filter(
+                date=date, is_available=False
+        ).exists():
+            work_day_duration = datetime.timedelta(0)
+            stylist_weekday_availability = None
         load_on_date_duration = stylist.appointments.filter(
             datetime_start_at__gte=midnight, datetime_start_at__lt=next_midnight,
         ).exclude(status__in=[
             AppointmentStatus.CANCELLED_BY_STYLIST,
             AppointmentStatus.CANCELLED_BY_CLIENT]
         ).count() * time_gap
-        is_working_day: bool = (
+        is_stylist_weekday_available: bool = (
             stylist_weekday_availability.is_available if stylist_weekday_availability else False)
+        has_special_date_unavailable = stylist.special_available_dates.filter(
+            date=date, is_available=False
+        ).exists()
+        is_working_day: bool = is_stylist_weekday_available and not has_special_date_unavailable
+
         demand_on_date = (
             load_on_date_duration / work_day_duration
             if work_day_duration > datetime.timedelta(0)

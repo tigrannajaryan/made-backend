@@ -11,7 +11,7 @@ from freezegun import freeze_time
 from appointment.models import Appointment, AppointmentService
 from core.models import User
 from core.types import Weekday
-from ..models import Salon, Stylist, StylistService
+from ..models import Salon, Stylist, StylistService, StylistSpecialAvailableDate
 from ..utils import (
     create_stylist_profile_for_user,
     generate_demand_list_for_stylist,
@@ -66,6 +66,19 @@ def test_generate_demand_list_for_stylist():
     assert(demand_list[2].demand == 0)
     assert(demand_list[3].demand == 1)
     assert(demand_list[4].demand == 1)
+
+    # 3. Test with special unavailability date
+    # mark Sunday unavailable
+    G(
+        StylistSpecialAvailableDate,
+        stylist=stylist, date=datetime.date(2018, 6, 17), is_available=False
+    )
+    demand_list = generate_demand_list_for_stylist(stylist, dates=dates)
+    assert (demand_list[0].demand == 0.5)
+    assert (demand_list[1].demand == 1)
+    assert (demand_list[2].demand == 1)
+    assert (demand_list[3].demand == 1)
+    assert (demand_list[4].demand == 1)
 
 
 @pytest.mark.django_db
