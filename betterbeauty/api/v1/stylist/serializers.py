@@ -39,6 +39,7 @@ from salon.models import (
     StylistAvailableWeekDay,
     StylistService,
     StylistServicePhotoSample,
+    StylistSpecialAvailableDate,
     StylistWeekdayDiscount,
 )
 from salon.types import PriceOnDate
@@ -1485,3 +1486,11 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
     def get_is_day_available(self, data) -> bool:
         available_weekday: StylistAvailableWeekDay = self.context['available_weekday']
         return available_weekday.is_available if available_weekday else False
+
+
+class StylistSpecialAvailableDateSerializer(serializers.ModelSerializer):
+    is_available = serializers.BooleanField(required=False, default=False)
+
+    class Meta:
+        model = StylistSpecialAvailableDate
+        fields = ['is_available', ]

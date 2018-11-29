@@ -20,8 +20,10 @@ from .views import (
     StylistServicePricingView,
     StylistServiceView,
     StylistSettingsRetrieveView,
+    StylistSpecialAvailabilityDateView,
     StylistTodayView,
-    StylistView)
+    StylistView
+)
 
 app_name = 'stylist'
 
@@ -52,4 +54,6 @@ urlpatterns = [
     url('^clients/(?P<client_uuid>[0-9a-f\-]+)$', ClientView.as_view(), name='client'),
     url('^clients/pricing$', ClientPricingView.as_view(), name='client-pricing'),
     url('^nearby-clients$', NearbyClientsView.as_view(), name='nearby-client'),
+    url('^availability/special/(?P<date>\d{4}-\d{1,2}-\d{1,2})$',
+        StylistSpecialAvailabilityDateView.as_view(), name='special-availability'),
 ]

@@ -15,6 +15,7 @@ from rest_framework import generics, permissions, status, views
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
+from api.common.constants import HIGH_LEVEL_API_ERROR_CODES
 from api.common.permissions import (
     StylistPermission,
     StylistRegisterUpdatePermission,
@@ -29,7 +30,12 @@ from client.models import Client
 from core.utils import (
     post_or_get,
 )
-from salon.models import ServiceTemplateSet, Stylist, StylistAvailableWeekDay, StylistService
+from salon.models import (
+    ServiceTemplateSet,
+    Stylist,
+    StylistAvailableWeekDay,
+    StylistService,
+)
 from salon.types import ClientPriceOnDate
 from salon.utils import (
     generate_client_prices_for_stylist_services,
@@ -60,6 +66,7 @@ from .serializers import (
     StylistServicePricingSerializer,
     StylistServiceSerializer,
     StylistSettingsRetrieveSerializer,
+    StylistSpecialAvailableDateSerializer,
     StylistTodaySerializer,
 )
 
@@ -618,3 +625,63 @@ class ClientPricingView(views.APIView):
             prices=prices
         )
         return pricing_response
+
+
+class StylistSpecialAvailabilityDateView(views.APIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+
+    @staticmethod
+    def _get_date(date_str: str) -> datetime.date:
+        return parse(date_str).date()
+
+    @staticmethod
+    def _not_found_response():
+        return Response({
+            'code': HIGH_LEVEL_API_ERROR_CODES[404],
+            'field_errors': {},
+            'non_field_errors': [
+                {'code': 'err_special_availability_date_not_found'}
+            ]
+        }, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request, date: str):
+        date_to_create = self._get_date(date)
+        stylist: Stylist = self.request.user.stylist
+        date_obj = stylist.special_available_dates.filter(
+            date=date_to_create
+        ).last()
+        serializer = StylistSpecialAvailableDateSerializer(
+            data=self.request.data, instance=date_obj
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save(stylist=stylist, date=date_to_create)
+        if not date_obj:
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, date: str):
+        return self.put(request, date)
+
+    def get(self, request, date: str):
+        date_to_create = self._get_date(date)
+        stylist: Stylist = self.request.user.stylist
+        date_obj = stylist.special_available_dates.filter(
+            date=date_to_create
+        ).last()
+        if not date_obj:
+            return self._not_found_response()
+        return Response(
+            data=StylistSpecialAvailableDateSerializer(instance=date_obj).data
+        )
+
+    def delete(self, request, date: str):
+        date_to_create = self._get_date(date)
+        stylist: Stylist = self.request.user.stylist
+        date_obj = stylist.special_available_dates.filter(
+            date=date_to_create
+        ).last()
+        if date_obj:
+            date_obj.delete()
+            return Response({}, status=status.HTTP_204_NO_CONTENT)
+        return self._not_found_response()
