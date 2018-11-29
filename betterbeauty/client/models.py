@@ -25,11 +25,11 @@ class Client(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     zip_code = models.CharField(max_length=10, blank=True, null=True)
     birthday = models.DateField(blank=True, null=True)
-    email = models.EmailField(null=True)
+    email = models.EmailField(null=True, blank=True)
     city = models.CharField(blank=True, null=True, max_length=64)
     state = models.CharField(blank=True, null=True, max_length=25)
     country = models.CharField(max_length=20, blank=True, null=True)
-    location = PointField(geography=True, null=True)
+    location = PointField(geography=True, null=True, blank=True)
 
     is_address_geocoded = models.BooleanField(default=False)
     last_geo_coded = models.DateTimeField(blank=True, null=True, default=None)
@@ -37,9 +37,9 @@ class Client(models.Model):
     privacy = models.CharField(
         max_length=16, choices=CLIENT_PRIVACY_CHOICES, default=ClientPrivacy.PUBLIC
     )
-    google_integration_added_at = models.DateTimeField(null=True, default=None)
-    google_access_token = models.CharField(max_length=1024, null=True, default=None)
-    google_refresh_token = models.CharField(max_length=1024, null=True, default=None)
+    google_integration_added_at = models.DateTimeField(null=True, blank=True, default=None)
+    google_access_token = models.CharField(max_length=1024, null=True, blank=True, default=None)
+    google_refresh_token = models.CharField(max_length=1024, null=True, blank=True, default=None)
 
     created_at = models.DateTimeField(null=True, auto_now_add=True)
 

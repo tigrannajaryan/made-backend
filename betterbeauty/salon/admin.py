@@ -14,6 +14,7 @@ from .models import (
     StylistAvailableWeekDay,
     StylistService,
     StylistServicePhotoSample,
+    StylistSpecialAvailableDate,
     StylistWeekdayDiscount,
 )
 
@@ -72,8 +73,19 @@ class StylistAvailableDayForm(forms.ModelForm):
 class StylistAdmin(admin.ModelAdmin):
     search_fields = ['user__first_name', 'user__last_name',
                      'user__phone']
-    list_display = ['__str__', 'user_name', 'user_phone']
+
+    list_display = [
+        'user_name', 'user_phone', 'is_profile_bookable', 'created_at', 'deactivated_at',
+    ]
     raw_id_fields = ['user', 'salon']
+
+    def is_profile_bookable(self, obj):
+        return obj.is_profile_bookable
+    is_profile_bookable.boolean = True  # type: ignore
+
+    # TODO: remove as soon as we have created_at in Stylist model
+    def created_at(self, obj):
+        return obj.user.date_joined
 
     def user_phone(self, obj):
         return obj.user.phone
@@ -85,6 +97,10 @@ class StylistAdmin(admin.ModelAdmin):
         model = StylistAvailableWeekDay
         extra = 1
         form = StylistAvailableDayForm
+
+    class StylistSpecialAvailableDateInline(admin.TabularInline):
+        model = StylistSpecialAvailableDate
+        extra = 0
 
     class StylistWeekdayDiscount(admin.StackedInline):
         model = StylistWeekdayDiscount
@@ -105,7 +121,13 @@ class StylistAdmin(admin.ModelAdmin):
         extra = 0
 
     fieldsets = (
-        (None, {'fields': ('user', 'salon', 'deactivated_at', 'specialities')}),
+        (None, {'fields': (
+            'user', 'salon', 'deactivated_at', 'service_time_gap', 'specialities')
+        }),
+        ('Social', {'fields': ('instagram_url', 'website_url')}),
+        ('Google OAuth', {'fields': (
+            'google_access_token', 'google_refresh_token', 'google_integration_added_at',
+        )}),
         ('Discounts', {'fields': ('first_time_book_discount_percent',
                                   'rebook_within_1_week_discount_percent',
                                   'rebook_within_2_weeks_discount_percent',
@@ -118,6 +140,7 @@ class StylistAdmin(admin.ModelAdmin):
 
     inlines = [
         StylistWeekdayDiscount,
+        StylistSpecialAvailableDateInline,
         StylistAvailableDayInline,
         StylistServiceInline,
     ]

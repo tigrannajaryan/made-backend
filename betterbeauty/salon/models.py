@@ -94,7 +94,7 @@ class StylistSpecialAvailableDate(models.Model):
         if self.is_available:
             availability_str = ''
         return '{0}:{1} available on {2}'.format(
-            self.stylist, availability_str, self.get_weekday_display(),
+            self.stylist, availability_str, self.date,
             self.date
         )
 
@@ -227,7 +227,7 @@ class Stylist(models.Model):
     service_time_gap = models.DurationField(
         default=datetime.timedelta(minutes=DEFAULT_SERVICE_GAP_TIME_MINUTES)
     )
-    specialities = models.ManyToManyField(to='Speciality')
+    specialities = models.ManyToManyField(to='Speciality', blank=True)
 
     maximum_discount = models.IntegerField(default=None, blank=True, null=True)
     is_maximum_discount_enabled = models.BooleanField(default=False)
@@ -235,9 +235,9 @@ class Stylist(models.Model):
     instagram_url = models.CharField(max_length=2084, blank=True, null=True)
     website_url = models.CharField(max_length=2084, blank=True, null=True)
 
-    google_integration_added_at = models.DateTimeField(null=True, default=None)
-    google_access_token = models.CharField(max_length=1024, null=True, default=None)
-    google_refresh_token = models.CharField(max_length=1024, null=True, default=None)
+    google_integration_added_at = models.DateTimeField(null=True, blank=True, default=None)
+    google_access_token = models.CharField(max_length=1024, null=True, blank=True, default=None)
+    google_refresh_token = models.CharField(max_length=1024, null=True, blank=True, default=None)
 
     class Meta:
         db_table = 'stylist'

@@ -2,7 +2,7 @@ from custom_user.admin import EmailUserAdmin
 
 from django.contrib import admin
 
-from core.models import User
+from core.models import User, UserRole
 
 
 class SoftDeletedFilter(admin.SimpleListFilter):
@@ -48,6 +48,8 @@ class RoleListFilter(admin.SimpleListFilter):
         if lookup_value:
             # the __contains lookup expects a list, so...
             queryset = queryset.filter(role__contains=[lookup_value])
+            if lookup_value != UserRole.STAFF:
+                queryset = queryset.exclude(role__contains=[UserRole.STAFF, ])
         return queryset
 
 
@@ -61,7 +63,7 @@ class UserAdmin(EmailUserAdmin):
         (None, {'fields': (
             'email', 'password', 'first_name', 'last_name', 'phone', 'photo'
         )}),
-        ('Permissions', {'fields': ('is_active', 'role', 'is_staff', 'is_superuser')})
+        ('Permissions', {'fields': ('is_active', 'role', 'is_superuser')})
     )
     add_fieldsets = (
         (None, {
