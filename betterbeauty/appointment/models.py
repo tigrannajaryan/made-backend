@@ -214,13 +214,13 @@ class Appointment(models.Model):
             logger.exception(
                 'Could not add Google Calendar event for appointment {0}'.format(
                     self.uuid))
-        except (AccessTokenRefreshError, FlowExchangeError) as e:
+        except (AccessTokenRefreshError, FlowExchangeError):
             # an exception due to bad token. Log error and remove stylist's token
             # to stop retrying and allow to re-add the integration
             logger.exception(
                 'Unable to use stylist token when trying to cancel appointment {0}'.format(
                     self.uuid))
-            self.stylist.remove_google_oauth_token(e)
+            self.stylist.remove_google_oauth_token()
 
     def cancel_stylist_google_calendar_event(self):
         """
@@ -263,7 +263,7 @@ class Appointment(models.Model):
                     self.uuid
                 )
             )
-        except (AccessTokenRefreshError, FlowExchangeError) as e:
+        except (AccessTokenRefreshError, FlowExchangeError):
             # an exception due to bad token. Log error and remove stylist's token
             # to stop retrying and allow to re-add the integration
             logger.exception(

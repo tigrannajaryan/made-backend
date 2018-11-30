@@ -41,7 +41,12 @@ from integrations.slack import (
     send_slack_client_profile_update,
 )
 from pricing import CalculatedPrice
-from salon.models import Invitation, ServiceCategory, Stylist, StylistService
+from salon.models import (
+    Invitation,
+    ServiceCategory,
+    Stylist,
+    StylistService,
+)
 from salon.types import InvitationStatus, PriceOnDate
 from salon.utils import (
     calculate_price_and_discount_for_client_on_date,
@@ -137,11 +142,12 @@ class ClientProfileStatusSerializer(serializers.ModelSerializer):
     has_preferred_stylist_set = serializers.SerializerMethodField()
     has_booked_appointment = serializers.SerializerMethodField()
     has_past_visit = serializers.SerializerMethodField()
+    has_invitation = serializers.SerializerMethodField()
 
     class Meta:
         model = Client
         fields = [
-            'has_name', 'has_zipcode', 'has_email', 'has_picture_set',
+            'has_name', 'has_zipcode', 'has_email', 'has_picture_set', 'has_invitation',
             'has_preferred_stylist_set', 'has_booked_appointment', 'has_past_visit',
         ]
 
@@ -173,6 +179,12 @@ class ClientProfileStatusSerializer(serializers.ModelSerializer):
 
     def get_has_past_visit(self, client: Client) -> bool:
         return client.get_past_appointments().exists()
+
+    def get_has_invitation(self, client: Client) -> bool:
+        has_invitation: bool = Invitation.objects.filter(
+            phone=client.user.phone).exclude(
+            status=InvitationStatus.ACCEPTED).exists()
+        return has_invitation
 
 
 class PreferredStylistSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):

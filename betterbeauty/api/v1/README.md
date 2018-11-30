@@ -374,7 +374,8 @@ If the token has not yet expired, it can be refreshed to a new one:
         "has_picture_set": true,
         "has_preferred_stylist_set": true,
         "has_booked_appointment": true,
-        "has_past_visit": true
+        "has_past_visit": true,
+        "has_invitation": true
     }
 }
 ```
@@ -544,7 +545,17 @@ curl -X POST \
             "is_profile_bookable": true
         }
     ],
-     "user_uuid": "0ad92eca-2eae-4bef-b6d4-a3323597108c"
+     "user_uuid": "0ad92eca-2eae-4bef-b6d4-a3323597108c",
+     "profile_status": {
+        "has_name": true,
+        "has_zipcode": true,
+        "has_email": true,
+        "has_picture_set": true,
+        "has_preferred_stylist_set": true,
+        "has_booked_appointment": true,
+        "has_past_visit": true,
+        "has_invitation": true
+    }
 }
 ```
 
@@ -1728,7 +1739,6 @@ curl -X GET -H 'Authorization: Token jwt_token' \
             "created_at": "2018-11-02T04:12:08.690148-04:00"
         }
     ],
-    "first_slot_start_time": "09:00:00",
     "service_time_gap_minutes": 60,
     "total_slot_count": 2,
     "work_start_at": "13:00:00",
