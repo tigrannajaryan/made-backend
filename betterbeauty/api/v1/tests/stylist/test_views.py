@@ -20,7 +20,12 @@ from appointment.models import Appointment, AppointmentService
 from client.models import Client, PreferredStylist
 from core.models import User
 from core.types import UserRole
-from salon.models import Salon, Stylist, StylistService
+from salon.models import (
+    Salon,
+    Stylist,
+    StylistService,
+    StylistSpecialAvailableDate,
+)
 from salon.tests.test_models import stylist_appointments_data
 from salon.utils import get_default_service_uuids
 
@@ -392,3 +397,94 @@ class TestAppointmentsOnADaySerializer(object):
         assert(response_data['work_start_at'] == datetime.time(hour=12))
         assert(response_data['work_end_at'] == datetime.time(hour=19))
         assert(response_data['is_day_available'])
+
+    @pytest.mark.django_db
+    def test_appointments_on_a_special_date(self, client, authorized_stylist_user):
+        user, auth_token = authorized_stylist_user
+        stylist = user.stylist
+        salon = G(Salon, timezone=pytz.utc)
+        stylist.salon = salon
+        stylist.save(update_fields=['salon', ])
+        G(StylistService, stylist=stylist)
+        G(StylistSpecialAvailableDate, stylist=stylist, date=datetime.date(2018, 5, 14))
+        stylist_appointments_data(stylist)
+        url = reverse('api:v1:stylist:one-day-appointments')
+        response_data = client.get(url, data={
+            'date': '2018-05-14'
+        }, HTTP_AUTHORIZATION=auth_token).data
+
+        assert (len(response_data['appointments']) == 4)
+        assert (response_data['service_time_gap_minutes'] == 30)
+        assert (response_data['total_slot_count'] == 0)
+        assert (response_data['work_start_at'] is None)
+        assert (response_data['work_end_at'] is None)
+        assert (response_data['is_day_available'] is False)
+
+
+class TestStylistSpecialAvailabilityDateView(object):
+    @pytest.mark.django_db
+    def test_create_update(self, client, authorized_stylist_user):
+        user, auth_token = authorized_stylist_user
+        stylist: Stylist = user.stylist
+        url = reverse(
+            'api:v1:stylist:special-availability',
+            args=[datetime.date(2018, 11, 29).isoformat()]
+        )
+        response = client.post(url, HTTP_AUTHORIZATION=auth_token)
+        assert(response.status_code == status.HTTP_201_CREATED)
+        assert(stylist.special_available_dates.all().count() == 1)
+        special_date = stylist.special_available_dates.last()
+        assert(special_date.date == datetime.date(2018, 11, 29))
+        assert(special_date.is_available is False)
+        special_date.delete()
+        response = client.post(url, data={'is_available': True}, HTTP_AUTHORIZATION=auth_token)
+        assert (response.status_code == status.HTTP_201_CREATED)
+        assert (stylist.special_available_dates.all().count() == 1)
+        special_date = stylist.special_available_dates.last()
+        assert (special_date.date == datetime.date(2018, 11, 29))
+        assert (special_date.is_available is True)
+        response = client.post(url, data={'is_available': False}, HTTP_AUTHORIZATION=auth_token)
+        assert (response.status_code == status.HTTP_200_OK)
+        assert (stylist.special_available_dates.all().count() == 1)
+        special_date = stylist.special_available_dates.last()
+        assert (special_date.date == datetime.date(2018, 11, 29))
+        assert (special_date.is_available is False)
+
+    @pytest.mark.django_db
+    def test_retrieve(self, client, authorized_stylist_user):
+        user, auth_token = authorized_stylist_user
+        stylist: Stylist = user.stylist
+        G(
+            StylistSpecialAvailableDate,
+            stylist=stylist, date=datetime.date(2018, 11, 29), is_available=True
+        )
+        url = reverse(
+            'api:v1:stylist:special-availability',
+            args=[datetime.date(2018, 11, 28).isoformat()]
+        )
+        response = client.get(url, HTTP_AUTHORIZATION=auth_token)
+        assert(response.status_code == status.HTTP_404_NOT_FOUND)
+        url = reverse(
+            'api:v1:stylist:special-availability',
+            args=[datetime.date(2018, 11, 29).isoformat()]
+        )
+        response = client.get(url, HTTP_AUTHORIZATION=auth_token)
+        assert(response.status_code == status.HTTP_200_OK)
+        assert(response.data == {'is_available': True})
+
+    @pytest.mark.django_db
+    def test_delete(self, client, authorized_stylist_user):
+        user, auth_token = authorized_stylist_user
+        stylist: Stylist = user.stylist
+        url = reverse(
+            'api:v1:stylist:special-availability',
+            args=[datetime.date(2018, 11, 29).isoformat()]
+        )
+        response = client.delete(url, HTTP_AUTHORIZATION=auth_token)
+        assert (response.status_code == status.HTTP_404_NOT_FOUND)
+        G(
+            StylistSpecialAvailableDate,
+            stylist=stylist, date=datetime.date(2018, 11, 29), is_available=True
+        )
+        response = client.delete(url, HTTP_AUTHORIZATION=auth_token)
+        assert (response.status_code == status.HTTP_204_NO_CONTENT)
