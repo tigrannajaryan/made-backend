@@ -235,48 +235,57 @@ class TestSearchStylistView(object):
         location = stylist_data.salon.location
         G(Salon, location=location)
         stylist_data_2 = G(Stylist)
+        client_data = G(Client)
+
         results = SearchStylistView._search_stylists(
-            '', '', location=location, country='US')
+            '', '', location=location, country='US', client_id=client_data.id)
         assert (len(results) == 1)
 
         results = SearchStylistView._search_stylists(
-            'Fred', 'los altos', location=location, country='US')
+            'Fred', 'los altos', location=location, country='US', client_id=client_data.id)
         assert (len(results) == 1)
         assert (results[0] == stylist_data)
+        assert (results[0].preference_uuid is None)
+        preference = G(PreferredStylist, client=client_data, stylist=stylist_data)
+
         results = SearchStylistView._search_stylists(
-            'mcbob fr', 'rilma', location=location, country='US')
+            'mcbob fr', 'rilma', location=location, country='US', client_id=client_data.id)
         assert (len(results) == 1)
         assert (results[0] == stylist_data)
+        assert (results[0].preference_uuid == preference.uuid)
+
         results = SearchStylistView._search_stylists(
-            'mcbob fr', 'junk-address', location=location, country='US')
+            'mcbob fr', 'junk-address', location=location, country='US', client_id=client_data.id)
         assert (len(results) == 0)
         salon = stylist_data_2.salon
         salon.location = location
         salon.country = 'US'
         salon.save()
         results = SearchStylistView._search_stylists(
-            stylist_data_2.get_full_name(), '', location=location, country='US')
+            stylist_data_2.get_full_name(), '', location=location,
+            country='US', client_id=client_data.id)
         assert (len(results) == 1)
         assert (results[0] == stylist_data_2)
 
         results = SearchStylistView._search_stylists(
-            'some-junk-text', '', location=location, country='US')
+            'some-junk-text', '', location=location, country='US', client_id=client_data.id)
         assert (len(results) == 0)
         # Test with deactivated stylist
         stylist_data.deactivated_at = timezone.now()
         stylist_data.save()
         results = SearchStylistView._search_stylists(
-            'Fred', 'los altos', location=location, country='US')
+            'Fred', 'los altos', location=location, country='US', client_id=client_data.id)
         assert (len(results) == 0)
 
     @pytest.mark.django_db
     def test_search_stylists_when_no_results(self, stylist_data: Stylist):
         salon_2 = G(Salon, location=NEW_YORK_LOCATION, country='CA')
         G(Stylist, salon=salon_2)
+        client_data = G(Client)
         location = Point(77.303474, 11.1503445, srid=4326)
 
         results = SearchStylistView._search_stylists(
-            '', '', location=location, country='US')
+            '', '', location=location, country='US', client_id=client_data.id)
         assert (len(results) == 1)
         assert results[0] == stylist_data
 
