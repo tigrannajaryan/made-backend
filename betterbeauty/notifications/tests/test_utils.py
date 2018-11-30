@@ -3,11 +3,12 @@ import datetime
 import pytest
 import pytz
 from django.conf import settings
+from django.utils import timezone
 from django_dynamic_fixture import G
 from freezegun import freeze_time
 from push_notifications.models import APNSDevice, GCMDevice
 
-from appointment.models import Appointment
+from appointment.models import Appointment, AppointmentStatus
 from client.models import Client
 from core.models import User, UserRole
 from notifications.models import Notification
@@ -22,6 +23,7 @@ from salon.models import (
 )
 from ..utils import (
     generate_hint_to_first_book_notifications,
+    generate_hint_to_rebook_notifications,
     generate_hint_to_select_stylist_notifications,
 )
 
@@ -183,4 +185,58 @@ class TestGenerateHintToSelectStylistNotification(object):
         assert (Notification.objects.count() == 1)
 
         generate_hint_to_select_stylist_notifications()
+        assert (Notification.objects.count() == 1)
+
+
+class TestGenerateHintToRebookNotification(object):
+    @pytest.mark.django_db
+    def test_verify_rebook_period(self, bookable_stylist):
+        G(StylistService, stylist=bookable_stylist, is_enabled=True)
+        client: Client = G(Client)
+        G(APNSDevice, user=client.user)
+        G(Appointment, client=client,
+          datetime_start_at=timezone.now() - datetime.timedelta(weeks=5))
+        generate_hint_to_rebook_notifications()
+        assert(Notification.objects.count() == 1)
+        notification: Notification = Notification.objects.last()
+        assert('for 5 weeks' in notification.message)
+        assert(notification.code == NotificationCode.HINT_TO_REBOOK)
+        assert(notification.user == client.user)
+        # test indempotency
+        generate_hint_to_rebook_notifications()
+        assert (Notification.objects.count() == 1)
+
+    @pytest.mark.django_db
+    def test_verify_no_stylists(self):
+        client: Client = G(Client)
+        G(APNSDevice, user=client.user)
+        G(Appointment, client=client,
+          datetime_start_at=timezone.now() - datetime.timedelta(weeks=5))
+        generate_hint_to_rebook_notifications()
+        assert (Notification.objects.count() == 0)
+        G(Stylist, deactivated_at=timezone.now())
+        generate_hint_to_rebook_notifications()
+        assert (Notification.objects.count() == 0)
+        G(Stylist)
+        generate_hint_to_rebook_notifications()
+        assert (Notification.objects.count() == 0)
+
+    @pytest.mark.django_db
+    def test_verify_no_previous_bookings(self, bookable_stylist):
+        G(StylistService, stylist=bookable_stylist, is_enabled=True)
+        client: Client = G(Client)
+        G(APNSDevice, user=client.user)
+        generate_hint_to_rebook_notifications()
+        assert (Notification.objects.count() == 0)
+        # try with recent booking
+        G(Appointment, client=client,
+          datetime_start_at=timezone.now() - datetime.timedelta(weeks=5))
+        recent_booking: Appointment = G(
+            Appointment, client=client,
+            datetime_start_at=timezone.now() - datetime.timedelta(weeks=2))
+        generate_hint_to_rebook_notifications()
+        assert (Notification.objects.count() == 0)
+        recent_booking.status = AppointmentStatus.CANCELLED_BY_CLIENT
+        recent_booking.save(update_fields=['status', ])
+        generate_hint_to_rebook_notifications()
         assert (Notification.objects.count() == 1)
