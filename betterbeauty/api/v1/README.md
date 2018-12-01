@@ -233,7 +233,7 @@ such specific errors in particular API calls.
 |err_bad_notification_type|Notification with this UUID is not a PUSH notification|/api/v1/common/ack-push|message_uuids|
 |err_bad_integration_type|Passed integration type is not (yet) supported|/api/v1/common/integrations|integration_type|
 |err_failure_to_setup_oauth|General problem with setting up oauth credentials|/api/v1/common/integrations|non-field|
-
+|err_stylist_special_availability_date_not_found|Special availability date not found|/api/v1/stylist/availability/special/{date}|non-field|
 # Authorization
 ## Getting auth token with email/password credentials
 In order to make requests to the API, client needs a JWT token. There are 2 ways to obtain
@@ -1344,6 +1344,83 @@ Note: time is passed in salon's local timezone
     ]
 }
 ```
+
+## Special Availability Dates
+Special availability date is a date set by stylist for particular date,
+which overrides availability settings set by weekday availability
+
+### Add/update special availability date
+**POST/PUT/PATCH /api/v1/stylist/availability/special/{date}**
+```
+curl -X POST \
+  'http://apiserver/api/v1/stylist/availability/special/2018-11-29' \
+  -H 'Authorization: Token {{auth_token}}' \
+  -H 'Content-Type: application/json' \
+  -d '{"is_available": false}'
+```
+
+or
+
+```
+curl -X POST \
+  'http://apiserver/api/v1/stylist/availability/special/2018-11-29' \
+  -H 'Authorization: Token {{auth_token}}' \
+  -H 'Content-Type: application/json'
+```
+
+(in this case `is_available` defaults to `false`)
+
+**Response 200 OK / 201 Created**
+```
+{
+    "is_available": true
+}
+```
+
+### Retrieve special availability on a date
+**GET /api/v1/stylist/availability/special/{date}**
+
+**Response 200 OK**
+```
+{
+    "is_available": false
+}
+```
+
+**Response 404 Not Found**
+```
+{
+    "code": "err_not_found",
+    "field_errors": {},
+    "non_field_errors": [
+        {
+            "code": "err_stylist_special_availability_date_not_found"
+        }
+    ]
+}
+```
+
+### Delete special availability on a date
+**DELETE /api/v1/stylist/availability/special/{date}**
+
+**Response 204 No Content**
+```
+{}
+```
+
+**Response 404 Not Found**
+```
+{
+    "code": "err_not_found",
+    "field_errors": {},
+    "non_field_errors": [
+        {
+            "code": "err_stylist_special_availability_date_not_found"
+        }
+    ]
+}
+```
+
 
 ## Discounts
 ### Retrieve discounts

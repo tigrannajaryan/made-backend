@@ -9,6 +9,7 @@ from core.constants import EnvLevel
 from notifications.types import NotificationCode
 from notifications.utils import (
     generate_hint_to_first_book_notifications,
+    generate_hint_to_rebook_notifications,
     generate_hint_to_select_stylist_notifications,
     send_all_push_notifications,
 )
@@ -71,6 +72,20 @@ class Command(BaseCommand):
             )
             time_start = timezone.now()
             notification_count = generate_hint_to_select_stylist_notifications(dry_run=dry_run)
+            time_end = timezone.now()
+            stdout_and_log('...{0} notifications generated; took {1} seconds'.format(
+                notification_count, (time_end - time_start).total_seconds()
+            ), self.stdout)
+
+        # TODO: enable on production
+        if settings.LEVEL != EnvLevel.PRODUCTION:
+            # Don't generate on production yet until tested
+            stdout_and_log(
+                'Generating {0} notifications'.format(NotificationCode.HINT_TO_REBOOK),
+                self.stdout
+            )
+            time_start = timezone.now()
+            notification_count = generate_hint_to_rebook_notifications(dry_run=dry_run)
             time_end = timezone.now()
             stdout_and_log('...{0} notifications generated; took {1} seconds'.format(
                 notification_count, (time_end - time_start).total_seconds()
