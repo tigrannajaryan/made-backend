@@ -450,11 +450,11 @@ class TestGetAvailableTime():
         stylist_data.available_days.filter(
             weekday=1).update(
             work_start_at=datetime.time(9, 0, 0),
-            work_end_at=datetime.time(11, 1, 0),
+            work_end_at=datetime.time(11, 29, 0),
             is_available=True)
         stylist_available_weekday = stylist_data.available_days.get(weekday=1)
         assert (stylist_available_weekday.get_available_time() == datetime.timedelta(
-            hours=2, minutes=30))
+            hours=2))
 
         stylist_data.available_days.filter(
             weekday=2).update(work_start_at=datetime.time(9, 0, 0),
