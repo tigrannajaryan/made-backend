@@ -10,7 +10,7 @@ from notifications.utils import (
     generate_hint_to_first_book_notifications,
     generate_hint_to_rebook_notifications,
     generate_hint_to_select_stylist_notifications,
-    send_all_push_notifications,
+    send_all_notifications,
 )
 
 
@@ -86,5 +86,5 @@ class Command(BaseCommand):
 
         if force_send:
             self.stdout.write('Going to send push notifications now')
-            sent, skipped = send_all_push_notifications(stdout=self.stdout, dry_run=dry_run)
+            sent, skipped = send_all_notifications(stdout=self.stdout, dry_run=dry_run)
             self.stdout.write('{0} notifications sent, {1} skipped'.format(sent, skipped))

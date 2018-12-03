@@ -2,7 +2,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from notifications.utils import (
-    send_all_push_notifications,
+    send_all_notifications,
 )
 
 
@@ -25,5 +25,5 @@ class Command(BaseCommand):
             self.stdout.write('Push notifications are disabled; exiting')
             return
         self.stdout.write('Going to send push notifications now')
-        sent, skipped = send_all_push_notifications(stdout=self.stdout, dry_run=dry_run)
+        sent, skipped = send_all_notifications(stdout=self.stdout, dry_run=dry_run)
         self.stdout.write('{0} notifications sent, {1} skipped'.format(sent, skipped))

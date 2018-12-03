@@ -45,9 +45,13 @@ def send_sms_message(
             logger.exception('Cannot send SMS through twilio', exc_info=True)
             raise HttpCodeException(status_code=status.HTTP_504_GATEWAY_TIMEOUT)
     if settings.TWILIO_SLACK_MOCK_ENABLED:
-        send_slack_twilio_message_notification(
-            from_phone=settings.TWILIO_FROM_TEL,
-            to_phone=to_phone,
-            message=body
-        )
+        try:
+            send_slack_twilio_message_notification(
+                from_phone=settings.TWILIO_FROM_TEL,
+                to_phone=to_phone,
+                message=body
+            )
+        except:  # noqa
+            # we really don't want this to break the flow for whatever reason
+            logger.exception('Could not send Slack message')
     return result_sid

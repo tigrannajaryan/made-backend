@@ -65,7 +65,7 @@ class NotificationAckSerializer(FormattedErrorMessageMixin, serializers.Serializ
             if not notification:
                 errors.append(NotificationErrors.ERR_NOTIFICATION_NOT_FOUND)
                 continue
-            if notification.channel != NotificationChannel.PUSH:
+            if notification.sent_via_channel != NotificationChannel.PUSH:
                 errors.append(NotificationErrors.ERR_BAD_NOTIFICATION_TYPE)
         if errors:
             raise serializers.ValidationError(errors)

@@ -1,13 +1,13 @@
 from django.contrib import admin, messages
 
+from integrations.push.utils import has_push_notification_device
 from .models import Notification
-from .types import NotificationChannel
 
 
 class NotificationAdmin(admin.ModelAdmin):
     list_display = [
-        'code', 'channel', 'user', 'target', 'pending_to_send',
-        'sent_at', 'device_acked_at',
+        'code', 'user', 'target', 'pending_to_send',
+        'sent_via_channel', 'sent_at', 'device_acked_at',
     ]
     list_filter = ['code', 'target', 'channel', ]
     readonly_fields = ['sent_at', 'device_acked_at', ]
@@ -23,8 +23,10 @@ class NotificationAdmin(admin.ModelAdmin):
             if not notification.can_send_now():
                 errors.append('{0} cannot be sent now'.format(notification))
                 continue
-            if notification.channel != NotificationChannel.PUSH:
-                errors.append('{0} is not a Push notification'.format(notification))
+            if not has_push_notification_device(notification.user, notification.target):
+                errors.append('Failed to send {0}: user {1} has no push-enabled devices'.format(
+                    notification, notification.user
+                ))
                 continue
             if not notification.send_and_mark_sent_push_notification_now():
                 errors.append('Failed to send {0}'.format(notification))
