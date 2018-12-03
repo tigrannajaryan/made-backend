@@ -17,3 +17,4 @@ NOTIFICATION_CNANNEL_CHOICES = Choices(
 class NotificationCode(StrEnum):
     HINT_TO_FIRST_BOOK = 'hint_to_first_book'
     HINT_TO_SELECT_STYLIST = 'hint_to_select_stylist'
+    HINT_TO_REBOOK = 'hint_to_rebook'

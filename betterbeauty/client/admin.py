@@ -31,7 +31,7 @@ class PreferredStylistAdmin(admin.ModelAdmin):
 
 
 class ClientAdmin(admin.ModelAdmin):
-    list_display = ['user_phone', 'user_name']
+    list_display = ['user_phone', 'user_name', 'created_at', ]
     search_fields = ['user__phone', 'user__first_name', 'user__last_name']
 
     def user_phone(self, obj):

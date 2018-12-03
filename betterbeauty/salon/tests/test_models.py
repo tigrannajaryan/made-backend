@@ -1,5 +1,5 @@
 import datetime
-from typing import Dict
+from typing import Dict, List
 
 import pytest
 import pytz
@@ -12,11 +12,16 @@ from freezegun import freeze_time
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.models import Client, PreferredStylist
+from core.models import User, UserRole
 from core.types import Weekday
 from salon.models import (
+    Salon,
     Stylist,
+    StylistAvailableWeekDay,
     StylistService,
+    StylistSpecialAvailableDate,
 )
+from salon.types import TimeSlot
 
 
 def stylist_appointments_data(stylist: Stylist) -> Dict[str, Appointment]:
@@ -227,6 +232,172 @@ class TestStylist(object):
         preferred_stylist.save(update_fields=['deleted_at'])
         assert (stylist.get_preferred_clients().count() == 0)
 
+    @pytest.mark.django_db
+    def test_is_working_time(self):
+        salon: Salon = G(Salon, timezone=pytz.timezone('America/New_York'))
+        user: User = G(User, role=[UserRole.STYLIST, ])
+        stylist: Stylist = G(Stylist, salon=salon, user=user)
+        G(
+            StylistAvailableWeekDay, stylist=stylist,
+            weekday=Weekday.MONDAY,
+            work_start_at=datetime.time(9, 0),
+            work_end_at=datetime.time(17, 0),
+            is_available=True
+
+        )
+        G(
+            StylistAvailableWeekDay, stylist=stylist,
+            weekday=Weekday.TUESDAY,
+            work_start_at=datetime.time(9, 0),
+            work_end_at=datetime.time(17, 0),
+            is_available=False
+
+        )
+        G(
+            StylistAvailableWeekDay, stylist=stylist,
+            weekday=Weekday.THURSDAY,
+            work_start_at=datetime.time(9, 0),
+            work_end_at=datetime.time(17, 0),
+            is_available=True
+
+        )
+        G(
+            StylistSpecialAvailableDate, stylist=stylist,
+            date=datetime.date(2018, 11, 29), is_available=False
+        )
+        est = pytz.timezone('America/New_York')
+        # Monday
+        assert(
+            stylist.is_working_time(est.localize(datetime.datetime(2018, 11, 26, 8, 59))) is False
+        )
+        assert (
+            stylist.is_working_time(est.localize(datetime.datetime(2018, 11, 26, 9, 00))) is True
+        )
+        assert (
+            stylist.is_working_time(est.localize(datetime.datetime(2018, 11, 26, 9, 1))) is True
+        )
+        assert (
+            stylist.is_working_time(est.localize(datetime.datetime(2018, 11, 26, 16, 59))) is True
+        )
+        assert (
+            stylist.is_working_time(est.localize(datetime.datetime(2018, 11, 26, 17, 1))) is False
+        )
+        # Tuesday
+        assert (
+            stylist.is_working_time(est.localize(datetime.datetime(2018, 11, 27, 8, 59))) is False
+        )
+        assert (
+            stylist.is_working_time(est.localize(datetime.datetime(2018, 11, 27, 9, 00))) is False
+        )
+        assert (
+            stylist.is_working_time(est.localize(datetime.datetime(2018, 11, 27, 9, 1))) is False
+        )
+        assert (
+            stylist.is_working_time(est.localize(datetime.datetime(2018, 11, 27, 16, 59))) is False
+        )
+        assert (
+            stylist.is_working_time(est.localize(datetime.datetime(2018, 11, 27, 17, 1))) is False
+        )
+        # Thursday - because it's a special date
+        assert (
+            stylist.is_working_time(est.localize(datetime.datetime(2018, 11, 27, 8, 59))) is False
+        )
+        assert (
+            stylist.is_working_time(est.localize(datetime.datetime(2018, 11, 27, 9, 00))) is False
+        )
+        assert (
+            stylist.is_working_time(est.localize(datetime.datetime(2018, 11, 27, 9, 1))) is False
+        )
+        assert (
+            stylist.is_working_time(est.localize(datetime.datetime(2018, 11, 27, 16, 59))) is False
+        )
+        assert (
+            stylist.is_working_time(est.localize(datetime.datetime(2018, 11, 27, 17, 1))) is False
+        )
+
+    @pytest.mark.django_db
+    def test_is_working_day(self):
+        salon: Salon = G(Salon, timezone=pytz.timezone('America/New_York'))
+        user: User = G(User, role=[UserRole.STYLIST, ])
+        stylist: Stylist = G(Stylist, salon=salon, user=user)
+        G(
+            StylistAvailableWeekDay, stylist=stylist,
+            weekday=Weekday.MONDAY,
+            work_start_at=datetime.time(9, 0),
+            work_end_at=datetime.time(17, 0),
+            is_available=True
+
+        )
+        G(
+            StylistAvailableWeekDay, stylist=stylist,
+            weekday=Weekday.TUESDAY,
+            work_start_at=datetime.time(9, 0),
+            work_end_at=datetime.time(17, 0),
+            is_available=False
+
+        )
+        G(
+            StylistAvailableWeekDay, stylist=stylist,
+            weekday=Weekday.THURSDAY,
+            work_start_at=datetime.time(9, 0),
+            work_end_at=datetime.time(17, 0),
+            is_available=True
+
+        )
+        G(
+            StylistSpecialAvailableDate, stylist=stylist,
+            date=datetime.date(2018, 11, 29), is_available=False
+        )
+        est = pytz.timezone('America/New_York')
+        # Monday
+        assert (
+            stylist.is_working_day(est.localize(datetime.datetime(2018, 11, 26, 8, 59))) is True
+        )
+        assert (
+            stylist.is_working_day(est.localize(datetime.datetime(2018, 11, 26, 9, 00))) is True
+        )
+        assert (
+            stylist.is_working_day(est.localize(datetime.datetime(2018, 11, 26, 9, 1))) is True
+        )
+        assert (
+            stylist.is_working_day(est.localize(datetime.datetime(2018, 11, 26, 16, 59))) is True
+        )
+        assert (
+            stylist.is_working_day(est.localize(datetime.datetime(2018, 11, 26, 17, 1))) is True
+        )
+        # Tuesday
+        assert (
+            stylist.is_working_day(est.localize(datetime.datetime(2018, 11, 27, 8, 59))) is False
+        )
+        assert (
+            stylist.is_working_day(est.localize(datetime.datetime(2018, 11, 27, 9, 00))) is False
+        )
+        assert (
+            stylist.is_working_day(est.localize(datetime.datetime(2018, 11, 27, 9, 1))) is False
+        )
+        assert (
+            stylist.is_working_day(est.localize(datetime.datetime(2018, 11, 27, 16, 59))) is False
+        )
+        assert (
+            stylist.is_working_day(est.localize(datetime.datetime(2018, 11, 27, 17, 1))) is False
+        )
+        # Thursday - because it's a special date
+        assert (
+            stylist.is_working_day(est.localize(datetime.datetime(2018, 11, 27, 8, 59))) is False
+        )
+        assert (
+            stylist.is_working_day(est.localize(datetime.datetime(2018, 11, 27, 9, 00))) is False
+        )
+        assert (
+            stylist.is_working_day(est.localize(datetime.datetime(2018, 11, 27, 9, 1))) is False
+        )
+        assert (
+            stylist.is_working_day(est.localize(datetime.datetime(2018, 11, 27, 16, 59))) is False
+        )
+        assert (
+            stylist.is_working_day(est.localize(datetime.datetime(2018, 11, 27, 17, 1))) is False
+        )
+
 
 class TestStylistService(object):
     @pytest.mark.django_db
@@ -257,6 +428,20 @@ class TestAvailableSlots(object):
         assert (parser.parse('2018-05-14 13:30:00+0000') in unavailable_slot_times)
         assert (parser.parse('2018-05-14 14:30:00+0000') in unavailable_slot_times)
 
+    @pytest.mark.django_db
+    @freeze_time('2018-05-14 07:30:00 UTC')
+    def test_available_slots_with_special_date(self, stylist_data):
+        stylist: Stylist = stylist_data
+        date = datetime.datetime.now().date()
+        stylist.available_days.filter(weekday=date.isoweekday()).update(
+            work_start_at="09:00", work_end_at="18:00", is_available=True)
+        G(
+            StylistSpecialAvailableDate, stylist=stylist,
+            date=datetime.date(2018, 5, 14), is_available=False
+        )
+        all_slots = stylist.get_available_slots(date)
+        assert(len(all_slots) == 0)
+
 
 class TestGetAvailableTime():
 
@@ -278,3 +463,82 @@ class TestGetAvailableTime():
         stylist_available_weekday2 = stylist_data.available_days.get(weekday=2)
         assert (stylist_available_weekday2.get_available_time() == datetime.timedelta(
             hours=2, minutes=00))
+
+
+class TestStylistAvailableWeekDay(object):
+    @pytest.mark.django_db
+    def test_get_slot_end_time(self):
+        stylist: Stylist = G(
+            Stylist, service_time_gap=datetime.timedelta(minutes=40))
+        available_weekday: StylistAvailableWeekDay = G(
+            StylistAvailableWeekDay,
+            stylist=stylist, weekday=Weekday.MONDAY,
+            work_start_at=datetime.time(10, 0),
+            work_end_at=datetime.time(18, 0), is_available=True
+        )
+        assert (
+            available_weekday.get_slot_end_time() == datetime.time(18, 40)
+        )
+        available_weekday.is_available = False
+        available_weekday.save()
+        assert (available_weekday.get_slot_end_time() is None)
+
+    @pytest.mark.django_db
+    def test_get_available_time(self):
+        salon: Salon = G(Salon, timezone=pytz.timezone('America/New_York'))
+        stylist: Stylist = G(
+            Stylist, salon=salon, service_time_gap=datetime.timedelta(minutes=30))
+        available_weekday: StylistAvailableWeekDay = G(
+            StylistAvailableWeekDay,
+            stylist=stylist, weekday=Weekday.MONDAY,
+            work_start_at=datetime.time(10, 0),
+            work_end_at=datetime.time(18, 0), is_available=True
+        )
+        # 16 slots between 10am and 6pm
+        assert(
+            available_weekday.get_available_time() == datetime.timedelta(minutes=16 * 30)
+        )
+
+    @pytest.mark.django_db
+    def test_get_all_slots(self):
+        salon: Salon = G(Salon, timezone=pytz.timezone('America/New_York'))
+        stylist: Stylist = G(
+            Stylist, salon=salon, service_time_gap=datetime.timedelta(minutes=30))
+        available_weekday: StylistAvailableWeekDay = G(
+            StylistAvailableWeekDay,
+            stylist=stylist, weekday=Weekday.MONDAY,
+            work_start_at=datetime.time(10, 0),
+            work_end_at=datetime.time(18, 0), is_available=True
+        )
+
+        all_slots: List[TimeSlot] = available_weekday.get_all_slots()
+        # 16 slots between 10am and 6pm
+        assert(len(all_slots) == 16)
+        first_slot_start, first_slot_end = all_slots[0]
+        assert (first_slot_start == datetime.time(10, 0))
+        assert (first_slot_end == datetime.time(10, 30))
+        last_slot_start, last_slot_end = all_slots[-1]
+        assert (last_slot_start == datetime.time(17, 30))
+        assert (last_slot_end == datetime.time(18, 0))
+
+        slots_slightly_after_noon: List[TimeSlot] = available_weekday.get_all_slots(
+            current_time=datetime.time(12, 20)
+        )
+        # 12:30-13:00, 13:00-13:30, 13:30-14:00, 14:00-14:30, 14:30-15:00, 15:00-15-30,
+        # 15:30-16:00, 16:00-16:30, 16:30-17:00, 17:00-17:30, 17:30-18:00
+        # total 11 slots
+        assert (len(slots_slightly_after_noon) == 11)
+        first_slot_start, first_slot_end = slots_slightly_after_noon[0]
+        assert(first_slot_start == datetime.time(12, 30))
+        assert (first_slot_end == datetime.time(13, 0))
+        last_slot_start, last_slot_end = slots_slightly_after_noon[-1]
+        assert (last_slot_start == datetime.time(17, 30))
+        assert (last_slot_end == datetime.time(18, 0))
+
+        # test with special date
+        special_date = datetime.date(2018, 11, 26)  # Monday
+        G(StylistSpecialAvailableDate, date=special_date, stylist=stylist, is_available=False)
+        special_date_slots: List[TimeSlot] = available_weekday.get_all_slots(
+            for_date=special_date
+        )
+        assert(len(special_date_slots) == 0)

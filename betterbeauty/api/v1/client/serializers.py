@@ -41,7 +41,12 @@ from integrations.slack import (
     send_slack_client_profile_update,
 )
 from pricing import CalculatedPrice
-from salon.models import Invitation, ServiceCategory, Stylist, StylistService
+from salon.models import (
+    Invitation,
+    ServiceCategory,
+    Stylist,
+    StylistService,
+)
 from salon.types import InvitationStatus, PriceOnDate
 from salon.utils import (
     calculate_price_and_discount_for_client_on_date,

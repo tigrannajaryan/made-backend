@@ -39,6 +39,7 @@ from salon.models import (
     StylistAvailableWeekDay,
     StylistService,
     StylistServicePhotoSample,
+    StylistSpecialAvailableDate,
     StylistWeekdayDiscount,
 )
 from salon.types import PriceOnDate
@@ -1213,7 +1214,7 @@ class StylistHomeSerializer(serializers.ModelSerializer):
             try:
                 shift = stylist.available_days.get(
                     weekday=date.isoweekday(), is_available=True)
-                return len(shift.get_all_slots())
+                return len(shift.get_all_slots(for_date=date))
             except StylistAvailableWeekDay.DoesNotExist:
                 return 0
         return None
@@ -1472,16 +1473,24 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
 
     def get_total_slot_count(self, data) -> int:
         available_weekday: StylistAvailableWeekDay = self.context['available_weekday']
-        return len(available_weekday.get_all_slots())
+        return len(available_weekday.get_all_slots()) if available_weekday else 0
 
     def get_work_start_at(self, data) -> Optional[datetime.time]:
         available_weekday: StylistAvailableWeekDay = self.context['available_weekday']
-        return available_weekday.work_start_at
+        return available_weekday.work_start_at if available_weekday else None
 
     def get_work_end_at(self, data) -> Optional[datetime.time]:
         available_weekday: StylistAvailableWeekDay = self.context['available_weekday']
-        return available_weekday.work_end_at
+        return available_weekday.work_end_at if available_weekday else None
 
     def get_is_day_available(self, data) -> bool:
         available_weekday: StylistAvailableWeekDay = self.context['available_weekday']
-        return available_weekday.is_available
+        return available_weekday.is_available if available_weekday else False
+
+
+class StylistSpecialAvailableDateSerializer(serializers.ModelSerializer):
+    is_available = serializers.BooleanField(required=False, default=False)
+
+    class Meta:
+        model = StylistSpecialAvailableDate
+        fields = ['is_available', ]
