@@ -185,11 +185,13 @@ class SearchStylistView(generics.ListAPIView):
             location = get_lat_lng_for_ip_address(ip)
         self.save_search_request(location)
         country: Optional[str] = self.request.user.client.country or 'US'
-        return SearchStylistView._search_stylists(query, address_query, location, country)
+        client_id: int = self.request.user.client.id
+        return SearchStylistView._search_stylists(query, address_query, location,
+                                                  country, client_id)
 
     @staticmethod
-    def _search_stylists(query: str, address_query: str, location: Point, country: str
-                         ) -> models.query.RawQuerySet:
+    def _search_stylists(query: str, address_query: str, location: Point, country: str,
+                         client_id: int) -> models.query.RawQuerySet:
         '''
         :param location: This is a required parameter. If omitted the function will fail.
         '''
@@ -215,7 +217,8 @@ class SearchStylistView(generics.ListAPIView):
                 salon.zip_code AS salon__zip_code,
                 sp.text AS sp_text,
                 services_count,
-                followers_count
+                followers_count,
+                preference_uuid
             FROM
                 stylist as st
             JOIN "user" on
@@ -252,6 +255,20 @@ class SearchStylistView(generics.ListAPIView):
                     ) ps ON
                     st.id = ps.stylist_id
             LEFT JOIN (
+                    SELECT
+                        uuid as preference_uuid,
+                        pfs.stylist_id
+                    FROM
+                        preferred_stylist as pfs
+                    WHERE
+                        pfs.client_id = {5} AND
+                        pfs.deleted_at IS NULL
+                    GROUP BY
+                        pfs.stylist_id,
+                        preference_uuid
+                    ) pfs ON
+                    st.id = pfs.stylist_id
+            LEFT JOIN (
             --	select denormalized list of all specialty names and their keywords for all stylists
                 SELECT
                     sp.stylist_id,
@@ -285,7 +302,7 @@ class SearchStylistView(generics.ListAPIView):
                 ST_Distance(salon.location,
                 ST_GeogFromText('{3}'))
             LIMIT {4};'''.format(query, address_query, country, point_str,
-                                 STYLIST_SEARCH_LIMIT + 1)
+                                 STYLIST_SEARCH_LIMIT + 1, client_id)
         )
         return stylists
 
