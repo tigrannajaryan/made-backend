@@ -124,6 +124,15 @@ class Client(models.Model):
                 status=AppointmentStatus.CHECKED_OUT)),
         ).order_by('-datetime_start_at')
 
+    def remove_google_oauth_token(self):
+        """Completely remove access and refresh tokens to allow to re-add integration"""
+        self.google_access_token = None
+        self.google_refresh_token = None
+        self.google_integration_added_at = None
+        self.save(update_fields=[
+            'google_access_token', 'google_refresh_token', 'google_integration_added_at'
+        ])
+
 
 class PreferredStylist(SmartModel):
     uuid = models.UUIDField(unique=True, default=uuid4, editable=False)
