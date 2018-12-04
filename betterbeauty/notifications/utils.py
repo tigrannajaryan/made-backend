@@ -232,7 +232,6 @@ def generate_hint_to_rebook_notifications(dry_run=False) -> int:
     send_time_window_start = datetime.time(19, 0)
     send_time_window_end = datetime.time(21, 0)
     discard_after = timezone.now() + datetime.timedelta(days=30)
-    cutoff_datetime = timezone.now() - datetime.timedelta(days=32)
     earliest_last_booking_datetime = timezone.now() - datetime.timedelta(weeks=4)
     target = UserRole.CLIENT
     message = (
@@ -257,7 +256,6 @@ def generate_hint_to_rebook_notifications(dry_run=False) -> int:
 
     eligible_clients_ids = Client.objects.filter(
         client_has_registered_devices,
-        created_at__gte=cutoff_datetime,
         user__is_active=True,
         appointment__status__in=[AppointmentStatus.NEW, AppointmentStatus.CHECKED_OUT]
     ).annotate(
