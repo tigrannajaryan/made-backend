@@ -13,11 +13,18 @@ from core.models import UserRole
 from salon.models import PreferredStylist, Stylist
 from salon.utils import has_bookable_slots_with_discounts
 from .models import Notification
+from .settings import NOTIFICATION_CHANNEL_PRIORITY
 from .types import NotificationChannel, NotificationCode
 
 
+def is_push_only(code: NotificationCode) -> bool:
+    """Return True if notification to be delivered ONLY via push"""
+    channels: List = NOTIFICATION_CHANNEL_PRIORITY.get(code, [])
+    return frozenset(channels) == frozenset([NotificationChannel.PUSH])
+
+
 @transaction.atomic()
-def send_all_push_notifications(stdout: TextIOBase, dry_run: bool=True) -> Tuple[int, int]:
+def send_all_notifications(stdout: TextIOBase, dry_run: bool=True) -> Tuple[int, int]:
     """
     Send (or pretend if dry_run is True) ALL pending push notifications
     :param stdout: TextIOBase object representing stdout device
@@ -28,12 +35,11 @@ def send_all_push_notifications(stdout: TextIOBase, dry_run: bool=True) -> Tuple
     skipped = 0
     pending_notifications = Notification.objects.filter(
         user__is_active=True, pending_to_send=True, sent_at__isnull=True,
-        channel=NotificationChannel.PUSH
     ).select_for_update(skip_locked=True)
     for notification in pending_notifications.iterator():
         stdout.write('Going to send {0}'.format(notification.__str__()))
         if not dry_run:
-            result = notification.send_and_mark_sent_push_notification_now()
+            result = notification.send_and_mark_sent_now()
             if result:
                 sent += 1
                 stdout.write('..sent successfully')
@@ -91,7 +97,6 @@ def generate_hint_to_first_book_notifications(dry_run=False) -> int:
             )
         )
     ).filter(
-        client_has_registered_devices,
         client__appointment__isnull=True,
         notification_cnt=0,
         stylist__services__is_enabled=True,
@@ -101,6 +106,14 @@ def generate_hint_to_first_book_notifications(dry_run=False) -> int:
         stylist__has_business_hours_set=True,
         stylist__deactivated_at=None,
     ).values_list('id', flat=True)
+
+    # if based on initial settings PUSH is the one and only channel that will be used
+    # let's select only those clients who actually have push-enabled devices, and
+    # include others only as soon as they add a push device.
+    if is_push_only(code):
+        pref_client_stylist_records_ids = pref_client_stylist_records_ids.filter(
+            client_has_registered_devices
+        )
     # actual queryset that we can lock for update on the time of
     # notifications creation
     pref_client_stylist_record = PreferredStylist.objects.filter(
@@ -186,7 +199,6 @@ def generate_hint_to_select_stylist_notifications(dry_run=False) -> int:
 
     message = message.format(bookable_stylists.count())
     eligible_clients_ids = Client.objects.filter(
-        client_has_registered_devices,
         client_does_not_have_preferred_stylists,
         created_at__lt=client_joined_before_datetime,
         created_at__gte=cutoff_datetime,
@@ -199,6 +211,14 @@ def generate_hint_to_select_stylist_notifications(dry_run=False) -> int:
             )
         )
     ).filter(notification_cnt=0).values_list('id', flat=True)
+
+    # if based on initial settings PUSH is the one and only channel that will be used
+    # let's select only those clients who actually have push-enabled devices, and
+    # include others only as soon as they add a push device.
+    if is_push_only(code):
+        eligible_clients_ids = eligible_clients_ids.filter(
+            client_has_registered_devices
+        )
     eligible_clients = Client.objects.filter(
         id__in=eligible_clients_ids
     ).select_for_update(skip_locked=True)
@@ -238,7 +258,6 @@ def generate_hint_to_rebook_notifications(dry_run=False) -> int:
         'We noticed you haven\'t booked an appointment '
         'for {0} weeks. Tap too book now.'
     )
-
     bookable_stylists = Stylist.objects.filter(
         services__is_enabled=True,
         user__phone__isnull=False,
@@ -255,7 +274,6 @@ def generate_hint_to_rebook_notifications(dry_run=False) -> int:
         user__gcmdevice__active=True)
 
     eligible_clients_ids = Client.objects.filter(
-        client_has_registered_devices,
         user__is_active=True,
         appointment__status__in=[AppointmentStatus.NEW, AppointmentStatus.CHECKED_OUT]
     ).annotate(
@@ -268,6 +286,12 @@ def generate_hint_to_rebook_notifications(dry_run=False) -> int:
     ).filter(
         last_visit_datetime__lt=earliest_last_booking_datetime, notification_cnt=0
     ).values_list('id', flat=True)
+
+    # if based on initial settings PUSH is the one and only channel that will be used
+    # let's select only those clients who actually have push-enabled devices, and
+    # include others only as soon as they add a push device.
+    if is_push_only(code):
+        eligible_clients_ids = eligible_clients_ids.filter(client_has_registered_devices)
 
     eligible_clients = Client.objects.filter(
         id__in=eligible_clients_ids

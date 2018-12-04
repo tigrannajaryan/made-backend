@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Dict, Optional, Tuple, Union
 
-from django.db import transaction
+from django.db import models, transaction
 from push_notifications import NotificationError
 from push_notifications.models import APNSDevice, GCMDevice
 
@@ -145,6 +145,30 @@ def unregister_device(
     return False
 
 
+def get_fcm_devices_for_user_and_role(user: User, user_role: UserRole) -> models.QuerySet:
+    """Return all FCM devices for give user and role"""
+    eligible_fcm_app_ids = {
+        UserRole.STYLIST: [MobileAppIdType.ANDROID_STYLIST, ],
+        UserRole.CLIENT: [MobileAppIdType.ANDROID_CLIENT, ]
+    }[user_role]
+    # Based on django_push_notifications documentation, we should specifically add
+    # this filter (`cloud_message_type='FCM'`)
+    fcm_devices = user.gcmdevice_set.filter(
+        application_id__in=eligible_fcm_app_ids, active=True, cloud_message_type='FCM')
+    return fcm_devices
+
+
+def get_apns_devices_for_user_and_role(user: User, user_role: UserRole) -> models.QuerySet:
+    """Return all APNS devices for give user and role"""
+    eligible_apns_app_ids = {
+        UserRole.STYLIST: [MobileAppIdType.IOS_STYLIST, MobileAppIdType.IOS_STYLIST_DEV],
+        UserRole.CLIENT: [MobileAppIdType.IOS_CLIENT, MobileAppIdType.IOS_CLIENT_DEV]
+    }[user_role]
+    apns_devices = user.apnsdevice_set.filter(
+        application_id__in=eligible_apns_app_ids, active=True)
+    return apns_devices
+
+
 def send_message_to_apns_devices_of_user(
         user: User, user_role: UserRole, message: str,
         extra: Dict[str, Any], badge_count: Optional[int]=0
@@ -158,12 +182,7 @@ def send_message_to_apns_devices_of_user(
         :param badge_count: positive int number to display on badge; 0 clears the badge
         :return: True if operation was successful, False otherwise
     """
-    eligible_app_ids = {
-        UserRole.STYLIST: [MobileAppIdType.IOS_STYLIST, MobileAppIdType.IOS_STYLIST_DEV],
-        UserRole.CLIENT: [MobileAppIdType.IOS_CLIENT, MobileAppIdType.IOS_CLIENT_DEV]
-    }[user_role]
-    apns_devices = user.apnsdevice_set.filter(
-        application_id__in=eligible_app_ids, active=True)
+    apns_devices = get_apns_devices_for_user_and_role(user=user, user_role=user_role)
     try:
         apns_devices.send_message(message=message, extra=extra, badge=badge_count)
     except NotificationError:
@@ -185,14 +204,7 @@ def send_message_to_fcm_devices_of_user(
     :param badge_count: positive int number to display on badge; 0 clears the badge
     :return: True if operation was successful, False otherwise
     """
-    eligible_app_ids = {
-        UserRole.STYLIST: [MobileAppIdType.ANDROID_STYLIST, ],
-        UserRole.CLIENT: [MobileAppIdType.ANDROID_CLIENT, ]
-    }[user_role]
-    # Based on django_push_notifications documentation, we should specifically add
-    # this filter (`cloud_message_type='FCM'`)
-    fcm_devices = user.gcmdevice_set.filter(
-        application_id__in=eligible_app_ids, active=True, cloud_message_type='FCM')
+    fcm_devices = get_fcm_devices_for_user_and_role(user=user, user_role=user_role)
     try:
         # Although we're dealing with FCM here, pure FCM format doesn't seem to work,
         # so here we're rolling back to native GCM and adding `body` key to extra, so
@@ -210,3 +222,10 @@ def send_message_to_fcm_devices_of_user(
             user_role, user.uuid
         ))
         return False
+
+
+def has_push_notification_device(user: User, user_role: UserRole) -> bool:
+    """Return True if user has at least one push-enabled device for given role"""
+    fcm_devices = get_fcm_devices_for_user_and_role(user=user, user_role=user_role)
+    apns_devices = get_apns_devices_for_user_and_role(user=user, user_role=user_role)
+    return fcm_devices.exists() or apns_devices.exists()
