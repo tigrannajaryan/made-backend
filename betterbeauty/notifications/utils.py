@@ -1,7 +1,8 @@
 import datetime
 from io import TextIOBase
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Max, Q
 from django.utils import timezone
@@ -9,7 +10,10 @@ from django.utils import timezone
 from appointment.models import Appointment
 from appointment.types import AppointmentStatus
 from client.models import Client
+from core.constants import EnvLevel
 from core.models import UserRole
+from core.utils.phone import to_international_format
+from integrations.push.utils import has_push_notification_device
 from salon.models import PreferredStylist, Stylist
 from salon.utils import has_bookable_slots_with_discounts
 from .models import Notification
@@ -163,7 +167,6 @@ def generate_hint_to_select_stylist_notifications(dry_run=False) -> int:
     Generate hint_to_select_stylist notifications
     Find all clients where it's been more than 72 hours since registered and
     no stylist is selected and we have at least 1 stylist that is bookable.
-    :param dry_run: if set to False, no sending will actually occur
     :param dry_run: if set to True, don't actually create notifications
     :return: number of notifications created
     """
@@ -244,7 +247,6 @@ def generate_hint_to_rebook_notifications(dry_run=False) -> int:
     Generate hint_to_rebook notifications
     Find all clients where it's been more than 4 weeks since last
     booking
-    :param dry_run: if set to False, no sending will actually occur
     :param dry_run: if set to True, don't actually create notifications
     :return: number of notifications created
     """
@@ -318,3 +320,155 @@ def generate_hint_to_rebook_notifications(dry_run=False) -> int:
     if notifications_to_create_list and not dry_run:
         Notification.objects.bulk_create(notifications_to_create_list)
     return len(notifications_to_create_list)
+
+
+def cancel_new_appointment_notification(
+    appointment: Appointment
+):
+    """Delete new appointment notification if it's not sent yet"""
+    notification: Notification = appointment.stylist_new_appointment_notification
+    if notification and notification.pending_to_send:
+        appointment.stylist_new_appointment_notification = None
+        appointment.stylist_new_appointment_notification_sent_at = None
+        appointment.save(
+            update_fields=[
+                'stylist_new_appointment_notification_sent_at',
+                'stylist_new_appointment_notification_sent_at'
+            ])
+        notification.delete()
+
+
+def get_earliest_time_to_send_notification_on_date(
+        stylist: Stylist, date: datetime.date
+) -> datetime.datetime:
+    """Return earliest between 10am and start of work on a given date"""
+    ten_am: datetime.datetime = stylist.salon.timezone.localize(
+        datetime.datetime.combine(date, datetime.time(10, 0))
+    )
+    work_start: Optional[
+        datetime.datetime] = stylist.get_workday_start_time(date)
+    if work_start:
+        return min(work_start, ten_am)
+    return ten_am
+
+
+@transaction.atomic()
+def generate_new_appointment_notification(
+        appointment: Appointment
+) -> int:
+    """
+    Generates single notification for NEW appointment, when appointment is created
+    by a client and at least 15 mins are passed since appointment creation
+    (15 min is time we allow for the client to cancel without bothering the stylist).
+    After notification is created, appointment is updated with reference to it
+
+    :param appointment: Appointment to generate
+    :return: number of notifications created
+    """
+    # TODO: Enable on production once tested
+    if settings.LEVEL == EnvLevel.PRODUCTION:
+        return 0
+
+    code = NotificationCode.NEW_APPOINTMENT
+    target = UserRole.STYLIST
+    message = (
+        'You have a new appointment at {date_time} for ${client_price} '
+        '{services} from {client_name}{client_phone}'
+    )
+    stylist: Stylist = appointment.stylist
+    client: Client = appointment.client
+    # appointment must be created by client
+    if not client or client.user != appointment.created_by:
+        return 0
+    # if appointment is not new - skip
+    if appointment.status != AppointmentStatus.NEW:
+        return 0
+    # if it's push-only notification, and client has no push devices - skip
+    if is_push_only(code) and not has_push_notification_device(
+        stylist.user, UserRole.STYLIST
+    ):
+        return 0
+    message = message.format(
+        date_time=stylist.with_salon_tz(appointment.datetime_start_at),
+        client_price=int(appointment.total_client_price_before_tax),
+        services=', '.join([s.service_name for s in appointment.services.all()]),
+        client_name=appointment.client.user.get_full_name(),
+        client_phone=to_international_format(client.user.phone, client.country)
+    )
+    # Calculate start of send window.
+    # If current time is later than minimum of (stylist's day start - 30 min, 10am) -
+    # schedule to send immediately. If it's not working day for stylist (can happen
+    # in case if stylist set unavailability after appointment was created), we'll
+    # default to 10am.
+    # Otherwise, we'll delay sending to half-hour to the minimum of either day start
+    # or appointment start time
+    current_now: datetime.datetime = stylist.with_salon_tz(timezone.now())
+    # We'll use graceful period delay of 15 minutes, to
+    # allow cancelling it without sending if client cancels appointment
+    current_now_with_grace_period: datetime.datetime = current_now + datetime.timedelta(
+        minutes=15
+    )
+    stylist_today: datetime.date = current_now.date()
+    earliest_time_today = get_earliest_time_to_send_notification_on_date(
+        stylist, stylist_today
+    )
+    if current_now >= earliest_time_today:
+        # if stylist already started work, or it's later than 10am - just add
+        # 15 minute grace period to current time
+        send_time_window_start_datetime = current_now_with_grace_period
+    else:
+        # if it's earlier than 10am or stylist's work day - set time window
+        # 30 minutes earlier than work start or appointment start time,
+        # but not earlier than (current time + 15 min)
+        send_time_window_start_datetime = max(
+            earliest_time_today - datetime.timedelta(minutes=30),
+            current_now_with_grace_period
+        )
+    # there's a real chance that we've jumped to tomorrow, if appointment was created
+    # just before the midnight. This means we've lost our send window for today, and
+    # should create time window to use for tomorrow following the same rules as for
+    # today, just honouring tomorrow's day settings
+    if send_time_window_start_datetime.date() == current_now.date():
+        send_time_window_start = send_time_window_start_datetime.time()
+        send_time_window_end = datetime.time(23, 59, 59)
+        discard_after = stylist.salon.timezone.localize(
+            datetime.datetime.combine(
+                stylist_today, datetime.time(0, 0, 0)
+            )
+        ) + datetime.timedelta(days=1)
+    else:
+        # we're jumping to tomorrow
+        tomorrow_send_time_window_start_datetime = get_earliest_time_to_send_notification_on_date(
+            stylist, send_time_window_start_datetime.date()
+        ) - datetime.timedelta(minutes=30)
+        send_time_window_start = tomorrow_send_time_window_start_datetime.time()
+        # we also need to adjust time window end, to avoid sending today. We'll just
+        # set it one minute back from current time
+        send_time_window_end = (current_now - datetime.timedelta(minutes=1)).time()
+        discard_after = stylist.salon.timezone.localize(
+            datetime.datetime.combine(
+                stylist_today, datetime.time(0, 0, 0)
+            )
+        ) + datetime.timedelta(days=2)
+
+    notification = Notification.objects.create(
+        user=appointment.stylist.user, target=target, code=code,
+        message=message,
+        discard_after=discard_after,
+        send_time_window_start=send_time_window_start,
+        send_time_window_end=send_time_window_end,
+        send_time_window_tz=stylist.salon.timezone,
+        data={
+            'appointment_datetime_start_at': appointment.datetime_start_at.isoformat(),
+            'appointment_uuid': str(appointment.uuid)
+        }
+    )
+    appointment.stylist_new_appointment_notification = notification
+    appointment.stylist_new_appointment_notification_sent_at = current_now
+    appointment.save(
+        update_fields=[
+            'stylist_new_appointment_notification',
+            'stylist_new_appointment_notification_sent_at'
+        ]
+    )
+    return 1

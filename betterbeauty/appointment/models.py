@@ -90,12 +90,22 @@ class Appointment(models.Model):
     has_tax_included = models.NullBooleanField(null=True, default=None)
     has_card_fee_included = models.NullBooleanField(null=True, default=None)
 
+    # fields holding Google calendar references for this appointment
     client_google_calendar_id = models.CharField(
         max_length=512, null=True, blank=True, default=None)
     client_google_calendar_added_at = models.DateTimeField(null=True, default=None)
     stylist_google_calendar_id = models.CharField(
         max_length=512, null=True, blank=True, default=None)
     stylist_google_calendar_added_at = models.DateTimeField(null=True, default=None)
+
+    # fields holding references to notifications sent for this appointment
+    stylist_new_appointment_notification = models.ForeignKey(
+        'notifications.Notification', null=True, blank=True, default=None,
+        on_delete=models.SET_NULL
+    )
+    stylist_new_appointment_notification_sent_at = models.DateTimeField(
+        null=True, blank=True, default=None
+    )
 
     objects = AppointmentManager()
     all_objects = AppointmentAllObjectsManager()
