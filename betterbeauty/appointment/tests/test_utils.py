@@ -20,7 +20,7 @@ def test_appointments_to_insert_to_stylist_calendar():
     # Eligible appointments must match the following criteria:
     # - stylist has google access token
     # - appointment is created AFTER stylist added google integration
-    # - appointment is in NEW state
+    # - appointment is in NEW or Checked Out state
     # - appointment wasn't added to stylist's google calendar before
     salon: Salon = G(Salon, timezone=pytz.timezone('America/New_York'))
     stylist: Stylist = G(
