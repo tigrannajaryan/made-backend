@@ -41,6 +41,8 @@ class Client(models.Model):
     google_access_token = models.CharField(max_length=1024, null=True, blank=True, default=None)
     google_refresh_token = models.CharField(max_length=1024, null=True, blank=True, default=None)
 
+    has_seen_educational_screens = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(null=True, auto_now_add=True)
 
     def geo_code_address(self):

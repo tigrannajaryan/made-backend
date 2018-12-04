@@ -43,7 +43,8 @@ class TestClientProfileView:
             'phone': user.phone,
             'first_name': 'Tom',
             'last_name': 'Cruise',
-            "email": 'test@example.com'
+            "email": 'test@example.com',
+            'has_seen_educational_screens': True
         }
         profile_url = reverse('api:v1:client:client-profile')
         response = client.post(profile_url, data=data, HTTP_AUTHORIZATION=auth_token)
@@ -54,6 +55,7 @@ class TestClientProfileView:
         user.refresh_from_db()
         assert(user.client is not None)
         slack_mock.assert_called_once_with(user.client)
+        assert (user.client.has_seen_educational_screens is True)
 
     @pytest.mark.django_db
     def test_update_profile(self, client, authorized_client_user, mocker):
@@ -72,7 +74,8 @@ class TestClientProfileView:
         assert (data['first_name'] == 'Tom')
         assert (data['last_name'] == 'Cruise')
         updated_data = {
-            'first_name': 'Tommy'
+            'first_name': 'Tommy',
+            'has_seen_educational_screens': True
         }
         user.refresh_from_db()
         assert (user.client is not None)
@@ -88,6 +91,7 @@ class TestClientProfileView:
         assert (data['last_name'] == 'Cruise')
         user.refresh_from_db()
         slack_mock.assert_called_once_with(user.client)
+        assert(user.client.has_seen_educational_screens is True)
 
     @pytest.mark.django_db
     def test_view_permissions(

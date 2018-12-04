@@ -73,13 +73,15 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
     )
 
     google_calendar_integrated = serializers.SerializerMethodField()
+    has_seen_educational_screens = serializers.BooleanField(
+        source='client.has_seen_educational_screens', required=False)
 
     class Meta:
         model = User
         fields = [
             'first_name', 'last_name', 'phone', 'profile_photo_id', 'profile_photo_url',
             'zip_code', 'birthday', 'email', 'city', 'state', 'privacy',
-            'google_calendar_integrated',
+            'google_calendar_integrated', 'has_seen_educational_screens',
         ]
 
     def get_google_calendar_integrated(self, instance: User) -> bool:
@@ -149,6 +151,7 @@ class ClientProfileStatusSerializer(serializers.ModelSerializer):
         fields = [
             'has_name', 'has_zipcode', 'has_email', 'has_picture_set', 'has_invitation',
             'has_preferred_stylist_set', 'has_booked_appointment', 'has_past_visit',
+            'has_seen_educational_screens',
         ]
 
     def get_has_name(self, client: Client) -> bool:
