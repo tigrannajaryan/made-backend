@@ -322,6 +322,7 @@ def generate_hint_to_rebook_notifications(dry_run=False) -> int:
     return len(notifications_to_create_list)
 
 
+@transaction.atomic()
 def cancel_new_appointment_notification(
     appointment: Appointment
 ):
@@ -341,7 +342,7 @@ def cancel_new_appointment_notification(
 def get_earliest_time_to_send_notification_on_date(
         stylist: Stylist, date: datetime.date
 ) -> datetime.datetime:
-    """Return earliest between 10am and start of work on a given date"""
+    """Return minimum between 10am and start of work on a given date"""
     ten_am: datetime.datetime = stylist.salon.timezone.localize(
         datetime.datetime.combine(date, datetime.time(10, 0))
     )
@@ -405,24 +406,36 @@ def generate_new_appointment_notification(
     current_now: datetime.datetime = stylist.with_salon_tz(timezone.now())
     # We'll use graceful period delay of 15 minutes, to
     # allow cancelling it without sending if client cancels appointment
-    current_now_with_grace_period: datetime.datetime = current_now + datetime.timedelta(
-        minutes=15
-    )
-    stylist_today: datetime.date = current_now.date()
+    GRACE_PERIOD = datetime.timedelta(minutes=15)
+    # we're going to limit minimum time we can send the message before the day
+    # starts
+    MINIMUM_TIME_BEFORE_DAY_START = datetime.timedelta(minutes=30)
+    CURRENT_NOW_WITH_GRACE_PERIOD: datetime.datetime = current_now + GRACE_PERIOD
+    STYLIST_TODAY: datetime.date = current_now.date()
+    # if we're composing the notification to be sent today - we'll discard it after
+    # today's midnight
+    TODAY_MIDNIGHT = stylist.salon.timezone.localize(
+        datetime.datetime.combine(
+            STYLIST_TODAY, datetime.time(0, 0, 0)
+        )
+    ) + datetime.timedelta(days=1)
+    # there can be a situation (if it's too late today) that notification will
+    # go to tomorrow
+    TOMORROW_MIDNIGHT = TODAY_MIDNIGHT + datetime.timedelta(days=1)
     earliest_time_today = get_earliest_time_to_send_notification_on_date(
-        stylist, stylist_today
+        stylist, STYLIST_TODAY
     )
     if current_now >= earliest_time_today:
         # if stylist already started work, or it's later than 10am - just add
         # 15 minute grace period to current time
-        send_time_window_start_datetime = current_now_with_grace_period
+        send_time_window_start_datetime = CURRENT_NOW_WITH_GRACE_PERIOD
     else:
         # if it's earlier than 10am or stylist's work day - set time window
         # 30 minutes earlier than work start or appointment start time,
         # but not earlier than (current time + 15 min)
         send_time_window_start_datetime = max(
-            earliest_time_today - datetime.timedelta(minutes=30),
-            current_now_with_grace_period
+            earliest_time_today - MINIMUM_TIME_BEFORE_DAY_START,
+            CURRENT_NOW_WITH_GRACE_PERIOD
         )
     # there's a real chance that we've jumped to tomorrow, if appointment was created
     # just before the midnight. This means we've lost our send window for today, and
@@ -431,25 +444,23 @@ def generate_new_appointment_notification(
     if send_time_window_start_datetime.date() == current_now.date():
         send_time_window_start = send_time_window_start_datetime.time()
         send_time_window_end = datetime.time(23, 59, 59)
-        discard_after = stylist.salon.timezone.localize(
-            datetime.datetime.combine(
-                stylist_today, datetime.time(0, 0, 0)
-            )
-        ) + datetime.timedelta(days=1)
+        discard_after = TODAY_MIDNIGHT
     else:
-        # we're jumping to tomorrow
+        # we're jumping to tomorrow. We'll set the start of time window to the earliest
+        # time when we can send it tomorrow (i.e. min(start of day or 10am) - 30 minutes
         tomorrow_send_time_window_start_datetime = get_earliest_time_to_send_notification_on_date(
             stylist, send_time_window_start_datetime.date()
-        ) - datetime.timedelta(minutes=30)
+        ) - MINIMUM_TIME_BEFORE_DAY_START
         send_time_window_start = tomorrow_send_time_window_start_datetime.time()
-        # we also need to adjust time window end, to avoid sending today. We'll just
-        # set it one minute back from current time
+        # we also need to adjust time window end, to avoid sending today. To do this,
+        # we'll set time window just a minute before now, so it's not sent today
         send_time_window_end = (current_now - datetime.timedelta(minutes=1)).time()
-        discard_after = stylist.salon.timezone.localize(
-            datetime.datetime.combine(
-                stylist_today, datetime.time(0, 0, 0)
-            )
-        ) + datetime.timedelta(days=2)
+        # If appointment is tomorrow - we'll set discard_after to appointment's time,
+        # because it's no longer relevant after it started
+        # Otherwise (if it's on a later date), we'll set it to tomorrow's midnight
+        discard_after = stylist.with_salon_tz(
+            min(TOMORROW_MIDNIGHT, appointment.datetime_start_at)
+        )
 
     notification = Notification.objects.create(
         user=appointment.stylist.user, target=target, code=code,

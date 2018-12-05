@@ -657,9 +657,12 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
                 appointment.append_status_history(updated_by=user)
 
             appointment.save(**kwargs)
-            # try to cancel new appointment notification if it's not
+            # If status is changing try to cancel new appointment notification if it's not
             # sent yet
-            if status == AppointmentStatus.CANCELLED_BY_CLIENT:
+            if (
+                status != AppointmentStatus.NEW and
+                appointment.stylist_new_appointment_notification
+            ):
                 cancel_new_appointment_notification(appointment)
                 appointment.refresh_from_db()
 
