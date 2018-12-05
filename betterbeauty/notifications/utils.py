@@ -13,6 +13,7 @@ from client.models import Client
 from core.constants import EnvLevel
 from core.models import UserRole
 from core.utils.phone import to_international_format
+from integrations.push.types import MobileAppIdType
 from integrations.push.utils import has_push_notification_device
 from salon.models import PreferredStylist, Stylist
 from salon.utils import has_bookable_slots_with_discounts
@@ -483,3 +484,196 @@ def generate_new_appointment_notification(
         ]
     )
     return 1
+
+
+def generate_tomorrow_appointments_notifications(dry_run=False) -> int:
+    """
+    Generate notifications about tomorrow appointments
+
+    We're going to generate this for the stylist, for whom in their local timezone
+    it's 30 minutes past their work day (or 30 minutes past 19:00, if today is not working day)
+
+    Stylist must have at least one appointment in NEW status for tomorrow, and there
+    must be no previously sent notification. If current settings for this notification imply
+    that it's a push-only notification - at least one push-enabled device must be configured
+
+    :param dry_run: if set to True, don't actually create notifications
+    :return: number of notifications created
+    """
+    code = NotificationCode.TOMORROW_APPOINTMENTS
+    message = 'You have new appointments tomorrow. Tap to see the list.'
+    target = UserRole.STYLIST
+
+    eligible_stylists_raw_queryset = Stylist.objects.raw(
+        """
+        select
+            st_id as id
+        from
+            (
+            select
+                st_id,
+                u_id,
+                -- current date in stylist's timezone
+                stylist_current_date_d,
+                -- current time in stylist's timezone
+                stylist_current_time_t,
+                -- datetime of today's midnight (the one which is tonight) in stylist's timezone
+                ((stylist_current_date_d + time '00:00') + interval '1 day')
+                    at time zone stylist_timezone stylist_tomorrow_start_dt,
+                -- datetime of tomorrow's midnight (i.e. the one which is tomorrow's tonight)
+                ((stylist_current_date_d + time '00:00') + interval '2 days')
+                    at time zone stylist_timezone stylist_tomorrow_end_dt,
+                -- time of today's work day end. If stylist's availability is set and it's not
+                -- special unavailable day - it will be set to
+                -- (end of day + grace_end_day_interval_int).
+                -- Otherwise it will be set to (19:00 + grace_end_day_interval_int)
+                (coalesce(
+                   wd.work_end_at,
+                   time %(fallback_work_end_time)s) +
+                     interval '%(grace_end_day_interval_int)s minutes')
+                stylist_work_day_end_with_grace_period_t
+            from
+                (
+                select
+                    st.id st_id,
+                    u.id u_id,
+                    -- stylist's timezone as string
+                    sl.timezone stylist_timezone,
+                    -- current time in stylist's timezone
+                    cast(
+                      timestamptz %(current_now_with_tz)s at time zone sl.timezone as time
+                      ) stylist_current_time_t,
+                    -- current date in stylist's timezone
+                    cast(
+                      timestamptz %(current_now_with_tz)s at time zone sl.timezone as date
+                      ) stylist_current_date_d,
+                    -- current iso weekday based on date in stylist's timezone
+                    extract(ISODOW
+                from
+                    timestamptz %(current_now_with_tz)s at time zone sl.timezone)
+                      stylist_current_weekday
+                from
+                    stylist as st
+                inner join public.user as u on
+                    st.user_id = u.id
+                inner join salon as sl on
+                    st.salon_id = sl.id
+                where
+                    st.deactivated_at isnull
+                order by
+                    st.id ) as stylists_with_tz_aware_info
+            left outer join stylist_available_day as wd on
+                wd.stylist_id = st_id
+                and wd.weekday = stylist_current_weekday
+                and wd.is_available = true
+                -- if special unavailability is set - it overrides weekday availability
+                and not exists(
+                  select 1 from stylist_special_available_date ssad
+                  where
+                    ssad.date = stylist_current_date_d
+                    and ssad.stylist_id = st_id
+                    and ssad.is_available = false
+                )
+            ) as stylists_for_whom_it_is_time_to_send
+        where
+            -- current time must be > stylist's work day end (real or implied) + grace period
+            stylist_current_time_t > stylist_work_day_end_with_grace_period_t
+            -- at least one appointment in NEW status must exist for tomorrow
+            and exists(
+            select 1 from appointment
+            where
+                stylist_id = st_id
+                and datetime_start_at >= stylist_tomorrow_start_dt
+                and datetime_start_at < stylist_tomorrow_end_dt
+                and status = %(appointment_status)s )
+            -- no notification is created for tomorrow yet
+            and not exists(
+            select 1 from notification
+            where
+                user_id = u_id
+                and code = %(code)s
+                and target = %(target)s
+                and data->'date' ? cast(
+                  cast((stylist_current_date_d + interval '1 day'
+                  ) as date) as text)
+              )
+            and (
+            -- if it's push-only notification - there should be at least 1 device
+              %(not_push_only)s or
+                exists(
+                    select 1
+                    from push_notifications_apnsdevice
+                    where
+                      active = true
+                      and user_id = u_id
+                      and application_id in (%(local_apns_id)s, %(server_apns_id)s)
+                )
+                or exists(
+                     select 1
+                     from push_notifications_gcmdevice
+                     where
+                       active = true
+                       and user_id = u_id
+                       and application_id=%(fcm_app_id)s
+                )
+            )
+            ;
+        """,
+        {
+            'current_now_with_tz': timezone.now().isoformat(),
+            'code': code,
+            'appointment_status': AppointmentStatus.NEW,
+            'fallback_work_end_time': datetime.time(19, 0).isoformat(),
+            'grace_end_day_interval_int': 30,
+            'target': UserRole.STYLIST,
+            'not_push_only': str(not is_push_only(code)),
+            'local_apns_id': MobileAppIdType.IOS_STYLIST_DEV,
+            'server_apns_id': MobileAppIdType.IOS_STYLIST,
+            'fcm_app_id': MobileAppIdType.ANDROID_STYLIST
+        }
+    )
+    # we can't operate directy on RawQuerySet, so we have to extract eligible ids out
+    # of it
+
+    eligible_stylist_ids = [
+        stylist.id for stylist in eligible_stylists_raw_queryset]
+    eligible_stylists = Stylist.objects.filter(id__in=eligible_stylist_ids)
+    notifications_to_create_list: List[Notification] = []
+
+    for stylist in eligible_stylists.select_for_update(skip_locked=True):
+        # we can safely set start time window to now, since we've verified the condition
+        # in the main query
+        current_now: datetime.datetime = stylist.with_salon_tz(
+            timezone.now()
+        )
+        send_time_window_start = current_now.time()
+        send_time_window_end = datetime.time(23, 59, 59)
+        send_time_window_tz = stylist.salon.timezone
+        tomorrow_date_iso_str: str = (
+            current_now.date() + datetime.timedelta(days=1)
+        ).isoformat()
+
+        # set discard_after to today's midnight in stylist's timezone
+        discard_after = stylist.salon.timezone.localize(
+            datetime.datetime.combine(
+                current_now.date(), datetime.time(0, 0)
+            )
+        ) + datetime.timedelta(days=1)
+
+        notifications_to_create_list.append(
+            Notification(
+                user=stylist.user,
+                code=code,
+                target=target,
+                message=message,
+                send_time_window_start=send_time_window_start,
+                send_time_window_end=send_time_window_end,
+                send_time_window_tz=send_time_window_tz,
+                discard_after=discard_after,
+                data={'date': tomorrow_date_iso_str}
+            )
+        )
+    # if any notifications were generated - bulk created them
+    if notifications_to_create_list and not dry_run:
+        Notification.objects.bulk_create(notifications_to_create_list)
+    return len(notifications_to_create_list)

@@ -20,5 +20,8 @@ NOTIFICATION_CHANNEL_PRIORITY = {
     ],
     NotificationCode.NEW_APPOINTMENT: [
         NotificationChannel.PUSH,
-    ]
+    ],
+    NotificationCode.TOMORROW_APPOINTMENTS: [
+        NotificationChannel.PUSH  # NotificationChannel.SMS
+    ],
 }
