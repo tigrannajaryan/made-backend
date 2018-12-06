@@ -375,7 +375,8 @@ If the token has not yet expired, it can be refreshed to a new one:
         "has_preferred_stylist_set": true,
         "has_booked_appointment": true,
         "has_past_visit": true,
-        "has_invitation": true
+        "has_invitation": true,
+        "has_seen_educational_screens": false
     }
 }
 ```
@@ -554,7 +555,8 @@ curl -X POST \
         "has_preferred_stylist_set": true,
         "has_booked_appointment": true,
         "has_past_visit": true,
-        "has_invitation": true
+        "has_invitation": true,
+        "has_seen_educational_screens": true
     }
 }
 ```
@@ -2613,7 +2615,8 @@ curl -X GET \
     "email": "test@example.com",
     "city": "Queens",
     "state": "NY",
-    "privacy": "public"
+    "privacy": "public",
+    "has_seen_educational_screens": true
 }
 ```
 
@@ -2629,8 +2632,8 @@ curl -X POST \
     "birthday": "1988-09-08",
     "zip_code":12345,
     "email": "test@example.com",
-    "privacy": "private"
-
+    "privacy": "private",
+    "has_seen_educational_screens": true
 }'
 ```
 
@@ -2647,7 +2650,8 @@ curl -X POST \
     "email": "test@example.com",
     "city": null,
     "state": null,
-    "privacy": "private"
+    "privacy": "private",
+    "has_seen_educational_screens": true
 }
 ```
 

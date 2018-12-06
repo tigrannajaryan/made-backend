@@ -338,3 +338,5 @@ GOOGLE_OAUTH_CREDENTIALS_FILE_PATH = '<override in local.py>'
 # enable synchronization of Appointments with Stylist calendars
 GOOGLE_CALENDAR_STYLIST_SYNC_ENABLED = True
 GOOGLE_CALENDAR_CLIENT_SYNC_ENABLED = True
+
+MINUTES_BEFORE_REQUESTING_NEW_CODE = 0

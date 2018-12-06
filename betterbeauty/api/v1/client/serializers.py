@@ -1,4 +1,5 @@
 import datetime
+import decimal
 import uuid
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -75,15 +76,22 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
     privacy = serializers.ChoiceField(
         source='client.privacy', choices=CLIENT_PRIVACY_CHOICES, required=False
     )
+    profile_completeness = serializers.DecimalField(source='client.profile_completeness',
+                                                    max_digits=3, decimal_places=2,
+                                                    read_only=True, coerce_to_string=False,
+                                                    rounding=decimal.ROUND_HALF_UP)
 
     google_calendar_integrated = serializers.SerializerMethodField()
+    has_seen_educational_screens = serializers.BooleanField(
+        source='client.has_seen_educational_screens', required=False)
 
     class Meta:
         model = User
         fields = [
             'first_name', 'last_name', 'phone', 'profile_photo_id', 'profile_photo_url',
             'zip_code', 'birthday', 'email', 'city', 'state', 'privacy',
-            'google_calendar_integrated',
+            'has_seen_educational_screens',
+            'google_calendar_integrated', 'profile_completeness'
         ]
 
     def get_google_calendar_integrated(self, instance: User) -> bool:
@@ -115,6 +123,10 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
         client_data = self.validated_data.pop('client', None)
         user: User = self.instance
         client = user.client
+        if should_save_photo:
+            save_profile_photo(
+                user, profile_photo_id
+            )
         if client_data:
             fields_to_save: List[str] = list(client_data.keys())
             if client.zip_code != client_data.get('zip_code', client.zip_code):
@@ -127,12 +139,8 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
                     'city', 'state', 'location', 'is_address_geocoded', 'last_geo_coded'])
             for k, v in client_data.items():
                 setattr(client, k, v)
-            client.save(update_fields=fields_to_save)
+        client.save()
         user = super(ClientProfileSerializer, self).save(**kwargs)
-        if should_save_photo:
-            save_profile_photo(
-                user, profile_photo_id
-            )
         if not is_profile_already_complete:
             send_slack_client_profile_update(client)
         return user
@@ -153,6 +161,7 @@ class ClientProfileStatusSerializer(serializers.ModelSerializer):
         fields = [
             'has_name', 'has_zipcode', 'has_email', 'has_picture_set', 'has_invitation',
             'has_preferred_stylist_set', 'has_booked_appointment', 'has_past_visit',
+            'has_seen_educational_screens',
         ]
 
     def get_has_name(self, client: Client) -> bool:
