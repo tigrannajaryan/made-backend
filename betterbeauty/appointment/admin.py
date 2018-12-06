@@ -1,9 +1,6 @@
 from django import forms
 from django.contrib import admin
-
-from client.models import Client
-from core.models import User
-from salon.models import Stylist
+from django.utils.html import format_html
 
 from .models import Appointment, AppointmentService
 
@@ -26,50 +23,41 @@ class AppointmentServiceAdminForm(forms.ModelForm):
         return service_uuid
 
 
-class AppointmentAdminForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        super(AppointmentAdminForm, self).__init__(*args, **kwargs)
-        self.fields['client'].required = False
-
-    def clean(self):
-        cleaned_data = super(AppointmentAdminForm, self).clean()
-        if not cleaned_data.get('client', None):
-            if not (cleaned_data.get('client_first_name') or
-                    cleaned_data.get('client_last_name')):
-                raise forms.ValidationError(
-                    {'client': 'Either a client object, or first '
-                               'and last names must be supplied'
-                     }
-                )
-        return cleaned_data
-
-    class Meta:
-        model = Appointment
-        fields = '__all__'
-
-    def save(self, commit=True):
-        current_user: User = getattr(self, 'current_user')
-        instance = super(AppointmentAdminForm, self).save(commit=False)
-        if not instance.id:
-            instance.created_by = current_user
-        if commit:
-            instance.save()
-        return instance
-
-
 class AppointmentAdmin(admin.ModelAdmin):
+    search_fields = [
+        'stylist__user__first_name', 'stylist__user__last_name', 'stylist__user__phone',
+        'client__user__first_name', 'client__user__last_name', 'client__user__phone',
+    ]
 
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == 'stylist':
-            kwargs['queryset'] = Stylist.objects.order_by('user__email')
-        if db_field.name == 'client':
-            kwargs['queryset'] = Client.objects.order_by('user__first_name', 'user__last_name')
-        return super(AppointmentAdmin, self).formfield_for_foreignkey(db_field, request, **kwargs)
+    def created(self, obj):
+        return obj.created_at.strftime('%b %d, %Y')
 
+    def in_client_cal(self, obj) -> bool:
+        return bool(obj.client_google_calendar_id)
+    in_client_cal.boolean = True  # type: ignore
+    in_client_cal.admin_order_field = 'client_google_calendar_id'  # type: ignore
+
+    def in_stylist_cal(self, obj) -> bool:
+        return bool(obj.stylist_google_calendar_id)
+    in_stylist_cal.boolean = True  # type: ignore
+    in_stylist_cal.admin_order_field = 'stylist_google_calendar_id'  # type: ignore
+
+    def notification_sent(self, obj) -> bool:
+        return bool(obj.stylist_new_appointment_notification)
+    notification_sent.boolean = True  # type: ignore
+    notification_sent.admin_order_field = 'stylist_new_appointment_notification'  # type: ignore
+
+    def services(self, obj):
+        return format_html('<br />'.join([s.service_name for s in obj.services.all()]))
     readonly_fields = [
         'deleted_at', 'deleted_by', 'created_at', 'created_by',
     ]
-    form = AppointmentAdminForm
+    list_display = [
+        'created', 'stylist', 'client', 'services', 'datetime_start_at', 'status',
+        'in_client_cal', 'in_stylist_cal', 'notification_sent',
+    ]
+    list_display_links = ['created', 'stylist', 'client']
+    raw_id_fields = ['stylist', 'client', ]
 
     class Meta:
         model = Appointment

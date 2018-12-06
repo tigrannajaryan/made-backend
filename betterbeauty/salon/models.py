@@ -264,8 +264,8 @@ class Stylist(models.Model):
     class Meta:
         db_table = 'stylist'
 
-    def __str__(self) -> str:
-        return 'Stylist: {0}'.format(self.user)
+    def __str__(self):
+        return '{0} ({1})'.format(self.user.get_full_name(), self.user.phone)
 
     @property
     def phone(self) -> Optional[str]:

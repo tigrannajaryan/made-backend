@@ -54,7 +54,7 @@ class Appointment(models.Model):
     # client can be null in case if stylist adds an appointment for someone not in the system
     client = models.ForeignKey(
         Client, related_name='appointments', related_query_name='appointment',
-        null=True, on_delete=models.PROTECT
+        null=True, blank=True, on_delete=models.PROTECT
     )
     client_first_name = models.CharField(max_length=255, null=True, blank=True)
     client_last_name = models.CharField(max_length=255, null=True, blank=True)
@@ -77,26 +77,34 @@ class Appointment(models.Model):
     )
 
     # fields filled on checkout, all null by default
-    total_client_price_before_tax = models.DecimalField(max_digits=6, decimal_places=2, null=True)
-    total_tax = models.DecimalField(max_digits=6, decimal_places=2, null=True)
+    total_client_price_before_tax = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True)
+    total_tax = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True)
     tax_percentage = models.DecimalField(
-        max_digits=5, decimal_places=3, default=float(DEFAULT_TAX_RATE) * 100
+        max_digits=5, decimal_places=3, default=float(DEFAULT_TAX_RATE) * 100,
+        blank=True
     )
     card_fee_percentage = models.DecimalField(
-        max_digits=5, decimal_places=3, default=float(DEFAULT_CARD_FEE) * 100
+        max_digits=5, decimal_places=3, default=float(DEFAULT_CARD_FEE) * 100,
+        blank=True
     )
-    total_card_fee = models.DecimalField(max_digits=6, decimal_places=2, null=True)
-    grand_total = models.DecimalField(max_digits=4, decimal_places=0, null=True)
+    total_card_fee = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True)
+    grand_total = models.DecimalField(
+        max_digits=4, decimal_places=0, null=True, blank=True)
     has_tax_included = models.NullBooleanField(null=True, default=None)
     has_card_fee_included = models.NullBooleanField(null=True, default=None)
 
     # fields holding Google calendar references for this appointment
     client_google_calendar_id = models.CharField(
         max_length=512, null=True, blank=True, default=None)
-    client_google_calendar_added_at = models.DateTimeField(null=True, default=None)
+    client_google_calendar_added_at = models.DateTimeField(
+        null=True, blank=True, default=None)
     stylist_google_calendar_id = models.CharField(
         max_length=512, null=True, blank=True, default=None)
-    stylist_google_calendar_added_at = models.DateTimeField(null=True, default=None)
+    stylist_google_calendar_added_at = models.DateTimeField(
+        null=True, blank=True, default=None)
 
     # fields holding references to notifications sent for this appointment
     stylist_new_appointment_notification = models.ForeignKey(
