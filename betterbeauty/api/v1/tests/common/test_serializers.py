@@ -40,14 +40,14 @@ class TestNotificationAckSerializer(object):
         user: User = G(User)
 
         our_notification = G(
-            Notification, channel=NotificationChannel.PUSH,
+            Notification, sent_via_channel=NotificationChannel.PUSH,
             user=user
         )
         foreign_notification = G(
             Notification,
         )
         our_sms_notification: Notification = G(
-            Notification, channel=NotificationChannel.SMS,
+            Notification, sent_via_channel=NotificationChannel.SMS,
             user=user
         )
 

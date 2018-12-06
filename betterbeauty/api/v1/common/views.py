@@ -104,7 +104,7 @@ class NotificationAckView(views.APIView):
         serializer.is_valid(raise_exception=True)
         uuids: List[UUID] = serializer.data['message_uuids']
         row_count = Notification.objects.filter(
-            user=user, uuid__in=uuids, channel=NotificationChannel.PUSH
+            user=user, uuid__in=uuids, sent_via_channel=NotificationChannel.PUSH
         ).update(device_acked_at=timezone.now())
         if row_count > 0:
             return Response({}, status=status.HTTP_200_OK)
