@@ -89,6 +89,7 @@ class TestClientProfileView:
         data = response.data
         assert (data['first_name'] == 'Tommy')
         assert (data['last_name'] == 'Cruise')
+        assert (float(data['profile_completeness']) == 0.6)
         user.refresh_from_db()
         slack_mock.assert_called_once_with(user.client)
         assert(user.client.has_seen_educational_screens is True)
