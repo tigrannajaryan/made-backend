@@ -19,3 +19,4 @@ class NotificationCode(StrEnum):
     HINT_TO_SELECT_STYLIST = 'hint_to_select_stylist'
     HINT_TO_REBOOK = 'hint_to_rebook'
     NEW_APPOINTMENT = 'new_appointment'
+    TOMORROW_APPOINTMENTS = 'tomorrow_appointments'

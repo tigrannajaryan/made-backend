@@ -21,6 +21,7 @@ from salon.models import (
     Stylist,
     StylistAvailableWeekDay,
     StylistService,
+    StylistSpecialAvailableDate,
     StylistWeekdayDiscount,
 )
 from ..utils import (
@@ -28,6 +29,7 @@ from ..utils import (
     generate_hint_to_rebook_notifications,
     generate_hint_to_select_stylist_notifications,
     generate_new_appointment_notification,
+    generate_tomorrow_appointments_notifications,
 )
 
 
@@ -364,3 +366,127 @@ class TestGenerateNewAppointmentNotification(object):
             assert (
                 notification.send_time_window_end == datetime.time(23, 54)
             )
+
+
+class TestGenerateTomorrowAppointmentsNotifications(object):
+    @pytest.mark.django_db
+    def test_time_of_generation_on_working_day(self):
+        salon = G(Salon, timezone=pytz.timezone('America/New_York'))
+        stylist = G(Stylist, salon=salon)
+        G(
+            APNSDevice, user=stylist.user,
+            application_id=MobileAppIdType.IOS_STYLIST_DEV
+        )
+        G(
+            StylistAvailableWeekDay, weekday=Weekday.THURSDAY,
+            work_start_at=datetime.time(9, 0),
+            work_end_at=datetime.time(18, 0),
+            is_available=True, stylist=stylist
+        )
+        G(
+            Appointment,
+            stylist=stylist,
+            datetime_start_at=pytz.UTC.localize(datetime.datetime(
+                2018, 12, 7, 17, 0  # noon EST
+            ))
+        )
+        with freeze_time('2018-12-6 18:29 EST'):
+            generate_tomorrow_appointments_notifications()
+            assert(Notification.objects.all().count() == 0)
+        with freeze_time('2018-12-6 18:31 EST'):
+            generate_tomorrow_appointments_notifications()
+            assert(Notification.objects.all().count() == 1)
+            # test indempotence
+            generate_tomorrow_appointments_notifications()
+            assert (Notification.objects.all().count() == 1)
+        notification: Notification = Notification.objects.last()
+        assert(notification.user == stylist.user)
+        assert(notification.code == NotificationCode.TOMORROW_APPOINTMENTS)
+        assert(notification.data == {'date': datetime.date(2018, 12, 7).isoformat()})
+        assert(notification.send_time_window_start == datetime.time(18, 31))
+        assert(notification.send_time_window_end == datetime.time(23, 59, 59))
+        assert(notification.discard_after == salon.timezone.localize(
+            datetime.datetime(
+                2018, 12, 7, 0, 0
+            )
+        ))
+        assert(notification.target == UserRole.STYLIST)
+
+    @pytest.mark.django_db
+    def test_time_of_generation_on_non_working_day(self):
+        salon = G(Salon, timezone=pytz.timezone('America/New_York'))
+        stylist = G(Stylist, salon=salon)
+        G(
+            APNSDevice, user=stylist.user,
+            application_id=MobileAppIdType.IOS_STYLIST_DEV
+        )
+        G(
+            Appointment,
+            stylist=stylist,
+            datetime_start_at=pytz.UTC.localize(datetime.datetime(
+                2018, 12, 7, 17, 0  # noon EST
+            ))
+        )
+        # test non-working day
+        with freeze_time('2018-12-6 19:29 EST'):
+            generate_tomorrow_appointments_notifications()
+            assert (Notification.objects.all().count() == 0)
+        with freeze_time('2018-12-6 19:31 EST'):
+            generate_tomorrow_appointments_notifications()
+            assert (Notification.objects.all().count() == 1)
+            # test indempotence
+            generate_tomorrow_appointments_notifications()
+            assert (Notification.objects.all().count() == 1)
+        # test special availability
+        Notification.objects.all().delete()
+        G(
+            StylistAvailableWeekDay, weekday=Weekday.THURSDAY,
+            work_start_at=datetime.time(9, 0),
+            work_end_at=datetime.time(18, 0),
+            is_available=True, stylist=stylist
+        )
+        G(
+            StylistSpecialAvailableDate, stylist=stylist,
+            date=datetime.date(2018, 12, 6), is_available=False
+        )
+        with freeze_time('2018-12-6 19:29 EST'):
+            generate_tomorrow_appointments_notifications()
+            assert (Notification.objects.all().count() == 0)
+        with freeze_time('2018-12-6 19:31 EST'):
+            generate_tomorrow_appointments_notifications()
+            assert (Notification.objects.all().count() == 1)
+            # test indempotence
+            generate_tomorrow_appointments_notifications()
+            assert (Notification.objects.all().count() == 1)
+
+    @pytest.mark.django_db
+    def test_generation_with_no_appointments(self):
+        salon = G(Salon, timezone=pytz.timezone('America/New_York'))
+        stylist = G(Stylist, salon=salon)
+        G(
+            APNSDevice, user=stylist.user,
+            application_id=MobileAppIdType.IOS_STYLIST_DEV
+        )
+        G(
+            StylistAvailableWeekDay, weekday=Weekday.THURSDAY,
+            work_start_at=datetime.time(9, 0),
+            work_end_at=datetime.time(18, 0),
+            is_available=True, stylist=stylist
+        )
+        with freeze_time('2018-12-6 18:31 EST'):
+            generate_tomorrow_appointments_notifications()
+            assert (Notification.objects.all().count() == 0)
+
+            appointment: Appointment = G(
+                Appointment,
+                stylist=stylist,
+                datetime_start_at=pytz.UTC.localize(datetime.datetime(
+                    2018, 12, 7, 17, 0  # noon EST
+                )), status=AppointmentStatus.CHECKED_OUT
+            )
+            generate_tomorrow_appointments_notifications()
+            assert (Notification.objects.all().count() == 0)
+            appointment.status = AppointmentStatus.NEW
+            appointment.save()
+            generate_tomorrow_appointments_notifications()
+            assert (Notification.objects.all().count() == 1)
