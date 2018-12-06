@@ -11,6 +11,8 @@ from push_notifications.models import APNSDevice, GCMDevice
 from appointment.models import Appointment, AppointmentStatus
 from client.models import Client
 from core.models import User, UserRole
+from core.types import Weekday
+from integrations.push.types import MobileAppIdType
 from notifications.models import Notification
 from notifications.types import NotificationCode
 from salon.models import (
@@ -25,6 +27,7 @@ from ..utils import (
     generate_hint_to_first_book_notifications,
     generate_hint_to_rebook_notifications,
     generate_hint_to_select_stylist_notifications,
+    generate_new_appointment_notification,
 )
 
 
@@ -240,3 +243,124 @@ class TestGenerateHintToRebookNotification(object):
         recent_booking.save(update_fields=['status', ])
         generate_hint_to_rebook_notifications()
         assert (Notification.objects.count() == 1)
+
+
+@pytest.fixture
+def new_appointment_stylist_client():
+    salon: Salon = G(Salon, timezone=pytz.timezone('America/New_York'))
+    stylist: Stylist = G(Stylist, salon=salon)
+    G(APNSDevice, user=stylist.user, application_id=MobileAppIdType.IOS_STYLIST_DEV)
+    G(
+        StylistAvailableWeekDay, weekday=Weekday.TUESDAY,
+        work_start_at=datetime.time(9, 0),
+        work_end_at=datetime.time(12, 0), stylist=stylist,
+        is_available=True
+    )
+    G(
+        StylistAvailableWeekDay, weekday=Weekday.WEDNESDAY,
+        work_start_at=datetime.time(9, 35),
+        work_end_at=datetime.time(12, 0), stylist=stylist,
+        is_available=True
+    )
+    client: Client = G(Client)
+    return stylist, client
+
+
+class TestGenerateNewAppointmentNotification(object):
+    @pytest.mark.django_db
+    def test_time_window_before_working_day_same_day(
+            self, new_appointment_stylist_client
+    ):
+        stylist, client = new_appointment_stylist_client
+        appointment: Appointment = G(
+            Appointment, stylist=stylist, client=client,
+            datetime_start_at=pytz.timezone('America/New_York').localize(
+                datetime.datetime(2018, 12, 4, 10, 00)
+            ), created_by=client.user
+        )
+        # appointment is created before start of work day, for the same day
+        # window should be min(day_start - 30 minutes, 10am), but at least 15
+        # minutes later after creation
+        with freeze_time('2018-12-4 7:30 EST'):
+            assert(generate_new_appointment_notification(appointment) == 1)
+            notification: Notification = Notification.objects.last()
+            assert(
+                notification.send_time_window_start == datetime.time(8, 30)
+            )
+            Notification.objects.all().delete()
+        with freeze_time('2018-12-4 9:20 EST'):
+            assert(generate_new_appointment_notification(appointment) == 1)
+            notification: Notification = Notification.objects.last()
+            assert(
+                notification.send_time_window_start == datetime.time(9, 35)
+            )
+            Notification.objects.all().delete()
+        with freeze_time('2018-12-4 9:45 EST'):
+            assert(generate_new_appointment_notification(appointment) == 1)
+            notification: Notification = Notification.objects.last()
+            assert(
+                notification.send_time_window_start == datetime.time(10, 0)
+            )
+            Notification.objects.all().delete()
+
+    @pytest.mark.django_db
+    def test_time_window_during_working_day_same_day(self, new_appointment_stylist_client):
+        stylist, client = new_appointment_stylist_client
+        appointment: Appointment = G(
+            Appointment, stylist=stylist, client=client,
+            datetime_start_at=pytz.timezone('America/New_York').localize(
+                datetime.datetime(2018, 12, 4, 11, 00)
+            ), created_by=client.user
+        )
+        # appointment is created during the work day, for the same day
+        # window should be min(day_start - 30 minutes, 10am), but at least 15
+        # minutes later after creation
+        with freeze_time('2018-12-4 10:00 EST'):
+            assert (generate_new_appointment_notification(appointment) == 1)
+            notification: Notification = Notification.objects.last()
+            assert (
+                notification.send_time_window_start == datetime.time(10, 15)
+            )
+            Notification.objects.all().delete()
+
+    @pytest.mark.django_db
+    def test_time_window_during_working_day_next_day(self, new_appointment_stylist_client):
+        stylist, client = new_appointment_stylist_client
+        appointment: Appointment = G(
+            Appointment, stylist=stylist, client=client,
+            datetime_start_at=pytz.timezone('America/New_York').localize(
+                datetime.datetime(2018, 12, 5, 11, 00)
+            ), created_by=client.user
+        )
+        # appointment is created during the work day, for the same day
+        # window should be min(day_start - 30 minutes, 10am), but at least 15
+        # minutes later after creation
+        with freeze_time('2018-12-4 10:00 EST'):
+            assert (generate_new_appointment_notification(appointment) == 1)
+            notification: Notification = Notification.objects.last()
+            assert (
+                notification.send_time_window_start == datetime.time(10, 15)
+            )
+
+    @pytest.mark.django_db
+    def test_time_window_right_before_midnight_for_next_day(
+            self, new_appointment_stylist_client):
+        stylist, client = new_appointment_stylist_client
+        appointment: Appointment = G(
+            Appointment, stylist=stylist, client=client,
+            datetime_start_at=pytz.timezone('America/New_York').localize(
+                datetime.datetime(2018, 12, 5, 11, 00)
+            ), created_by=client.user
+        )
+        # earliest time we can send notification is after midnight, which is
+        # outside of current time window. So we should set new time window
+        # for tomorrow
+        with freeze_time('2018-12-4 23:55 EST'):
+            assert (generate_new_appointment_notification(appointment) == 1)
+            notification: Notification = Notification.objects.last()
+            assert (
+                notification.send_time_window_start == datetime.time(9, 5)
+            )  # 30 minutes before tomorrow day starts
+            assert (
+                notification.send_time_window_end == datetime.time(23, 54)
+            )

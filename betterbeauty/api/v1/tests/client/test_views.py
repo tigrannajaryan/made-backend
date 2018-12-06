@@ -13,6 +13,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django_dynamic_fixture import G
 from freezegun import freeze_time
+from push_notifications.models import APNSDevice
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
@@ -29,6 +30,9 @@ from appointment.constants import (
 from appointment.models import Appointment
 from client.models import Client, PreferredStylist
 from client.types import ClientPrivacy
+from integrations.push.types import MobileAppIdType
+from notifications.models import Notification
+from notifications.types import NotificationCode
 from salon.models import Salon, Stylist, StylistService
 from salon.tests.test_models import stylist_appointments_data
 
@@ -433,6 +437,43 @@ class TestAppointmentListCreateAPIView(object):
         )
         assert (response.status_code == status.HTTP_403_FORBIDDEN)
 
+    @pytest.mark.django_db
+    @mock.patch.object(
+        AppointmentValidationMixin, 'validate_datetime_start_at', lambda s, a: a)
+    @mock.patch.object(
+        AppointmentValidationMixin, 'validate_services', lambda s, a: a)
+    def test_create(self, client, authorized_client_user, authorized_stylist_user):
+        user, auth_token = authorized_client_user
+        client_obj: Client = user.client
+        stylist_user, _ = authorized_stylist_user
+        G(APNSDevice, user=stylist_user, application_id=MobileAppIdType.IOS_STYLIST_DEV)
+        salon: Salon = G(Salon, timezone=pytz.UTC)
+        stylist: Stylist = stylist_user.stylist
+        stylist.google_access_token = 'token'
+        stylist.google_refresh_token = 'token'
+        stylist.salon = salon
+        stylist.save()
+        G(PreferredStylist, stylist=stylist, client=client_obj)
+        service_1: StylistService = G(StylistService, stylist=stylist)
+        service_2: StylistService = G(StylistService, stylist=stylist)
+        data = {
+            'stylist_uuid': stylist.uuid,
+            'datetime_start_at': datetime.datetime(2018, 1, 1, 0, 0, 0),
+            'services': [service_1.uuid, service_2.uuid]
+        }
+        appointments_url = reverse('api:v1:client:appointments')
+        response = client.post(
+            appointments_url,
+            data=data, HTTP_AUTHORIZATION=auth_token
+        )
+        assert (status.is_success(response.status_code))
+        appointment = Appointment.objects.last()
+        assert(appointment is not None)
+        notification: Notification = Notification.objects.last()
+        assert(notification is not None)
+        assert(appointment.stylist_new_appointment_notification == notification)
+        assert(notification.user == stylist.user)
+
 
 class TestAppointmentRetriveUpdateView(object):
 
@@ -488,6 +529,37 @@ class TestAppointmentRetriveUpdateView(object):
             appointment_url, data=data, HTTP_AUTHORIZATION=auth_token,
         )
         assert (status.is_success(response.status_code))
+
+    @pytest.mark.django_db
+    @mock.patch.object(
+        AppointmentValidationMixin, 'validate_datetime_start_at', lambda s, a: a)
+    @mock.patch.object(
+        AppointmentValidationMixin, 'validate_services', lambda s, a: a)
+    def test_cancel(self, client, authorized_client_user):
+        stylist: Stylist = G(Stylist)
+        user, auth_token = authorized_client_user
+        client_obj: Client = user.client
+        new_appt_notification = G(
+            Notification, code=NotificationCode.NEW_APPOINTMENT,
+            user=stylist.user
+        )
+        appointment: Appointment = G(
+            Appointment, client=client_obj, stylist=stylist,
+            stylist_new_appointment_notification=new_appt_notification,
+            created_by=client_obj.user
+
+        )
+        appointment_url = reverse(
+            'api:v1:client:appointment', kwargs={'uuid': appointment.uuid}
+        )
+        data = {'status': AppointmentStatus.CANCELLED_BY_CLIENT}
+        response = client.post(
+            appointment_url, data=data, HTTP_AUTHORIZATION=auth_token,
+        )
+        assert (status.is_success(response.status_code))
+        appointment.refresh_from_db()
+        assert(appointment.stylist_new_appointment_notification is None)
+        assert(Notification.objects.count() == 0)
 
 
 class TestAvailableTimeSlotView(object):

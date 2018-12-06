@@ -330,6 +330,23 @@ class Stylist(models.Model):
         ).values_list('client_id', flat=True)
         return Client.objects.filter(id__in=preferences)
 
+    def get_workday_start_time(self, date: datetime.date) -> Optional[datetime.datetime]:
+        """Return datetime of day start on given date"""
+        weekday = date.isoweekday()
+        # if date is specially unavailable, return None
+        if self.special_available_dates.filter(
+                date=date, is_available=False
+        ).exists():
+            return None
+        available_day: Optional[StylistAvailableWeekDay] = self.available_days.filter(
+            weekday=weekday, is_available=True
+        ).last()
+        if available_day:
+            return self.salon.timezone.localize(datetime.datetime.combine(
+                date, available_day.work_start_at
+            ))
+        return None
+
     def get_available_slots(self, date: datetime.date) -> List[TimeSlotAvailability]:
         datetime_from = self.with_salon_tz(datetime.datetime(date.year, date.month, date.day))
         datetime_to = self.with_salon_tz(datetime.datetime(

@@ -41,6 +41,10 @@ from integrations.slack import (
     send_slack_auto_booking_notification,
     send_slack_client_profile_update,
 )
+from notifications.utils import (
+    cancel_new_appointment_notification,
+    generate_new_appointment_notification,
+)
 from pricing import CalculatedPrice
 from salon.models import (
     Invitation,
@@ -514,7 +518,6 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
         ]
 
     def create(self, validated_data):
-
         data = validated_data.copy()
         stylist_data = validated_data.pop('stylist', {})
         stylist_uuid = stylist_data.get('uuid', None)
@@ -578,6 +581,7 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
                 setattr(appointment, k, v)
             appointment.save()
             appointment.append_status_history(updated_by=stylist.user)
+        generate_new_appointment_notification(appointment)
         send_slack_auto_booking_notification(appointment)
         return appointment
 
@@ -662,6 +666,14 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
                 appointment.append_status_history(updated_by=user)
 
             appointment.save(**kwargs)
+            # If status is changing try to cancel new appointment notification if it's not
+            # sent yet
+            if (
+                status != AppointmentStatus.NEW and
+                appointment.stylist_new_appointment_notification
+            ):
+                cancel_new_appointment_notification(appointment)
+                appointment.refresh_from_db()
 
         return appointment
 
