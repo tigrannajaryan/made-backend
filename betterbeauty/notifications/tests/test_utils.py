@@ -29,6 +29,7 @@ from ..utils import (
     generate_hint_to_rebook_notifications,
     generate_hint_to_select_stylist_notifications,
     generate_new_appointment_notification,
+    generate_stylist_registration_incomplete_notifications,
     generate_tomorrow_appointments_notifications,
 )
 
@@ -490,3 +491,108 @@ class TestGenerateTomorrowAppointmentsNotifications(object):
             appointment.save()
             generate_tomorrow_appointments_notifications()
             assert (Notification.objects.all().count() == 1)
+
+
+class TestGenerateStylistRegistrationIncompleteNotifications(object):
+    @pytest.mark.django_db
+    def test_time_of_day_with_salon(self):
+        PST = pytz.timezone('America/Los_Angeles')
+        salon: Salon = G(Salon, timezone=PST)
+        stylist: Stylist = G(
+            Stylist, salon=salon, created_at=timezone.now() - datetime.timedelta(weeks=1)
+        )
+        G(APNSDevice, user=stylist.user, application_id=MobileAppIdType.IOS_STYLIST_DEV)
+        with freeze_time(PST.localize(datetime.datetime(2018, 12, 6, 18, 1))):
+            # verify it won't send today if time > 18:01
+            generate_stylist_registration_incomplete_notifications()
+            assert(Notification.objects.count() == 0)
+        with freeze_time(PST.localize(datetime.datetime(2018, 12, 7, 2, 1))):
+            # verify it will still send next day
+            generate_stylist_registration_incomplete_notifications()
+            assert(Notification.objects.count() == 1)
+            Notification.objects.all().delete()
+        with freeze_time(PST.localize(datetime.datetime(2018, 12, 6, 17, 59))):
+            generate_stylist_registration_incomplete_notifications()
+            assert(Notification.objects.count() == 1)
+            Notification.objects.all().delete()
+        with freeze_time(PST.localize(datetime.datetime(2018, 12, 6, 10, 0))):
+            generate_stylist_registration_incomplete_notifications()
+            assert(Notification.objects.count() == 1)
+            generate_stylist_registration_incomplete_notifications()
+            assert (Notification.objects.count() == 1)
+            notification: Notification = Notification.objects.last()
+            assert(notification.send_time_window_start == datetime.time(11, 0))
+            assert(notification.send_time_window_end == datetime.time(18, 0))
+            assert(notification.send_time_window_tz == PST)
+            assert(notification.target == UserRole.STYLIST)
+            assert(notification.user == stylist.user)
+
+    @pytest.mark.django_db
+    def test_time_of_day_without_salon(self):
+        PST = pytz.timezone('America/Los_Angeles')
+        stylist: Stylist = G(
+            Stylist, created_at=timezone.now() - datetime.timedelta(weeks=1)
+        )
+        G(APNSDevice, user=stylist.user, application_id=MobileAppIdType.IOS_STYLIST_DEV)
+        # now test without salon; it should now default to EST timezone (PST + 3)
+        # we'll pretend as if we're in PST to see if it behaves correctly with
+        # different timezone
+        with freeze_time(PST.localize(datetime.datetime(2018, 12, 6, 18, 1))):
+            generate_stylist_registration_incomplete_notifications()
+            assert(Notification.objects.count() == 0)
+        with freeze_time(PST.localize(datetime.datetime(2018, 12, 6, 17, 59))):
+            generate_stylist_registration_incomplete_notifications()
+        with freeze_time(PST.localize(datetime.datetime(2018, 12, 6, 14, 59))):
+            # now it's 17:59 in EST, so should work
+            generate_stylist_registration_incomplete_notifications()
+            assert(Notification.objects.count() == 1)
+            Notification.objects.all().delete()
+        with freeze_time(PST.localize(datetime.datetime(2018, 12, 6, 10, 0))):
+            generate_stylist_registration_incomplete_notifications()
+            assert(Notification.objects.count() == 1)
+            generate_stylist_registration_incomplete_notifications()
+            assert (Notification.objects.count() == 1)
+            notification: Notification = Notification.objects.last()
+            assert(notification.send_time_window_start == datetime.time(11, 0))
+            assert(notification.send_time_window_end == datetime.time(18, 0))
+            assert(notification.send_time_window_tz == pytz.timezone('America/New_York'))
+            assert(notification.target == UserRole.STYLIST)
+            assert(notification.user == stylist.user)
+
+    @pytest.mark.django_db
+    def test_incompleteness_criteria(self):
+        PST = pytz.timezone('America/Los_Angeles')
+        salon: Salon = G(Salon, timezone=PST)
+        user: User = G(User, phone='123123')
+        stylist: Stylist = G(
+            Stylist, salon=salon, created_at=timezone.now() - datetime.timedelta(weeks=1),
+            user=user
+        )
+        G(APNSDevice, user=stylist.user, application_id=MobileAppIdType.IOS_STYLIST_DEV)
+        with freeze_time(PST.localize(datetime.datetime(2018, 12, 6, 17, 59))):
+            generate_stylist_registration_incomplete_notifications()
+            assert (Notification.objects.count() == 1)
+            Notification.objects.all().delete()
+            stylist.has_business_hours_set = True
+            stylist.save()
+            G(StylistService, is_enabled=True, stylist=stylist)
+            # now stylist has phone, business hours and an enabled service
+            # which is considered as profile-complete
+            generate_stylist_registration_incomplete_notifications()
+            assert (Notification.objects.count() == 0)
+
+    @pytest.mark.django_db
+    def test_registration_time(self):
+        PST = pytz.timezone('America/Los_Angeles')
+        salon: Salon = G(Salon, timezone=PST)
+        with freeze_time(PST.localize(datetime.datetime(2018, 12, 6, 17, 59))):
+            stylist: Stylist = G(
+                Stylist, salon=salon, created_at=timezone.now() - datetime.timedelta(hours=23)
+            )
+            G(APNSDevice, user=stylist.user, application_id=MobileAppIdType.IOS_STYLIST_DEV)
+            generate_stylist_registration_incomplete_notifications()
+            assert (Notification.objects.count() == 0)
+            stylist.created_at = timezone.now() - datetime.timedelta(hours=25)
+            stylist.save()
+            generate_stylist_registration_incomplete_notifications()
+            assert (Notification.objects.count() == 1)

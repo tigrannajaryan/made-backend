@@ -2,6 +2,9 @@ import datetime
 from io import TextIOBase
 from typing import Dict, List, Optional, Tuple
 
+import pytz
+
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Max, Q
 from django.utils import timezone
@@ -674,6 +677,153 @@ def generate_tomorrow_appointments_notifications(dry_run=False) -> int:
             )
         )
     # if any notifications were generated - bulk created them
+    if notifications_to_create_list and not dry_run:
+        Notification.objects.bulk_create(notifications_to_create_list)
+    return len(notifications_to_create_list)
+
+
+@transaction.atomic
+def generate_stylist_registration_incomplete_notifications(dry_run=False) -> int:
+    """
+    Generate registration_incomplete notifications for stylists after 24 hours
+    since registration start if registration is not complete. Send immediately
+    if current time in [11am..6pm] in stylist’s timezone otherwise delay until
+    next [11am..6pm] window.
+
+    :param dry_run: if set to True, don't actually create notifications
+    :return: number of notifications created
+    """
+    code = NotificationCode.REGISTRATION_INCOMPLETE
+    discard_after = timezone.now() + datetime.timedelta(days=30)
+    message = (
+        'We noticed that you have not completed your registration. Once you '
+        'finish all registration steps clients will be able to find and book '
+        'appointments with you.'
+    )
+    target = UserRole.STYLIST
+    send_time_window_start = datetime.time(11, 0)
+    send_time_window_end = datetime.time(18, 0)
+
+    # select all stylists with incomplete registration, for whom local time is < 6pm
+    # in their local timezone. Unfortunately, due to existing flaw in our DB structure
+    # some of the stylists with incomplete registration may not have a salon, so
+    # we cannot extract timezone information for such stylists; we'll assume EST for
+    # them
+    # We should also omit stylists who already have this notification, and if this
+    # notification is push-only - we should also omit stylists without push-enabled
+    # devices
+
+    # incomplete registration is defined as in is_profile_bookable and is at least one
+    # of the following criteria:
+    #  - user phone is not set
+    #  - business hours not set
+    #  - no enabled services
+    eligible_stylists_raw_queryset = Stylist.objects.raw(
+        """
+        select
+            stylist_id id,
+            u_id,
+            stylist_current_now_t,
+            stylist_maximum_time_to_send_today_t,
+            time_since_creation
+        from
+            (
+            select
+                st.user_id u_id,
+                st.id stylist_id,
+                st.created_at stylist_created_at_dt,
+                cast(timestamptz %(current_timestamp_tz)s at time zone coalesce(sl.timezone,
+                %(default_timezone)s) as time) stylist_current_now_t,
+                time %(maximum_evening_time)s stylist_maximum_time_to_send_today_t,
+                (timestamptz %(current_timestamp_tz)s - st.created_at) time_since_creation,
+                u.phone phone,
+                st.has_business_hours_set has_business_hours_set
+            from
+                stylist as st
+            inner join public.user as u on st.user_id = u.id
+            left outer join salon as sl on
+                st.salon_id = sl.id ) as stylist_with_tz_info
+        where
+            stylist_current_now_t < stylist_maximum_time_to_send_today_t
+            and (
+              phone is null
+              or has_business_hours_set is false
+              or not exists(
+                select 1 from stylist_service as ss
+                 where ss.stylist_id = stylist_id
+                        and ss.is_enabled = True
+                  )
+            )
+            and time_since_creation > interval '1 days'
+            and not exists(
+                select
+                    1
+                from
+                    notification
+                where
+                    user_id = u_id
+                    and code = %(code)s
+                    and target = %(target)s )
+            and (%(not_push_only)s
+            or exists(
+                select
+                    1
+                from
+                    push_notifications_apnsdevice
+                where
+                    active = true
+                    and user_id = u_id
+                    and application_id in (%(local_apns_id)s, %(server_apns_id)s)
+                )
+            or exists(
+                select
+                    1
+                from
+                    push_notifications_gcmdevice
+                where
+                    active = true
+                    and user_id = u_id
+                    and application_id = %(fcm_app_id)s )
+                )
+          ;
+        """,
+        {
+            'current_timestamp_tz': timezone.now().isoformat(),
+            'maximum_evening_time': datetime.time(18, 00).isoformat(),
+            'default_timezone': settings.TIME_ZONE,
+            'code': code,
+            'target': UserRole.STYLIST,
+            'not_push_only': str(not is_push_only(code)),
+            'local_apns_id': MobileAppIdType.IOS_STYLIST_DEV,
+            'server_apns_id': MobileAppIdType.IOS_STYLIST,
+            'fcm_app_id': MobileAppIdType.ANDROID_STYLIST
+        }
+    )
+    # we can't operate directly on RawQuerySet, so we have to extract eligible ids out
+    # of it
+    eligible_stylist_ids = [
+        stylist.id for stylist in eligible_stylists_raw_queryset]
+
+    eligible_stylists = Stylist.objects.filter(id__in=eligible_stylist_ids)
+    notifications_to_create_list: List[Notification] = []
+    for stylist in eligible_stylists.select_for_update(skip_locked=True):
+        send_time_window_tz = pytz.timezone(settings.TIME_ZONE)
+        if stylist.salon:
+            send_time_window_tz = stylist.salon.timezone
+
+        notifications_to_create_list.append(
+            Notification(
+                user=stylist.user,
+                code=code,
+                target=target,
+                message=message,
+                send_time_window_start=send_time_window_start,
+                send_time_window_end=send_time_window_end,
+                send_time_window_tz=send_time_window_tz,
+                discard_after=discard_after,
+            )
+        )
+    # if any notifications were generated - bulk create them
     if notifications_to_create_list and not dry_run:
         Notification.objects.bulk_create(notifications_to_create_list)
     return len(notifications_to_create_list)
