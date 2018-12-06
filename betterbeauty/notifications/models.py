@@ -48,7 +48,7 @@ class Notification(models.Model):
     sent_at = models.DateTimeField(null=True, default=None, blank=True)
     sent_via_channel = models.CharField(
         max_length=16, null=True, choices=NOTIFICATION_CNANNEL_CHOICES,
-        default=NotificationChannel.PUSH
+        default=None, blank=True
     )
     discard_after = models.DateTimeField()
     device_acked_at = models.DateTimeField(null=True, default=None, editable=False)

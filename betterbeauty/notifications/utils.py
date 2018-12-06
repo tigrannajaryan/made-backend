@@ -148,7 +148,7 @@ def generate_hint_to_first_book_notifications(dry_run=False) -> int:
         if stylist_bookable_status_map[stylist]:
             notifications_to_create_list.append(Notification(
                 user=client.user, target=target, code=code,
-                channel=NotificationChannel.PUSH, message=message,
+                message=message,
                 discard_after=discard_after,
                 send_time_window_start=send_time_window_start,
                 send_time_window_end=send_time_window_end,
@@ -231,7 +231,7 @@ def generate_hint_to_select_stylist_notifications(dry_run=False) -> int:
     for client in eligible_clients.iterator():
         notifications_to_create_list.append(Notification(
             user=client.user, target=target, code=code,
-            channel=NotificationChannel.PUSH, message=message,
+            message=message,
             discard_after=discard_after,
             send_time_window_start=send_time_window_start,
             send_time_window_end=send_time_window_end,
@@ -312,7 +312,7 @@ def generate_hint_to_rebook_notifications(dry_run=False) -> int:
         message = message.format(week_count)
         notifications_to_create_list.append(Notification(
             user=client.user, target=target, code=code,
-            channel=NotificationChannel.PUSH, message=message,
+            message=message,
             discard_after=discard_after,
             send_time_window_start=send_time_window_start,
             send_time_window_end=send_time_window_end,
@@ -390,13 +390,16 @@ def generate_new_appointment_notification(
         stylist.user, UserRole.STYLIST
     ):
         return 0
+
+    client_name = appointment.client.user.get_full_name()
+
     message = message.format(
         date_time=stylist.with_salon_tz(appointment.datetime_start_at).strftime(
             '%-I:%M%p, on %b %-d, %Y'
         ),
         client_price=int(appointment.total_client_price_before_tax),
         services=', '.join([s.service_name for s in appointment.services.all()]),
-        client_name=appointment.client.user.get_full_name(),
+        client_name='{0} '.format(client_name) if client_name else '',
         client_phone=to_international_format(client.user.phone, client.country)
     )
     # Calculate start of send window.
