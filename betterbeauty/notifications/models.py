@@ -81,7 +81,7 @@ class Notification(models.Model):
 
     def send_and_mark_sent_push_notification_now(self) -> bool:
         """Send push notification to all devices of the user and mark message as sent"""
-        if not settings.PUSH_NOTIFICATIONS_ENABLED:
+        if not settings.NOTIFICATIONS_ENABLED:
             return False
         if not self.can_send_now():
             return False
@@ -134,6 +134,8 @@ class Notification(models.Model):
 
     def can_send_over_channel(self, channel: NotificationChannel) -> bool:
         """Verify if notification can be sent over given channel"""
+        if not settings.NOTIFICATIONS_ENABLED:
+            return False
         if self.code not in NOTIFICATION_CHANNEL_PRIORITY:
             logger.error(
                 'Attempted to send a notification with code '
@@ -143,12 +145,12 @@ class Notification(models.Model):
         if channel not in NOTIFICATION_CHANNEL_PRIORITY[self.code]:
             return False
         if channel == NotificationChannel.PUSH:
-            if settings.PUSH_NOTIFICATIONS_ENABLED:
-                return has_push_notification_device(
-                    user=self.user, user_role=self.target
-                )
+            return has_push_notification_device(
+                user=self.user, user_role=self.target
+            )
         if channel == NotificationChannel.SMS:
-            return settings.TWILIO_SMS_ENABLED
+            if self.user.phone:
+                return True  # in case if twilio is disabled, notification will go to Slack
         return False
 
     def get_channel_to_send_over(self) -> Optional[NotificationChannel]:
