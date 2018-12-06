@@ -44,7 +44,7 @@ class TestNotification(object):
 
     @freeze_time('2018-11-07 10:30:00 UTC')  # 5:30 am EST
     @pytest.mark.django_db
-    @override_settings(PUSH_NOTIFICATIONS_ENABLED=True)
+    @override_settings(NOTIFICATIONS_ENABLED=True)
     def test_send_push_notification_now(self, mocker):
         apns_sender_mock = mocker.patch(
             'notifications.models.send_message_to_apns_devices_of_user'
@@ -156,7 +156,7 @@ class TestNotification(object):
             Notification, user=our_user, sent_at=None, code='our_code',
             message='some message', target=UserRole.CLIENT,
             discard_after=datetime.datetime(2019, 1, 1, 0, 0, tzinfo=pytz.UTC))
-        with override_settings(PUSH_NOTIFICATIONS_ENABLED=True):
+        with override_settings(NOTIFICATIONS_ENABLED=True):
             with mock.patch.dict(NOTIFICATION_CHANNEL_PRIORITY, {
                 'our_code': [NotificationChannel.PUSH]
             }):
@@ -176,7 +176,7 @@ class TestNotification(object):
                 assert (
                     notification.can_send_over_channel(NotificationChannel.PUSH) is True
                 )
-        with override_settings(TWILIO_SMS_ENABLED=True):
+        with override_settings(TWILIO_SMS_ENABLED=True, NOTIFICATIONS_ENABLED=True):
             with mock.patch.dict(NOTIFICATION_CHANNEL_PRIORITY, {
                 'our_code': [NotificationChannel.PUSH]
             }):
@@ -184,10 +184,13 @@ class TestNotification(object):
             with mock.patch.dict(NOTIFICATION_CHANNEL_PRIORITY, {
                 'our_code': [NotificationChannel.PUSH, NotificationChannel.SMS]
             }):
+                assert (notification.can_send_over_channel(NotificationChannel.SMS) is False)
+                our_user.phone = '12345'
+                our_user.save()
                 assert (notification.can_send_over_channel(NotificationChannel.SMS) is True)
 
     @pytest.mark.django_db
-    @override_settings(TWILIO_SMS_ENABLED=True, PUSH_NOTIFICATIONS_ENABLED=True)
+    @override_settings(TWILIO_SMS_ENABLED=True, NOTIFICATIONS_ENABLED=True)
     def test_get_channel_to_send_over(self):
         our_user: User = G(User, role=[UserRole.CLIENT, UserRole.STYLIST])
         notification: Notification = G(
@@ -206,6 +209,9 @@ class TestNotification(object):
             'our_code': [NotificationChannel.PUSH, NotificationChannel.SMS]
         }):
             # it's only push, and no devices are there
+            assert (notification.get_channel_to_send_over() is None)
+            our_user.phone = '12345'
+            our_user.save()
             assert(notification.get_channel_to_send_over() is NotificationChannel.SMS)
             # add push device, and it should take priority
             G(APNSDevice, user=our_user, application_id=MobileAppIdType.IOS_CLIENT_DEV)

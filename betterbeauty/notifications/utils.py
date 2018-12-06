@@ -391,7 +391,9 @@ def generate_new_appointment_notification(
     ):
         return 0
     message = message.format(
-        date_time=stylist.with_salon_tz(appointment.datetime_start_at),
+        date_time=stylist.with_salon_tz(appointment.datetime_start_at).strftime(
+            '%-I:%M%p, on %b %-d, %Y'
+        ),
         client_price=int(appointment.total_client_price_before_tax),
         services=', '.join([s.service_name for s in appointment.services.all()]),
         client_name=appointment.client.user.get_full_name(),

@@ -49,8 +49,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         dry_run = options['dry_run']
         force_send = options['force_send']
-        if not settings.PUSH_NOTIFICATIONS_ENABLED:
-            self.stdout.write('Push notifications are disabled, exiting')
+        if not settings.NOTIFICATIONS_ENABLED:
+            self.stdout.write('Notifications are disabled, exiting')
             return
 
         stdout_and_log(

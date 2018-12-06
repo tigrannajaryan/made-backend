@@ -300,8 +300,8 @@ AUTO_BOOKING_SLACK_HOOK = (
     'https://hooks.slack.com/services/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'
 )
 
-# push notifications
-PUSH_NOTIFICATIONS_ENABLED = True
+#  notifications
+NOTIFICATIONS_ENABLED = True
 
 IOS_PUSH_CERTIFICATES_PATH = Path(ROOT_PATH.parent / 'push_certificates')
 
