@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -18,7 +19,6 @@ from api.v1.stylist.serializers import (
     StylistSerializer,
     StylistSerializerWithInvitation
 )
-from client.constants import MINUTES_BEFORE_REQUESTING_NEW_CODE
 from core.choices import USER_ROLE
 from core.models import PhoneSMSCodes, User
 from core.types import FBAccessToken, FBUserID, UserRole
@@ -208,7 +208,7 @@ class PhoneSerializer(FormattedErrorMessageMixin, serializers.Serializer):
         try:
             phone_sms_code = PhoneSMSCodes.objects.get(phone=phone, role=role)
             if not (timezone.now() - phone_sms_code.generated_at) > timedelta(
-                    minutes=MINUTES_BEFORE_REQUESTING_NEW_CODE):
+                    minutes=settings.MINUTES_BEFORE_REQUESTING_NEW_CODE):
                 raise ValidationError(ErrorMessages.ERR_WAIT_TO_REREQUEST_NEW_CODE)
             return attrs
         except PhoneSMSCodes.DoesNotExist:
