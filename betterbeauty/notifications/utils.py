@@ -2,7 +2,6 @@ import datetime
 from io import TextIOBase
 from typing import Dict, List, Optional, Tuple
 
-from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Max, Q
 from django.utils import timezone
@@ -10,7 +9,6 @@ from django.utils import timezone
 from appointment.models import Appointment
 from appointment.types import AppointmentStatus
 from client.models import Client
-from core.constants import EnvLevel
 from core.models import UserRole
 from core.utils.phone import to_international_format
 from integrations.push.types import MobileAppIdType
@@ -367,9 +365,6 @@ def generate_new_appointment_notification(
     :param appointment: Appointment to generate
     :return: number of notifications created
     """
-    # TODO: Enable on production once tested
-    if settings.LEVEL == EnvLevel.PRODUCTION:
-        return 0
 
     code = NotificationCode.NEW_APPOINTMENT
     target = UserRole.STYLIST
