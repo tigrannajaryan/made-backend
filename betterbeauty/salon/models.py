@@ -138,8 +138,9 @@ class StylistAvailableWeekDay(models.Model):
         # be any date - we're not using it per se
         if not self.is_available:
             return None
-        return (datetime.datetime.combine(
-            datetime.date.today(), self.work_end_at) + self.stylist.service_time_gap).time()
+        return (
+            datetime.datetime.combine(datetime.date.today(), self.work_end_at
+                                      ) + self.stylist.service_time_gap).time()
 
     def get_available_time(self) -> Optional[datetime.timedelta]:
         """Return total timedelta between begin of the day and end of last slot"""
@@ -183,17 +184,16 @@ class StylistAvailableWeekDay(models.Model):
                 today, current_time))
         slot_start_at: datetime.datetime = salon.timezone.localize(datetime.datetime.combine(
             today, self.work_start_at))
-        last_slot_end_time: datetime.datetime = salon.timezone.localize(datetime.datetime.combine(
-            today, self.get_slot_end_time()))
+        slot_end_at = slot_start_at + self.stylist.service_time_gap
         day_end_at: datetime.datetime = salon.timezone.localize(datetime.datetime.combine(
             today, self.work_end_at))
-        while slot_start_at < day_end_at:
-            slot_end_time = slot_start_at + self.stylist.service_time_gap
+        while slot_end_at <= day_end_at:
             if (not current_datetime or (
-                    current_datetime and slot_start_at > current_datetime)) and (
-                    slot_end_time <= last_slot_end_time):
-                available_slots.append((slot_start_at.time(), slot_end_time.time()))
-            slot_start_at = slot_end_time
+                    current_datetime and slot_start_at > current_datetime)):
+                available_slots.append((slot_start_at.time(), slot_end_at.time()))
+            # set start and end values for next slot
+            slot_start_at = slot_end_at
+            slot_end_at = slot_start_at + self.stylist.service_time_gap
         return available_slots
 
 
