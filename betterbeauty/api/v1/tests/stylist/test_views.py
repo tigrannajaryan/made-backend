@@ -397,6 +397,43 @@ class TestAppointmentsOnADaySerializer(object):
         assert(response_data['work_start_at'] == datetime.time(hour=12))
         assert(response_data['work_end_at'] == datetime.time(hour=19))
         assert(response_data['is_day_available'])
+        assert(response_data['week_summary'] == [
+            {
+                'weekday_iso': 7,
+                'day_of_month': 13,
+                'has_appointments': False,
+                'is_working_day': True
+            }, {
+                'weekday_iso': 1,
+                'day_of_month': 14,
+                'has_appointments': True,
+                'is_working_day': True
+            }, {
+                'weekday_iso': 2,
+                'day_of_month': 15,
+                'has_appointments': True,
+                'is_working_day': False
+            }, {
+                'weekday_iso': 3,
+                'day_of_month': 16,
+                'has_appointments': False,
+                'is_working_day': True
+            }, {
+                'weekday_iso': 4,
+                'day_of_month': 17,
+                'has_appointments': False,
+                'is_working_day': True
+            }, {
+                'weekday_iso': 5,
+                'day_of_month': 18,
+                'has_appointments': False,
+                'is_working_day': True
+            }, {
+                'weekday_iso': 6,
+                'day_of_month': 19,
+                'has_appointments': False,
+                'is_working_day': True}
+        ])
 
     @pytest.mark.django_db
     def test_appointments_on_a_special_date(self, client, authorized_stylist_user):
@@ -419,6 +456,35 @@ class TestAppointmentsOnADaySerializer(object):
         assert (response_data['work_start_at'] is None)
         assert (response_data['work_end_at'] is None)
         assert (response_data['is_day_available'] is False)
+        assert (response_data['week_summary'] == [
+            {'weekday_iso': 7,
+             'day_of_month': 13,
+             'has_appointments': False,
+             'is_working_day': True},
+            {'weekday_iso': 1,
+             'day_of_month': 14,
+             'has_appointments': True,
+             'is_working_day': False},
+            {'weekday_iso': 2,
+             'day_of_month': 15,
+             'has_appointments': True,
+             'is_working_day': False},
+            {'weekday_iso': 3,
+             'day_of_month': 16,
+             'has_appointments': False,
+             'is_working_day': True},
+            {'weekday_iso': 4,
+             'day_of_month': 17,
+             'has_appointments': False,
+             'is_working_day': True},
+            {'weekday_iso': 5,
+             'day_of_month': 18,
+             'has_appointments': False,
+             'is_working_day': True},
+            {'weekday_iso': 6,
+             'day_of_month': 19,
+             'has_appointments': False,
+             'is_working_day': True}])
 
 
 class TestStylistSpecialAvailabilityDateView(object):

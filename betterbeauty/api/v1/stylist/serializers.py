@@ -6,8 +6,8 @@ from typing import Dict, Iterable, List, Optional
 
 from django.conf import settings
 from django.db import models, transaction
-from django.db.models import Sum
-from django.db.models.functions import Coalesce, ExtractWeekDay
+from django.db.models import Count, Sum
+from django.db.models.functions import Coalesce, ExtractDay, ExtractWeekDay
 from django.shortcuts import get_object_or_404
 
 from rest_framework import serializers
@@ -1452,6 +1452,7 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
     work_start_at = serializers.SerializerMethodField()
     work_end_at = serializers.SerializerMethodField()
     is_day_available = serializers.SerializerMethodField()
+    week_summary = serializers.SerializerMethodField()
 
     class Meta:
         fields = [
@@ -1461,6 +1462,7 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
             "work_start_at",
             "work_end_at",
             "is_day_available",
+            "week_summary"
         ]
 
     def get_appointments(self, data) -> List:
@@ -1486,6 +1488,65 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
     def get_is_day_available(self, data) -> bool:
         available_weekday: StylistAvailableWeekDay = self.context['available_weekday']
         return available_weekday.is_available if available_weekday else False
+
+    @staticmethod
+    def check_has_appointment(daily_appointment_data, day_of_month):
+        for weekday in daily_appointment_data:
+            if weekday['day'] == day_of_month and weekday['count']:
+                return True
+        return False
+
+    @staticmethod
+    def check_week_availability(daily_availability, iso_weekday):
+        for weekday in daily_availability:
+            if weekday.weekday == iso_weekday:
+                return weekday.is_available
+        return False
+
+    @staticmethod
+    def check_special_unavailability(special_unavailability, date):
+        for day in special_unavailability:
+            if day.date == date:
+                return False
+        return True
+
+    def get_week_summary(self, data):
+        stylist: Stylist = self.context['stylist']
+        date = self.context['date']
+
+        start_of_the_week = date - datetime.timedelta(days=(date.isoweekday() % 7))
+        end_of_the_week = start_of_the_week + datetime.timedelta(days=6)
+
+        daily_appointment_data = stylist.get_appointments_in_datetime_range(
+            datetime_from=stylist.salon.timezone.localize(
+                datetime.datetime.combine(start_of_the_week, datetime.datetime.min.time())),
+            datetime_to=stylist.salon.timezone.localize(
+                datetime.datetime.combine(end_of_the_week, datetime.datetime.max.time())),
+        ).annotate(day=ExtractDay('datetime_start_at'),
+                   ).values('day').annotate(count=Count('id'))
+
+        daily_availability = stylist.available_days.all()
+
+        special_unavailability = stylist.special_available_dates.filter(
+            date__gte=start_of_the_week, date__lte=end_of_the_week,
+            is_available=False,
+        )
+
+        week_summary = []
+        for i in range(7):
+            day = start_of_the_week + datetime.timedelta(days=i)
+            week_summary.append({
+                'weekday_iso': day.isoweekday(),
+                'day_of_month': day.day,
+                'has_appointments': self.check_has_appointment(daily_appointment_data, day.day),
+                'is_working_day': (
+                    self.check_week_availability(daily_availability, day.isoweekday()
+                                                 ) and self.check_special_unavailability(
+                        special_unavailability, day)
+                )
+            })
+
+        return week_summary
 
 
 class StylistSpecialAvailableDateSerializer(serializers.ModelSerializer):

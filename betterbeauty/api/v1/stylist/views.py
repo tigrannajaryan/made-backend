@@ -322,7 +322,8 @@ class AppointmentsOnADayView(views.APIView):
             {}, context={
                 'stylist': stylist,
                 'appointments': appointments,
-                'available_weekday': available_weekday
+                'available_weekday': available_weekday,
+                'date': date,
             }
         )
         return Response(response_serializer.data)
