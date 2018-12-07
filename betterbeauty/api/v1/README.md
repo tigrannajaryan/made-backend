@@ -1822,7 +1822,44 @@ curl -X GET -H 'Authorization: Token jwt_token' \
     "total_slot_count": 2,
     "work_start_at": "13:00:00",
     "work_end_at": "15:00:00",
-    "is_day_available": true
+    "is_day_available": true,
+    "week_summary": [
+            {
+                "weekday_iso": 7,
+                "day_of_month": 13,
+                "has_appointments": false,
+                "is_working_day": true
+            }, {
+                "weekday_iso": 1,
+                "day_of_month": 14,
+                "has_appointments": true,
+                "is_working_day": true
+            }, {
+                "weekday_iso": 2,
+                "day_of_month": 15,
+                "has_appointments": true,
+                "is_working_day": false
+            }, {
+                "weekday_iso": 3,
+                "day_of_month": 16,
+                "has_appointments": false,
+                "is_working_day": true
+            }, {
+                "weekday_iso": 4,
+                "day_of_month": 17,
+                "has_appointments": false,
+                "is_working_day": true
+            },{
+                "weekday_iso": 5,
+                "day_of_month": 18,
+                "has_appointments": false,
+                "is_working_day": true
+            },{
+                "weekday_iso": 6,
+                "day_of_month": 19,
+                "has_appointments": false,
+                "is_working_day": true}
+        ]
 }
 ```
 
