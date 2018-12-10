@@ -13,3 +13,7 @@ class ErrorMessages:
     ERR_ORIG_IAT_IS_REQUIRED = 'err_orig_iat_is_required'
     ERR_WAIT_TO_REREQUEST_NEW_CODE = 'err_wait_to_rerequest_new_code'
     ERR_INVALID_SMS_CODE = 'err_invalid_sms_code'
+
+
+class AnalyticsErrorMessages:
+    ERR_SESSION_NOT_FOUND = 'err_session_not_found'

@@ -24,6 +24,8 @@ from notifications.types import NotificationChannel
 from salon.models import Stylist
 
 from .serializers import (
+    AnalyticsSessionSerializer,
+    AnalyticsViewSerializer,
     IntegrationAddSerializer,
     NotificationAckSerializer,
     PushNotificationTokenSerializer,
@@ -177,3 +179,14 @@ class CommonStylistDetailView(views.APIView):
             'client': client,
             'request_role': request_role
         }
+
+
+class AnalyticsSessionsView(generics.CreateAPIView):
+    serializer_class = AnalyticsSessionSerializer
+
+
+class AnalyticsViewsView(generics.CreateAPIView):
+    serializer_class = AnalyticsViewSerializer
+
+    def get_serializer_context(self):
+        return {'request': self.request}

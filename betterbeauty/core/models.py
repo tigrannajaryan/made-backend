@@ -7,7 +7,7 @@ from typing import List
 from django.conf import settings
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
-from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -15,7 +15,7 @@ from django.utils.translation import gettext_lazy as _
 from client.constants import SMS_CODE_EXPIRY_TIME_MINUTES
 from integrations.twilio import render_one_time_sms_for_phone, send_sms_message
 
-from .choices import USER_ROLE
+from .choices import CLIENT_OR_STYLIST_ROLE, MOBILE_OS_CHOICES, USER_ROLE
 from .constants import EnvLevel
 from .types import UserRole
 
@@ -206,3 +206,32 @@ class PhoneSMSCodes(models.Model):
             body=message,
             role=str(self.role)
         )
+
+
+class AnalyticsSession(models.Model):
+    uuid = models.UUIDField(editable=False, unique=True)
+    server_timestamp = models.DateTimeField(auto_now_add=True)
+    client_timestamp = models.DateTimeField()
+    user_role = models.CharField(max_length=16, choices=CLIENT_OR_STYLIST_ROLE)
+    app_version = models.CharField(max_length=16)
+    app_build = models.IntegerField()
+    extra_data = JSONField(default=dict, blank=True, null=True)
+    app_os = models.CharField(max_length=16, choices=MOBILE_OS_CHOICES, null=True)
+
+    class Meta:
+        db_table = 'analytics_session'
+
+
+class AnalyticsView(models.Model):
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    server_timestamp = models.DateTimeField(auto_now_add=True)
+    client_timestamp = models.DateTimeField()
+    analytics_session = models.ForeignKey(AnalyticsSession, on_delete=models.CASCADE)
+    # auth_session_id holds SHA1 hash for auth JWT token, if present in request
+    auth_session_id = models.CharField(max_length=40, null=True, blank=True)
+    view_title = models.CharField(max_length=64)
+    extra_data = JSONField(default=dict, blank=True, null=True)
+
+    class Meta:
+        db_table = 'analytics_view'

@@ -1,5 +1,11 @@
+import datetime
+import json
+from hashlib import sha1
+from uuid import uuid4
+
 import mock
 import pytest
+import pytz
 
 from django.urls import reverse
 from django_dynamic_fixture import G
@@ -11,11 +17,17 @@ from rest_framework.permissions import IsAuthenticated
 from api.common.permissions import ClientOrStylistPermission
 from api.v1.common.urls import urlpatterns
 from api.v1.common.views import (
+    AnalyticsSessionsView,
+    AnalyticsViewsView,
     TemporaryImageUploadView,
 )
 from client.models import Client
-from core.models import User
-from core.types import UserRole
+from core.models import (
+    AnalyticsSession,
+    AnalyticsView,
+    User
+)
+from core.types import MobileOSType, UserRole
 from integrations.google.types import GoogleIntegrationErrors, GoogleIntegrationType
 from integrations.push.constants import ErrorMessages
 from salon.models import Stylist
@@ -186,6 +198,152 @@ class TestIntegrationAddView(object):
         )
 
 
+class TestAnalyticsSessionsView(object):
+
+    @pytest.mark.django_db
+    def test_create_with_user(self, client, authorized_stylist_user):
+        url = reverse('api:v1:common:analytics_sessions')
+        user, auth_token = authorized_stylist_user
+        session_uuid = str(uuid4())
+        extra_data = {
+            'random_data_key': ['a', 'b', 'c'],
+            'random_data_dict': {'a': 1, 'b': 2}
+        }
+        timestamp = pytz.UTC.localize(datetime.datetime(2018, 12, 10, 18, 0))
+        data = {
+            'role': UserRole.STYLIST,
+            'timestamp': timestamp.isoformat(),
+            'session_uuid': session_uuid,
+            'extra_data': json.dumps(extra_data),
+            'app_os': MobileOSType.IOS.value,
+            'app_version': '1.2.3',
+            'app_build': 1234
+        }
+        response = client.post(url, data=data, HTTP_AUTHORIZATION=auth_token)
+        assert(response.status_code == status.HTTP_201_CREATED)
+        session: AnalyticsSession = AnalyticsSession.objects.last()
+        assert(session is not None)
+        assert(session.client_timestamp == timestamp)
+        assert(session.user_role == UserRole.STYLIST)
+        assert(session.app_os == MobileOSType.IOS)
+        assert(session.app_version == '1.2.3')
+        assert(session.app_build == 1234)
+
+    @pytest.mark.django_db
+    def test_create_without_user(self, client):
+        url = reverse('api:v1:common:analytics_sessions')
+        session_uuid = str(uuid4())
+        extra_data = {
+            'random_data_key': ['a', 'b', 'c'],
+            'random_data_dict': {'a': 1, 'b': 2}
+        }
+        timestamp = pytz.UTC.localize(datetime.datetime(2018, 12, 10, 18, 0))
+        data = {
+            'role': UserRole.STYLIST,
+            'timestamp': timestamp.isoformat(),
+            'session_uuid': session_uuid,
+            'extra_data': json.dumps(extra_data),
+            'app_os': MobileOSType.IOS.value,
+            'app_version': '1.2.3',
+            'app_build': 1234
+        }
+        response = client.post(url, data=data)
+        assert(response.status_code == status.HTTP_201_CREATED)
+        session: AnalyticsSession = AnalyticsSession.objects.last()
+        assert(session is not None)
+        assert(session.client_timestamp == timestamp)
+        assert(session.user_role == UserRole.STYLIST)
+        assert(session.app_os == MobileOSType.IOS)
+        assert(session.app_version == '1.2.3')
+        assert(session.app_build == 1234)
+
+
+class TestAnalyticsViewView(object):
+    @pytest.mark.django_db
+    def test_create_with_user(self, client, authorized_client_user):
+        client_user, auth_token = authorized_client_user
+        timestamp = pytz.UTC.localize(datetime.datetime(2018, 12, 10, 18, 0))
+        session: AnalyticsSession = G(
+            AnalyticsSession, user_role=UserRole.STYLIST, app_os=MobileOSType.IOS,
+            app_version='1.2.3', app_build=1234, user=client_user, role=UserRole.CLIENT
+        )
+        data = {
+            'session_uuid': str(session.uuid),
+            'timestamp': timestamp.isoformat(),
+            'view_title': 'screen_title',
+            'extra_data': json.dumps({'key': 'value'})
+        }
+        url = reverse('api:v1:common:analytics_views')
+        response = client.post(url, data=data, HTTP_AUTHORIZATION=auth_token)
+        assert(response.status_code == status.HTTP_201_CREATED)
+        view = AnalyticsView.objects.last()
+
+        assert(view is not None)
+        assert(view.user == client_user)
+        assert(view.analytics_session == session)
+        assert(view.extra_data == {'key': 'value'})
+        assert(view.view_title == 'screen_title')
+        assert(view.client_timestamp == timestamp)
+        assert (view.auth_session_id == sha1(
+            str(auth_token).replace('Token ', '').encode('utf-8')
+        ).hexdigest())
+
+    @pytest.mark.django_db
+    def test_create_without_user(self, client):
+        timestamp = pytz.UTC.localize(datetime.datetime(2018, 12, 10, 18, 0))
+        session: AnalyticsSession = G(
+            AnalyticsSession, user_role=UserRole.STYLIST, app_os=MobileOSType.IOS,
+            app_version='1.2.3', app_build=1234, role=UserRole.CLIENT
+        )
+        data = {
+            'session_uuid': str(session.uuid),
+            'timestamp': timestamp.isoformat(),
+            'view_title': 'screen_title',
+        }
+        url = reverse('api:v1:common:analytics_views')
+        response = client.post(url, data=data)
+        assert(response.status_code == status.HTTP_201_CREATED)
+        view: AnalyticsView = AnalyticsView.objects.last()
+
+        assert(view is not None)
+        assert(view.user is None)
+        assert(view.analytics_session == session)
+        assert(view.extra_data == {})
+        assert(view.view_title == 'screen_title')
+        assert(view.client_timestamp == timestamp)
+        assert(view.auth_session_id is None)
+
+    @pytest.mark.django_db
+    def test_transition_from_anonymous_to_authorized(
+            self, client, authorized_client_user):
+        client_user, auth_token = authorized_client_user
+        timestamp = pytz.UTC.localize(datetime.datetime(2018, 12, 10, 18, 0))
+        session: AnalyticsSession = G(
+            AnalyticsSession, user_role=UserRole.STYLIST, app_os=MobileOSType.IOS,
+            app_version='1.2.3', app_build=1234, user=None
+        )
+        data = {
+            'session_uuid': str(session.uuid),
+            'timestamp': timestamp.isoformat(),
+            'view_title': 'screen_title',
+        }
+        url = reverse('api:v1:common:analytics_views')
+        response = client.post(url, data=data, HTTP_AUTHORIZATION=auth_token)
+        assert (response.status_code == status.HTTP_201_CREATED)
+        view = AnalyticsView.objects.last()
+
+        assert (view is not None)
+        assert (view.user == client_user)
+        assert (view.analytics_session == session)
+        assert (view.extra_data == {})
+        assert (view.view_title == 'screen_title')
+        assert (view.client_timestamp == timestamp)
+        assert(view.user == client_user)
+        assert(view.auth_session_id == sha1(
+            str(auth_token).replace('Token ', '').encode('utf-8')
+        ).hexdigest())
+
+
 class TestCommonViewPermissions(object):
     def test_view_permissions(self):
         """Go over all configured urls an make sure they have necessary permissions"""
@@ -197,7 +355,7 @@ class TestCommonViewPermissions(object):
                         IsAuthenticated
                     ])
                 )
-            else:
+            elif view_class not in [AnalyticsSessionsView, AnalyticsViewsView]:
                 assert (
                     frozenset(view_class.permission_classes) == frozenset([
                         ClientOrStylistPermission, IsAuthenticated

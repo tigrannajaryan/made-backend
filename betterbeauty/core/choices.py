@@ -2,7 +2,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from model_utils import Choices
 
-from .types import UserRole, Weekday
+from .types import MobileOSType, UserRole, Weekday
 
 WEEKDAY = Choices(
     (Weekday.MONDAY.value, 'monday', _('Monday')),
@@ -24,4 +24,9 @@ USER_ROLE = Choices(
 CLIENT_OR_STYLIST_ROLE = Choices(
     (UserRole.CLIENT.value, 'client', _('Client')),
     (UserRole.STYLIST.value, 'stylist', _('Stylist')),
+)
+
+MOBILE_OS_CHOICES = Choices(
+    (MobileOSType.ANDROID.value, 'android', 'Android'),
+    (MobileOSType.IOS.value, 'ios', 'iOS'),
 )

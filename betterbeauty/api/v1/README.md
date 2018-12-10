@@ -70,6 +70,11 @@
 - [**Google Auth Integration**](#google-auth-integration)
    - [Add integration](#add-integration)
 
+- [**Analytics**](#analytics)
+    - [Analytics Sessions](#analytics-session)
+    - [Analytics Views](#analytics-views)
+
+
 # Error handling
 
 Initially discussed in https://github.com/madebeauty/monorepo/issues/35, from now
@@ -3821,5 +3826,118 @@ trying to validate server auth code
         {"code": "err_failure_to_setup_oauth"}
     ],
     "field_errors": {}
+}
+```
+
+# Analytics
+
+## Analytics Session
+**POST /api/v1/common/analytics/sessions**
+
+Submit analytics session
+- **role** - `stylist` or `client`
+- **timestamp** - timestamp in ISO format
+- **session_uuid** - UUID as in RFC 4122
+- **extra_data** - JSON-serialized dictionary, optional
+- **app_os** - `ios` or `android`
+- **app_version** - string representing app version (e.g. `1.23.4`)
+- **app_build** - integer
+
+```
+curl -X POST \
+  'http://apiserver/api/v1/common/analytics/sessions' \
+  -H 'Authorization: Token {{auth_token}}' \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "role": "stylist",
+        "timestamp": "2018-12-12T10:57:04+00:00",
+        "session_uuid": "a23cd21c-9757-4ea5-8998-47e92c14628a",
+        "extra_data": {"key": "value"},
+        "app_os": "android",
+        "app_version": "1.2.3",
+        "app_build": 123
+      }'
+```
+
+can also be unauthorized
+
+```
+curl -X POST \
+  'http://apiserver/api/v1/common/analytics/sessions' \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "role": "stylist",
+        "timestamp": "2018-12-12T10:57:04+00:00",
+        "session_uuid": "a23cd21c-9757-4ea5-8998-47e92c14628a",
+        "extra_data": {"key": "value"},
+        "app_os": "android",
+        "app_version": "1.2.3",
+        "app_build": 123
+      }'
+```
+
+**Response 200 OK**
+
+```
+{
+    "role": "stylist",
+    "timestamp": "2018-12-12T05:57:04-05:00",
+    "session_uuid": "a23cd21c-9757-4ea5-8998-47e92c14628a",
+    "extra_data": {
+        "key": "value"
+    },
+    "app_os": "android",
+    "app_version": "1.2.3",
+    "app_build": 123
+}
+```
+
+## Analytics Views
+Submit a view impression for given session
+
+- **session_uuid** - UUID of previously created session as in RFC 4122
+- **timestamp** - timestamp in ISO format
+- **view_title** - view (screen) title
+- **extra_data** - JSON-serialized dictionary, optional
+
+```
+curl -X POST \
+  http://apiserver/api/v1/common/analytics/views \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "view_title": "page_title",
+        "timestamp": "2018-12-12T10:57:04+00:00",
+        "session_uuid": "a23cd21c-9757-4ea5-8998-47e92c14628a",
+        "extra_data": {"key": "value"}
+      }'
+```
+
+**Response 200 OK**
+```
+{
+    "timestamp": "2018-12-12T05:57:04-05:00",
+    "view_title": "page_title",
+    "extra_data": {
+        "key": "value"
+    }
+}
+```
+
+
+**Response 400 Bad Request**
+Will be raised if supplied session_uuid does not have previously
+created session
+
+```
+{
+    "code": "err_api_exception",
+    "field_errors": {
+        "session_uuid": [
+            {
+                "code": "err_session_not_found"
+            }
+        ]
+    },
+    "non_field_errors": []
 }
 ```
