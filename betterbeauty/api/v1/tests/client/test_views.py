@@ -658,7 +658,7 @@ class TestAvailableTimeSlotView(object):
         response = client.post(availability_url, HTTP_AUTHORIZATION=auth_token, data={
             "date": "2018-05-16",
             "stylist_uuid": our_stylist.uuid})
-        assert len(response.data['time_slots']) == 5
+        assert len(response.data['time_slots']) == 4
 
         service = our_stylist.services.first()
         data = {
