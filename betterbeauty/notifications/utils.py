@@ -489,6 +489,7 @@ def generate_new_appointment_notification(
     return 1
 
 
+@transaction.atomic
 def generate_tomorrow_appointments_notifications(dry_run=False) -> int:
     """
     Generate notifications about tomorrow appointments
