@@ -379,7 +379,7 @@ class StylistServiceCategoryDetailsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ServiceCategory
-        fields = ['name', 'uuid', 'services', 'category_code']
+        fields = ['name', 'uuid', 'services', 'category_code', 'weight']
 
     def get_services(self, service_category: ServiceCategory):
         stylist: Stylist = self.context['stylist']
@@ -400,8 +400,8 @@ class ServiceTemplateSetDetailsSerializer(serializers.ModelSerializer):
 
     def get_categories(self, service_template_set: ServiceTemplateSet):
         category_queryset = ServiceCategory.objects.all().order_by(
-            'name', 'uuid'
-        ).distinct('name', 'uuid')
+            '-order', 'name', 'uuid'
+        ).distinct('order', 'name', 'uuid')
         return ServiceTemplateCategoryDetailsSerializer(
             category_queryset,
             context={'service_template_set': service_template_set},
@@ -430,8 +430,8 @@ class StylistServiceListSerializer(
 
     def get_categories(self, stylist: Stylist):
         category_queryset = ServiceCategory.objects.all().order_by(
-            'name', 'uuid'
-        ).distinct('name', 'uuid')
+            '-weight', 'name', 'uuid'
+        ).distinct('weight', 'name', 'uuid')
         return StylistServiceCategoryDetailsSerializer(
             category_queryset,
             context={'stylist': stylist},
