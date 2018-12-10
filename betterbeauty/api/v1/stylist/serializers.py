@@ -199,7 +199,7 @@ class StylistSerializer(
             'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url', 'followers_count',
             'salon_name', 'salon_address', 'profile_photo_id', 'instagram_url', 'public_phone',
             'website_url', 'salon_city', 'salon_zipcode', 'salon_state', 'is_profile_bookable',
-            'google_calendar_integrated',
+            'google_calendar_integrated', 'email'
         ]
 
     def get_google_calendar_integrated(self, instance: Stylist) -> bool:
