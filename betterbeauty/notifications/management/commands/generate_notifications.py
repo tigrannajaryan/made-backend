@@ -5,7 +5,6 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from core.constants import EnvLevel
 from notifications.types import NotificationCode
 from notifications.utils import (
     generate_hint_to_first_book_notifications,
@@ -87,31 +86,29 @@ class Command(BaseCommand):
             notification_count, (time_end - time_start).total_seconds()
         ), self.stdout)
 
-        if settings.LEVEL != EnvLevel.PRODUCTION:
-            stdout_and_log(
-                'Generating {0} notifications'.format(NotificationCode.TOMORROW_APPOINTMENTS),
-                self.stdout
-            )
-            time_start = timezone.now()
-            notification_count = generate_tomorrow_appointments_notifications(dry_run=dry_run)
-            time_end = timezone.now()
-            stdout_and_log('...{0} notifications generated; took {1} seconds'.format(
-                notification_count, (time_end - time_start).total_seconds()
-            ), self.stdout)
+        stdout_and_log(
+            'Generating {0} notifications'.format(NotificationCode.TOMORROW_APPOINTMENTS),
+            self.stdout
+        )
+        time_start = timezone.now()
+        notification_count = generate_tomorrow_appointments_notifications(dry_run=dry_run)
+        time_end = timezone.now()
+        stdout_and_log('...{0} notifications generated; took {1} seconds'.format(
+            notification_count, (time_end - time_start).total_seconds()
+        ), self.stdout)
 
-        if settings.LEVEL != EnvLevel.PRODUCTION:
-            stdout_and_log(
-                'Generating {0} notifications'.format(NotificationCode.REGISTRATION_INCOMPLETE),
-                self.stdout
-            )
-            time_start = timezone.now()
-            notification_count = generate_stylist_registration_incomplete_notifications(
-                dry_run=dry_run
-            )
-            time_end = timezone.now()
-            stdout_and_log('...{0} notifications generated; took {1} seconds'.format(
-                notification_count, (time_end - time_start).total_seconds()
-            ), self.stdout)
+        stdout_and_log(
+            'Generating {0} notifications'.format(NotificationCode.REGISTRATION_INCOMPLETE),
+            self.stdout
+        )
+        time_start = timezone.now()
+        notification_count = generate_stylist_registration_incomplete_notifications(
+            dry_run=dry_run
+        )
+        time_end = timezone.now()
+        stdout_and_log('...{0} notifications generated; took {1} seconds'.format(
+            notification_count, (time_end - time_start).total_seconds()
+        ), self.stdout)
 
         if force_send:
             self.stdout.write('Going to send push notifications now')
