@@ -28,6 +28,9 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
         NotificationCode.TOMORROW_APPOINTMENTS: [
             NotificationChannel.PUSH  # NotificationChannel.SMS
         ],
+        NotificationCode.REGISTRATION_INCOMPLETE: [
+            NotificationChannel.PUSH  # NotificationChannel.SMS
+        ],
     }
 else:
     NOTIFICATION_CHANNEL_PRIORITY = {
@@ -44,6 +47,9 @@ else:
             NotificationChannel.PUSH, NotificationChannel.SMS,
         ],
         NotificationCode.TOMORROW_APPOINTMENTS: [
+            NotificationChannel.PUSH  # NotificationChannel.SMS
+        ],
+        NotificationCode.REGISTRATION_INCOMPLETE: [
             NotificationChannel.PUSH  # NotificationChannel.SMS
         ],
     }
