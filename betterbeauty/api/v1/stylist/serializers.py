@@ -1549,9 +1549,18 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
         return week_summary
 
 
-class StylistSpecialAvailableDateSerializer(serializers.ModelSerializer):
+class StylistSpecialAvailableDateSerializer(
+    FormattedErrorMessageMixin, serializers.ModelSerializer
+):
     is_available = serializers.BooleanField(required=False, default=False)
 
     class Meta:
         model = StylistSpecialAvailableDate
         fields = ['is_available', ]
+
+
+class DatesWithAppointmentsSerializer(
+    FormattedErrorMessageMixin, serializers.Serializer
+):
+    date = serializers.DateField(read_only=True)
+    has_appointments = serializers.BooleanField()

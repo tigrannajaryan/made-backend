@@ -34,6 +34,8 @@
       - [Send invitation(s) to the client(s)](#user-content-send-invitations-to-the-clients)
     - [**Appointments**](#user-content-appointments)
       - [List existing appointments](#user-content-list-existing-appointments)
+      - [Retrieve appointments for OneDay](#retrieve-appointments-for-oneday)
+      - [Retrieve list of dates with appointments](#retrieve-list-of-dates-with-appointments)
       - [Retrieve single appointment](#user-content-retrieve-single-appointment)
       - [Preview appointment](#user-content-preview-appointment)
       - [Add appointment](#user-content-add-appointment)
@@ -234,6 +236,8 @@ such specific errors in particular API calls.
 |err_bad_integration_type|Passed integration type is not (yet) supported|/api/v1/common/integrations|integration_type|
 |err_failure_to_setup_oauth|General problem with setting up oauth credentials|/api/v1/common/integrations|non-field|
 |err_stylist_special_availability_date_not_found|Special availability date not found|/api/v1/stylist/availability/special/{date}|non-field|
+|err_invalid_date_range|Provided date range is invalid|/api/v1/stylist/dates-with-appointments|non-field|
+
 # Authorization
 ## Getting auth token with email/password credentials
 In order to make requests to the API, client needs a JWT token. There are 2 ways to obtain
@@ -1740,7 +1744,7 @@ curl -X GET -H 'Authorization: Token jwt_token' \
 ]
 ```
 
-### Retrive appointments on a for OneDay
+### Retrieve appointments for OneDay
 **GET /api/v1/stylist/appointments/oneday**?date_from=yyyy-mm-dd
 
 ```
@@ -1829,9 +1833,50 @@ curl -X GET -H 'Authorization: Token jwt_token' \
 ```
 
 
+### Retrieve list of dates with appointments
+**GET /api/v1/stylist/appointments/dates-with-appointments?date_from={yyyy-mm-dd}&date_to={yyyy-mm-dd}**
+
+**date_from** - mandatory - date to start from, in iso format
+**date_to** - mandatory - finish date, in iso format
+
+**Important**: only dates with appointments are returned; dates without
+appointments (or with cancelled appointments only) are omitted, so
+`has_appointments` value is always `true`.
+
+```
+curl -X GET \
+  http://apiserver/api/v1/stylist/appointments/dates-with-appointments?date_from=2018-10-10&date_to=2018-12-31 \
+  -H 'Authorization: Token jwt_token'
+```
+
+**Response 200 OK**
+```
+{
+    "dates": [
+        {"date": "2018-12-10", "has_appointments": true},
+        {"date": "2018-12-12", "has_appointments": true}
+    ]
+}
+```
+
+**Response 400 Bad Request**
+
+Will normally be raised when either `date_from` or `date_to` are
+omitted or have bad format.
+
+```json
+{
+    "code": "err_api_exception",
+    "field_errors": {},
+    "non_field_errors": [
+        {"code": "err_invalid_date_range"}
+    ]
+}
+```
+
 
 ### Retrieve single appointment
-**GET /api/v1/appointments/{appointment_uuid}**
+**GET /api/v1/stylist/appointments/{appointment_uuid}**
 
 ```
 curl -X GET \
@@ -2324,6 +2369,7 @@ Note: `today_slots` will be `null` if query param is not `today`
     "past_visits_count": 2
 }
 ```
+
 
 ## Settings screen
 

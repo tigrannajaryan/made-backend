@@ -1,6 +1,6 @@
 import datetime
 import uuid
-from typing import List, NamedTuple, Optional
+from typing import Any, Dict, List, NamedTuple, Optional
 
 from annoying.functions import get_object_or_None
 from dateutil.parser import parse
@@ -50,6 +50,7 @@ from .serializers import (
     ClientDetailsSerializer,
     ClientSerializer,
     ClientServicePricingSerializer,
+    DatesWithAppointmentsSerializer,
     InvitationSerializer,
     MaximumDiscountSerializer,
     NearbyClientSerializer,
@@ -689,3 +690,67 @@ class StylistSpecialAvailabilityDateView(views.APIView):
             date_obj.delete()
             return Response({}, status=status.HTTP_204_NO_CONTENT)
         return self._not_found_response()
+
+
+class DatesWithAppointmentsView(views.APIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+
+    def get(self, request):
+        date_from_str = post_or_get(self.request, 'date_from')
+        date_to_str = post_or_get(self.request, 'date_to')
+        datetime_from = None
+        datetime_to = None
+
+        stylist: Stylist = self.request.user.stylist
+
+        if date_from_str:
+            datetime_from = stylist.salon.timezone.localize(
+                parse(date_from_str).replace(
+                    hour=0, minute=0, second=0
+                )
+            )
+        if date_to_str:
+            datetime_to = stylist.salon.timezone.localize(
+                (parse(date_to_str) + datetime.timedelta(days=1)).replace(
+                    hour=0, minute=0, second=0
+                )
+            )
+        if not datetime_from or not datetime_to:
+            raise ValidationError(
+                {'non_field_errors': [
+                    {'code': ErrorMessages.ERR_INVALID_DATE_RANGE}
+                ]})
+
+        dates_with_appointments: List[
+            Dict[str, Any]
+        ] = self._get_dates_with_appointments(
+            datetime_from, datetime_to
+        )
+        dates_serialized = DatesWithAppointmentsSerializer(
+            dates_with_appointments, many=True
+        ).data
+        return Response({'dates': dates_serialized}, status=status.HTTP_200_OK)
+
+    def _get_dates_with_appointments(
+            self, datetime_from: datetime.datetime, datetime_to: datetime.datetime
+    ) -> List[dict]:
+        stylist: Stylist = self.request.user.stylist
+        appointments = stylist.get_appointments_in_datetime_range(
+            datetime_from=datetime_from, datetime_to=datetime_to,
+            including_to=True, exclude_statuses=[
+                AppointmentStatus.CANCELLED_BY_STYLIST,
+                AppointmentStatus.CANCELLED_BY_CLIENT
+            ],
+            service__uuid__isnull=False
+        ).order_by('id').distinct('id')
+
+        dates: List[datetime.date] = []
+        for appointment in appointments.iterator():
+            start_date = stylist.with_salon_tz(appointment.datetime_start_at).date()
+            if start_date in dates:
+                continue
+            dates.append(start_date)
+        transformed_dates: List[dict] = [
+            {'date': date, 'has_appointments': True} for date in dates
+        ]
+        return transformed_dates

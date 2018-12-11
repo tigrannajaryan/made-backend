@@ -12,6 +12,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
 from api.common.permissions import StylistPermission, StylistRegisterUpdatePermission
+from api.v1.stylist.constants import ErrorMessages as stylist_errors
 from api.v1.stylist.serializers import AppointmentValidationMixin
 from api.v1.stylist.urls import urlpatterns
 from api.v1.stylist.views import StylistView
@@ -554,3 +555,90 @@ class TestStylistSpecialAvailabilityDateView(object):
         )
         response = client.delete(url, HTTP_AUTHORIZATION=auth_token)
         assert (response.status_code == status.HTTP_204_NO_CONTENT)
+
+
+class TestDatesWithAppointmentsView(object):
+    @pytest.mark.django_db
+    def test_dates(self, client, authorized_stylist_user):
+        est = pytz.timezone('America/New_York')
+        salon = G(Salon, timezone=est)
+        stylist_user, auth_token = authorized_stylist_user
+        stylist: Stylist = stylist_user.stylist
+        stylist.salon = salon
+        stylist.save()
+        service: StylistService = G(StylistService, stylist=stylist, is_enabled=True)
+        a1 = G(
+            Appointment,
+            stylist=stylist, datetime_start_at=est.localize(datetime.datetime(
+                2018, 12, 8, 0, 1
+            ))
+        )
+        G(AppointmentService, appointment=a1, service_uuid=service.uuid)
+
+        a2 = G(
+            Appointment,
+            stylist=stylist, datetime_start_at=est.localize(datetime.datetime(
+                2018, 12, 10, 23, 59
+            ))
+        )
+        G(AppointmentService, appointment=a2, service_uuid=service.uuid)
+
+        a3 = G(  # should not be in output, cancelled by client
+            Appointment,
+            stylist=stylist, datetime_start_at=est.localize(datetime.datetime(
+                2018, 12, 11, 12, 10
+            )), status=AppointmentStatus.CANCELLED_BY_CLIENT
+        )
+        G(AppointmentService, appointment=a3, service_uuid=service.uuid)
+
+        a4 = G(
+            Appointment,
+            stylist=stylist, datetime_start_at=est.localize(datetime.datetime(
+                2018, 12, 12, 12, 10
+            ))
+        )
+        G(AppointmentService, appointment=a4, service_uuid=service.uuid)
+        a5 = G(  # let's check that multiple appointments on a day work fine
+            Appointment,
+            stylist=stylist, datetime_start_at=est.localize(datetime.datetime(
+                2018, 12, 12, 14, 10
+            ))
+        )
+        G(AppointmentService, appointment=a5, service_uuid=service.uuid)
+
+        a7 = G(  # should not be in output, cancelled by stylist
+            Appointment,
+            stylist=stylist, datetime_start_at=est.localize(datetime.datetime(
+                2018, 12, 13, 14, 10
+            )), status=AppointmentStatus.CANCELLED_BY_STYLIST
+        )
+        G(AppointmentService, appointment=a7, service_uuid=service.uuid)
+
+        G(  # should not be in output, has no services
+            Appointment,
+            stylist=stylist, datetime_start_at=est.localize(datetime.datetime(
+                2018, 12, 14, 12, 10
+            ))
+        )
+        url = reverse('api:v1:stylist:dates-with-appointments')
+        url = '{0}?date_from=2018-10-10&date_to=2018-12-31'.format(url)
+
+        response = client.get(url, HTTP_AUTHORIZATION=auth_token)
+        assert(response.status_code == status.HTTP_200_OK)
+        dates = [d['date'] for d in response.data['dates']]
+        assert(dates == [
+            '2018-12-08',
+            '2018-12-10',
+            '2018-12-12',
+        ])
+
+    @pytest.mark.django_db
+    def test_input_params(self, client, authorized_stylist_user):
+        stylist_user, auth_token = authorized_stylist_user
+        url = reverse('api:v1:stylist:dates-with-appointments')
+        response = client.get(url, HTTP_AUTHORIZATION=auth_token)
+        assert(response.status_code == status.HTTP_400_BAD_REQUEST)
+        assert(
+            {'code': stylist_errors.ERR_INVALID_DATE_RANGE} in
+            response.data['non_field_errors']
+        )
