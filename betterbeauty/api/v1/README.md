@@ -918,6 +918,7 @@ curl http://apiserver/api/v1/stylist/service-template-sets/{template_set_uuid} \
         "categories": [
             {
                 "name": "Special Occassions",
+                "category-code":"wash-and-style",
                 "uuid": "01899abd-89d9-4776-a74c-7e7d155b58af",
                 "services": [
                     {
@@ -976,6 +977,8 @@ curl http://apiserver/api/v1/stylist/services \
    "categories":[
       {
          "name":"Braids and Locs",
+         "category-code":"braids-and-locks",
+         "weight": 1,
          "uuid":"15610c0a-a819-4731-b503-1e5e3f4fdbee",
          "services":[
 
@@ -983,6 +986,8 @@ curl http://apiserver/api/v1/stylist/services \
       },
       {
          "name":"Color",
+         "category-code":"color",
+         "weight": 1,
          "uuid":"3a9e6529-d380-4f73-8759-731e53e2058d",
          "services":[
             {
@@ -1002,6 +1007,8 @@ curl http://apiserver/api/v1/stylist/services \
       },
       {
          "name":"Conditioners",
+         "category-code":"conditioners",
+         "weight": 1,
          "uuid":"8dd74735-72a1-4590-bc0f-70464dcc8f61",
          "services":[
             {
@@ -1021,6 +1028,8 @@ curl http://apiserver/api/v1/stylist/services \
       },
       {
          "name":"Cuts",
+         "category-code":"cuts",
+         "weight": 1,
          "uuid":"724d837f-ed4e-4f0c-9f4e-b2381785f52b",
          "services":[
 
@@ -1028,28 +1037,9 @@ curl http://apiserver/api/v1/stylist/services \
       },
       {
          "name":"Extensions",
+         "category-code":"extensions",
+         "weight": 1,
          "uuid":"73b9b7f8-9719-422b-9d76-92c67bc15995",
-         "services":[
-
-         ]
-      },
-      {
-         "name":"Special Occassions",
-         "uuid":"9adadbcb-4994-4ceb-baf6-48f1f286dfed",
-         "services":[
-
-         ]
-      },
-      {
-         "name":"Treatments",
-         "uuid":"9989737d-93de-47a0-aeb4-3616b696e48f",
-         "services":[
-
-         ]
-      },
-      {
-         "name":"Wash and Style",
-         "uuid":"b0605fd7-3afe-451e-89c7-994407674f7a",
          "services":[
 
          ]
@@ -1123,6 +1113,8 @@ curl -X POST http://apiserver/api/v1/stylist/services \
       },
       {
          "name":"Color",
+         "category-code":"color",
+         "weight": 1,
          "uuid":"3a9e6529-d380-4f73-8759-731e53e2058d",
          "services":[
             {
@@ -1142,6 +1134,8 @@ curl -X POST http://apiserver/api/v1/stylist/services \
       },
       {
          "name":"Conditioners",
+         "category-code":"conditioners",
+         "weight": 1,
          "uuid":"8dd74735-72a1-4590-bc0f-70464dcc8f61",
          "services":[
             {
@@ -1157,41 +1151,6 @@ curl -X POST http://apiserver/api/v1/stylist/services \
                "category_name":"Conditioners",
                "uuid":"6e3148fe-b6c9-46f8-b79b-7568f24a17b8"
             }
-         ]
-      },
-      {
-         "name":"Cuts",
-         "uuid":"724d837f-ed4e-4f0c-9f4e-b2381785f52b",
-         "services":[
-
-         ]
-      },
-      {
-         "name":"Extensions",
-         "uuid":"73b9b7f8-9719-422b-9d76-92c67bc15995",
-         "services":[
-
-         ]
-      },
-      {
-         "name":"Special Occassions",
-         "uuid":"9adadbcb-4994-4ceb-baf6-48f1f286dfed",
-         "services":[
-
-         ]
-      },
-      {
-         "name":"Treatments",
-         "uuid":"9989737d-93de-47a0-aeb4-3616b696e48f",
-         "services":[
-
-         ]
-      },
-      {
-         "name":"Wash and Style",
-         "uuid":"b0605fd7-3afe-451e-89c7-994407674f7a",
-         "services":[
-
          ]
       }
    ]
@@ -2900,6 +2859,8 @@ curl -X GET \
     "categories": [
         {
             "name": "Braids and Locs",
+            "category-code": "wash-and-style",
+            "weight": 1,
             "uuid": "1b040c66-a74a-4383-8ab4-f48171e65fb3",
             "services": [
                 {
