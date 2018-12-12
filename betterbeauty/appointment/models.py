@@ -401,7 +401,10 @@ class AppointmentStatusHistory(models.Model):
 
 
 class AppointmentService(models.Model):
-    appointment = models.ForeignKey(Appointment, related_name='services', on_delete=models.CASCADE)
+    appointment = models.ForeignKey(
+        Appointment, related_name='services', on_delete=models.CASCADE,
+        related_query_name='service'
+    )
     uuid = models.UUIDField(unique=True, default=uuid4, editable=False)
 
     service_uuid = models.UUIDField()

@@ -16,3 +16,4 @@ class ErrorMessages:
     ERR_INVALID_APPOINTMENT_UUID = 'err_invalid_appointment_uuid'
     ERR_STYLIST_LOCATION_UNAVAILABLE = 'err_stylist_location_unavailable'
     ERR_STYLIST_SPECIAL_DATE_NOT_FOUND = 'err_stylist_special_availability_date_not_found'
+    ERR_INVALID_DATE_RANGE = 'err_invalid_date_range'
