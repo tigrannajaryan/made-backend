@@ -400,8 +400,8 @@ class ServiceTemplateSetDetailsSerializer(serializers.ModelSerializer):
 
     def get_categories(self, service_template_set: ServiceTemplateSet):
         category_queryset = ServiceCategory.objects.all().order_by(
-            '-order', 'name', 'uuid'
-        ).distinct('order', 'name', 'uuid')
+            '-weight', 'name', 'uuid'
+        ).distinct('weight', 'name', 'uuid')
         return ServiceTemplateCategoryDetailsSerializer(
             category_queryset,
             context={'service_template_set': service_template_set},
