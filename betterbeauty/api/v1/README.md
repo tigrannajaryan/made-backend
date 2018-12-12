@@ -3393,6 +3393,85 @@ curl -X POST \
 }
 ```
 
+## Stylist Profile Details
+
+**GET api/v1/common/stylist-profile/<stylist-uuid>?role=stylist**
+
+Note: role can be "stylist" or "client" depending on the app which sends the request 
+
+
+**Response 200 OK**
+```json
+{
+    "uuid": "1827c31e-c93c-4f9f-be18-d83bd8234837",
+    "first_name": "John",
+    "last_name": "Doe",
+    "profile_photo_url": null,
+    "is_preferred": false, // Always false when `?role=stylist`
+    "salon_name": "John's Salon",
+    "salon_address": "New York Stock Exchange, New York, NY 10005, USA",
+    "followers_count": 1,
+    "working_hours": {
+        "weekdays": [
+            {
+                "weekday_iso": 1,
+                "label": "Monday",
+                "work_start_at": "09:00:00",
+                "work_end_at": "17:00:00",
+                "is_available": true
+            },
+            {
+                "weekday_iso": 2,
+                "label": "Tuesday",
+                "work_start_at": null,
+                "work_end_at": null,
+                "is_available": false
+            },
+            {
+                "weekday_iso": 3,
+                "label": "Wednesday",
+                "work_start_at": "09:00:00",
+                "work_end_at": "17:00:00",
+                "is_available": true
+            },
+            {
+                "weekday_iso": 4,
+                "label": "Thursday",
+                "work_start_at": "09:00:00",
+                "work_end_at": "17:00:00",
+                "is_available": true
+            },
+            {
+                "weekday_iso": 5,
+                "label": "Friday",
+                "work_start_at": "09:00:00",
+                "work_end_at": "17:00:00",
+                "is_available": true
+            },
+            {
+                "weekday_iso": 6,
+                "label": "Saturday",
+                "work_start_at": "09:00:00",
+                "work_end_at": "17:00:00",
+                "is_available": true
+            },
+            {
+                "weekday_iso": 7,
+                "label": "Sunday",
+                "work_start_at": "09:00:00",
+                "work_end_at": "17:00:00",
+                "is_available": true
+            }
+        ]
+    },
+    "instagram_url": "instag",
+    "website_url": "www.johns.com",
+    "email": "salon@johns.com",
+    "phone": "+13471247890",
+    "is_profile_bookable": true
+}
+```
+
 # Files upload
 ## Image upload
 
