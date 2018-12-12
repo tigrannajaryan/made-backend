@@ -303,8 +303,8 @@ class StylistServiceListSerializer(FormattedErrorMessageMixin, serializers.Model
 
     def get_categories(self, stylist: Stylist):
         category_queryset = ServiceCategory.objects.all().order_by(
-            'name', 'uuid'
-        ).distinct('name', 'uuid')
+            '-weight', 'name', 'uuid'
+        ).distinct('weight', 'name', 'uuid')
         return StylistServiceCategoryDetailsSerializer(
             category_queryset,
             context={'stylist': stylist},
