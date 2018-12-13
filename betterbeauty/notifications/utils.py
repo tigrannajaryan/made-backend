@@ -187,10 +187,6 @@ def generate_hint_to_select_stylist_notifications(dry_run=False) -> int:
         user__apnsdevice__active=True) | Q(
         user__gcmdevice__active=True)
 
-    client_does_not_have_preferred_stylists = Q(
-        preferred_stylists__deleted_at__isnull=False
-    ) | Q(preferred_stylists__isnull=True)
-
     bookable_stylists = Stylist.objects.filter(
         services__is_enabled=True,
         user__phone__isnull=False,
@@ -204,7 +200,6 @@ def generate_hint_to_select_stylist_notifications(dry_run=False) -> int:
 
     message = message.format(bookable_stylists.count())
     eligible_clients_ids = Client.objects.filter(
-        client_does_not_have_preferred_stylists,
         created_at__lt=client_joined_before_datetime,
         created_at__gte=cutoff_datetime,
         user__is_active=True,
@@ -214,8 +209,13 @@ def generate_hint_to_select_stylist_notifications(dry_run=False) -> int:
             'user__notification', filter=Q(
                 user__notification__code=code
             )
+        ),
+        preferred_stylist_cnt=Count(
+            'preferred_stylists', filter=Q(
+                preferred_stylists__deleted_at__isnull=True,
+            )
         )
-    ).filter(notification_cnt=0).values_list('id', flat=True)
+    ).filter(notification_cnt=0, preferred_stylist_cnt=0).values_list('id', flat=True)
 
     # if based on initial settings PUSH is the one and only channel that will be used
     # let's select only those clients who actually have push-enabled devices, and
