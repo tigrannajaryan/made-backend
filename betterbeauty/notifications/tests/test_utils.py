@@ -35,8 +35,10 @@ from ..utils import (
 
 
 @pytest.fixture
-def bookable_stylist() -> Stylist:
-    user = G(User, role=[UserRole.STYLIST], phone='+15555555555')
+def bookable_stylist(phone: str=None) -> Stylist:
+    if phone is None:
+        phone = '+15555555555'
+    user = G(User, role=[UserRole.STYLIST], phone=phone)
     salon = G(Salon, timezone=pytz.timezone(settings.TIME_ZONE))
     stylist: Stylist = G(
         Stylist, user=user, salon=salon, service_time_gap=datetime.timedelta(hours=1),
@@ -147,23 +149,19 @@ class TestGenerateHintToSelectStylistNotification(object):
 
     @pytest.mark.django_db
     @freeze_time('2018-11-26 20:30:00 UTC')
-    def test_with_bookable_stylist(self, bookable_stylist):
-        G(StylistService, stylist=bookable_stylist, is_enabled=True)
+    def test_with_present_and_deleted_stylist(self):
+        stylist: Stylist = bookable_stylist()
+        another_stylist: Stylist = bookable_stylist(phone='+15555555554')
+        G(StylistService, stylist=stylist, is_enabled=True)
+        G(StylistService, stylist=another_stylist, is_enabled=True)
         client = G(Client, created_at=pytz.UTC.localize(
             datetime.datetime(2018, 11, 20, 0, 0)))
         G(APNSDevice, user=client.user)
-        p = G(PreferredStylist, client=client, stylist=bookable_stylist)
+        p = G(PreferredStylist, client=client, stylist=stylist)
+        p.delete()
+        G(PreferredStylist, client=client, stylist=another_stylist)
         generate_hint_to_select_stylist_notifications()
         assert (Notification.objects.count() == 0)
-        p.delete()
-        generate_hint_to_select_stylist_notifications()
-        assert (Notification.objects.count() == 1)
-        notification: Notification = Notification.objects.last()
-        assert(notification.code == NotificationCode.HINT_TO_SELECT_STYLIST)
-        assert(notification.target == UserRole.CLIENT)
-        assert(notification.pending_to_send is True)
-        assert(notification.user == client.user)
-        assert('We have 1 stylists' in notification.message)
 
     @pytest.mark.django_db
     @freeze_time('2018-11-26 20:30:00 UTC')
@@ -192,6 +190,26 @@ class TestGenerateHintToSelectStylistNotification(object):
 
         generate_hint_to_select_stylist_notifications()
         assert (Notification.objects.count() == 1)
+
+    @pytest.mark.django_db
+    @freeze_time('2018-11-26 20:30:00 UTC')
+    def test_with_bookable_stylist(self, bookable_stylist):
+        G(StylistService, stylist=bookable_stylist, is_enabled=True)
+        client = G(Client, created_at=pytz.UTC.localize(
+            datetime.datetime(2018, 11, 20, 0, 0)))
+        G(APNSDevice, user=client.user)
+        p = G(PreferredStylist, client=client, stylist=bookable_stylist)
+        generate_hint_to_select_stylist_notifications()
+        assert (Notification.objects.count() == 0)
+        p.delete()
+        generate_hint_to_select_stylist_notifications()
+        assert (Notification.objects.count() == 1)
+        notification: Notification = Notification.objects.last()
+        assert (notification.code == NotificationCode.HINT_TO_SELECT_STYLIST)
+        assert (notification.target == UserRole.CLIENT)
+        assert (notification.pending_to_send is True)
+        assert (notification.user == client.user)
+        assert ('We have 1 stylists' in notification.message)
 
 
 class TestGenerateHintToRebookNotification(object):

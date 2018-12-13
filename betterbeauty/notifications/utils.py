@@ -6,7 +6,7 @@ import pytz
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, Max, Q
+from django.db.models import Count, Exists, Max, OuterRef, Q
 from django.utils import timezone
 
 from appointment.models import Appointment
@@ -187,10 +187,6 @@ def generate_hint_to_select_stylist_notifications(dry_run=False) -> int:
         user__apnsdevice__active=True) | Q(
         user__gcmdevice__active=True)
 
-    client_does_not_have_preferred_stylists = Q(
-        preferred_stylists__deleted_at__isnull=False
-    ) | Q(preferred_stylists__isnull=True)
-
     bookable_stylists = Stylist.objects.filter(
         services__is_enabled=True,
         user__phone__isnull=False,
@@ -198,24 +194,30 @@ def generate_hint_to_select_stylist_notifications(dry_run=False) -> int:
         has_business_hours_set=True,
         deactivated_at__isnull=True
     ).distinct('id')
+
+    client_has_preferred_stylists = PreferredStylist.objects.filter(
+        client_id=OuterRef('id'), deleted_at__isnull=True
+    )
+    client_has_prior_notifications = Notification.objects.filter(
+        user_id=OuterRef('user__id'), code=code
+    )
     if not bookable_stylists.exists():
         # there are no bookable stylists, so we won't be sending anything
         return 0
 
     message = message.format(bookable_stylists.count())
     eligible_clients_ids = Client.objects.filter(
-        client_does_not_have_preferred_stylists,
         created_at__lt=client_joined_before_datetime,
         created_at__gte=cutoff_datetime,
         user__is_active=True,
         # TODO: add is_active=True
     ).annotate(
-        notification_cnt=Count(
-            'user__notification', filter=Q(
-                user__notification__code=code
-            )
-        )
-    ).filter(notification_cnt=0).values_list('id', flat=True)
+        has_prior_notifications=Exists(client_has_prior_notifications),
+        has_preferred_stylists=Exists(client_has_preferred_stylists)
+    ).filter(
+        has_prior_notifications=False,
+        has_preferred_stylists=False
+    ).values_list('id', flat=True)
 
     # if based on initial settings PUSH is the one and only channel that will be used
     # let's select only those clients who actually have push-enabled devices, and
