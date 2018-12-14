@@ -22,9 +22,9 @@ from appointment.constants import (
 )
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
-from client.models import Client
+from client.models import Client, PreferredStylist
 from core.models import User
-from core.types import AppointmentPrices, Weekday
+from core.types import AppointmentPrices, UserRole, Weekday
 from core.utils import (
     calculate_appointment_prices,
 )
@@ -1566,3 +1566,47 @@ class DatesWithAppointmentsSerializer(
 ):
     date = serializers.DateField(read_only=True)
     has_appointments = serializers.BooleanField()
+
+
+class StylistProfileDetailsSerializer(serializers.ModelSerializer):
+
+    is_preferred = serializers.SerializerMethodField()
+    working_hours = serializers.SerializerMethodField()
+    followers_count = serializers.SerializerMethodField()
+    phone = serializers.SerializerMethodField()
+    profile_photo_url = serializers.CharField(source='get_profile_photo_url', read_only=True)
+    salon_name = serializers.CharField(
+        source='salon.name', allow_null=True, required=False
+    )
+    salon_address = serializers.CharField(source='salon.address', allow_null=True)
+    is_profile_bookable = serializers.BooleanField(
+        read_only=True,
+    )
+
+    class Meta:
+        model = Stylist
+        fields = [
+            'uuid', 'first_name', 'last_name', 'profile_photo_url', 'is_preferred',
+            'salon_name', 'salon_address', 'followers_count', 'working_hours', 'instagram_url',
+            'website_url', 'email', 'phone', 'is_profile_bookable',
+        ]
+
+    def get_is_preferred(self, stylist: Stylist) -> bool:
+        role = self.context['request_role']
+        user = self.context['user']
+        if role == UserRole.CLIENT and user.client:
+            return PreferredStylist.objects.filter(client=user.client,
+                                                   stylist=stylist,
+                                                   deleted_at=None).exists()
+        return False
+
+    def get_working_hours(self, stylist: Stylist) -> dict:
+        return StylistAvailableWeekDayListSerializer(stylist).data
+
+    def get_followers_count(self, stylist: Stylist) -> Optional[int]:
+        return stylist.get_preferred_clients().count()
+
+    def get_phone(self, stylist: Stylist):
+        return stylist.salon.public_phone or stylist.user.phone if (
+            stylist.salon
+        ) else None
