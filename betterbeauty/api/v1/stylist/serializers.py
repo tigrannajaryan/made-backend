@@ -1517,7 +1517,7 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
         start_of_the_week = date - datetime.timedelta(days=(date.isoweekday() % 7))
         end_of_the_week = start_of_the_week + datetime.timedelta(days=6)
 
-        daily_appointment_data = stylist.get_appointments_in_datetime_range(
+        daily_appointment_data = (stylist.get_appointments_in_datetime_range(
             datetime_from=stylist.salon.timezone.localize(
                 datetime.datetime.combine(start_of_the_week, datetime.datetime.min.time())),
             datetime_to=stylist.salon.timezone.localize(
@@ -1525,7 +1525,7 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
             exclude_statuses=[AppointmentStatus.CANCELLED_BY_STYLIST,
                               AppointmentStatus.CANCELLED_BY_CLIENT],
         ).annotate(day=ExtractDay('datetime_start_at'),
-                   ).values('day').annotate(count=Count('id'))
+                   ).values('day').annotate(count=Count('id')))
 
         daily_availability = stylist.available_days.all()
 
