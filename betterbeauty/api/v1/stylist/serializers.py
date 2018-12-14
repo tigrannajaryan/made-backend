@@ -1522,6 +1522,8 @@ class AppointmentsOnADaySerializer(serializers.Serializer):
                 datetime.datetime.combine(start_of_the_week, datetime.datetime.min.time())),
             datetime_to=stylist.salon.timezone.localize(
                 datetime.datetime.combine(end_of_the_week, datetime.datetime.max.time())),
+            exclude_statuses=[AppointmentStatus.CANCELLED_BY_STYLIST,
+                              AppointmentStatus.CANCELLED_BY_CLIENT],
         ).annotate(day=ExtractDay('datetime_start_at'),
                    ).values('day').annotate(count=Count('id'))
 
