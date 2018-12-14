@@ -91,7 +91,7 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
             'first_name', 'last_name', 'phone', 'profile_photo_id', 'profile_photo_url',
             'zip_code', 'birthday', 'email', 'city', 'state', 'privacy',
             'has_seen_educational_screens',
-            'google_calendar_integrated', 'profile_completeness'
+            'google_calendar_integrated', 'profile_completeness',
         ]
 
     def get_google_calendar_integrated(self, instance: User) -> bool:
@@ -225,12 +225,17 @@ class PreferredStylistSerializer(FormattedErrorMessageMixin, serializers.ModelSe
         source='stylist.is_profile_bookable', read_only=True
     )
     specialities = serializers.ListField(source='stylist.get_specialities_list', read_only=True)
+    instagram_integrated = serializers.BooleanField(
+        source='stylist.instagram_integrated', read_only=True
+    )
 
     class Meta:
         model = PreferredStylist
         fields = ['uuid', 'salon_name', 'salon_address', 'profile_photo_url',
                   'first_name', 'last_name', 'phone', 'preference_uuid', 'instagram_url',
-                  'website_url', 'followers_count', 'is_profile_bookable', 'specialities']
+                  'website_url', 'followers_count', 'is_profile_bookable', 'specialities',
+                  'instagram_integrated',
+                  ]
 
     def get_followers_count(self, preferred_stylist: PreferredStylist):
         return preferred_stylist.stylist.get_preferred_clients().filter(
@@ -816,6 +821,7 @@ class SearchStylistSerializer(
     followers_count = serializers.IntegerField()
     specialities = serializers.SerializerMethodField()
     preference_uuid = serializers.CharField()
+    instagram_integrated = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Stylist
@@ -823,7 +829,7 @@ class SearchStylistSerializer(
             'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url',
             'salon_name', 'salon_address', 'instagram_url',
             'website_url', 'salon_city', 'salon_zipcode', 'salon_state', 'is_profile_bookable',
-            'followers_count', 'specialities', 'preference_uuid'
+            'followers_count', 'specialities', 'preference_uuid', 'instagram_integrated',
         ]
 
     def get_phone(self, stylist: Stylist):

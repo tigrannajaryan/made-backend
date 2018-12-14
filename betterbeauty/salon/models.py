@@ -256,12 +256,14 @@ class Stylist(models.Model):
     is_maximum_discount_enabled = models.BooleanField(default=False)
 
     email = models.EmailField(blank=True, null=True)
-    instagram_url = models.CharField(max_length=2084, blank=True, null=True)
     website_url = models.CharField(max_length=2084, blank=True, null=True)
 
     google_integration_added_at = models.DateTimeField(null=True, blank=True, default=None)
     google_access_token = models.CharField(max_length=1024, null=True, blank=True, default=None)
     google_refresh_token = models.CharField(max_length=1024, null=True, blank=True, default=None)
+
+    instagram_url = models.CharField(max_length=2084, blank=True, null=True)
+    instagram_access_token = models.CharField(max_length=512, blank=True, null=True)
 
     class Meta:
         db_table = 'stylist'
@@ -302,6 +304,10 @@ class Stylist(models.Model):
         return self.services.filter(
             is_enabled=True, deleted_at__isnull=True
         ).exists()
+
+    @property
+    def instagram_integrated(self):
+        return self.instagram_access_token is not None
 
     def delete(self, using=None, keep_parents=False):
         preferences = PreferredStylist.objects.filter(

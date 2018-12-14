@@ -648,6 +648,8 @@ class TestCommonProfileDetailsView(object):
     @pytest.mark.django_db
     def test_for_stylist_user(self, client, authorized_stylist_user, stylist_data):
         stylist_user, auth_token = authorized_stylist_user
+        stylist_data.instagram_access_token = 'some_token'
+        stylist_data.save(update_fields=['instagram_access_token'])
         url = reverse('api:v1:common:stylist-profile-detail', kwargs={
             "stylist_uuid": stylist_data.uuid})
         response_data = client.get(url, HTTP_AUTHORIZATION=auth_token, data={
@@ -660,6 +662,7 @@ class TestCommonProfileDetailsView(object):
         assert (response_data['followers_count'] == 0)
         assert (not response_data['is_profile_bookable'])
         assert (not response_data['is_preferred'])
+        assert (response_data['instagram_integrated'] is True)
 
     @pytest.mark.django_db
     def test_for_client_user(self, client, authorized_client_user, stylist_data):

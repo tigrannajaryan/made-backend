@@ -9,7 +9,6 @@ from django.db import models, transaction
 from django.db.models import Count, Sum
 from django.db.models.functions import Coalesce, ExtractDay, ExtractWeekDay
 from django.shortcuts import get_object_or_404
-
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
@@ -50,7 +49,6 @@ from salon.utils import (
 )
 from .constants import ErrorMessages, MAX_SERVICE_TEMPLATE_PREVIEW_COUNT, MIN_VALID_ADDR_LEN
 from .fields import DurationMinuteField
-
 
 logger = logging.getLogger(__name__)
 
@@ -192,6 +190,11 @@ class StylistSerializer(
     is_profile_bookable = serializers.BooleanField(read_only=True)
     followers_count = serializers.SerializerMethodField()
     google_calendar_integrated = serializers.SerializerMethodField()
+    instagram_integrated = serializers.BooleanField(read_only=True)
+
+    instagram_access_token = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, write_only=True
+    )
 
     class Meta:
         model = Stylist
@@ -199,7 +202,8 @@ class StylistSerializer(
             'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url', 'followers_count',
             'salon_name', 'salon_address', 'profile_photo_id', 'instagram_url', 'public_phone',
             'website_url', 'salon_city', 'salon_zipcode', 'salon_state', 'is_profile_bookable',
-            'google_calendar_integrated', 'email'
+            'google_calendar_integrated', 'email', 'instagram_integrated',
+            'instagram_access_token',
         ]
 
     def get_google_calendar_integrated(self, instance: Stylist) -> bool:
@@ -1583,6 +1587,7 @@ class StylistProfileDetailsSerializer(serializers.ModelSerializer):
     is_profile_bookable = serializers.BooleanField(
         read_only=True,
     )
+    instagram_integrated = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Stylist
@@ -1590,6 +1595,7 @@ class StylistProfileDetailsSerializer(serializers.ModelSerializer):
             'uuid', 'first_name', 'last_name', 'profile_photo_url', 'is_preferred',
             'salon_name', 'salon_address', 'followers_count', 'working_hours', 'instagram_url',
             'website_url', 'email', 'phone', 'is_profile_bookable', 'preference_uuid',
+            'instagram_integrated',
         ]
 
     def get_is_preferred(self, stylist: Stylist) -> bool:

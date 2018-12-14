@@ -29,6 +29,7 @@ from .serializers import (
     IntegrationAddSerializer,
     NotificationAckSerializer,
     PushNotificationTokenSerializer,
+    StylistInstagramPhotoSerializer,
     TemporaryImageSerializer,
 )
 
@@ -190,3 +191,14 @@ class AnalyticsViewsView(generics.CreateAPIView):
 
     def get_serializer_context(self):
         return {'request': self.request}
+
+
+class StylistInstagramPhotosRetrieveView(generics.RetrieveAPIView):
+    serializer_class = StylistInstagramPhotoSerializer
+    permission_classes = [permissions.IsAuthenticated, ClientOrStylistPermission, ]
+
+    lookup_url_kwarg = 'stylist_uuid'
+    lookup_field = 'uuid'
+
+    def get_queryset(self):
+        return Stylist.objects.filter(deactivated_at__isnull=True)

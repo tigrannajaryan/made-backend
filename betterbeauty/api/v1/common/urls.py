@@ -7,6 +7,7 @@ from .views import (
     IntegrationAddView,
     NotificationAckView,
     RegisterDeviceView,
+    StylistInstagramPhotosRetrieveView,
     TemporaryImageUploadView,
     UnregisterDeviceView,
 )
@@ -23,4 +24,6 @@ urlpatterns = [
     url('analytics/sessions$', AnalyticsSessionsView.as_view(), name='analytics_sessions'),
     url('^stylist-profile/(?P<stylist_uuid>[0-9a-f\-]+)$',
         CommonStylistDetailView.as_view(), name='stylist-profile-detail'),
+    url('^stylist/(?P<stylist_uuid>[0-9a-f\-]+)/instagram-photos',
+        StylistInstagramPhotosRetrieveView.as_view(), name='instagram-photos'),
 ]
