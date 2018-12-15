@@ -3,15 +3,19 @@ import datetime
 import pytest
 import pytz
 from django.conf import settings
+from django.contrib.gis.geos import Point
+from django.urls import reverse
 from django.utils import timezone
 from django_dynamic_fixture import G
 from freezegun import freeze_time
 from push_notifications.models import APNSDevice, GCMDevice
+from rest_framework_jwt.settings import api_settings
 
 from appointment.models import Appointment, AppointmentStatus
 from client.models import Client
 from core.models import User, UserRole
 from core.types import Weekday
+from core.utils.auth import custom_jwt_payload_handler
 from integrations.push.types import MobileAppIdType
 from notifications.models import Notification
 from notifications.types import NotificationCode
@@ -24,6 +28,7 @@ from salon.models import (
     StylistSpecialAvailableDate,
     StylistWeekdayDiscount,
 )
+from salon.utils import create_stylist_profile_for_user
 from ..utils import (
     generate_hint_to_first_book_notifications,
     generate_hint_to_rebook_notifications,
@@ -285,6 +290,115 @@ def new_appointment_stylist_client():
     )
     client: Client = G(Client)
     return stylist, client
+
+
+@pytest.fixture()
+def authorized_stylist_data(db):
+    salon = G(
+        Salon,
+        name='Test salon', address='2000, Rilma Lane, Los Altos, US 94022',
+        city='Los Altos', state='CA',
+        zip_code='94022', location=Point(x=-122.1185007, y=37.4009997), country='US',
+        timezone=pytz.utc
+    )
+    stylist_user = G(
+        User,
+        is_staff=False, is_superuser=False, email='test_stylist@example.com',
+        first_name='Fred', last_name='McBob', phone='(650) 350-1111'
+    )
+    stylist: Stylist = create_stylist_profile_for_user(
+        stylist_user,
+        salon=salon,
+        service_time_gap=datetime.timedelta(minutes=30)
+    )
+    monday_discount = stylist.get_or_create_weekday_discount(
+        weekday=Weekday.MONDAY
+    )
+    monday_discount.discount_percent = 50
+    monday_discount.save()
+    G(APNSDevice, user=stylist_user, application_id=MobileAppIdType.IOS_STYLIST_DEV)
+    jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
+    payload = custom_jwt_payload_handler(stylist_user, role=UserRole.STYLIST)
+    token = jwt_encode_handler(payload)
+    auth_token = 'Token {0}'.format(token)
+    return stylist_user, auth_token
+
+
+class TestGenerateStylistCancelledAppointmentNotification(object):
+
+    @pytest.mark.django_db
+    def test_cancelled_appointment_notification(
+            self, client, authorized_stylist_data
+    ):
+        user, auth_token = authorized_stylist_data
+        client_data = G(Client)
+        stylist = user.stylist
+
+        # deliver at appointment_start_time-30min
+        # (appointment_start_time-30min is earlier than next 10am)
+        with freeze_time('2018-12-4 7:30 UTC'):
+            our_appointment = G(
+                Appointment,
+                status=AppointmentStatus.NEW,
+                stylist=stylist,
+                client=client_data,
+                duration=datetime.timedelta(0),
+                datetime_start_at=datetime.datetime(2018, 12, 4, 9, 0, tzinfo=pytz.UTC),
+                created_by=client_data.user
+            )
+
+            url = reverse(
+                'api:v1:stylist:appointment', kwargs={'appointment_uuid': our_appointment.uuid}
+            )
+            data = {'status': AppointmentStatus.CANCELLED_BY_STYLIST}
+            client.post(url, HTTP_AUTHORIZATION=auth_token, data=data)
+
+            notification: Notification = Notification.objects.order_by('created_at').last()
+            assert (notification.send_time_window_start == datetime.time(8, 30))
+            assert (notification.send_time_window_end == datetime.time.max)
+
+        # Test send (immediately since current time in [10am..8pm] in client’s timezone)
+        with freeze_time('2018-12-4 10:30 UTC'):
+            our_appointment = G(
+                Appointment,
+                status=AppointmentStatus.NEW,
+                stylist=stylist,
+                client=client_data,
+                duration=datetime.timedelta(0),
+                datetime_start_at=datetime.datetime(2018, 12, 4, 12, 0, tzinfo=pytz.UTC),
+                created_by=client_data.user
+            )
+
+            url = reverse(
+                'api:v1:stylist:appointment', kwargs={'appointment_uuid': our_appointment.uuid}
+            )
+            data = {'status': AppointmentStatus.CANCELLED_BY_STYLIST}
+            client.post(url, HTTP_AUTHORIZATION=auth_token, data=data)
+
+            notification: Notification = Notification.objects.order_by('created_at').last()
+            assert (notification.send_time_window_start == datetime.time(10, 30))
+            assert (notification.send_time_window_end == datetime.time.max)
+        # Test delay until next 10 AM
+        with freeze_time('2018-12-4 22:00 UTC'):
+            our_appointment = G(
+                Appointment,
+                status=AppointmentStatus.NEW,
+                stylist=stylist,
+                client=client_data,
+                duration=datetime.timedelta(0),
+                datetime_start_at=datetime.datetime(2018, 12, 5, 11, 0, tzinfo=pytz.UTC),
+                created_by=client_data.user
+            )
+
+            url = reverse(
+                'api:v1:stylist:appointment', kwargs={'appointment_uuid': our_appointment.uuid}
+            )
+            data = {'status': AppointmentStatus.CANCELLED_BY_STYLIST}
+            client.post(url, HTTP_AUTHORIZATION=auth_token, data=data)
+
+            notification: Notification = Notification.objects.order_by('created_at').last()
+            assert (notification.send_time_window_start == datetime.time(10, 00))
+            assert (notification.send_time_window_end == datetime.time(20, 0, 0))
 
 
 class TestGenerateNewAppointmentNotification(object):
