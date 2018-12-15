@@ -1571,6 +1571,7 @@ class DatesWithAppointmentsSerializer(
 class StylistProfileDetailsSerializer(serializers.ModelSerializer):
 
     is_preferred = serializers.SerializerMethodField()
+    preference_uuid = serializers.SerializerMethodField()
     working_hours = serializers.SerializerMethodField()
     followers_count = serializers.SerializerMethodField()
     phone = serializers.SerializerMethodField()
@@ -1588,7 +1589,7 @@ class StylistProfileDetailsSerializer(serializers.ModelSerializer):
         fields = [
             'uuid', 'first_name', 'last_name', 'profile_photo_url', 'is_preferred',
             'salon_name', 'salon_address', 'followers_count', 'working_hours', 'instagram_url',
-            'website_url', 'email', 'phone', 'is_profile_bookable',
+            'website_url', 'email', 'phone', 'is_profile_bookable', 'preference_uuid',
         ]
 
     def get_is_preferred(self, stylist: Stylist) -> bool:
@@ -1599,6 +1600,17 @@ class StylistProfileDetailsSerializer(serializers.ModelSerializer):
                                                    stylist=stylist,
                                                    deleted_at=None).exists()
         return False
+
+    def get_preference_uuid(self, stylist: Stylist) -> Optional[str]:
+        role = self.context['request_role']
+        user = self.context['user']
+        if role == UserRole.CLIENT and user.client:
+            preference = PreferredStylist.objects.filter(client=user.client,
+                                                         stylist=stylist,
+                                                         deleted_at=None).last()
+            if preference:
+                return str(preference.uuid)
+        return None
 
     def get_working_hours(self, stylist: Stylist) -> dict:
         return StylistAvailableWeekDayListSerializer(stylist).data

@@ -3413,6 +3413,7 @@ Note: role can be "stylist" or "client" depending on the app which sends the req
     "last_name": "Doe",
     "profile_photo_url": null,
     "is_preferred": false, // Always false when `?role=stylist`
+    "preference_uuid": "uuid", // Always null when `?role=stylist` or no preference exists
     "salon_name": "John's Salon",
     "salon_address": "New York Stock Exchange, New York, NY 10005, USA",
     "followers_count": 1,

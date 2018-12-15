@@ -664,7 +664,9 @@ class TestCommonProfileDetailsView(object):
     @pytest.mark.django_db
     def test_for_client_user(self, client, authorized_client_user, stylist_data):
         client_user, auth_token = authorized_client_user
-        G(PreferredStylist, stylist=stylist_data, client=client_user.client, deleted_at=None)
+        preference_obj = G(PreferredStylist,
+                           stylist=stylist_data, client=client_user.client, deleted_at=None)
+
         url = reverse('api:v1:common:stylist-profile-detail', kwargs={
             "stylist_uuid": stylist_data.uuid})
         response_data = client.get(url, HTTP_AUTHORIZATION=auth_token, data={
@@ -677,3 +679,4 @@ class TestCommonProfileDetailsView(object):
         assert (response_data['followers_count'] == 1)
         assert (not response_data['is_profile_bookable'])
         assert (response_data['is_preferred'])
+        assert (response_data['preference_uuid'] == str(preference_obj.uuid))
