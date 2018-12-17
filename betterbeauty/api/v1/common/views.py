@@ -11,7 +11,9 @@ from rest_framework.response import Response
 
 from api.common.constants import HIGH_LEVEL_API_ERROR_CODES
 from api.common.permissions import ClientOrStylistPermission
+from api.v1.stylist.serializers import StylistProfileDetailsSerializer
 from core.models import User
+from core.utils import post_or_get_or_data
 from integrations.google.types import GoogleIntegrationErrors, GoogleIntegrationType
 from integrations.google.utils import add_google_calendar_integration_for_user
 from integrations.push.constants import ErrorMessages as push_errors
@@ -19,8 +21,11 @@ from integrations.push.types import PushRegistrationIdType
 from integrations.push.utils import register_device, unregister_device
 from notifications.models import Notification
 from notifications.types import NotificationChannel
+from salon.models import Stylist
 
 from .serializers import (
+    AnalyticsSessionSerializer,
+    AnalyticsViewSerializer,
     IntegrationAddSerializer,
     NotificationAckSerializer,
     PushNotificationTokenSerializer,
@@ -142,3 +147,46 @@ class IntegrationAddView(views.APIView):
                     ]
                 }, status=status.HTTP_400_BAD_REQUEST)
         return Response({}, status=status.HTTP_200_OK)
+
+
+class CommonStylistDetailView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, ClientOrStylistPermission]
+
+    def get(self, request, *args, **kwargs):
+        stylist_uuid = kwargs['stylist_uuid']
+        request_role: str = post_or_get_or_data(self.request, 'role', '')
+        serializer = StylistProfileDetailsSerializer(self.get_object(stylist_uuid),
+                                                     many=False,
+                                                     context=self.get_serializer_context(
+                                                         stylist_uuid, request_role))
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+    def get_object(self, stylist_uuid) -> Stylist:
+        stylist: Stylist = Stylist.objects.get(uuid=stylist_uuid)
+        return stylist
+
+    def get_serializer_context(self, stylist_uuid, request_role):
+        stylist = None
+        client = None
+        if stylist_uuid:
+            stylist = Stylist.objects.get(uuid=stylist_uuid)
+        user = self.request.user
+        if user.is_client():
+            client = user.client
+        return {
+            'user': self.request.user,
+            'stylist': stylist,
+            'client': client,
+            'request_role': request_role
+        }
+
+
+class AnalyticsSessionsView(generics.CreateAPIView):
+    serializer_class = AnalyticsSessionSerializer
+
+
+class AnalyticsViewsView(generics.CreateAPIView):
+    serializer_class = AnalyticsViewSerializer
+
+    def get_serializer_context(self):
+        return {'request': self.request}

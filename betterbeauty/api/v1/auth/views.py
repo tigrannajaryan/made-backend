@@ -16,8 +16,8 @@ from core.types import FBAccessToken, FBUserID, UserRole
 from core.utils import post_or_get_or_data
 from core.utils.auth import (
     client_jwt_response_payload_handler,
-    jwt_response_payload_handler as stylist_jwt_response_payload_handler,
-)
+    custom_jwt_payload_handler,
+    jwt_response_payload_handler as stylist_jwt_response_payload_handler)
 from core.utils.facebook import verify_fb_token
 from integrations.slack import send_slack_new_user_signup
 from salon.utils import create_stylist_profile_for_user
@@ -168,10 +168,9 @@ class VerifyCodeView(APIView):
             send_slack_new_user_signup(user)
 
         api_settings.user_settings['JWT_EXPIRATION_DELTA'] = timedelta(days=365)
-        jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
         jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
 
-        payload = jwt_payload_handler(user)
+        payload = custom_jwt_payload_handler(user, role=role)
         token = jwt_encode_handler(payload)
         if role == UserRole.CLIENT:
             jwt_response_payload_handler = client_jwt_response_payload_handler

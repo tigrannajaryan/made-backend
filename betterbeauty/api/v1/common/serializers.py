@@ -1,10 +1,20 @@
+from hashlib import sha1
+from typing import Optional
+
 from django.conf import settings
+from django.db import transaction
 
 from rest_framework import serializers
 
 from api.common.mixins import FormattedErrorMessageMixin
-from api.v1.auth.constants import ErrorMessages
-from core.models import TemporaryFile, User
+from api.v1.auth.constants import AnalyticsErrorMessages, ErrorMessages
+from core.choices import CLIENT_OR_STYLIST_ROLE, MOBILE_OS_CHOICES
+from core.models import (
+    AnalyticsSession,
+    AnalyticsView,
+    TemporaryFile,
+    User,
+)
 from core.types import UserRole
 from integrations.google.types import (
     GoogleIntegrationErrors,
@@ -89,3 +99,59 @@ class IntegrationAddSerializer(FormattedErrorMessageMixin, serializers.Serialize
         if user_role not in user.role:
             raise serializers.ValidationError(ErrorMessages.ERR_INCORRECT_USER_ROLE)
         return user_role
+
+
+class AnalyticsSessionSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
+    role = serializers.ChoiceField(choices=CLIENT_OR_STYLIST_ROLE, source='user_role')
+    app_os = serializers.ChoiceField(choices=MOBILE_OS_CHOICES)
+    timestamp = serializers.DateTimeField(source='client_timestamp')
+    session_uuid = serializers.UUIDField(source='uuid')
+
+    class Meta:
+        model = AnalyticsSession
+        fields = [
+            'role', 'timestamp', 'session_uuid', 'extra_data', 'app_os',
+            'app_version', 'app_build',
+        ]
+
+
+class AnalyticsViewSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
+    timestamp = serializers.DateTimeField(source='client_timestamp')
+    session_uuid = serializers.UUIDField(write_only=True)
+
+    class Meta:
+        model = AnalyticsView
+        fields = [
+            'session_uuid', 'timestamp', 'view_title', 'extra_data',
+        ]
+
+    def validate_session_uuid(self, session_uuid):
+        session = AnalyticsSession.objects.filter(
+            uuid=session_uuid
+        )
+        if not session:
+            raise serializers.ValidationError(AnalyticsErrorMessages.ERR_SESSION_NOT_FOUND)
+        return session_uuid
+
+    @transaction.atomic
+    def create(self, validated_data):
+        data = self.validated_data
+        request = self.context['request']
+        user: Optional[User] = request.user if request.user.is_authenticated else None
+
+        # Take sha1 hash of auth JWT token (if present) and save it as auth_session_id
+        # Token is already stored as a byte string, so no need to cast it to unicode
+        # before calculating hash
+        auth_token_sha1_digest: Optional[str] = sha1(
+            request.auth
+        ).hexdigest() if request.auth else None
+
+        analytics_session: AnalyticsSession = AnalyticsSession.objects.get(
+            uuid=data.pop('session_uuid')
+        )
+        data.update({
+            'user': user,
+            'analytics_session': analytics_session,
+            'auth_session_id': auth_token_sha1_digest
+        })
+        return super(AnalyticsViewSerializer, self).create(data)

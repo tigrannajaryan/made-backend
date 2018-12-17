@@ -15,6 +15,7 @@ from client.models import Client
 from core.choices import USER_ROLE
 from core.models import PhoneSMSCodes, User
 from core.types import UserRole, Weekday
+from core.utils.auth import custom_jwt_payload_handler
 from salon.models import Salon, Stylist
 from salon.utils import create_stylist_profile_for_user
 
@@ -82,9 +83,8 @@ def authorized_stylist_user(client) -> Tuple[User, str]:
         role=[UserRole.STYLIST, ]
     )
     create_stylist_profile_for_user(user)
-    jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
     jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
-    payload = jwt_payload_handler(user)
+    payload = custom_jwt_payload_handler(user, role=UserRole.STYLIST)
     token = jwt_encode_handler(payload)
     auth_token = 'Token {0}'.format(token)
     return user, auth_token
