@@ -27,7 +27,7 @@ from pricing import (
     DiscountSettings,
 )
 from pricing.constants import COMPLETELY_BOOKED_DEMAND, PRICE_BLOCK_SIZE
-from salon.models import Stylist, StylistAvailableWeekDay, StylistService
+from salon.models import Salon, Stylist, StylistAvailableWeekDay, StylistService
 from salon.types import ClientPriceOnDate, DemandOnDate, PriceOnDate
 
 
@@ -323,6 +323,8 @@ def create_stylist_profile_for_user(user: User, **kwargs) -> Stylist:
                     DEFAULT_FIRST_TIME_BOOK_DISCOUNT_PERCENT
             }
         )
+        if 'salon' not in kwargs:
+            kwargs['salon'] = Salon.objects.create()
         stylist = Stylist.objects.create(user=user, **kwargs)
         for i in range(1, 8):
             stylist.get_or_create_weekday_availability(Weekday(i))
