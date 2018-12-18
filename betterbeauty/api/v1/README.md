@@ -329,7 +329,8 @@ If the token has not yet expired, it can be refreshed to a new one:
         "salon_zipcode": null,
         "salon_state": null,
         "is_profile_bookable": false,
-        "google_calendar_integrated": false
+        "google_calendar_integrated": false,
+        "instagram_integrated": true,
     },
     "profile_status": {
         "has_personal_data": true,
@@ -651,7 +652,8 @@ curl -X POST \
     "salon_zipcode": "11375",
     "salon_state": "NY",
     "is_profile_bookable": false,
-    "google_api_key": "<api_key>"
+    "google_api_key": "<api_key>",
+    "instagram_integrated": false
 }
 ```
 
@@ -691,7 +693,8 @@ Note: all fields listed above are required.
     "salon_zipcode": "11375",
     "salon_state": "NY",
     "is_profile_bookable": false,
-    "google_api_key": "<api_key>"
+    "google_api_key": "<api_key>",
+    "instagram_integrated": false
 }
 ```
 
@@ -740,7 +743,8 @@ Note: all fields listed above are required.
     "salon_zipcode": "11375",
     "salon_state": "NY",
     "is_profile_bookable": false,
-    "google_api_key": "<api_key>"
+    "google_api_key": "<api_key>",
+    "instagram_integrated": false
 }
 ```
 
@@ -761,7 +765,8 @@ curl -X PATCH \
   http://apiserver/api/v1/stylist/profile \
   -H 'Authorization: Token jwt_token' \
   -F first_name=Jane \
-  -F 'salon_address=1234 Front Street'
+  -F 'salon_address=1234 Front Street' \
+  -F 'instagram_access_token=some_token' \
 ```
 
 Note: you can patch individual fields with PATCH.
@@ -784,7 +789,8 @@ Note: you can patch individual fields with PATCH.
     "salon_city": "Queens",
     "salon_zipcode": "11375",
     "salon_state": "NY",
-    "is_profile_bookable": false
+    "is_profile_bookable": false,
+    "instagram_integrated": true
 }
 ```
 
@@ -821,7 +827,8 @@ curl -X PATCH \
     "salon_city": "Queens",
     "salon_zipcode": "11375",
     "salon_state": "NY",
-    "is_profile_bookable": false
+    "is_profile_bookable": false,
+    "instagram_integrated": false
 }
 ```
 
@@ -861,7 +868,8 @@ Note: all fields listed above are required.
     "salon_city": "Queens",
     "salon_zipcode": "11375",
     "salon_state": "NY",
-    "is_profile_bookable": false
+    "is_profile_bookable": false,
+    "instagram_integrated": false
 }
 ```
 
@@ -2753,7 +2761,8 @@ curl -X GET \
             "website_url": "4sw.in",
             "followers_count": 2,
             "is_profile_bookable": true,
-            "specialities": ["cut", "color"]
+            "specialities": ["cut", "color"],
+            "instagram_integrated": true
         }
     ]
 }
@@ -2836,7 +2845,8 @@ curl -X POST \
             "salon_state": "NY",
             "followers_count": 5,
             "is_profile_bookable": true,
-            "specialities": ["cut", "color"]
+            "specialities": ["cut", "color"],
+            "instagram_integrated": true
         }
     ],
     "more_results_available": false
@@ -3474,7 +3484,8 @@ Note: role can be "stylist" or "client" depending on the app which sends the req
     "website_url": "www.johns.com",
     "email": "salon@johns.com",
     "phone": "+13471247890",
-    "is_profile_bookable": true
+    "is_profile_bookable": true,
+    "instagram_integrated": true
 }
 ```
 
@@ -3940,5 +3951,91 @@ created session
         ]
     },
     "non_field_errors": []
+}
+```
+
+## Get instagram photos of a stylist
+Returns list of instagram photos for given stylist. All media types
+(`image`, `video`, `carousel`) are returned as photo (like they're
+seen in actual instagram while not tapped on). For all photos 3
+resolutions are returned - `thumbnail`, `low_resolution` and
+`standard_resolution`.
+
+API also returns number of likes for each photo
+
+
+**GET /api/v1/common/stylist/{uuid}/instagram-photos**
+
+**Response 200 OK**
+```
+{
+    "instagram_media": [
+        {
+            "id": "1",
+            "content_type": InstagramContentType.CAROUSEL,
+            "images": {
+                "thumbnail": {
+                    "url": "https://th1.jpg",
+                    "height": 150,
+                    "width": 150
+                },
+                "low_resolution": {
+                    "url": "https://lr1.jpg",
+                    "height": 320,
+                    "width": 320
+                },
+                "standard_resolution": {
+                    "url": "https://sr1.jpg",
+                    "height": 640,
+                    "width": 640
+                }
+            },
+            "likes_count": 10
+        },
+        {
+            "id": "2",
+            "content_type": InstagramContentType.VIDEO,
+            "images": {
+                "thumbnail": {
+                    "url": "https://th2.jpg",
+                    "height": 150,
+                    "width": 150
+                },
+                "low_resolution": {
+                    "url": "https://lr2.jpg",
+                    "height": 320,
+                    "width": 320
+                },
+                "standard_resolution": {
+                    "url": "https://sr2.jpg",
+                    "height": 640,
+                    "width": 640
+                }
+            },
+            "likes_count": 20
+        },
+        {
+            "id": "3",
+            "content_type": InstagramContentType.IMAGE,
+            "images": {
+                "thumbnail": {
+                    "url": "https://th3.jpg",
+                    "height": 150,
+                    "width": 150
+                },
+                "low_resolution": {
+                    "url": "https://lr3.jpg",
+                    "height": 320,
+                    "width": 320
+                },
+                "standard_resolution": {
+                    "url": "https://sr3.jpg",
+                    "height": 640,
+                    "width": 640
+                }
+            },
+            "likes_count": 30
+        },
+    ]
 }
 ```

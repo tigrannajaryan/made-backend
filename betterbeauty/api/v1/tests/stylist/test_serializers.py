@@ -121,6 +121,7 @@ class TestStylistSerializer(object):
             'phone': '(650) 350-1111',
             'salon_name': 'Janes beauty',
             'salon_address': '1234 Front Street',
+            'instagram_access_token': 'some_token'
             # TODO: uncomment below lines when we enable address splitting
             # 'salon_city': 'Menlo Park',
             # 'salon_zipcode': '12345',
@@ -133,10 +134,11 @@ class TestStylistSerializer(object):
             instance=stylist_data, data=data, context={'user': stylist_data.user}
         )
         serializer.is_valid(raise_exception=True)
-        stylist = serializer.save()
+        stylist: Stylist = serializer.save()
         assert(stylist.salon is not None)
         assert(stylist.user.first_name == 'Jane')
         assert(stylist.salon.name == 'Janes beauty')
+        assert(stylist.instagram_access_token == 'some_token')
 
     @pytest.mark.django_db
     def test_stylist_serializer_erase_photo(self, stylist_data: Stylist):

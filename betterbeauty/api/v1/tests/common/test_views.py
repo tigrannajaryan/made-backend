@@ -29,7 +29,9 @@ from core.models import (
 )
 from core.types import MobileOSType, UserRole
 from integrations.google.types import GoogleIntegrationErrors, GoogleIntegrationType
+from integrations.instagram import InstagramContentType
 from integrations.push.constants import ErrorMessages
+from integrations.test_instagram import mocked_instagram_requests_get
 from salon.models import Stylist
 
 
@@ -342,6 +344,98 @@ class TestAnalyticsViewView(object):
         assert(view.auth_session_id == sha1(
             str(auth_token).replace('Token ', '').encode('utf-8')
         ).hexdigest())
+
+
+class TestStylistInstagramPhotosRetrieveView(object):
+    @pytest.mark.django_db
+    @mock.patch(
+        'integrations.instagram.requests.get',
+        side_effect=mocked_instagram_requests_get
+    )
+    def test_retrieve(self, requests_mock, client, authorized_client_user):
+        client_user, auth_token = authorized_client_user
+        stylist: Stylist = G(Stylist, instagram_access_token='token')
+        url = reverse('api:v1:common:instagram-photos', kwargs={'stylist_uuid': stylist.uuid})
+        response = client.get(url, HTTP_AUTHORIZATION=auth_token)
+        assert(status.is_success(response.status_code))
+        assert(response.data == {
+            'instagram_media': [
+                {
+                    'id': '1',
+                    'content_type': InstagramContentType.CAROUSEL,
+                    'images': {
+                        'thumbnail': {
+                            'url': 'https://th1.jpg',
+                            'height': 150,
+                            'width': 150
+                        },
+                        'low_resolution': {
+                            'url': 'https://lr1.jpg',
+                            'height': 320,
+                            'width': 320
+                        },
+                        'standard_resolution': {
+                            'url': 'https://sr1.jpg',
+                            'height': 640,
+                            'width': 640
+                        }
+                    },
+                    'likes_count': 10
+                },
+                {
+                    'id': '2',
+                    'content_type': InstagramContentType.VIDEO,
+                    'images': {
+                        'thumbnail': {
+                            'url': 'https://th2.jpg',
+                            'height': 150,
+                            'width': 150
+                        },
+                        'low_resolution': {
+                            'url': 'https://lr2.jpg',
+                            'height': 320,
+                            'width': 320
+                        },
+                        'standard_resolution': {
+                            'url': 'https://sr2.jpg',
+                            'height': 640,
+                            'width': 640
+                        }
+                    },
+                    'likes_count': 20
+                },
+                {
+                    'id': '3',
+                    'content_type': InstagramContentType.IMAGE,
+                    'images': {
+                        'thumbnail': {
+                            'url': 'https://th3.jpg',
+                            'height': 150,
+                            'width': 150
+                        },
+                        'low_resolution': {
+                            'url': 'https://lr3.jpg',
+                            'height': 180,
+                            'width': 320
+                        },
+                        'standard_resolution': {
+                            'url': 'https://sr3.jpg',
+                            'height': 360,
+                            'width': 640
+                        }
+                    },
+                    'likes_count': 30
+                },
+            ]
+        })
+        stylist.instagram_access_token = None
+        stylist.save()
+        url = reverse('api:v1:common:instagram-photos', kwargs={'stylist_uuid': stylist.uuid})
+        response = client.get(url, HTTP_AUTHORIZATION=auth_token)
+        assert (status.is_success(response.status_code))
+        assert (response.data == {
+            'instagram_media': []
+        })
 
 
 class TestCommonViewPermissions(object):

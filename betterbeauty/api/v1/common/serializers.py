@@ -1,5 +1,5 @@
 from hashlib import sha1
-from typing import Optional
+from typing import List, Optional
 
 from django.conf import settings
 from django.db import transaction
@@ -20,9 +20,11 @@ from integrations.google.types import (
     GoogleIntegrationErrors,
     GoogleIntegrationType,
 )
+from integrations.instagram import get_recent_media, InstagramMediaItem
 from integrations.push.types import PUSH_NOTIFICATION_TOKEN_CHOICES
 from notifications import ErrorMessages as NotificationErrors
 from notifications.models import Notification, NotificationChannel
+from salon.models import Stylist
 
 
 class TemporaryImageSerializer(serializers.ModelSerializer):
@@ -155,3 +157,32 @@ class AnalyticsViewSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
             'auth_session_id': auth_token_sha1_digest
         })
         return super(AnalyticsViewSerializer, self).create(data)
+
+
+class InstagramImageInfoSerializer(serializers.Serializer):
+    url = serializers.CharField()
+    height = serializers.IntegerField()
+    width = serializers.IntegerField()
+
+
+class InstagramMediaItemSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    content_type = serializers.CharField()
+    images = serializers.DictField(child=InstagramImageInfoSerializer())
+    likes_count = serializers.IntegerField(source='likes')
+
+
+class StylistInstagramPhotoSerializer(serializers.ModelSerializer):
+    instagram_media = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Stylist
+        fields = ['instagram_media', ]
+
+    def get_instagram_media(self, stylist: Stylist):
+        if not stylist.instagram_integrated:
+            return []
+        media_items: List[InstagramMediaItem] = get_recent_media(
+            stylist.instagram_access_token
+        )
+        return InstagramMediaItemSerializer(media_items, many=True).data
