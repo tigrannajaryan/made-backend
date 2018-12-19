@@ -3,13 +3,14 @@ from typing import Optional
 
 from django.conf import settings
 from django.template.loader import render_to_string
+from django.urls import reverse
 from rest_framework import status
 
 from twilio.base.exceptions import TwilioException, TwilioRestException
 from twilio.rest import Client
 
 from core.exceptions.middleware import HttpCodeException
-from .slack import send_slack_twilio_message_notification
+from integrations.slack import send_slack_twilio_message_notification
 
 logger = logging.getLogger(__name__)
 
@@ -24,18 +25,22 @@ def render_one_time_sms_for_phone(code: str):
 
 
 def send_sms_message(
-        to_phone: str, body: str, role: str, status_callback=None
+        to_phone: str, body: str, role: str
 ) -> Optional[str]:
     # TODO: implement status callback handler
     result_sid: Optional[str] = None
     if settings.TWILIO_SMS_ENABLED:
         try:
             client = Client()
+            status_callback_url = '{0}/{1}'.format(
+                settings.BASE_URL,
+                reverse('api:v1:webhooks:update-sms-status')
+            )
             result = client.messages.create(
                 to=to_phone,
                 from_=settings.TWILIO_FROM_TEL,
                 body=body,
-                status_callback=status_callback
+                status_callback=status_callback_url
             )
             result_sid = result.sid
         except TwilioRestException as e:

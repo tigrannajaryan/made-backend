@@ -16,6 +16,7 @@ from .utils import (
 )
 
 LEVEL = EnvLevel.STAGING
+BASE_URL = 'https://admindev.madebeauty.com'
 
 AWS_INSTANCE_ID = get_ec2_instance_id()
 

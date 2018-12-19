@@ -3,7 +3,6 @@ import logging
 from django.conf import settings
 from django.template.loader import render_to_string
 
-from requests.exceptions import HTTPError
 from slackweb import Slack
 
 from core.constants import EnvLevel
@@ -21,7 +20,8 @@ def send_slack_message(channel: str, slack_url: str, bot_name: str, message: str
             channel=channel,
             username=bot_name,
         )
-    except HTTPError:
+    except:  # noqa
+        # we really don't want this to break the flow for whatever reason
         if settings.LEVEL != EnvLevel.PRODUCTION:
             raise
         logger.exception('Failed to send Slack message to channel {}'.format(
@@ -37,6 +37,46 @@ def send_slack_twilio_message_notification(from_phone, to_phone, message):
             'from_phone': from_phone,
             'to_phone': to_phone,
             'message': message,
+        })
+    send_slack_message(
+        channel=settings.TWILLIO_SLACK_CHANNEL,
+        slack_url=settings.TWILLIO_SLACK_HOOK,
+        bot_name='twilio-bot', message=message
+    )
+
+
+def send_slack_user_disabled_sms_notifications(user):
+    message = render_to_string(
+        'slack/user_disabled_sms_notifications.txt',
+        context={
+            'user': user
+        })
+    send_slack_message(
+        channel=settings.TWILLIO_SLACK_CHANNEL,
+        slack_url=settings.TWILLIO_SLACK_HOOK,
+        bot_name='twilio-bot', message=message
+    )
+
+
+def send_slack_user_enabled_sms_notifications(user):
+    message = render_to_string(
+        'slack/user_enabled_sms_notifications.txt',
+        context={
+            'user': user
+        })
+    send_slack_message(
+        channel=settings.TWILLIO_SLACK_CHANNEL,
+        slack_url=settings.TWILLIO_SLACK_HOOK,
+        bot_name='twilio-bot', message=message
+    )
+
+
+def send_slack_incoming_twilio_notification(user, body):
+    message = render_to_string(
+        'slack/incoming_twilio_notification.txt',
+        context={
+            'user': user,
+            'body': body
         })
     send_slack_message(
         channel=settings.TWILLIO_SLACK_CHANNEL,

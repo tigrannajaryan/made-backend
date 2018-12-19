@@ -1,0 +1,1 @@
+{% load phone_format %}:x: :calling: User *{{ user.get_full_name }} (phone {{ user.phone|to_international:'US' }})* have requested to disable SMS notifications.

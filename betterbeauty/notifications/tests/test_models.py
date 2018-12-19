@@ -107,6 +107,7 @@ class TestNotification(object):
     @override_settings(TWILIO_SMS_ENABLED=True)
     @mock.patch('notifications.models.send_sms_message')
     def test_send_and_mark_sent_sms_now(self, twilio_mock):
+        twilio_mock.return_value = 'sid12345'
         our_user: User = G(User, role=[UserRole.CLIENT])
         notification: Notification = G(
             Notification, user=our_user, sent_at=None, code='our_code',
@@ -125,6 +126,7 @@ class TestNotification(object):
         assert(notification.sent_via_channel == NotificationChannel.SMS)
         assert(notification.pending_to_send is False)
         assert(notification.sent_at is not None)
+        assert(notification.twilio_message_id == 'sid12345')
 
     @pytest.mark.django_db
     @mock.patch.object(Notification, 'send_and_mark_sent_sms_now')

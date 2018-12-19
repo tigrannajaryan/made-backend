@@ -65,6 +65,8 @@ class Notification(models.Model):
         default=None
     )
 
+    twilio_message_id = models.CharField(max_length=255, null=True, blank=True, default=None)
+
     class Meta:
         db_table = 'notification'
 
@@ -124,7 +126,7 @@ class Notification(models.Model):
             return False
 
         user: User = self.user
-        send_sms_message(
+        message_sid = send_sms_message(
             to_phone=user.phone,
             body=self.message,
             role=self.target
@@ -134,8 +136,11 @@ class Notification(models.Model):
         self.sent_via_channel = NotificationChannel.SMS
         self.sent_at = timezone.now()
         self.pending_to_send = False
+        self.twilio_message_id = message_sid
         self.save(
-            update_fields=['sent_via_channel', 'sent_at', 'pending_to_send', ])
+            update_fields=[
+                'sent_via_channel', 'sent_at', 'pending_to_send', 'twilio_message_id',
+            ])
         return True
 
     def can_send_over_channel(self, channel: NotificationChannel) -> bool:

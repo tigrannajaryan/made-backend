@@ -1,0 +1,2 @@
+{% load phone_format %}:memo: Incoming message from *{{ user.get_full_name }} (phone {{ user.phone|to_international:'US' }})*
+*Message*: {{ body }}

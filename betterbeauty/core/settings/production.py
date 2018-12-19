@@ -16,6 +16,7 @@ from .utils import (
 )
 
 LEVEL = EnvLevel.PRODUCTION
+BASE_URL = 'https://admin.madebeauty.com'
 
 AWS_INSTANCE_ID = get_ec2_instance_id()
 ALLOWED_HOSTS = ('*.admin.madebeauty.com', 'admin.madebeauty.com', get_ec2_instance_ip_address())
