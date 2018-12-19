@@ -102,6 +102,8 @@ class User(BaseEmailUser):
 
     uuid = models.UUIDField(unique=True, editable=False, default=uuid.uuid4)
 
+    user_stopped_sms = models.BooleanField(default=False)
+
     EMAIL_FIELD = 'email'
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS: List[str] = []

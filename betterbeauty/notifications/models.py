@@ -10,7 +10,7 @@ from django.utils import timezone
 from timezone_field import TimeZoneField
 
 from core.choices import CLIENT_OR_STYLIST_ROLE
-from core.models import User
+from core.models import User, UserRole
 from integrations.push.utils import (
     has_push_notification_device,
     send_message_to_apns_devices_of_user,
@@ -155,8 +155,13 @@ class Notification(models.Model):
                 user=self.user, user_role=self.target
             )
         if channel == NotificationChannel.SMS:
-            if self.user.phone:
-                return True  # in case if twilio is disabled, notification will go to Slack
+            if not self.user.phone or self.user.user_stopped_sms:
+                return False
+            if self.target == UserRole.CLIENT and hasattr(self.user, 'client'):
+                if not self.user.client.sms_notifications_enabled:
+                    return False
+            return True
+
         return False
 
     def get_channel_to_send_over(self) -> Optional[NotificationChannel]:
