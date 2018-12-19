@@ -182,8 +182,15 @@ class TestAppointmentSerializer(object):
             data=data, context={'stylist': stylist_data, 'user': client_data.user})
         assert(serializer.is_valid() is True)
         appointment: Appointment = serializer.save()
+        # pricing experiment is in effect (see description in
+        # `salon.utils.generate_demand_list_for_stylist`)
+        # In this particular case initial Monday discount is 20%, so price would
+        # be $50 - 20% = $40. However, as part of the experiment we enforce minimum
+        # demand of 75% on the first day, which brings the discount only to 5%, i.e.
+        # discount = original_discount * (1 - demand) = 20% * (1 - 0.75) = 5%
+        # This brings original price of $50 to $47.5, and $48 after rounding up
 
-        assert(appointment.total_client_price_before_tax == 40)
+        assert(appointment.total_client_price_before_tax == 48)
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == client_data.user.first_name)
         assert (appointment.client is not None)
@@ -194,7 +201,7 @@ class TestAppointmentSerializer(object):
         original_service: AppointmentService = appointment.services.first()
         assert(original_service.is_original is True)
         assert(original_service.regular_price == service.regular_price)
-        assert(original_service.client_price == 40)
+        assert(original_service.client_price == 48)
         assert(original_service.service_uuid == service.uuid)
         assert(original_service.service_name == service.name)
 
@@ -245,8 +252,16 @@ class TestAppointmentSerializer(object):
         assert (serializer.is_valid() is True)
         appointment: Appointment = serializer.save()
 
+        # pricing experiment is in effect (see description in
+        # `salon.utils.generate_demand_list_for_stylist`)
+        # In this particular case initial Monday discount is 20%, so price would
+        # be $50 - 20% = $40. However, as part of the experiment we enforce minimum
+        # demand of 75% on the first day, which brings the discount only to 5%, i.e.
+        # discount = original_discount * (1 - demand) = 20% * (1 - 0.75) = 5%
+        # This brings original price of $50 to $47.5, and $48 after rounding up
+
         assert (
-            appointment.total_client_price_before_tax == 40
+            appointment.total_client_price_before_tax == 48
         )
         assert(appointment.duration == service.duration)
         assert(appointment.client_first_name == client_data.user.first_name)
@@ -256,7 +271,7 @@ class TestAppointmentSerializer(object):
         original_service: AppointmentService = appointment.services.first()
         assert (original_service.is_original is True)
         assert (original_service.regular_price == service.regular_price)
-        assert (original_service.client_price == 40)
+        assert (original_service.client_price == 48)
         assert (original_service.service_uuid == service.uuid)
         assert (original_service.service_name == service.name)
         assert(slack_mock.called_once_with(appointment))
