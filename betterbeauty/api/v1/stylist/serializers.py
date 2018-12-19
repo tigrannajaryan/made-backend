@@ -22,12 +22,14 @@ from appointment.constants import (
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.models import Client, PreferredStylist
+from client.types import ClientPrivacy
 from core.models import User
 from core.types import AppointmentPrices, UserRole, Weekday
 from core.utils import (
     calculate_appointment_prices,
 )
 from integrations.slack import send_slack_stylist_profile_update
+from notifications.utils import generate_stylist_cancelled_appointment_notification
 from salon.models import (
     Invitation,
     Salon,
@@ -1109,11 +1111,12 @@ class AppointmentUpdateSerializer(
                     setattr(appointment, k, v)
 
             if appointment.status != status:
+                if (appointment.status == AppointmentStatus.NEW and
+                        status == AppointmentStatus.CANCELLED_BY_STYLIST):
+                    generate_stylist_cancelled_appointment_notification(appointment)
                 appointment.status = status
                 appointment.append_status_history(updated_by=user)
-
             appointment.save(**kwargs)
-
         return appointment
 
 
@@ -1622,7 +1625,9 @@ class StylistProfileDetailsSerializer(serializers.ModelSerializer):
         return StylistAvailableWeekDayListSerializer(stylist).data
 
     def get_followers_count(self, stylist: Stylist) -> Optional[int]:
-        return stylist.get_preferred_clients().count()
+        return stylist.get_preferred_clients().filter(
+            privacy=ClientPrivacy.PUBLIC
+        ).count()
 
     def get_phone(self, stylist: Stylist):
         return stylist.salon.public_phone or stylist.user.phone if (
