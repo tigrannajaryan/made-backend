@@ -29,6 +29,7 @@ from core.utils import (
     calculate_appointment_prices,
 )
 from integrations.slack import send_slack_stylist_profile_update
+from notifications.utils import generate_stylist_cancelled_appointment_notification
 from salon.models import (
     Invitation,
     Salon,
@@ -1110,11 +1111,12 @@ class AppointmentUpdateSerializer(
                     setattr(appointment, k, v)
 
             if appointment.status != status:
+                if (appointment.status == AppointmentStatus.NEW and
+                        status == AppointmentStatus.CANCELLED_BY_STYLIST):
+                    generate_stylist_cancelled_appointment_notification(appointment)
                 appointment.status = status
                 appointment.append_status_history(updated_by=user)
-
             appointment.save(**kwargs)
-
         return appointment
 
 
