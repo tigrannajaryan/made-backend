@@ -31,6 +31,9 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
         NotificationCode.REGISTRATION_INCOMPLETE: [
             NotificationChannel.PUSH  # NotificationChannel.SMS
         ],
+        NotificationCode.STYLIST_CANCELLED_APPOINTMENT: [
+            NotificationChannel.PUSH  # NotificationChannel.SMS
+        ],
     }
 else:
     NOTIFICATION_CHANNEL_PRIORITY = {
@@ -50,6 +53,9 @@ else:
             NotificationChannel.PUSH  # NotificationChannel.SMS
         ],
         NotificationCode.REGISTRATION_INCOMPLETE: [
+            NotificationChannel.PUSH  # NotificationChannel.SMS
+        ],
+        NotificationCode.STYLIST_CANCELLED_APPOINTMENT: [
             NotificationChannel.PUSH  # NotificationChannel.SMS
         ],
     }
