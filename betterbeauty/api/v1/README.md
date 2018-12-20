@@ -3485,7 +3485,9 @@ Note: role can be "stylist" or "client" depending on the app which sends the req
     "email": "salon@johns.com",
     "phone": "+13471247890",
     "is_profile_bookable": true,
-    "instagram_integrated": true
+    "instagram_integrated": true,
+    "latitude": 3.2692488
+    "longitude": 73.00267099999999
 }
 ```
 

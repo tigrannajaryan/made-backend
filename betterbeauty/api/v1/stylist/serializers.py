@@ -1586,6 +1586,8 @@ class StylistProfileDetailsSerializer(serializers.ModelSerializer):
     salon_name = serializers.CharField(
         source='salon.name', allow_null=True, required=False
     )
+    latitude = serializers.SerializerMethodField(read_only=True)
+    longitude = serializers.SerializerMethodField(read_only=True)
     salon_address = serializers.CharField(source='salon.address', allow_null=True)
     is_profile_bookable = serializers.BooleanField(
         read_only=True,
@@ -1598,8 +1600,18 @@ class StylistProfileDetailsSerializer(serializers.ModelSerializer):
             'uuid', 'first_name', 'last_name', 'profile_photo_url', 'is_preferred',
             'salon_name', 'salon_address', 'followers_count', 'working_hours', 'instagram_url',
             'website_url', 'email', 'phone', 'is_profile_bookable', 'preference_uuid',
-            'instagram_integrated',
+            'instagram_integrated', 'latitude', 'longitude'
         ]
+
+    def get_latitude(self, stylist: Stylist):
+        if not stylist.salon or not stylist.salon.location:
+            return None
+        return stylist.salon.location[1]
+
+    def get_longitude(self, stylist: Stylist):
+        if not stylist.salon or not stylist.salon.location:
+            return None
+        return stylist.salon.location[1]
 
     def get_is_preferred(self, stylist: Stylist) -> bool:
         role = self.context['request_role']
