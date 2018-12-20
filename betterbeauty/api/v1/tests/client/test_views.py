@@ -540,6 +540,7 @@ class TestAppointmentRetriveUpdateView(object):
         stylist: Stylist = G(Stylist)
         user, auth_token = authorized_client_user
         client_obj: Client = user.client
+        G(APNSDevice, user=stylist.user, application_id=MobileAppIdType.IOS_STYLIST_DEV)
         new_appt_notification = G(
             Notification, code=NotificationCode.NEW_APPOINTMENT,
             user=stylist.user
@@ -560,7 +561,9 @@ class TestAppointmentRetriveUpdateView(object):
         assert (status.is_success(response.status_code))
         appointment.refresh_from_db()
         assert(appointment.stylist_new_appointment_notification is None)
-        assert(Notification.objects.count() == 0)
+        assert (Notification.objects.count() == 1)
+        assert(Notification.objects.exclude(
+            code=NotificationCode.CLIENT_CANCELLED_APPOINTMENT).count() == 0)
 
 
 class TestAvailableTimeSlotView(object):

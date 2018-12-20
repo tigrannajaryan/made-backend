@@ -382,7 +382,7 @@ def generate_stylist_cancelled_appointment_notification(
         return 0
     # if it's push-only notification, and client has no push devices - skip
     if is_push_only(code) and not has_push_notification_device(
-        stylist.user, UserRole.STYLIST
+        client.user, UserRole.CLIENT
     ):
         return 0
 
@@ -437,6 +437,96 @@ def generate_stylist_cancelled_appointment_notification(
 
     Notification.objects.create(
         user=appointment.client.user, target=target, code=code,
+        message=message,
+        discard_after=discard_after,
+        send_time_window_start=send_time_window_start_datetime,
+        send_time_window_end=send_time_window_end,
+        send_time_window_tz=stylist.salon.timezone,
+        data={
+            'appointment_datetime_start_at': appointment.datetime_start_at.isoformat(),
+            'appointment_uuid': str(appointment.uuid)
+        }
+    )
+    return 1
+
+
+@transaction.atomic()
+def generate_client_cancelled_appointment_notification(
+        appointment: Appointment
+) -> int:
+    """
+    Generates a single notification when an appointment is cancelled by the client.
+    :param appointment: Appointment to generate notification
+    :return: number of notifications created
+    """
+    code = NotificationCode.CLIENT_CANCELLED_APPOINTMENT
+    target = UserRole.STYLIST
+    message = (
+        'Your appointment at {date_time} '
+        'was cancelled by the client'
+    )
+    stylist = appointment.stylist
+    client = appointment.client
+    # appointment must be created by client
+    if not client or client.user != appointment.created_by:
+        return 0
+    # if appointment is not new - skip
+    if appointment.status != AppointmentStatus.NEW:
+        return 0
+    # if it's push-only notification, and stylist has no push devices - skip
+    if is_push_only(code) and not has_push_notification_device(
+        stylist.user, UserRole.STYLIST
+    ):
+        return 0
+
+    message = message.format(
+        date_time=stylist.with_salon_tz(appointment.datetime_start_at).strftime(
+            '%-I:%M%p, on %b %-d, %Y'
+        ),
+    )
+    current_now: datetime.datetime = stylist.with_salon_tz(timezone.now())
+
+    MINIMUM_TIME_BEFORE_APPOINTMENT_START = datetime.timedelta(minutes=30)
+
+    notify_before_time = (
+        appointment.datetime_start_at - MINIMUM_TIME_BEFORE_APPOINTMENT_START)
+
+    stylist_today: datetime.date = current_now.date()
+
+    TODAY_MIN = stylist.salon.timezone.localize(
+        datetime.datetime.combine(
+            stylist_today, datetime.time(10, 0, 0)
+        )
+    )
+
+    TODAY_MAX = stylist.salon.timezone.localize(
+        datetime.datetime.combine(
+            stylist_today, datetime.time(20, 0, 0)
+        )
+    )
+
+    TOMORROW_MIN = TODAY_MIN + datetime.timedelta(days=1)
+
+    if TODAY_MIN <= current_now <= TODAY_MAX:
+        # Immediately if current time in [10am..8pm] in client’s timezone
+        send_time_window_start_datetime = current_now
+    else:
+        # else delay until next 10 AM
+        if notify_before_time <= TOMORROW_MIN:
+            # However if appointment_start_time-30min is earlier than next 10am
+            # then deliver at appointment_start_time-30min
+            send_time_window_start_datetime = notify_before_time
+        else:
+            send_time_window_start_datetime = TOMORROW_MIN
+
+    send_time_window_end = datetime.time.max
+
+    discard_after = stylist.with_salon_tz(
+        appointment.datetime_start_at
+    ) + datetime.timedelta(hours=1)
+
+    Notification.objects.create(
+        user=appointment.stylist.user, target=target, code=code,
         message=message,
         discard_after=discard_after,
         send_time_window_start=send_time_window_start_datetime,
