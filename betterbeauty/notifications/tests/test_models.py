@@ -129,7 +129,7 @@ class TestNotification(object):
     @pytest.mark.django_db
     @mock.patch.object(Notification, 'send_and_mark_sent_sms_now')
     @mock.patch.object(Notification, 'send_and_mark_sent_push_notification_now')
-    def test_send_and_mark_sent_now(self, push_mock, sms_mock, mocker):
+    def test_send_and_mark_sent_now_without_forced_channel(self, push_mock, sms_mock, mocker):
         channel_selector_mock = mocker.patch.object(
             Notification, 'get_channel_to_send_over', mock.MagicMock()
         )
@@ -148,6 +148,25 @@ class TestNotification(object):
         notification.send_and_mark_sent_now()
         push_mock.assert_called_once_with()
         sms_mock.assert_not_called()
+
+    @pytest.mark.django_db
+    @mock.patch.object(Notification, 'send_and_mark_sent_sms_now')
+    @mock.patch.object(Notification, 'send_and_mark_sent_push_notification_now')
+    def test_send_and_mark_sent_now_with_forced_channel(self, push_mock, sms_mock, mocker):
+        channel_selector_mock = mocker.patch.object(
+            Notification, 'get_channel_to_send_over', mock.MagicMock()
+        )
+        channel_selector_mock.return_value = NotificationChannel.PUSH
+        our_user: User = G(User, role=[UserRole.CLIENT])
+        notification: Notification = G(
+            Notification, user=our_user, sent_at=None, code='our_code',
+            message='some message', target=UserRole.CLIENT,
+            discard_after=datetime.datetime(2019, 1, 1, 0, 0, tzinfo=pytz.UTC),
+            forced_channel=NotificationChannel.SMS,
+        )
+        notification.send_and_mark_sent_now()
+        push_mock.assert_not_called()
+        sms_mock.assert_called_once_with()
 
     @pytest.mark.django_db
     def test_can_send_over_channel(self):

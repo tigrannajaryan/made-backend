@@ -38,7 +38,7 @@ class Notification(models.Model):
     )
     target = models.CharField(choices=CLIENT_OR_STYLIST_ROLE, max_length=16)
     code = models.CharField(max_length=64, verbose_name='Notification code')
-    message = models.CharField(max_length=512)
+    message = models.CharField(max_length=1024)
     data = JSONField(default=default_json_field_value, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     send_time_window_start = models.TimeField()
@@ -57,6 +57,12 @@ class Notification(models.Model):
     channel = models.CharField(
         max_length=16, null=True, choices=NOTIFICATION_CNANNEL_CHOICES,
         default=NotificationChannel.PUSH
+    )
+
+    forced_channel = models.CharField(
+        verbose_name='Specifically selected channel for current notification',
+        max_length=16, null=True, blank=True, choices=NOTIFICATION_CNANNEL_CHOICES,
+        default=None
     )
 
     class Meta:
@@ -163,7 +169,10 @@ class Notification(models.Model):
 
     def send_and_mark_sent_now(self) -> bool:
         """Send over first available channel and mark as sent"""
-        channel = self.get_channel_to_send_over()
+        if self.forced_channel:
+            channel = self.forced_channel
+        else:
+            channel = self.get_channel_to_send_over()
         if not channel:
             return False
         if channel == NotificationChannel.SMS:
