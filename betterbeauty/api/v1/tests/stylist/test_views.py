@@ -683,10 +683,15 @@ class TestCommonProfileDetailsView(object):
         assert (not response_data['is_profile_bookable'])
         assert (not response_data['is_preferred'])
         assert (response_data['instagram_integrated'] is True)
+        assert (response_data['location']['lng'] == -122.1185007)
+        assert (response_data['location']['lat'] == 37.4009997)
 
     @pytest.mark.django_db
     def test_for_client_user(self, client, authorized_client_user, stylist_data):
         client_user, auth_token = authorized_client_user
+        salon: Salon = stylist_data.salon
+        salon.location = None
+        salon.save()
         preference_obj = G(PreferredStylist,
                            stylist=stylist_data, client=client_user.client, deleted_at=None)
 
@@ -703,3 +708,4 @@ class TestCommonProfileDetailsView(object):
         assert (not response_data['is_profile_bookable'])
         assert (response_data['is_preferred'])
         assert (response_data['preference_uuid'] == str(preference_obj.uuid))
+        assert (response_data['location'] is None)

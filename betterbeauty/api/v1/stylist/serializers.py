@@ -5,6 +5,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Iterable, List, Optional
 
 from django.conf import settings
+from django.contrib.gis.geos import Point
 from django.db import models, transaction
 from django.db.models import Count, Sum
 from django.db.models.functions import Coalesce, ExtractDay, ExtractWeekDay
@@ -1582,6 +1583,21 @@ class DatesWithSpecialAvailabilitySerializer(
     is_blocked = serializers.BooleanField()
 
 
+class LocationSerializer(serializers.Serializer):
+    lat = serializers.SerializerMethodField()
+    lng = serializers.SerializerMethodField()
+
+    def get_lat(self, location: Point) -> Optional[float]:
+        if location:
+            return location[1]
+        return None
+
+    def get_lng(self, location: Point) -> Optional[float]:
+        if location:
+            return location[0]
+        return None
+
+
 class StylistProfileDetailsSerializer(serializers.ModelSerializer):
 
     is_preferred = serializers.SerializerMethodField()
@@ -1593,13 +1609,12 @@ class StylistProfileDetailsSerializer(serializers.ModelSerializer):
     salon_name = serializers.CharField(
         source='salon.name', allow_null=True, required=False
     )
-    latitude = serializers.SerializerMethodField(read_only=True)
-    longitude = serializers.SerializerMethodField(read_only=True)
     salon_address = serializers.CharField(source='salon.address', allow_null=True)
     is_profile_bookable = serializers.BooleanField(
         read_only=True,
     )
     instagram_integrated = serializers.BooleanField(read_only=True)
+    location = LocationSerializer(source='salon.location', read_only=True, allow_null=True)
 
     class Meta:
         model = Stylist
@@ -1607,18 +1622,8 @@ class StylistProfileDetailsSerializer(serializers.ModelSerializer):
             'uuid', 'first_name', 'last_name', 'profile_photo_url', 'is_preferred',
             'salon_name', 'salon_address', 'followers_count', 'working_hours', 'instagram_url',
             'website_url', 'email', 'phone', 'is_profile_bookable', 'preference_uuid',
-            'instagram_integrated', 'latitude', 'longitude'
+            'instagram_integrated', 'location',
         ]
-
-    def get_latitude(self, stylist: Stylist):
-        if not stylist.salon or not stylist.salon.location:
-            return None
-        return stylist.salon.location[1]
-
-    def get_longitude(self, stylist: Stylist):
-        if not stylist.salon or not stylist.salon.location:
-            return None
-        return stylist.salon.location[0]
 
     def get_is_preferred(self, stylist: Stylist) -> bool:
         role = self.context['request_role']
