@@ -48,7 +48,13 @@ class AppointmentAdmin(admin.ModelAdmin):
     notification_sent.admin_order_field = 'stylist_new_appointment_notification'  # type: ignore
 
     def services(self, obj):
-        return format_html('<br />'.join([s.service_name for s in obj.services.all()]))
+        try:
+            service_names = format_html(
+                '<br />'.join([s.service_name for s in obj.services.all()]))
+        except KeyError:
+            service_names = ''
+        return service_names
+
     readonly_fields = [
         'deleted_at', 'deleted_by', 'created_at', 'created_by',
     ]
