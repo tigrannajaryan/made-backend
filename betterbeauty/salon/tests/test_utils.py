@@ -61,9 +61,12 @@ def test_generate_demand_list_for_stylist():
             datetime_start_at=stylist.with_salon_tz(datetime.datetime(2018, 6, 16, 19, 00))
         )
     demand_list = generate_demand_list_for_stylist(stylist, dates=dates)
-    assert(demand_list[0].demand == 0.5)
+    # pricing experiment is in effect (see description in
+    # `salon.utils.generate_demand_list_for_stylist`)
+    # Demand on the first 3 dates cannot be less than 0.75 / 0.5 / 0.25 respectively
+    assert(demand_list[0].demand == 0.75)
     assert(demand_list[1].demand == 1)
-    assert(demand_list[2].demand == 0)
+    assert(demand_list[2].demand == 0.25)
     assert(demand_list[3].demand == 1)
     assert(demand_list[4].demand == 1)
 
@@ -74,7 +77,7 @@ def test_generate_demand_list_for_stylist():
         stylist=stylist, date=datetime.date(2018, 6, 17), is_available=False
     )
     demand_list = generate_demand_list_for_stylist(stylist, dates=dates)
-    assert (demand_list[0].demand == 0.5)
+    assert (demand_list[0].demand == 0.75)
     assert (demand_list[1].demand == 1)
     assert (demand_list[2].demand == 1)
     assert (demand_list[3].demand == 1)

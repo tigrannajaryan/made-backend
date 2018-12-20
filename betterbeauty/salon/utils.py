@@ -69,7 +69,7 @@ def generate_demand_list_for_stylist(
     time_gap = stylist.service_time_gap
     demand_list = []
 
-    for date in dates:
+    for date_index, date in enumerate(dates):
         midnight = stylist.with_salon_tz(datetime.datetime.combine(date, datetime.time(0, 0)))
         next_midnight = midnight + datetime.timedelta(days=1)
         work_day_duration, stylist_weekday_availability = weekday_available_times[
@@ -96,6 +96,19 @@ def generate_demand_list_for_stylist(
             if work_day_duration > datetime.timedelta(0)
             else COMPLETELY_BOOKED_DEMAND
         )
+        # pricing experiment: add experimental pricing logic when discounts are gradually reduced
+        # for dates which are closer to today:
+        # Today: assume the demand is at least 75% even if it is lower
+        # Tomorrow: assume the demand is at least 50% even if it is lower
+        # The day after tomorrow: assume the demand is at least 25% even if it is lower
+        # After that: use the real demand
+
+        if date_index == 0:  # today
+            demand_on_date = max(demand_on_date, 0.75)
+        elif date_index == 1:  # tomorrow
+            demand_on_date = max(demand_on_date, 0.5)
+        elif date_index == 2:  # day after tomorrow
+            demand_on_date = max(demand_on_date, 0.25)
 
         # similar to demand_on_date which calculates the demand on the whole day,
         # we also need to calculate the demand during working hours to determine `is_fully_booked`
