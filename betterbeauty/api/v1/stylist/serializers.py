@@ -1575,6 +1575,13 @@ class DatesWithAppointmentsSerializer(
     has_appointments = serializers.BooleanField()
 
 
+class DatesWithSpecialAvailabilitySerializer(
+    FormattedErrorMessageMixin, serializers.Serializer
+):
+    date = serializers.DateField(read_only=True)
+    is_blocked = serializers.BooleanField()
+
+
 class StylistProfileDetailsSerializer(serializers.ModelSerializer):
 
     is_preferred = serializers.SerializerMethodField()
@@ -1611,7 +1618,7 @@ class StylistProfileDetailsSerializer(serializers.ModelSerializer):
     def get_longitude(self, stylist: Stylist):
         if not stylist.salon or not stylist.salon.location:
             return None
-        return stylist.salon.location[1]
+        return stylist.salon.location[0]
 
     def get_is_preferred(self, stylist: Stylist) -> bool:
         role = self.context['request_role']

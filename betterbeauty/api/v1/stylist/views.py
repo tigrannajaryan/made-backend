@@ -51,6 +51,7 @@ from .serializers import (
     ClientSerializer,
     ClientServicePricingSerializer,
     DatesWithAppointmentsSerializer,
+    DatesWithSpecialAvailabilitySerializer,
     InvitationSerializer,
     MaximumDiscountSerializer,
     NearbyClientSerializer,
@@ -726,10 +727,23 @@ class DatesWithAppointmentsView(views.APIView):
         ] = self._get_dates_with_appointments(
             datetime_from, datetime_to
         )
+        dates_with_special_availability: List[
+            Dict[str, Any]
+        ] = self._get_dates_with_special_availability(
+            datetime_from, datetime_to
+        )
         dates_serialized = DatesWithAppointmentsSerializer(
             dates_with_appointments, many=True
         ).data
-        return Response({'dates': dates_serialized}, status=status.HTTP_200_OK)
+        blocked_dates_serialized = DatesWithSpecialAvailabilitySerializer(
+            dates_with_special_availability, many=True
+        ).data
+        return Response(
+            {
+                'dates': dates_serialized,
+                'blocked_dates': blocked_dates_serialized,
+            }, status=status.HTTP_200_OK
+        )
 
     def _get_dates_with_appointments(
             self, datetime_from: datetime.datetime, datetime_to: datetime.datetime
@@ -751,6 +765,26 @@ class DatesWithAppointmentsView(views.APIView):
                 continue
             dates.append(start_date)
         transformed_dates: List[dict] = [
-            {'date': date, 'has_appointments': True} for date in dates
+            {
+                'date': date,
+                'has_appointments': True,
+            } for date in dates
+        ]
+        return transformed_dates
+
+    def _get_dates_with_special_availability(
+            self, datetime_from: datetime.datetime, datetime_to: datetime.datetime
+    ) -> List[dict]:
+        stylist: Stylist = self.request.user.stylist
+        special_available_dates = stylist.special_available_dates.filter(
+            date__gte=datetime_from.date(), date__lte=datetime_to.date(),
+            is_available=False
+        ).order_by('date')
+
+        transformed_dates: List[dict] = [
+            {
+                'date': special_date.date,
+                'is_blocked': True,
+            } for special_date in special_available_dates
         ]
         return transformed_dates
