@@ -27,12 +27,11 @@ def render_one_time_sms_for_phone(code: str):
 def send_sms_message(
         to_phone: str, body: str, role: str
 ) -> Optional[str]:
-    # TODO: implement status callback handler
     result_sid: Optional[str] = None
     if settings.TWILIO_SMS_ENABLED:
         try:
             client = Client()
-            status_callback_url = '{0}/{1}'.format(
+            status_callback_url = '{0}{1}'.format(
                 settings.BASE_URL,
                 reverse('api:v1:webhooks:update-sms-status')
             )
