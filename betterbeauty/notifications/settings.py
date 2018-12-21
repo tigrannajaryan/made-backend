@@ -14,13 +14,13 @@ from notifications.types import NotificationChannel, NotificationCode
 if settings.LEVEL == EnvLevel.PRODUCTION:
     NOTIFICATION_CHANNEL_PRIORITY = {
         NotificationCode.HINT_TO_FIRST_BOOK: [
-            NotificationChannel.PUSH  # , NotificationChannel.SMS
+            NotificationChannel.PUSH,
         ],
         NotificationCode.HINT_TO_SELECT_STYLIST: [
-            NotificationChannel.PUSH,  # NotificationChannel.SMS
+            NotificationChannel.PUSH,
         ],
         NotificationCode.HINT_TO_REBOOK: [
-            NotificationChannel.PUSH,  # NotificationChannel.SMS
+            NotificationChannel.PUSH,
         ],
         NotificationCode.NEW_APPOINTMENT: [
             NotificationChannel.PUSH,
@@ -38,13 +38,13 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
 else:
     NOTIFICATION_CHANNEL_PRIORITY = {
         NotificationCode.HINT_TO_FIRST_BOOK: [
-            NotificationChannel.PUSH  # , NotificationChannel.SMS
+            NotificationChannel.PUSH, NotificationChannel.SMS
         ],
         NotificationCode.HINT_TO_SELECT_STYLIST: [
-            NotificationChannel.PUSH,  # NotificationChannel.SMS
+            NotificationChannel.PUSH, NotificationChannel.SMS
         ],
         NotificationCode.HINT_TO_REBOOK: [
-            NotificationChannel.PUSH,  # NotificationChannel.SMS
+            NotificationChannel.PUSH, NotificationChannel.SMS
         ],
         NotificationCode.NEW_APPOINTMENT: [
             NotificationChannel.PUSH, NotificationChannel.SMS,

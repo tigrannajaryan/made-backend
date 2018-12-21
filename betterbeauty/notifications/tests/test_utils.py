@@ -108,9 +108,6 @@ class TestGenerateHintToFirstBookNotification(object):
         assert(Notification.objects.count() == 0)  # appointment sill exists
         preexisting_appointment.delete()
         generate_hint_to_first_book_notifications()
-        assert (Notification.objects.count() == 0)  # client has no devices
-        G(APNSDevice, user=client.user)
-        generate_hint_to_first_book_notifications()
         assert (Notification.objects.count() == 1)
         notification: Notification = Notification.objects.last()
         assert(notification.code == NotificationCode.HINT_TO_FIRST_BOOK)
