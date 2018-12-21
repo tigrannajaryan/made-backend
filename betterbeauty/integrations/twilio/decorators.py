@@ -25,6 +25,7 @@ def twilio_auth_required(view_func):
         )
         validator = RequestValidator(auth_token)
         url = request.build_absolute_uri()
+        url = url.replace('http://', 'https://')
         logger.info('TWILIO AUTH: got url: %s' % url)
         payload = request.POST.dict()
         logger.info('TWILIO AUTH: Payload: {0}'.format(payload))
