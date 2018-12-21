@@ -1,0 +1,1 @@
+{% load phone_format %}:white_check_mark: :calling: User *{{ user.get_full_name }} (phone {{ user.phone|to_international:'US' }})* have enabled SMS notifications.
