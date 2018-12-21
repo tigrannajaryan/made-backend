@@ -5,6 +5,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Iterable, List, Optional
 
 from django.conf import settings
+from django.contrib.gis.geos import Point
 from django.db import models, transaction
 from django.db.models import Count, Sum
 from django.db.models.functions import Coalesce, ExtractDay, ExtractWeekDay
@@ -1575,6 +1576,28 @@ class DatesWithAppointmentsSerializer(
     has_appointments = serializers.BooleanField()
 
 
+class DatesWithSpecialAvailabilitySerializer(
+    FormattedErrorMessageMixin, serializers.Serializer
+):
+    date = serializers.DateField(read_only=True)
+    is_blocked = serializers.BooleanField()
+
+
+class LocationSerializer(serializers.Serializer):
+    lat = serializers.SerializerMethodField()
+    lng = serializers.SerializerMethodField()
+
+    def get_lat(self, location: Point) -> Optional[float]:
+        if location:
+            return location[1]
+        return None
+
+    def get_lng(self, location: Point) -> Optional[float]:
+        if location:
+            return location[0]
+        return None
+
+
 class StylistProfileDetailsSerializer(serializers.ModelSerializer):
 
     is_preferred = serializers.SerializerMethodField()
@@ -1591,6 +1614,7 @@ class StylistProfileDetailsSerializer(serializers.ModelSerializer):
         read_only=True,
     )
     instagram_integrated = serializers.BooleanField(read_only=True)
+    location = LocationSerializer(source='salon.location', read_only=True, allow_null=True)
 
     class Meta:
         model = Stylist
@@ -1598,7 +1622,7 @@ class StylistProfileDetailsSerializer(serializers.ModelSerializer):
             'uuid', 'first_name', 'last_name', 'profile_photo_url', 'is_preferred',
             'salon_name', 'salon_address', 'followers_count', 'working_hours', 'instagram_url',
             'website_url', 'email', 'phone', 'is_profile_bookable', 'preference_uuid',
-            'instagram_integrated',
+            'instagram_integrated', 'location',
         ]
 
     def get_is_preferred(self, stylist: Stylist) -> bool:

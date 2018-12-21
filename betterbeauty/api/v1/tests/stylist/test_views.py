@@ -623,6 +623,21 @@ class TestDatesWithAppointmentsView(object):
         url = reverse('api:v1:stylist:dates-with-appointments')
         url = '{0}?date_from=2018-10-10&date_to=2018-12-31'.format(url)
 
+        # different stylist
+        G(StylistSpecialAvailableDate, date=datetime.date(2018, 12, 7))
+        G(
+            StylistSpecialAvailableDate, date=datetime.date(2018, 12, 8),
+            stylist=stylist, is_available=True
+        )
+        G(
+            StylistSpecialAvailableDate, date=datetime.date(2018, 12, 10),
+            stylist=stylist, is_available=False
+        )
+        G(
+            StylistSpecialAvailableDate, date=datetime.date(2018, 12, 13),
+            stylist=stylist, is_available=False
+        )
+
         response = client.get(url, HTTP_AUTHORIZATION=auth_token)
         assert(response.status_code == status.HTTP_200_OK)
         dates = [d['date'] for d in response.data['dates']]
@@ -630,6 +645,11 @@ class TestDatesWithAppointmentsView(object):
             '2018-12-08',
             '2018-12-10',
             '2018-12-12',
+        ])
+        unavailable_dates = [d['date'] for d in response.data['blocked_dates']]
+        assert(unavailable_dates == [
+            '2018-12-10',
+            '2018-12-13',
         ])
 
     @pytest.mark.django_db
@@ -663,10 +683,15 @@ class TestCommonProfileDetailsView(object):
         assert (not response_data['is_profile_bookable'])
         assert (not response_data['is_preferred'])
         assert (response_data['instagram_integrated'] is True)
+        assert (response_data['location']['lng'] == -122.1185007)
+        assert (response_data['location']['lat'] == 37.4009997)
 
     @pytest.mark.django_db
     def test_for_client_user(self, client, authorized_client_user, stylist_data):
         client_user, auth_token = authorized_client_user
+        salon: Salon = stylist_data.salon
+        salon.location = None
+        salon.save()
         preference_obj = G(PreferredStylist,
                            stylist=stylist_data, client=client_user.client, deleted_at=None)
 
@@ -683,3 +708,4 @@ class TestCommonProfileDetailsView(object):
         assert (not response_data['is_profile_bookable'])
         assert (response_data['is_preferred'])
         assert (response_data['preference_uuid'] == str(preference_obj.uuid))
+        assert (response_data['location'] is None)

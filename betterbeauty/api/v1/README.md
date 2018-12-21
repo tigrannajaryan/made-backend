@@ -1868,6 +1868,10 @@ curl -X GET \
     "dates": [
         {"date": "2018-12-10", "has_appointments": true},
         {"date": "2018-12-12", "has_appointments": true}
+    ],
+    "blocked_dates": [
+        {"date": "2018-12-14", "is_blocked": true},
+        {"date": "2018-12-18", "is_blocked": true}
     ]
 }
 ```
@@ -3485,7 +3489,11 @@ Note: role can be "stylist" or "client" depending on the app which sends the req
     "email": "salon@johns.com",
     "phone": "+13471247890",
     "is_profile_bookable": true,
-    "instagram_integrated": true
+    "instagram_integrated": true,
+    "location": {
+        "lat": 3.2692488,
+        "lng": 73.00267099999999
+    }
 }
 ```
 
