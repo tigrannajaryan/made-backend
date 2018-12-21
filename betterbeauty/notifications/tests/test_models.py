@@ -235,3 +235,12 @@ class TestNotification(object):
             # add push device, and it should take priority
             G(APNSDevice, user=our_user, application_id=MobileAppIdType.IOS_CLIENT_DEV)
             assert (notification.get_channel_to_send_over() == NotificationChannel.PUSH)
+        with mock.patch.dict(NOTIFICATION_CHANNEL_PRIORITY, {
+            'our_code': [NotificationChannel.SMS, NotificationChannel.PUSH]
+        }):
+            # it's only push, and no devices are there
+            assert(notification.get_channel_to_send_over() is NotificationChannel.SMS)
+            # disable user's sms notifications
+            our_user.user_stopped_sms = True
+            our_user.save()
+            assert (notification.get_channel_to_send_over() == NotificationChannel.PUSH)

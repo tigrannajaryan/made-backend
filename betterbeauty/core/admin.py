@@ -63,7 +63,8 @@ class UserAdmin(EmailUserAdmin):
         (None, {'fields': (
             'email', 'password', 'first_name', 'last_name', 'phone', 'photo'
         )}),
-        ('Permissions', {'fields': ('is_active', 'role', 'is_superuser')})
+        ('Permissions', {'fields': ('is_active', 'role', 'is_superuser')}),
+        ('Notifications', {'fields': ('user_stopped_sms', )}),
     )
     add_fieldsets = (
         (None, {

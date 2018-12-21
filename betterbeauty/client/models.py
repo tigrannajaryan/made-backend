@@ -43,6 +43,8 @@ class Client(models.Model):
 
     has_seen_educational_screens = models.BooleanField(default=False)
 
+    sms_notifications_enabled = models.BooleanField(default=True)
+
     created_at = models.DateTimeField(null=True, auto_now_add=True)
 
     def geo_code_address(self):
