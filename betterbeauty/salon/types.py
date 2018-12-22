@@ -8,6 +8,7 @@ from pricing import CalculatedPrice, DiscountType
 class InvitationStatus(StrEnum):
     INVITED = 'invited'
     ACCEPTED = 'accepted'
+    DECLINED = 'declined'
 
 
 class DemandOnDate(NamedTuple):

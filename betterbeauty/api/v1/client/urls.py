@@ -6,6 +6,7 @@ from api.v1.client.views import (
     AppointmentRetriveUpdateView,
     AvailableTimeSlotView,
     ClientProfileView,
+    DeclineInvitationView,
     HistoryView,
     HomeView,
     PreferredStylistDeleteView,
@@ -13,7 +14,7 @@ from api.v1.client.views import (
     SearchStylistView,
     StylistFollowersView,
     StylistServicePriceView,
-    StylistServicesView
+    StylistServicesView,
 )
 
 
@@ -40,5 +41,7 @@ urlpatterns = [
     url('^appointments/preview$',
         AppointmentPreviewView.as_view(), name='appointments-preview'),
     url('^appointments/(?P<uuid>[0-9a-f\-]+)$',
-        AppointmentRetriveUpdateView.as_view(), name='appointment')
+        AppointmentRetriveUpdateView.as_view(), name='appointment'),
+    url('^invitations/(?P<uuid>[0-9a-f\-]+)$',
+        DeclineInvitationView.as_view(), name='decline-invitation'),
 ]
