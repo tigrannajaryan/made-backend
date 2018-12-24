@@ -51,7 +51,8 @@ from client.types import ClientPrivacy
 from core.utils import post_or_get
 from core.utils import post_or_get_or_data
 from integrations.ipstack import get_lat_lng_for_ip_address
-from salon.models import Stylist, StylistService
+from salon.models import Invitation, Stylist, StylistService
+from salon.types import InvitationStatus
 from salon.utils import get_default_service_uuids
 
 
@@ -531,3 +532,23 @@ class StylistFollowersView(views.APIView):
                 followers, context={'stylist': stylist}, many=True
             ).data
         })
+
+
+class DeclineInvitationView(generics.DestroyAPIView):
+
+    permission_classes = [ClientPermission, permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Invitation.objects.filter(
+            phone=self.request.user.phone, stylist__uuid=self.kwargs['uuid']
+        )
+
+    def delete(self, request, *args, **kwargs):
+        invitations = self.get_queryset()
+        invitations.update(status=InvitationStatus.DECLINED)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def get_serializer_context(self):
+        return {
+            'user': self.request.user
+        }

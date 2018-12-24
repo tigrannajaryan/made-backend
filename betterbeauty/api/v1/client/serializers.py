@@ -200,8 +200,7 @@ class ClientProfileStatusSerializer(serializers.ModelSerializer):
 
     def get_has_invitation(self, client: Client) -> bool:
         has_invitation: bool = Invitation.objects.filter(
-            phone=client.user.phone).exclude(
-            status=InvitationStatus.ACCEPTED).exists()
+            phone=client.user.phone, status=InvitationStatus.INVITED).exists()
         return has_invitation
 
 

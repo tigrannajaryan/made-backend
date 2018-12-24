@@ -33,8 +33,9 @@ from client.types import ClientPrivacy
 from integrations.push.types import MobileAppIdType
 from notifications.models import Notification
 from notifications.types import NotificationCode
-from salon.models import Salon, Stylist, StylistService
+from salon.models import Invitation, Salon, Stylist, StylistService
 from salon.tests.test_models import stylist_appointments_data
+from salon.types import InvitationStatus
 
 
 class TestClientProfileView:
@@ -883,3 +884,18 @@ class TestStylistFollowersView(object):
         assert (response.data['followers'][1]['uuid'] == str(client_with_name_without_photo.uuid))
         assert (response.data['followers'][2]['uuid'] == str(client_without_name_with_photo.uuid))
         assert (response.data['followers'][3]['uuid'] == str(client_without_name_or_photo.uuid))
+
+
+class TestInvitationDeclineView:
+
+    @pytest.mark.django_db
+    def test_decline_invitation(self, client, authorized_client_user):
+        user, auth_token = authorized_client_user
+        stylist: Stylist = G(Stylist)
+        invitation = G(Invitation, stylist=stylist, phone=user.phone)
+        assert (invitation.status == InvitationStatus.INVITED)
+        url = reverse('api:v1:client:decline-invitation', kwargs={'uuid': stylist.uuid})
+        response = client.delete(url, HTTP_AUTHORIZATION=auth_token)
+        assert (status.is_success(response.status_code))
+        invitation.refresh_from_db()
+        assert (invitation.status == InvitationStatus.DECLINED)

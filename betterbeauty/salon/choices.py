@@ -5,4 +5,5 @@ from .types import InvitationStatus
 INVITATION_STATUS_CHOICES = Choices(
     (InvitationStatus.INVITED.value, 'invited', 'Invited'),
     (InvitationStatus.ACCEPTED.value, 'accepted', 'Accepted'),
+    (InvitationStatus.DECLINED.value, 'declined', 'Declined'),
 )
