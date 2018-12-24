@@ -76,7 +76,7 @@ def generate_hint_to_first_book_notifications(dry_run=False) -> int:
     cutoff_datetime = timezone.now() - datetime.timedelta(days=32)
     earliest_creation_datetime = timezone.now() - datetime.timedelta(hours=48)
     target = UserRole.CLIENT
-    message = 'New discounts are available with your stylist. Tap to book an appointment'
+    message = 'New discounts are available with your stylist! Check them out on the MADE app.'
 
     # Get all PreferredStylist records created more than 48 hrs ago, for which
     # - client has zero appointments
@@ -166,7 +166,8 @@ def generate_hint_to_select_stylist_notifications(dry_run=False) -> int:
     target = UserRole.CLIENT
     message = (
         'We noticed that you registered but did not select a stylist. '
-        'We have {0} stylists available for booking. Tap to see them.'
+        'We have {0} stylists available for booking right now. '
+        'Check them out on the MADE app!'
     )
     client_has_registered_devices = Q(
         user__apnsdevice__active=True) | Q(
@@ -246,8 +247,8 @@ def generate_hint_to_rebook_notifications(dry_run=False) -> int:
     earliest_last_booking_datetime = timezone.now() - datetime.timedelta(weeks=4)
     target = UserRole.CLIENT
     message = (
-        'We noticed you haven\'t booked an appointment '
-        'for {0} weeks. Tap too book now.'
+        'We noticed you haven\'t booked an appointment in the MADE '
+        'in {0} weeks. Stylists have deals available today, take a look!'
     )
     bookable_stylists = Stylist.objects.filter(
         services__is_enabled=True,

@@ -224,7 +224,7 @@ class TestGenerateHintToRebookNotification(object):
         generate_hint_to_rebook_notifications()
         assert(Notification.objects.count() == 1)
         notification: Notification = Notification.objects.last()
-        assert('for 5 weeks' in notification.message)
+        assert('in 5 weeks' in notification.message)
         assert(notification.code == NotificationCode.HINT_TO_REBOOK)
         assert(notification.user == client.user)
         # test indempotency
