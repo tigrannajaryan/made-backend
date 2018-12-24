@@ -80,7 +80,6 @@ def busy_stylist() -> Stylist:
             2018, 11, 12, 9, 0, tzinfo=pytz.timezone(settings.TIME_ZONE))
     )
     # define a discount
-    G(StylistWeekdayDiscount, weekday=1, discount_percent=10, stylist=stylist)
     G(StylistService, stylist=stylist, is_enabled=True)
     return stylist
 
@@ -128,7 +127,7 @@ class TestGenerateHintToFirstBookNotification(object):
         )
         generate_hint_to_first_book_notifications()
         assert (Notification.objects.count() == 0)
-        Appointment.objects.all().delete()  # free up the slot
+        G(StylistWeekdayDiscount, stylist=busy_stylist, weekday=1, discount_percent=10)
         generate_hint_to_first_book_notifications()
         assert (Notification.objects.count() == 1)
 
