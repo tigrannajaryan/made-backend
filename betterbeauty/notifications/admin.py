@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin, messages
 
 from integrations.push.utils import has_push_notification_device
@@ -5,6 +6,15 @@ from .models import Notification
 
 
 class NotificationAdmin(admin.ModelAdmin):
+
+    def formfield_for_dbfield(self, db_field, **kwargs):
+        formfield = super(NotificationAdmin, self).formfield_for_dbfield(db_field, **kwargs)
+        if db_field.name == 'message':
+            attrs = formfield.widget.attrs
+            attrs['rows'] = '5'
+            formfield.widget = forms.Textarea(attrs=attrs)
+        return formfield
+
     list_display = [
         'code', 'user', 'target', 'pending_to_send',
         'sent_via_channel', 'sent_at', 'device_acked_at',

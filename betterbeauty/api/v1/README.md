@@ -2686,7 +2686,10 @@ curl -X GET \
     "city": "Queens",
     "state": "NY",
     "privacy": "public",
-    "has_seen_educational_screens": true
+    "has_seen_educational_screens": true,
+    "google_api_key": "<api-key>",
+    "google_calendar_integrated": false,
+    "profile_completeness": 0.83
 }
 ```
 
@@ -2721,7 +2724,10 @@ curl -X POST \
     "city": null,
     "state": null,
     "privacy": "private",
-    "has_seen_educational_screens": true
+    "has_seen_educational_screens": true,
+    "google_api_key": "<api-key>",
+    "google_calendar_integrated": false,
+    "profile_completeness": 0.83
 }
 ```
 
