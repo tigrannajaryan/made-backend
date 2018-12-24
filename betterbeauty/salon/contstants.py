@@ -12,7 +12,7 @@ SEVEN_PM = datetime.time(19, 0, 0)
 
 DEFAULT_WORKING_HOURS = {
     1: (TWELVE_PM, SEVEN_PM, True),
-    2: (None, None, False),
+    2: (TWELVE_PM, SEVEN_PM, True),
     3: (TWELVE_PM, SEVEN_PM, True),
     4: (TWELVE_PM, SEVEN_PM, True),
     5: (TWELVE_PM, SEVEN_PM, True),
