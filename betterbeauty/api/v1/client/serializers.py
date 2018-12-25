@@ -631,17 +631,22 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
                 continue
             except AppointmentService.DoesNotExist:
                 service: StylistService = stylist_services.get(uuid=service_uuid)
+                calc_price: CalculatedPrice = calculate_price_and_discount_for_client_on_date(
+                    service=service,
+                    client=appointment.client, date=appointment.datetime_start_at.date()
+                )
                 AppointmentService.objects.create(
                     appointment=appointment,
                     service_uuid=service.uuid,
                     service_name=service.name,
                     duration=service.duration,
                     regular_price=service.regular_price,
-                    calculated_price=service.regular_price,
+                    calculated_price=calc_price.price,
                     client_price=service_client_price if service_client_price
-                    else service.regular_price,
+                    else calc_price.price,
                     is_price_edited=True if service_client_price else False,
-                    applied_discount=None,
+                    applied_discount=calc_price.applied_discount,
+                    discount_percentage=calc_price.discount_percentage,
                     is_original=False
                 )
 
