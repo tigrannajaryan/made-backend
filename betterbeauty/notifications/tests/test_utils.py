@@ -83,7 +83,6 @@ def busy_stylist() -> Stylist:
             2018, 11, 12, 9, 0, tzinfo=pytz.timezone(settings.TIME_ZONE))
     )
     # define a discount
-    G(StylistWeekdayDiscount, weekday=1, discount_percent=10, stylist=stylist)
     G(StylistService, stylist=stylist, is_enabled=True)
     return stylist
 
@@ -131,7 +130,7 @@ class TestGenerateHintToFirstBookNotification(object):
         )
         generate_hint_to_first_book_notifications()
         assert (Notification.objects.count() == 0)
-        Appointment.objects.all().delete()  # free up the slot
+        G(StylistWeekdayDiscount, stylist=busy_stylist, weekday=1, discount_percent=10)
         generate_hint_to_first_book_notifications()
         assert (Notification.objects.count() == 1)
 
@@ -228,7 +227,7 @@ class TestGenerateHintToRebookNotification(object):
         generate_hint_to_rebook_notifications()
         assert(Notification.objects.count() == 1)
         notification: Notification = Notification.objects.last()
-        assert('for 5 weeks' in notification.message)
+        assert('in 5 weeks' in notification.message)
         assert(notification.code == NotificationCode.HINT_TO_REBOOK)
         assert(notification.user == client.user)
         # test indempotency
@@ -836,6 +835,10 @@ class TestGenerateStylistRegistrationIncompleteNotifications(object):
             generate_stylist_registration_incomplete_notifications()
             assert (Notification.objects.count() == 0)
             stylist.created_at = timezone.now() - datetime.timedelta(hours=25)
+            stylist.save()
+            generate_stylist_registration_incomplete_notifications()
+            assert (Notification.objects.count() == 0)
+            stylist.created_at = timezone.now() - datetime.timedelta(hours=73)
             stylist.save()
             generate_stylist_registration_incomplete_notifications()
             assert (Notification.objects.count() == 1)
