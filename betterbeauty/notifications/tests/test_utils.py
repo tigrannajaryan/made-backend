@@ -727,4 +727,8 @@ class TestGenerateStylistRegistrationIncompleteNotifications(object):
             stylist.created_at = timezone.now() - datetime.timedelta(hours=25)
             stylist.save()
             generate_stylist_registration_incomplete_notifications()
+            assert (Notification.objects.count() == 0)
+            stylist.created_at = timezone.now() - datetime.timedelta(hours=73)
+            stylist.save()
+            generate_stylist_registration_incomplete_notifications()
             assert (Notification.objects.count() == 1)
