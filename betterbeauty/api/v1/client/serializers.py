@@ -687,6 +687,18 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
         return appointment
 
     def validate_status(self, status: AppointmentStatus) -> AppointmentStatus:
+        if status == AppointmentStatus.CHECKED_OUT:
+            # we only allow clients to move appointments to checked out state
+            # on the actual date of appointment
+            stylist: Stylist = self.instance.stylist
+            appointment_date: datetime.date = stylist.with_salon_tz(
+                self.instance.datetime_start_at
+            ).date()
+            today = stylist.with_salon_tz(timezone.now()).date()
+            if appointment_date != today:
+                raise serializers.ValidationError(
+                    appointment_errors.ERR_STATUS_NOT_ALLOWED
+                )
         if status not in APPOINTMENT_CLIENT_SETTABLE_STATUSES:
             raise serializers.ValidationError(
                 appointment_errors.ERR_STATUS_NOT_ALLOWED
@@ -853,3 +865,9 @@ class SearchStylistSerializer(
 
     def get_profile_photo_url(self, stylist: Stylist):
         return default_storage.url(stylist.user__photo) if stylist.user__photo else None
+
+
+class AppointmentServiceListUpdateSerializer(
+    FormattedErrorMessageMixin, serializers.ModelSerializer
+):
+    services = AppointmentServiceSerializer(many=True)

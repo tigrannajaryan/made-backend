@@ -362,8 +362,11 @@ class TestAppointmentUpdateSerializer(object):
 
     @pytest.mark.django_db
     def test_validate_status(self, stylist_data: Stylist, client_data: Client):
-        appointment = G(
+        salon: Salon = G(Salon, timezone=pytz.timezone(settings.TIME_ZONE))
+        stylist: Stylist = G(Stylist, salon=salon)
+        appointment: Appointment = G(
             Appointment,
+            stylist=stylist,
             duration=datetime.timedelta(minutes=30)
         )
         data = {
@@ -375,15 +378,32 @@ class TestAppointmentUpdateSerializer(object):
             {'code': appointment_errors.ERR_STATUS_NOT_ALLOWED} in
             serializer.errors['field_errors']['status']
         )
-        data = {
-            'status': AppointmentStatus.CHECKED_OUT.value
-        }
-        serializer = AppointmentUpdateSerializer(instance=appointment, data=data, partial=True)
-        assert (serializer.is_valid() is False)
-        assert (
-            {'code': appointment_errors.ERR_STATUS_NOT_ALLOWED} in
-            serializer.errors['field_errors']['status']
-        )
+        with freeze_time(appointment.datetime_start_at - datetime.timedelta(days=1)):
+            # it should not be possible to move appointment to checked out
+            # on the date other than appointment date
+            data = {
+                'status': AppointmentStatus.CHECKED_OUT.value
+            }
+            serializer = AppointmentUpdateSerializer(
+                instance=appointment, data=data, partial=True
+            )
+            assert (serializer.is_valid() is False)
+            assert (
+                {'code': appointment_errors.ERR_STATUS_NOT_ALLOWED} in
+                serializer.errors['field_errors']['status']
+            )
+        with freeze_time(appointment.datetime_start_at):
+            # it should be possible to move appointment to checked out state
+            # on the actual date of appointment
+            data = {
+                'status': AppointmentStatus.CHECKED_OUT.value
+            }
+            serializer = AppointmentUpdateSerializer(
+                instance=appointment, data=data, partial=True
+            )
+            assert (serializer.is_valid() is True)
+        appointment.status = AppointmentStatus.NEW
+        appointment.save()
         data = {
             'status': AppointmentStatus.CANCELLED_BY_CLIENT.value
         }
