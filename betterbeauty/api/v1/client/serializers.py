@@ -4,6 +4,7 @@ import uuid
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from django.conf import settings
 from django.core.files.storage import default_storage
 from django.db import transaction
 from django.db.models import Sum
@@ -84,15 +85,19 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
     google_calendar_integrated = serializers.SerializerMethodField()
     has_seen_educational_screens = serializers.BooleanField(
         source='client.has_seen_educational_screens', required=False)
+    google_api_key = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
             'first_name', 'last_name', 'phone', 'profile_photo_id', 'profile_photo_url',
             'zip_code', 'birthday', 'email', 'city', 'state', 'privacy',
-            'has_seen_educational_screens',
+            'has_seen_educational_screens', 'google_api_key',
             'google_calendar_integrated', 'profile_completeness',
         ]
+
+    def get_google_api_key(self, user: User):
+        return settings.GOOGLE_AUTOCOMPLETE_API_KEY
 
     def get_google_calendar_integrated(self, instance: User) -> bool:
         return bool(
@@ -195,8 +200,7 @@ class ClientProfileStatusSerializer(serializers.ModelSerializer):
 
     def get_has_invitation(self, client: Client) -> bool:
         has_invitation: bool = Invitation.objects.filter(
-            phone=client.user.phone).exclude(
-            status=InvitationStatus.ACCEPTED).exists()
+            phone=client.user.phone, status=InvitationStatus.INVITED).exists()
         return has_invitation
 
 

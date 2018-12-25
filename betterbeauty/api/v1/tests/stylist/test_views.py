@@ -413,7 +413,7 @@ class TestAppointmentsOnADaySerializer(object):
                 'weekday_iso': 2,
                 'day_of_month': 15,
                 'has_appointments': True,
-                'is_working_day': False
+                'is_working_day': True
             }, {
                 'weekday_iso': 3,
                 'day_of_month': 16,
@@ -469,7 +469,7 @@ class TestAppointmentsOnADaySerializer(object):
             {'weekday_iso': 2,
              'day_of_month': 15,
              'has_appointments': True,
-             'is_working_day': False},
+             'is_working_day': True},
             {'weekday_iso': 3,
              'day_of_month': 16,
              'has_appointments': False,

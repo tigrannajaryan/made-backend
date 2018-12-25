@@ -59,8 +59,13 @@
     - [Services](#services)
     - [Appointment](#appointment)
     - [Available Slots](#available-slots)
+    - [Home API](#home-api)
+    - [History API](#history-api)
+    - [Decline Invitation API](#decline-invitation-api)
+- **Common**
+    - [Stylist Profile Details](#stylist-profile-details)
 - **Uploads**
-    - [Files](#user-content-files-upload)
+    - [Files](#files-upload)
     - [Images](#user-content-image-upload)
 
 - **Push notifications**
@@ -2681,7 +2686,10 @@ curl -X GET \
     "city": "Queens",
     "state": "NY",
     "privacy": "public",
-    "has_seen_educational_screens": true
+    "has_seen_educational_screens": true,
+    "google_api_key": "<api-key>",
+    "google_calendar_integrated": false,
+    "profile_completeness": 0.83
 }
 ```
 
@@ -2716,7 +2724,10 @@ curl -X POST \
     "city": null,
     "state": null,
     "privacy": "private",
-    "has_seen_educational_screens": true
+    "has_seen_educational_screens": true,
+    "google_api_key": "<api-key>",
+    "google_calendar_integrated": false,
+    "profile_completeness": 0.83
 }
 ```
 
@@ -3411,6 +3422,19 @@ curl -X POST \
     ]
 }
 ```
+
+## Decline Invitation API
+
+**GET api/v1/client/invitations/:uuid**
+
+```
+curl -X DELETE \
+  http://apiserver/api/v1/client/invitations/1827c31e-c93c-4f9f-be18-d83bd8234837 \
+  -H 'Authorization: Token {{auth_token}}' \
+  -H 'Content-Type: application/json'
+```
+
+**Response 204 NO CONTENT**
 
 ## Stylist Profile Details
 
