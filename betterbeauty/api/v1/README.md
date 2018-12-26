@@ -219,6 +219,7 @@ such specific errors in particular API calls.
 |err_unique_client_name| A client with the name already exists| /api/v1/stylist/appointments| client_first_name|
 |err_invalid_query_for_home| Query should be one of 'upcoming', 'past' or 'today'|/api/v1/stylist/home|`query` url param|
 |err_available_time_not_set| Day marked as available, but time is not set|/api/v1/stylist/availability/weekdays|non-field|
+|err_end_time_greater_than_start_time| Work start is greater than work_end_at|/api/v1/stylist/availability/weekdays|non-field|
 |err_appointment_in_the_past|Cannot add appointment for a past date and time|/api/v1/stylist/appointments|datetime_start_at|
 |err_appointment_intersection|Cannot add appointment intersecting with another|/api/v1/stylist/appointments|datetime_start_at|
 |err_appointment_outside_working_hours| Cannot add appointment outside working hours|/api/v1/stylist/appointments|datetime_start_at|
