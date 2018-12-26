@@ -16,7 +16,6 @@ def twilio_auth_required(view_func):
 
         validator = RequestValidator(os.environ.get('TWILIO_AUTH_TOKEN', None))
         url = request.build_absolute_uri()
-        url = url.replace('http://', 'https://')
         payload = request.POST.dict()
         if not validator.validate(url, payload, twilio_signature):
             return HttpResponseForbidden()
