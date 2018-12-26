@@ -837,7 +837,7 @@ def generate_stylist_registration_incomplete_notifications(dry_run=False) -> int
                         and ss.is_enabled = True
                   )
             )
-            and time_since_creation > interval '1 days'
+            and time_since_creation > interval '3 days'
             and not exists(
                 select
                     1
