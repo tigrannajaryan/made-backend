@@ -98,13 +98,17 @@ def build_appointment_preview_dict(
                 uuid=service_request_item['service_uuid']
             )
             if not client_price:
-                client_price = service.regular_price
-                if not appointment:
-                    # FIXME: below
-                    client_price = Decimal(calculate_price_and_discount_for_client_on_date(
-                        service=service, client=client,
-                        date=preview_request.datetime_start_at.date()
-                    ).price)
+                # If there's at least one service in the existing appointment which originally has
+                # a discount - we will copy discount information from that service instead
+                # of calculating it based on today's information
+                original_service: Optional[AppointmentService] = appointment.services.filter(
+                    is_original=True, applied_discount__isnull=False
+                ).first() if appointment else None
+                client_price = Decimal(calculate_price_and_discount_for_client_on_date(
+                    service=service, client=client,
+                    date=preview_request.datetime_start_at.date(),
+                    based_on_existing_service=original_service
+                ).price)
             service_item = AppointmentServicePreview(
                 uuid=None,
                 service_uuid=service.uuid,
