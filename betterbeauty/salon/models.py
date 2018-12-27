@@ -4,6 +4,7 @@ import uuid
 
 from typing import List, Optional, Tuple
 
+import pytz
 from django.conf import settings
 from django.contrib.gis.db.models.fields import PointField
 from django.contrib.postgres.fields import ArrayField, DateRangeField
@@ -436,7 +437,11 @@ class Stylist(models.Model):
 
     def with_salon_tz(self, date_time: datetime.datetime) -> datetime.datetime:
         """Convert supplied timezone-aware datetime to salon's timezone"""
-        return date_time.astimezone(self.salon.timezone)
+        if self.salon:
+            timezone = self.salon.timezone
+        else:
+            timezone = pytz.timezone(settings.TIME_ZONE)
+        return date_time.astimezone(timezone)
 
     def get_current_week_bounds(
             self
