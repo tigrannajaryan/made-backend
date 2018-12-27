@@ -22,3 +22,4 @@ class NotificationCode(StrEnum):
     TOMORROW_APPOINTMENTS = 'tomorrow_appointments'
     REGISTRATION_INCOMPLETE = 'registration_incomplete'
     STYLIST_CANCELLED_APPOINTMENT = 'stylist_cancelled_appointment'
+    CLIENT_CANCELLED_APPOINTMENT = 'client_cancelled_appointment'

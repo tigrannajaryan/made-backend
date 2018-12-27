@@ -44,6 +44,7 @@ from integrations.slack import (
 )
 from notifications.utils import (
     cancel_new_appointment_notification,
+    generate_client_cancelled_appointment_notification,
     generate_new_appointment_notification,
 )
 from pricing import CalculatedPrice
@@ -671,6 +672,8 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
                 setattr(appointment, k, v)
 
             if appointment.status != status:
+                if (status == AppointmentStatus.CANCELLED_BY_CLIENT):
+                    generate_client_cancelled_appointment_notification(appointment)
                 appointment.status = status
                 appointment.append_status_history(updated_by=user)
 
