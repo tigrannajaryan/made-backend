@@ -6,6 +6,7 @@ from core.types import StrEnum
 class NotificationChannel(StrEnum):
     SMS = 'sms'
     PUSH = 'push'
+    EMAIL = 'email'
 
 
 NOTIFICATION_CNANNEL_CHOICES = Choices(
@@ -23,3 +24,4 @@ class NotificationCode(StrEnum):
     REGISTRATION_INCOMPLETE = 'registration_incomplete'
     STYLIST_CANCELLED_APPOINTMENT = 'stylist_cancelled_appointment'
     CLIENT_CANCELLED_APPOINTMENT = 'client_cancelled_appointment'
+    REMIND_INVITE_CLIENTS = 'remind_invite_clients'

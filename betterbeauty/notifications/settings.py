@@ -37,6 +37,9 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
         NotificationCode.CLIENT_CANCELLED_APPOINTMENT: [
             NotificationChannel.PUSH  # NotificationChannel.SMS
         ],
+        NotificationCode.REMIND_INVITE_CLIENTS: [
+            NotificationChannel.PUSH,  # NotificationChannel.EMAIL
+        ]
     }
 else:
     NOTIFICATION_CHANNEL_PRIORITY = {
@@ -64,4 +67,7 @@ else:
         NotificationCode.CLIENT_CANCELLED_APPOINTMENT: [
             NotificationChannel.PUSH  # NotificationChannel.SMS
         ],
+        NotificationCode.REMIND_INVITE_CLIENTS: [
+            NotificationChannel.PUSH,  # NotificationChannel.EMAIL
+        ]
     }
