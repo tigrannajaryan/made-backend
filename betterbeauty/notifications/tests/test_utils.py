@@ -39,6 +39,7 @@ from ..utils import (
     generate_hint_to_select_stylist_notifications,
     generate_new_appointment_notification,
     generate_remind_add_photo_notifications,
+    generate_remind_define_services_notification,
     generate_remind_invite_clients_notifications,
     generate_stylist_registration_incomplete_notifications,
     generate_tomorrow_appointments_notifications,
@@ -131,6 +132,14 @@ def stylist_eligible_for_photo_reminder() -> Stylist:
     user = stylist.user
     user.photo = ''
     user.save()
+    return stylist
+
+
+@pytest.fixture
+def stylist_eligible_for_services_reminder() -> Stylist:
+    """Generate a stylist perfectly eligible for REMIND_DEFINE_SERVICES notification"""
+    stylist = stylist_eligible_for_notification(stylist_created_before_days=10)
+    StylistService.objects.all().delete()
     return stylist
 
 
@@ -991,10 +1000,10 @@ class TestGenerateRemindAddPhotoNotifications(object):
     def test_with_add_photo_notifications(self, stylist_eligible_for_invite_reminder):
         G(
             Notification, target=UserRole.STYLIST, user=stylist_eligible_for_invite_reminder.user,
-            code=NotificationCode.REMIND_INVITE_CLIENTS,
+            code=NotificationCode.REMIND_ADD_PHOTO,
             pending_to_send=False, sent_at=timezone.now() - datetime.timedelta(days=29)
         )
-        assert (generate_remind_invite_clients_notifications() == 0)
+        assert (generate_remind_add_photo_notifications() == 0)
 
     @pytest.mark.django_db
     def test_partial_profile(self, stylist_eligible_for_photo_reminder: Stylist):
@@ -1019,3 +1028,70 @@ class TestGenerateRemindAddPhotoNotifications(object):
         user.photo = dummy_user.photo
         user.save()
         assert (generate_remind_add_photo_notifications() == 0)
+
+
+class TestGenerateRemindDefineServiceNotifications(object):
+
+    @pytest.mark.django_db
+    def test_positive_path(self, stylist_eligible_for_services_reminder: Stylist):
+        assert (Notification.objects.count() == 1)
+        assert (generate_remind_define_services_notification() == 1)
+        assert (Notification.objects.count() == 2)
+        notification: Notification = Notification.objects.last()
+        assert (notification.code == NotificationCode.REMIND_DEFINE_SERVICES)
+        assert (notification.target == UserRole.STYLIST)
+        assert (notification.user == stylist_eligible_for_services_reminder.user)
+        assert (notification.send_time_window_start == datetime.time(10, 0))
+        assert (notification.send_time_window_end == datetime.time(20, 0))
+
+    @pytest.mark.django_db
+    def test_with_pending_notifications(self, stylist_eligible_for_services_reminder: Stylist):
+        G(
+            Notification, target=UserRole.STYLIST,
+            user=stylist_eligible_for_services_reminder.user,
+            code='whatever', pending_to_send=True, sent_at=None
+        )
+        assert (generate_remind_define_services_notification() == 0)
+
+    @pytest.mark.django_db
+    def test_recent_notifications(self, stylist_eligible_for_services_reminder: Stylist):
+        G(
+            Notification, target=UserRole.STYLIST,
+            user=stylist_eligible_for_services_reminder.user,
+            code='whatever', pending_to_send=False, sent_at=timezone.now() - datetime.timedelta(
+                hours=23
+            )
+        )
+        assert (generate_remind_define_services_notification() == 0)
+
+    @pytest.mark.django_db
+    def test_with_remind_define_service_notifications(self,
+                                                      stylist_eligible_for_services_reminder):
+        G(
+            Notification, target=UserRole.STYLIST,
+            user=stylist_eligible_for_services_reminder.user,
+            code=NotificationCode.REMIND_DEFINE_SERVICES,
+            pending_to_send=False, sent_at=timezone.now() - datetime.timedelta(days=25)
+        )
+        assert (generate_remind_invite_clients_notifications() == 0)
+
+    @pytest.mark.django_db
+    def test_partial_profile(self, stylist_eligible_for_services_reminder: Stylist):
+        user = stylist_eligible_for_services_reminder.user
+        user.phone = None
+        user.save()
+        assert (stylist_eligible_for_services_reminder.is_profile_bookable is False)
+        assert (generate_remind_define_services_notification() == 0)
+
+    @pytest.mark.django_db
+    def test_non_recent_stylist(self, stylist_eligible_for_services_reminder: Stylist):
+        stylist_eligible_for_services_reminder.created_at = timezone.now() - datetime.timedelta(
+            days=32
+        )
+        stylist_eligible_for_services_reminder.save()
+        assert (generate_remind_define_services_notification() == 0)
+
+    @pytest.mark.django_db
+    def test_stylist_with_service(self, stylist_eligible_for_services_reminder: Stylist):
+        G(StylistService, stylist=stylist_eligible_for_services_reminder, is_enabled=True)
+        assert (generate_remind_define_services_notification() == 0)

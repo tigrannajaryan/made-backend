@@ -72,5 +72,8 @@ else:
         ],
         NotificationCode.REMIND_ADD_PHOTO: [
             NotificationChannel.PUSH,  # NotificationChannel.EMAIL
-        ]
+        ],
+        NotificationCode.REMIND_DEFINE_SERVICES: [
+            NotificationChannel.PUSH, NotificationChannel.SMS
+        ],
     }
