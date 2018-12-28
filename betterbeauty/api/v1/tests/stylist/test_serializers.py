@@ -499,6 +499,12 @@ class TestStylistAvailableWeekDaySerializer(object):
         )
         assert (serializer.is_valid(raise_exception=False) is True)
 
+        data['work_start_at'] = '17:30'
+        serializer = StylistAvailableWeekDaySerializer(
+            data=data, context={'user': stylist.user}
+        )
+        assert (serializer.is_valid(raise_exception=False) is False)
+
 
 class TestStylistDiscountsSerializer(object):
 

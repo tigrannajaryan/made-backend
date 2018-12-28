@@ -523,6 +523,9 @@ class StylistAvailableWeekDaySerializer(
         if attrs.get('is_available', False) is True:
             if not attrs.get('work_start_at', None) or not attrs.get('work_end_at', None):
                 raise serializers.ValidationError(ErrorMessages.ERR_AVAILABLE_TIME_NOT_SET)
+            if attrs.get('work_start_at') > attrs.get('work_end_at'):
+                raise serializers.ValidationError(
+                    ErrorMessages.ERR_END_TIME_GREATER_THAN_START_TIME)
         else:
             attrs['work_start_at'] = None
             attrs['work_end_at'] = None
@@ -597,7 +600,8 @@ class StylistAvailableWeekDayWithBookedTimeSerializer(serializers.ModelSerialize
         ).count()
 
 
-class StylistAvailableWeekDayListSerializer(serializers.ModelSerializer):
+class StylistAvailableWeekDayListSerializer(FormattedErrorMessageMixin,
+                                            serializers.ModelSerializer):
     weekdays = serializers.SerializerMethodField()
 
     class Meta:
