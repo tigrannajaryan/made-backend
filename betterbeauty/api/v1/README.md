@@ -3145,6 +3145,10 @@ curl -X POST \
 ```
 
 ### Update existing appointment
+For the clients it is possible to patch the `services` field to change list of services
+or modify their prices by supplying the `client_price` field inside the service record.
+If `client_price` is omitted, client price will be calculated based on the existing discounts
+on the date of appointment
 
 **PATCH/POST /api/v1/client/appointments/:uuid**
 ```
@@ -3154,10 +3158,15 @@ curl -X PATCH \
   -H 'Content-Type: application/json' \
   -d '{
 	"services": [{
-		"service_uuid": "ade13b91-f1bd-45e8-a45c-aba2dad3f787"
+		"service_uuid": "ade13b91-f1bd-45e8-a45c-aba2dad3f787",
+		"client_price": 10
+	},
+	{
+		"service_uuid": "ade13b91-f1bd-45e8-a45c-aba2dad31234"
 	}]
 }'
 ```
+
 
 **Response 200 OK**
 ```json
@@ -3192,6 +3201,60 @@ curl -X PATCH \
     "has_card_fee_included": false
 }
 ```
+
+
+### Checkout existing appointment
+Clients can check out existing appointment by setting it's `status`
+field to `checked_out` value. This is only allowed on the actual date
+of appointment.
+
+
+**PATCH/POST /api/v1/client/appointments/:uuid**
+```
+curl -X PATCH \
+  http://betterbeauty.local:8000/api/v1/client/appointments/1c486b16-eb44-4914-9f03-3646ed066580 \
+  -H 'Authorization: Token jwt_token' \
+  -H 'Content-Type: application/json' \
+  -d '{
+	"status": "checked_out"
+}'
+```
+
+
+**Response 200 OK**
+```json
+{
+    "uuid": "1c486b16-eb44-4914-9f03-3646ed066580",
+    "stylist_uuid": "d5a2e88f-68f1-4ed5-95d2-e4e2a51f13e4",
+    "stylist_first_name": "Aswin",
+    "stylist_last_name": "Kumar",
+    "stylist_phone": "+19876543210",
+    "datetime_start_at": "2018-06-29T16:30:00-04:00",
+    "duration_minutes": 105,
+    "status": "new",
+    "total_tax": 10.65,
+    "total_card_fee": 3.3,
+    "total_client_price_before_tax": 120,
+    "profile_photo_url":null,
+    "salon_name": "Jane Solon",
+    "services": [
+        {
+            "uuid": "951f1607-e3f8-4fae-84ea-43fd07643db1",
+            "service_name": "Box braids",
+            "service_uuid": "ade13b91-f1bd-45e8-a45c-aba2dad3f787",
+            "client_price": 120,
+            "regular_price": 120,
+            "is_original": false
+        }
+    ],
+    "grand_total": 120,
+    "tax_percentage": 8.875,
+    "card_fee_percentage": 2.75,
+    "has_tax_included": false,
+    "has_card_fee_included": false
+}
+```
+
 
 ### Preview appointment (without creating it)
 
