@@ -29,7 +29,7 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
             NotificationChannel.PUSH  # NotificationChannel.SMS
         ],
         NotificationCode.REGISTRATION_INCOMPLETE: [
-            NotificationChannel.PUSH  # NotificationChannel.SMS
+            NotificationChannel.PUSH, NotificationChannel.SMS
         ],
         NotificationCode.STYLIST_CANCELLED_APPOINTMENT: [
             NotificationChannel.PUSH  # NotificationChannel.SMS
@@ -59,7 +59,7 @@ else:
             NotificationChannel.PUSH  # NotificationChannel.SMS
         ],
         NotificationCode.REGISTRATION_INCOMPLETE: [
-            NotificationChannel.PUSH  # NotificationChannel.SMS
+            NotificationChannel.PUSH, NotificationChannel.SMS
         ],
         NotificationCode.STYLIST_CANCELLED_APPOINTMENT: [
             NotificationChannel.PUSH  # NotificationChannel.SMS
