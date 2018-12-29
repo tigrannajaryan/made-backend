@@ -38,7 +38,7 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
             NotificationChannel.PUSH  # NotificationChannel.SMS
         ],
         NotificationCode.REMIND_INVITE_CLIENTS: [
-            NotificationChannel.PUSH,  # NotificationChannel.EMAIL
+            NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
         ]
     }
 else:
@@ -68,6 +68,6 @@ else:
             NotificationChannel.PUSH  # NotificationChannel.SMS
         ],
         NotificationCode.REMIND_INVITE_CLIENTS: [
-            NotificationChannel.PUSH,  # NotificationChannel.EMAIL
+            NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
         ]
     }
