@@ -921,12 +921,12 @@ def generate_stylist_registration_incomplete_notifications(dry_run=False) -> int
             inner join public.user as u on st.user_id = u.id
             left outer join salon as sl on
                 st.salon_id = sl.id
-            where st.deactivated_at isnull) as stylist_with_tz_info
+            where st.deactivated_at isnull and u.phone is not null and u.phone <> ''
+            ) as stylist_with_tz_info
         where
             stylist_current_now_t < stylist_maximum_time_to_send_today_t
             and (
-              phone is null
-              or has_business_hours_set is false
+              has_business_hours_set is false
               or not exists(
                 select 1 from stylist_service as ss
                  where ss.stylist_id = stylist_id

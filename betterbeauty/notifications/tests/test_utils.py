@@ -763,10 +763,11 @@ class TestGenerateStylistRegistrationIncompleteNotifications(object):
     def test_time_of_day_with_salon(self):
         PST = pytz.timezone('America/Los_Angeles')
         salon: Salon = G(Salon, timezone=PST)
+        user = G(User, phone='1234')
         stylist: Stylist = G(
             Stylist, salon=salon, created_at=PST.localize(
                 datetime.datetime(2018, 12, 6, 0, 0)
-            ) - datetime.timedelta(weeks=1)
+            ) - datetime.timedelta(weeks=1), user=user
         )
         G(APNSDevice, user=stylist.user, application_id=MobileAppIdType.IOS_STYLIST_DEV)
         with freeze_time(PST.localize(datetime.datetime(2018, 12, 6, 18, 1))):
@@ -797,10 +798,11 @@ class TestGenerateStylistRegistrationIncompleteNotifications(object):
     @pytest.mark.django_db
     def test_time_of_day_without_salon(self):
         PST = pytz.timezone('America/Los_Angeles')
+        user = G(User, phone='1234')
         stylist: Stylist = G(
             Stylist, created_at=PST.localize(
                 datetime.datetime(2018, 12, 6, 0, 0)
-            ) - datetime.timedelta(weeks=1)
+            ) - datetime.timedelta(weeks=1), user=user
         )
         G(APNSDevice, user=stylist.user, application_id=MobileAppIdType.IOS_STYLIST_DEV)
         # now test without salon; it should now default to EST timezone (PST + 3)
@@ -856,7 +858,8 @@ class TestGenerateStylistRegistrationIncompleteNotifications(object):
         salon: Salon = G(Salon, timezone=PST)
         with freeze_time(PST.localize(datetime.datetime(2018, 12, 6, 17, 59))):
             stylist: Stylist = G(
-                Stylist, salon=salon, created_at=timezone.now() - datetime.timedelta(hours=23)
+                Stylist, salon=salon, created_at=timezone.now() - datetime.timedelta(hours=23),
+                user=G(User, phone='1234')
             )
             G(APNSDevice, user=stylist.user, application_id=MobileAppIdType.IOS_STYLIST_DEV)
             generate_stylist_registration_incomplete_notifications()
