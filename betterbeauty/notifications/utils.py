@@ -1107,3 +1107,100 @@ def generate_remind_invite_clients_notifications(dry_run=False) -> int:
     if notifications_to_create_list and not dry_run:
         Notification.objects.bulk_create(notifications_to_create_list)
     return len(notifications_to_create_list)
+
+
+@transaction.atomic
+def generate_remind_add_photo_notifications(dry_run=False) -> int:
+    """
+    Generate `remind_add_photo` notifications for stylist matching the criteria:
+    1. Stylist did not invite any clients ever.
+    2. 24 hours or more passed since last notification of any type was sent
+       to this stylist and there are no pending notifications.
+    3. remind_add_photo notification was never sent
+    4. Stylist created account less than 30 days ago.
+    5. Stylist is bookable (has defined hours, services).
+    6. Stylist account is not partial, it is a full profile.
+
+    :param dry_run: if set to True, don't actually create notifications
+    :return: number of notifications created
+    """
+    code = NotificationCode.REMIND_ADD_PHOTO
+    discard_after = timezone.now() + datetime.timedelta(days=7)
+    message = (
+        'We noticed that you do not have a photo in Made Pro. Stylists who '
+        'have a photo have on average about 60% higher chance to get a booking.'
+    )
+    earliest_time_stylist_created_profile = timezone.now() - datetime.timedelta(days=30)
+    earliest_time_last_notification_sent = timezone.now() - datetime.timedelta(hours=24)
+    target = UserRole.STYLIST
+    send_time_window_start = datetime.time(10, 0)
+    send_time_window_end = datetime.time(20, 0)
+
+    stylist_has_invitations_query = Invitation.objects.filter(
+        stylist_id=OuterRef('id')
+    )
+    stylist_has_recent_or_unsent_notifications = Notification.objects.filter(
+        Q(Q(sent_at__gte=earliest_time_last_notification_sent) | Q(pending_to_send=True)),
+        user_id=OuterRef('user__id'), target=UserRole.STYLIST
+    )
+
+    stylist_has_remind_add_photo_notification_sent = Notification.objects.filter(
+        user_id=OuterRef('user__id'), target=UserRole.STYLIST, code=code
+    )
+
+    stylist_has_enabled_services_query = StylistService.objects.filter(
+        stylist_id=OuterRef('id'), is_enabled=True
+    )
+    eligible_stylists_ids = Stylist.objects.annotate(
+        has_invitations=Exists(stylist_has_invitations_query),
+        has_recent_or_unsent_notifications=Exists(
+            stylist_has_recent_or_unsent_notifications
+        ),
+        has_remind_add_photo_notification_sent=Exists(
+            stylist_has_remind_add_photo_notification_sent
+        ),
+        has_enabled_services=Exists(stylist_has_enabled_services_query),
+    ).filter(
+        Q(Q(user__photo='') | Q(user__photo=None)),
+        has_invitations=False,
+        has_recent_or_unsent_notifications=False,
+        has_remind_add_photo_notification_sent=False,
+        has_enabled_services=True,
+        created_at__gte=earliest_time_stylist_created_profile,
+        user__phone__isnull=False,
+        deactivated_at__isnull=True,
+        has_business_hours_set=True,
+    ).values_list('id', flat=True)
+
+    if is_push_only(code):
+        stylist_has_registered_devices = Q(
+            user__apnsdevice__active=True) | Q(
+            user__gcmdevice__active=True)
+        eligible_stylists_ids = eligible_stylists_ids.filter(
+            stylist_has_registered_devices
+        )
+
+    eligible_stylists = Stylist.objects.filter(
+        id__in=eligible_stylists_ids
+    ).select_for_update(skip_locked=True)
+
+    notifications_to_create_list: List[Notification] = []
+
+    for stylist in eligible_stylists.iterator():
+        notifications_to_create_list.append(
+            Notification(
+                user=stylist.user,
+                code=code,
+                target=target,
+                message=message,
+                send_time_window_start=send_time_window_start,
+                send_time_window_end=send_time_window_end,
+                send_time_window_tz=stylist.salon.timezone,
+                discard_after=discard_after,
+                data={}
+            )
+        )
+    # if any notifications were generated - bulk created them
+    if notifications_to_create_list and not dry_run:
+        Notification.objects.bulk_create(notifications_to_create_list)
+    return len(notifications_to_create_list)

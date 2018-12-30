@@ -69,5 +69,8 @@ else:
         ],
         NotificationCode.REMIND_INVITE_CLIENTS: [
             NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
+        ],
+        NotificationCode.REMIND_ADD_PHOTO: [
+            NotificationChannel.PUSH,  # NotificationChannel.EMAIL
         ]
     }

@@ -25,3 +25,4 @@ class NotificationCode(StrEnum):
     STYLIST_CANCELLED_APPOINTMENT = 'stylist_cancelled_appointment'
     CLIENT_CANCELLED_APPOINTMENT = 'client_cancelled_appointment'
     REMIND_INVITE_CLIENTS = 'remind_invite_clients'
+    REMIND_ADD_PHOTO = 'remind_add_photo'

@@ -5,11 +5,13 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
+from core.constants import EnvLevel
 from notifications.types import NotificationCode
 from notifications.utils import (
     generate_hint_to_first_book_notifications,
     generate_hint_to_rebook_notifications,
     generate_hint_to_select_stylist_notifications,
+    generate_remind_add_photo_notifications,
     generate_remind_invite_clients_notifications,
     generate_stylist_registration_incomplete_notifications,
     generate_tomorrow_appointments_notifications,
@@ -129,6 +131,21 @@ class Command(BaseCommand):
             notification_count, (time_end - time_start).total_seconds(),
             NotificationCode.REMIND_INVITE_CLIENTS
         ), self.stdout)
+
+        stdout_and_log(
+            'Generating {0} notifications'.format(NotificationCode.REMIND_ADD_PHOTO),
+            self.stdout
+        )
+        if settings.LEVEL != EnvLevel.PRODUCTION:  # TODO: enable on production after testing
+            time_start = timezone.now()
+            notification_count = generate_remind_add_photo_notifications(
+                dry_run=dry_run
+            )
+            time_end = timezone.now()
+            stdout_and_log('...{0} {2} notifications generated; took {1} seconds'.format(
+                notification_count, (time_end - time_start).total_seconds(),
+                NotificationCode.REMIND_ADD_PHOTO
+            ), self.stdout)
 
         if force_send:
             self.stdout.write('Going to send push notifications now')
