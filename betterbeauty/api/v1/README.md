@@ -57,7 +57,7 @@
     - [Search Stylists](#search-stylists)
     - [Stylist followers](#stylist-followers)
     - [Services](#services)
-    - [Appointment](#appointment)
+    - [Appointment](#appointments-1)
     - [Available Slots](#available-slots)
     - [Home API](#home-api)
     - [History API](#history-api)
