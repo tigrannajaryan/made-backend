@@ -39,7 +39,10 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
         ],
         NotificationCode.REMIND_INVITE_CLIENTS: [
             NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
-        ]
+        ],
+        NotificationCode.REMIND_DEFINE_SERVICES: [
+            NotificationChannel.PUSH, NotificationChannel.SMS
+        ],
     }
 else:
     NOTIFICATION_CHANNEL_PRIORITY = {
