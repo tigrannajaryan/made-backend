@@ -13,6 +13,7 @@ from push_notifications.models import APNSDevice, GCMDevice
 from rest_framework_jwt.settings import api_settings
 
 from api.v1.auth.utils import create_client_profile_from_phone
+from api.v1.client.constants import NEW_YORK_LOCATION
 from api.v1.client.serializers import AppointmentValidationMixin
 from appointment.models import Appointment, AppointmentService, AppointmentStatus
 from client.models import Client
@@ -41,6 +42,7 @@ from ..utils import (
     generate_hint_to_select_stylist_notifications,
     generate_new_appointment_notification,
     generate_remind_add_photo_notifications,
+    generate_remind_define_discounts_notifications,
     generate_remind_define_hours_notifications,
     generate_remind_define_services_notification,
     generate_remind_invite_clients_notifications,
@@ -143,6 +145,29 @@ def stylist_eligible_for_services_reminder() -> Stylist:
     """Generate a stylist perfectly eligible for REMIND_DEFINE_SERVICES notification"""
     stylist = stylist_eligible_for_notification(stylist_created_before_days=10)
     StylistService.objects.all().delete()
+    return stylist
+
+
+@pytest.fixture
+def stylist_eligible_for_discounts_reminder() -> Stylist:
+    """Generate a stylist perfectly eligible for REMIND_DEFINE_DISCOUNTS notification"""
+    stylist = stylist_eligible_for_notification(stylist_created_before_days=50)
+    stylist.is_discount_configured = False
+    stylist.rebook_within_1_week_discount_percent = 25
+    stylist.rebook_within_2_week_discount_percent = 20
+    stylist.rebook_within_3_week_discount_percent = 15
+    stylist.save()
+    salon = stylist.salon
+    salon.location = NEW_YORK_LOCATION
+    salon.save()
+    ANOTHER_NYC_LOCATION: Point = Point(-74.0735302, 40.6779378, srid=4326)
+    WASHINGTON_DC_LOCATION: Point = Point(-77.1546623, 38.8935128, srid=4326)
+    G(PreferredStylist, stylist=stylist, client=G(Client, country=salon.country,
+                                                  location=NEW_YORK_LOCATION))
+    G(PreferredStylist, stylist=stylist, client=G(Client, country=salon.country,
+                                                  location=ANOTHER_NYC_LOCATION))
+    G(PreferredStylist, stylist=stylist, client=G(Client, country=salon.country,
+                                                  location=WASHINGTON_DC_LOCATION))
     return stylist
 
 
@@ -1128,6 +1153,82 @@ class TestGenerateRemindDefineServiceNotifications(object):
     def test_stylist_with_service(self, stylist_eligible_for_services_reminder: Stylist):
         G(StylistService, stylist=stylist_eligible_for_services_reminder, is_enabled=True)
         assert (generate_remind_define_services_notification() == 0)
+
+
+class TestGenerateRemindDefineDiscountsNotifications(object):
+
+    @pytest.mark.django_db
+    def test_positive_path(self, stylist_eligible_for_discounts_reminder: Stylist):
+        assert (Notification.objects.count() == 1)
+        assert (generate_remind_define_discounts_notifications() == 1)
+        assert (Notification.objects.count() == 2)
+        notification: Notification = Notification.objects.last()
+        assert (notification.code == NotificationCode.REMIND_DEFINE_DISCOUNTS)
+        assert (notification.target == UserRole.STYLIST)
+        print(notification.message)
+        assert (notification.message.startswith('2 '))
+        assert (notification.user == stylist_eligible_for_discounts_reminder.user)
+        assert (notification.send_time_window_start == datetime.time(10, 0))
+        assert (notification.send_time_window_end == datetime.time(20, 0))
+
+    @pytest.mark.django_db
+    def test_with_pending_notifications(self, stylist_eligible_for_discounts_reminder: Stylist):
+        G(
+            Notification, target=UserRole.STYLIST,
+            user=stylist_eligible_for_discounts_reminder.user,
+            code='whatever', pending_to_send=True, sent_at=None
+        )
+        assert (generate_remind_define_discounts_notifications() == 0)
+
+    @pytest.mark.django_db
+    def test_recent_notifications(self, stylist_eligible_for_discounts_reminder: Stylist):
+        G(
+            Notification, target=UserRole.STYLIST,
+            user=stylist_eligible_for_discounts_reminder.user,
+            code='whatever', pending_to_send=False, sent_at=timezone.now() - datetime.timedelta(
+                hours=23
+            )
+        )
+        assert (generate_remind_define_discounts_notifications() == 0)
+
+    @pytest.mark.django_db
+    def test_with_remind_define_discounts_notifications(self,
+                                                        stylist_eligible_for_discounts_reminder):
+        G(
+            Notification, target=UserRole.STYLIST,
+            user=stylist_eligible_for_discounts_reminder.user,
+            code=NotificationCode.REMIND_DEFINE_DISCOUNTS,
+            pending_to_send=False, sent_at=timezone.now() - datetime.timedelta(days=25)
+        )
+        assert (generate_remind_define_discounts_notifications() == 0)
+
+    @pytest.mark.django_db
+    def test_partial_profile(self, stylist_eligible_for_discounts_reminder: Stylist):
+        user = stylist_eligible_for_discounts_reminder.user
+        user.phone = None
+        user.save()
+        assert (stylist_eligible_for_discounts_reminder.is_profile_bookable is False)
+        assert (generate_remind_define_discounts_notifications() == 0)
+
+    @pytest.mark.django_db
+    def test_non_recent_or_very_recent_stylist(self,
+                                               stylist_eligible_for_discounts_reminder: Stylist):
+        stylist_eligible_for_discounts_reminder.created_at = timezone.now() - datetime.timedelta(
+            days=92
+        )
+        stylist_eligible_for_discounts_reminder.save()
+        assert (generate_remind_define_discounts_notifications() == 0)
+        stylist_eligible_for_discounts_reminder.created_at = timezone.now() - datetime.timedelta(
+            hours=20
+        )
+        stylist_eligible_for_discounts_reminder.save()
+        assert (generate_remind_define_discounts_notifications() == 0)
+
+    @pytest.mark.django_db
+    def test_stylist_with_discount(self, stylist_eligible_for_discounts_reminder: Stylist):
+        stylist_eligible_for_discounts_reminder.is_discount_configured = True
+        stylist_eligible_for_discounts_reminder.save()
+        assert (generate_remind_define_discounts_notifications() == 0)
 
 
 class TestGenerateFollowUpInvitationSms(object):
