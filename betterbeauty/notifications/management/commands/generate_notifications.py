@@ -8,6 +8,7 @@ from django.utils import timezone
 from core.constants import EnvLevel
 from notifications.types import NotificationCode
 from notifications.utils import (
+    generate_follow_up_invitation_sms,
     generate_hint_to_first_book_notifications,
     generate_hint_to_rebook_notifications,
     generate_hint_to_select_stylist_notifications,
@@ -158,6 +159,16 @@ class Command(BaseCommand):
             time_end = timezone.now()
             stdout_and_log('...{0} notifications generated; took {1} seconds'.format(
                 notification_count, (time_end - time_start).total_seconds()
+            ), self.stdout)
+
+        if settings.LEVEL != EnvLevel.PRODUCTION:  # TODO: enable on production after testing
+            time_start = timezone.now()
+            sms_count = generate_follow_up_invitation_sms(
+                dry_run=dry_run
+            )
+            time_end = timezone.now()
+            stdout_and_log('...{0} Invitations follow-up SMS generated; took {1} seconds'.format(
+                sms_count, (time_end - time_start).total_seconds(),
             ), self.stdout)
 
         if force_send:

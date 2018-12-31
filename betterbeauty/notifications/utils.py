@@ -1318,7 +1318,7 @@ def generate_follow_up_invitation_sms(dry_run=False) -> int:
     message = (
         'Hey! Just following up on the invite {stylist_name} '
         'sent you about booking on MADE. You see better prices when you book '
-        'with her there. Download the app at: https://madebeauty.com/get/'
+        'with {stylist_name} there. Download the app at: https://madebeauty.com/get/'
     )
     # TODO: confirm with Tigran
     earliest_invitation_creation_datetime = timezone.now() - datetime.timedelta(days=30)
@@ -1348,7 +1348,12 @@ def generate_follow_up_invitation_sms(dry_run=False) -> int:
     sent_messages = 0
 
     for invite in eligible_invites.iterator():
-        message = message.format(stylist_name=invite.stylist.get_full_name())
+        stylist: Stylist = invite.stylist
+        if stylist.user.first_name:
+            stylist_name = stylist.user.first_name
+        else:
+            stylist_name = stylist.get_full_name()
+        message = message.format(stylist_name=stylist_name)
         try:
             if not dry_run:
                 send_sms_message(to_phone=invite.phone, body=message, role=UserRole.CLIENT)
