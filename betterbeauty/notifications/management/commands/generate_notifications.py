@@ -121,17 +121,14 @@ class Command(BaseCommand):
         ), self.stdout)
 
         stdout_and_log(
-            'Generating {0} notifications'.format(NotificationCode.REMIND_INVITE_CLIENTS),
+            'Generating {0} notifications'.format(NotificationCode.REMIND_DEFINE_SERVICES),
             self.stdout
         )
         time_start = timezone.now()
-        notification_count = generate_remind_invite_clients_notifications(
-            dry_run=dry_run
-        )
+        notification_count = generate_remind_define_services_notification(dry_run=dry_run)
         time_end = timezone.now()
-        stdout_and_log('...{0} {2} notifications generated; took {1} seconds'.format(
-            notification_count, (time_end - time_start).total_seconds(),
-            NotificationCode.REMIND_INVITE_CLIENTS
+        stdout_and_log('...{0} notifications generated; took {1} seconds'.format(
+            notification_count, (time_end - time_start).total_seconds()
         ), self.stdout)
 
         stdout_and_log(
@@ -150,16 +147,18 @@ class Command(BaseCommand):
             ), self.stdout)
 
         stdout_and_log(
-            'Generating {0} notifications'.format(NotificationCode.REMIND_DEFINE_SERVICES),
+            'Generating {0} notifications'.format(NotificationCode.REMIND_INVITE_CLIENTS),
             self.stdout
         )
-        if settings.LEVEL != EnvLevel.PRODUCTION:  # TODO: enable on production after testing
-            time_start = timezone.now()
-            notification_count = generate_remind_define_services_notification(dry_run=dry_run)
-            time_end = timezone.now()
-            stdout_and_log('...{0} notifications generated; took {1} seconds'.format(
-                notification_count, (time_end - time_start).total_seconds()
-            ), self.stdout)
+        time_start = timezone.now()
+        notification_count = generate_remind_invite_clients_notifications(
+            dry_run=dry_run
+        )
+        time_end = timezone.now()
+        stdout_and_log('...{0} {2} notifications generated; took {1} seconds'.format(
+            notification_count, (time_end - time_start).total_seconds(),
+            NotificationCode.REMIND_INVITE_CLIENTS
+        ), self.stdout)
 
         if settings.LEVEL != EnvLevel.PRODUCTION:  # TODO: enable on production after testing
             time_start = timezone.now()
