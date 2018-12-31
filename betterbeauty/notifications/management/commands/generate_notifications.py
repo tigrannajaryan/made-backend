@@ -12,6 +12,7 @@ from notifications.utils import (
     generate_hint_to_rebook_notifications,
     generate_hint_to_select_stylist_notifications,
     generate_remind_add_photo_notifications,
+    generate_remind_define_services_notification,
     generate_remind_invite_clients_notifications,
     generate_stylist_registration_incomplete_notifications,
     generate_tomorrow_appointments_notifications,
@@ -145,6 +146,18 @@ class Command(BaseCommand):
             stdout_and_log('...{0} {2} notifications generated; took {1} seconds'.format(
                 notification_count, (time_end - time_start).total_seconds(),
                 NotificationCode.REMIND_ADD_PHOTO
+            ), self.stdout)
+
+        stdout_and_log(
+            'Generating {0} notifications'.format(NotificationCode.REMIND_DEFINE_SERVICES),
+            self.stdout
+        )
+        if settings.LEVEL != EnvLevel.PRODUCTION:  # TODO: enable on production after testing
+            time_start = timezone.now()
+            notification_count = generate_remind_define_services_notification(dry_run=dry_run)
+            time_end = timezone.now()
+            stdout_and_log('...{0} notifications generated; took {1} seconds'.format(
+                notification_count, (time_end - time_start).total_seconds()
             ), self.stdout)
 
         if force_send:
