@@ -24,6 +24,7 @@ from notifications.models import Notification
 from notifications.types import NotificationCode
 from salon.models import (
     Invitation,
+    InvitationStatus,
     PreferredStylist,
     Salon,
     Stylist,
@@ -34,6 +35,7 @@ from salon.models import (
 )
 from salon.utils import create_stylist_profile_for_user
 from ..utils import (
+    generate_follow_up_invitation_sms,
     generate_hint_to_first_book_notifications,
     generate_hint_to_rebook_notifications,
     generate_hint_to_select_stylist_notifications,
@@ -1095,3 +1097,66 @@ class TestGenerateRemindDefineServiceNotifications(object):
     def test_stylist_with_service(self, stylist_eligible_for_services_reminder: Stylist):
         G(StylistService, stylist=stylist_eligible_for_services_reminder, is_enabled=True)
         assert (generate_remind_define_services_notification() == 0)
+
+
+class TestGenerateFollowUpInvitationSms(object):
+    @pytest.mark.django_db
+    @mock.patch('notifications.utils.send_sms_message')
+    @freeze_time('2018-12-31 23:30 UTC')  # 6:30pm EST
+    def test_positive_path_invitation(self, sms_mock):
+        invitation: Invitation = G(
+            Invitation, status=InvitationStatus.INVITED, created_client=None,
+            created_at=timezone.now() - datetime.timedelta(days=15),
+            followup_sent_at=None, followup_count=0
+        )
+        assert(generate_follow_up_invitation_sms() == 1)
+        invitation.refresh_from_db()
+        assert(invitation.followup_count == 1)
+        assert(invitation.followup_sent_at == timezone.now())
+        assert(sms_mock.call_count == 1)
+
+    @pytest.mark.django_db
+    @mock.patch('notifications.utils.send_sms_message')
+    @freeze_time('2018-12-31 23:30 UTC')  # 6:30pm EST
+    def test_recent_invitation(self, sms_mock):
+        invitation: Invitation = G(
+            Invitation, status=InvitationStatus.INVITED, created_client=None,
+            created_at=timezone.now() - datetime.timedelta(days=13),
+            followup_sent_at=None, followup_count=0
+        )
+        assert (generate_follow_up_invitation_sms() == 0)
+        invitation.refresh_from_db()
+        assert (invitation.followup_count == 0)
+        assert (invitation.followup_sent_at is None)
+        assert (sms_mock.call_count == 0)
+
+    @pytest.mark.django_db
+    @mock.patch('notifications.utils.send_sms_message')
+    @freeze_time('2018-12-31 23:30 UTC')  # 6:30pm EST
+    def test_already_resent_invitation(self, sms_mock):
+        invitation: Invitation = G(
+            Invitation, status=InvitationStatus.INVITED, created_client=None,
+            created_at=timezone.now() - datetime.timedelta(days=15),
+            followup_sent_at=None, followup_count=0
+        )
+        assert (generate_follow_up_invitation_sms() == 1)
+        invitation.refresh_from_db()
+        assert (invitation.followup_count == 1)
+        assert (invitation.followup_sent_at == timezone.now())
+        assert (sms_mock.call_count == 1)
+        sms_mock.reset_mock()
+
+        assert (generate_follow_up_invitation_sms() == 0)
+        assert (sms_mock.call_count == 0)
+
+    @pytest.mark.django_db
+    @mock.patch('notifications.utils.send_sms_message')
+    @freeze_time('2018-12-31 23:30 UTC')  # 6:30pm EST
+    def test_declined_invitation(self, sms_mock):
+        G(
+            Invitation, status=InvitationStatus.DECLINED, created_client=None,
+            created_at=timezone.now() - datetime.timedelta(days=15),
+            followup_sent_at=None, followup_count=0
+        )
+        assert (generate_follow_up_invitation_sms() == 0)
+        assert (sms_mock.call_count == 0)

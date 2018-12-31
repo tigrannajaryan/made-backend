@@ -1,4 +1,5 @@
 import datetime
+import logging
 from io import TextIOBase
 from typing import List, Optional, Tuple
 
@@ -16,8 +17,10 @@ from core.models import UserRole
 from core.utils.phone import to_international_format
 from integrations.push.types import MobileAppIdType
 from integrations.push.utils import has_push_notification_device
+from integrations.twilio import send_sms_message
 from salon.models import (
     Invitation,
+    InvitationStatus,
     PreferredStylist,
     Stylist,
     StylistService,
@@ -26,6 +29,9 @@ from salon.models import (
 from .models import Notification
 from .settings import NOTIFICATION_CHANNEL_PRIORITY
 from .types import NotificationChannel, NotificationCode
+
+
+logger = logging.getLogger(__name__)
 
 
 def is_push_only(code: NotificationCode) -> bool:
@@ -1297,3 +1303,62 @@ def generate_remind_add_photo_notifications(dry_run=False) -> int:
     if notifications_to_create_list and not dry_run:
         Notification.objects.bulk_create(notifications_to_create_list)
     return len(notifications_to_create_list)
+
+
+@transaction.atomic
+def generate_follow_up_invitation_sms(dry_run=False) -> int:
+    """
+    If there is an invitation to a client that is not accepted and the client
+    phone number does not have an account with us send a follow up text message
+    14 day after original invitation is sent.
+    :param dry_run:
+    :param dry_run: if set to True, don't actually create notifications
+    :return: number of SMS messages sent
+    """
+    message = (
+        'Hey! Just following up on the invite {stylist_name} '
+        'sent you about booking on MADE. You see better prices when you book '
+        'with her there. Download the app at: https://madebeauty.com/get/'
+    )
+    # TODO: confirm with Tigran
+    earliest_invitation_creation_datetime = timezone.now() - datetime.timedelta(days=30)
+    earliest_time_invitation_sent = timezone.now() - datetime.timedelta(days=14)
+    send_time_window_tz = pytz.timezone(settings.TIME_ZONE)
+
+    # TODO: discuss with Tigran, in which time window we'll send SMS's
+
+    send_time_window_start = datetime.time(18, 0)
+    send_time_window_end = datetime.time(20, 0)
+
+    current_now = timezone.now().astimezone(send_time_window_tz)
+    if current_now.time() < send_time_window_start or current_now.time() > send_time_window_end:
+        return 0
+
+    # we want to send SMS's in chunks to not overload Twilio and Slack
+    max_sms_messages_to_send_in_one_run = 20
+
+    eligible_invites = Invitation.objects.filter(
+        created_client__isnull=True,
+        followup_sent_at__isnull=True,
+        created_at__lte=earliest_time_invitation_sent,
+        created_at__gte=earliest_invitation_creation_datetime,
+        status=InvitationStatus.INVITED
+    ).select_for_update(skip_locked=True)[:max_sms_messages_to_send_in_one_run]
+
+    sent_messages = 0
+
+    for invite in eligible_invites.iterator():
+        message = message.format(stylist_name=invite.stylist.get_full_name())
+        try:
+            if not dry_run:
+                send_sms_message(to_phone=invite.phone, body=message, role=UserRole.CLIENT)
+                invite.followup_sent_at = timezone.now()
+                invite.followup_count += 1
+                invite.save(update_fields=['followup_sent_at', 'followup_count', ])
+            sent_messages += 1
+        except:  # noqa
+            # something went wrong here. We're in the outermost transaction, so just
+            # log the error and move on
+            logger.exception('Could not send SMS to {0}. Exiting'.format(invite.phone))
+            break
+    return sent_messages

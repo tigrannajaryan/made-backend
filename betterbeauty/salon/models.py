@@ -733,5 +733,8 @@ class Invitation(models.Model):
         Client, null=True, default=None, on_delete=models.CASCADE, related_name='invitations'
     )
 
+    followup_sent_at = models.DateTimeField(null=True, blank=True, default=None)
+    followup_count = models.IntegerField(default=0)
+
     class Meta:
         db_table = 'invitation'
