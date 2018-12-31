@@ -1160,3 +1160,15 @@ class TestGenerateFollowUpInvitationSms(object):
         )
         assert (generate_follow_up_invitation_sms() == 0)
         assert (sms_mock.call_count == 0)
+
+    @pytest.mark.django_db
+    @mock.patch('notifications.utils.send_sms_message')
+    @freeze_time('2018-12-31 23:30 UTC')  # 6:30pm EST
+    def test_accepted_invitation(self, sms_mock):
+        G(
+            Invitation, status=InvitationStatus.ACCEPTED, created_client=G(Client),
+            created_at=timezone.now() - datetime.timedelta(days=15),
+            followup_sent_at=None, followup_count=0
+        )
+        assert (generate_follow_up_invitation_sms() == 0)
+        assert (sms_mock.call_count == 0)
