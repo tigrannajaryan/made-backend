@@ -1320,12 +1320,9 @@ def generate_follow_up_invitation_sms(dry_run=False) -> int:
         'sent you about booking on MADE. You see better prices when you book '
         'with {stylist_name} there. Download the app at: https://madebeauty.com/get/'
     )
-    # TODO: confirm with Tigran
     earliest_invitation_creation_datetime = timezone.now() - datetime.timedelta(days=30)
     earliest_time_invitation_sent = timezone.now() - datetime.timedelta(days=14)
     send_time_window_tz = pytz.timezone(settings.TIME_ZONE)
-
-    # TODO: discuss with Tigran, in which time window we'll send SMS's
 
     send_time_window_start = datetime.time(18, 0)
     send_time_window_end = datetime.time(20, 0)
