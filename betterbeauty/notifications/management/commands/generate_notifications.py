@@ -136,31 +136,29 @@ class Command(BaseCommand):
             'Generating {0} notifications'.format(NotificationCode.REMIND_DEFINE_HOURS),
             self.stdout
         )
-        if settings.LEVEL != EnvLevel.PRODUCTION:  # TODO: enable on production after testing
-            time_start = timezone.now()
-            notification_count = generate_remind_define_hours_notifications(
-                dry_run=dry_run
-            )
-            time_end = timezone.now()
-            stdout_and_log('...{0} {2} notifications generated; took {1} seconds'.format(
-                notification_count, (time_end - time_start).total_seconds(),
-                NotificationCode.REMIND_DEFINE_HOURS
-            ), self.stdout)
+        time_start = timezone.now()
+        notification_count = generate_remind_define_hours_notifications(
+            dry_run=dry_run
+        )
+        time_end = timezone.now()
+        stdout_and_log('...{0} {2} notifications generated; took {1} seconds'.format(
+            notification_count, (time_end - time_start).total_seconds(),
+            NotificationCode.REMIND_DEFINE_HOURS
+        ), self.stdout)
 
         stdout_and_log(
             'Generating {0} notifications'.format(NotificationCode.REMIND_ADD_PHOTO),
             self.stdout
         )
-        if settings.LEVEL != EnvLevel.PRODUCTION:  # TODO: enable on production after testing
-            time_start = timezone.now()
-            notification_count = generate_remind_add_photo_notifications(
-                dry_run=dry_run
-            )
-            time_end = timezone.now()
-            stdout_and_log('...{0} {2} notifications generated; took {1} seconds'.format(
-                notification_count, (time_end - time_start).total_seconds(),
-                NotificationCode.REMIND_ADD_PHOTO
-            ), self.stdout)
+        time_start = timezone.now()
+        notification_count = generate_remind_add_photo_notifications(
+            dry_run=dry_run
+        )
+        time_end = timezone.now()
+        stdout_and_log('...{0} {2} notifications generated; took {1} seconds'.format(
+            notification_count, (time_end - time_start).total_seconds(),
+            NotificationCode.REMIND_ADD_PHOTO
+        ), self.stdout)
 
         stdout_and_log(
             'Generating {0} notifications'.format(NotificationCode.REMIND_INVITE_CLIENTS),
