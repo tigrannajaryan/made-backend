@@ -43,6 +43,12 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
         NotificationCode.REMIND_DEFINE_SERVICES: [
             NotificationChannel.PUSH, NotificationChannel.SMS
         ],
+        NotificationCode.REMIND_DEFINE_HOURS: [
+            NotificationChannel.PUSH, NotificationChannel.SMS
+        ],
+        NotificationCode.REMIND_ADD_PHOTO: [
+            NotificationChannel.PUSH, NotificationChannel.SMS
+        ],
     }
 else:
     NOTIFICATION_CHANNEL_PRIORITY = {
@@ -74,7 +80,7 @@ else:
             NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
         ],
         NotificationCode.REMIND_ADD_PHOTO: [
-            NotificationChannel.PUSH,  # NotificationChannel.EMAIL
+            NotificationChannel.PUSH, NotificationChannel.SMS,
         ],
         NotificationCode.REMIND_DEFINE_SERVICES: [
             NotificationChannel.PUSH, NotificationChannel.SMS
