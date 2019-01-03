@@ -1061,6 +1061,7 @@ def generate_remind_define_services_notification(dry_run=False) -> int:
     eligible_stylists_ids = Stylist.objects.filter(
         deactivated_at__isnull=True,
         created_at__gte=thirty_days_ago,
+        created_at__lte=one_day_ago,
     ).exclude(
         Q(user__phone__isnull=True) | Q(user__phone__exact='')
     ).annotate(
@@ -1130,7 +1131,7 @@ def generate_remind_invite_clients_notifications(dry_run=False) -> int:
         'invite 10 or more clients usually get their first booking within 24 hours.'
     )
     earliest_time_stylist_created_profile = timezone.now() - datetime.timedelta(days=90)
-    earliest_time_last_notification_sent = timezone.now() - datetime.timedelta(hours=24)
+    one_day_ago = timezone.now() - datetime.timedelta(hours=24)
     earliest_time_same_notification_sent = timezone.now() - datetime.timedelta(days=30)
     target = UserRole.STYLIST
     send_time_window_start = datetime.time(10, 0)
@@ -1141,7 +1142,7 @@ def generate_remind_invite_clients_notifications(dry_run=False) -> int:
     )
     stylist_has_notifications_sent_within_24hours_query = Notification.objects.filter(
         user_id=OuterRef('user__id'), target=UserRole.STYLIST, sent_at__isnull=False,
-        sent_at__gte=earliest_time_last_notification_sent
+        sent_at__gte=one_day_ago
     )
     stylist_has_any_pending_notifications_query = Notification.objects.filter(
         user_id=OuterRef('user__id'), target=UserRole.STYLIST, pending_to_send=True
@@ -1169,6 +1170,7 @@ def generate_remind_invite_clients_notifications(dry_run=False) -> int:
         has_same_notification=False,
         has_enabled_services=True,
         created_at__gte=earliest_time_stylist_created_profile,
+        created_at__lte=one_day_ago,
         user__phone__isnull=False,
         deactivated_at__isnull=True,
         has_business_hours_set=True,
@@ -1230,7 +1232,7 @@ def generate_remind_add_photo_notifications(dry_run=False) -> int:
         'have a photo have on average about 60% higher chance to get a booking.'
     )
     earliest_time_stylist_created_profile = timezone.now() - datetime.timedelta(days=30)
-    earliest_time_last_notification_sent = timezone.now() - datetime.timedelta(hours=24)
+    one_day_ago = timezone.now() - datetime.timedelta(hours=24)
     target = UserRole.STYLIST
     send_time_window_start = datetime.time(10, 0)
     send_time_window_end = datetime.time(20, 0)
@@ -1239,7 +1241,7 @@ def generate_remind_add_photo_notifications(dry_run=False) -> int:
         stylist_id=OuterRef('id')
     )
     stylist_has_recent_or_unsent_notifications = Notification.objects.filter(
-        Q(Q(sent_at__gte=earliest_time_last_notification_sent) | Q(pending_to_send=True)),
+        Q(Q(sent_at__gte=one_day_ago) | Q(pending_to_send=True)),
         user_id=OuterRef('user__id'), target=UserRole.STYLIST
     )
 
@@ -1266,6 +1268,7 @@ def generate_remind_add_photo_notifications(dry_run=False) -> int:
         has_remind_add_photo_notification_sent=False,
         has_enabled_services=True,
         created_at__gte=earliest_time_stylist_created_profile,
+        created_at__lte=one_day_ago,
         user__phone__isnull=False,
         deactivated_at__isnull=True,
         has_business_hours_set=True,
@@ -1386,13 +1389,13 @@ def generate_remind_define_hours_notifications(dry_run=False) -> int:
         "Don't forget! Update your hours in Made Pro so clients can start booking."
     )
     earliest_time_stylist_created_profile = timezone.now() - datetime.timedelta(days=30)
-    earliest_time_last_notification_sent = timezone.now() - datetime.timedelta(hours=24)
+    one_day_ago = timezone.now() - datetime.timedelta(hours=24)
     target = UserRole.STYLIST
     send_time_window_start = datetime.time(10, 0)
     send_time_window_end = datetime.time(20, 0)
 
     stylist_has_recent_or_unsent_notifications = Notification.objects.filter(
-        Q(Q(sent_at__gte=earliest_time_last_notification_sent) | Q(pending_to_send=True)),
+        Q(Q(sent_at__gte=one_day_ago) | Q(pending_to_send=True)),
         user_id=OuterRef('user__id'), target=UserRole.STYLIST
     )
 
@@ -1411,6 +1414,7 @@ def generate_remind_define_hours_notifications(dry_run=False) -> int:
         has_recent_or_unsent_notifications=False,
         has_remind_define_hours_notification_sent=False,
         created_at__gte=earliest_time_stylist_created_profile,
+        created_at__lte=one_day_ago,
         user__phone__isnull=False,
         deactivated_at__isnull=True,
         has_business_hours_set=False,

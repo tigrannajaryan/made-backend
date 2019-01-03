@@ -964,9 +964,16 @@ class TestGenerateRemindInviteClientsNotifications(object):
         assert (generate_remind_invite_clients_notifications() == 0)
 
     @pytest.mark.django_db
-    def test_non_recent_stylist(self, stylist_eligible_for_invite_reminder: Stylist):
+    def test_non_recent_or_very_recent_stylist(self,
+                                               stylist_eligible_for_invite_reminder: Stylist):
         stylist_eligible_for_invite_reminder.created_at = timezone.now() - datetime.timedelta(
             days=91
+        )
+        stylist_eligible_for_invite_reminder.save()
+        assert (generate_remind_invite_clients_notifications() == 0)
+
+        stylist_eligible_for_invite_reminder.created_at = timezone.now() - datetime.timedelta(
+            hours=20
         )
         stylist_eligible_for_invite_reminder.save()
         assert (generate_remind_invite_clients_notifications() == 0)
@@ -1026,9 +1033,16 @@ class TestGenerateRemindAddPhotoNotifications(object):
         assert (generate_remind_add_photo_notifications() == 0)
 
     @pytest.mark.django_db
-    def test_non_recent_stylist(self, stylist_eligible_for_photo_reminder: Stylist):
+    def test_non_recent__or_very_recent_stylist(self,
+                                                stylist_eligible_for_photo_reminder: Stylist):
         stylist_eligible_for_photo_reminder.created_at = timezone.now() - datetime.timedelta(
             days=32
+        )
+        stylist_eligible_for_photo_reminder.save()
+        assert (generate_remind_add_photo_notifications() == 0)
+
+        stylist_eligible_for_photo_reminder.created_at = timezone.now() - datetime.timedelta(
+            hours=20
         )
         stylist_eligible_for_photo_reminder.save()
         assert (generate_remind_add_photo_notifications() == 0)
@@ -1096,9 +1110,16 @@ class TestGenerateRemindDefineServiceNotifications(object):
         assert (generate_remind_define_services_notification() == 0)
 
     @pytest.mark.django_db
-    def test_non_recent_stylist(self, stylist_eligible_for_services_reminder: Stylist):
+    def test_non_recent__or_very_recent_stylist(self,
+                                                stylist_eligible_for_services_reminder: Stylist):
         stylist_eligible_for_services_reminder.created_at = timezone.now() - datetime.timedelta(
             days=32
+        )
+        stylist_eligible_for_services_reminder.save()
+        assert (generate_remind_define_services_notification() == 0)
+
+        stylist_eligible_for_services_reminder.created_at = timezone.now() - datetime.timedelta(
+            hours=20
         )
         stylist_eligible_for_services_reminder.save()
         assert (generate_remind_define_services_notification() == 0)
@@ -1238,9 +1259,16 @@ class TestGenerateRemindDefineHoursNotifications(object):
         assert (generate_remind_define_hours_notifications() == 0)
 
     @pytest.mark.django_db
-    def test_non_recent_stylist(self, stylist_eligible_for_hours_reminder: Stylist):
+    def test_non_recent_or_very_recent_stylist(self,
+                                               stylist_eligible_for_hours_reminder: Stylist):
         stylist_eligible_for_hours_reminder.created_at = timezone.now() - datetime.timedelta(
             days=32
+        )
+        stylist_eligible_for_hours_reminder.save()
+        assert (generate_remind_define_hours_notifications() == 0)
+
+        stylist_eligible_for_hours_reminder.created_at = timezone.now() - datetime.timedelta(
+            hours=20
         )
         stylist_eligible_for_hours_reminder.save()
         assert (generate_remind_define_hours_notifications() == 0)
