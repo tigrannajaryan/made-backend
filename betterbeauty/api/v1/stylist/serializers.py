@@ -1015,6 +1015,11 @@ class AppointmentUpdateSerializer(
         fields = ['status', 'services', 'has_tax_included', 'has_card_fee_included', ]
 
     def validate(self, attrs):
+        if 'status' not in self.initial_data:
+            raise serializers.ValidationError({
+                'status':
+                    serializers.Field.default_error_messages['required']
+            })
         status = self.initial_data['status']
         if status == AppointmentStatus.CHECKED_OUT:
             if self.instance and self.instance.status == AppointmentStatus.CHECKED_OUT:
