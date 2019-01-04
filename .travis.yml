@@ -83,3 +83,14 @@ deploy:
   on:
     repo: madebeauty/backend
     branch: develop
+
+# Set environment variables for storing artifacts
+#ARTIFACTS_KEY=(AWS access key id)
+#ARTIFACTS_SECRET=(AWS secret access key)
+#ARTIFACTS_BUCKET=(S3 bucket name)
+addons:
+  artifacts:
+    debug: true
+    target_paths: $TRAVIS_BUILD_NUMBER
+    bucket: aws_bucket_name
+    s3_region: us-east-1
