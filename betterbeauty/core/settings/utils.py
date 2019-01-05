@@ -7,7 +7,7 @@ import dj_database_url
 import requests
 from path import Path
 
-from core.constants import EnvLevel
+from core.constants import EnvLevel, EnvVars
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ def parse_database_url(database_url, ssl_cert=None):
 
 
 def get_file_handler_dict(local_path: str, filename: str, formatter: str) -> dict:
-    level = os.environ.get('LEVEL', EnvLevel.DEVELOPMENT)
+    level = os.environ.get(EnvVars.LEVEL, EnvLevel.DEVELOPMENT)
     # disable file logging on staging/production. It's useless in multi-instance
     # environment and produces all kinds of issues with log file permissions
     if level in [EnvLevel.STAGING, EnvLevel.PRODUCTION]:
@@ -87,7 +87,7 @@ def get_ec2_instance_id() -> Optional[str]:
 
 
 def get_travis_commit_id(path_to_commit_id_file: Path) -> str:
-    level = os.environ.get('LEVEL', EnvLevel.DEVELOPMENT)
+    level = os.environ.get(EnvVars.LEVEL, EnvLevel.DEVELOPMENT)
     if level not in [EnvLevel.STAGING, EnvLevel.PRODUCTION]:
         return ''
     try:
