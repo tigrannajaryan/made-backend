@@ -565,7 +565,9 @@ class TestAppointmentUpdateSerializer(object):
 
     @mock.patch(
         'api.v1.client.serializers.calculate_price_and_discount_for_client_on_date',
-        lambda service, client, date: CalculatedPrice.build(10, DiscountType.WEEKDAY, 90)
+        lambda service, client, date, based_on_existing_service: CalculatedPrice.build(
+            10, DiscountType.WEEKDAY, 90
+        )
     )
     def test_edit_services_list_by_client(self, stylist_data: Stylist, client_data: Client):
         appointment: Appointment = G(Appointment, stylist=stylist_data)

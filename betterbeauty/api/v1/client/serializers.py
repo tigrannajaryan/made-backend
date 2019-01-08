@@ -632,9 +632,16 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
                 continue
             except AppointmentService.DoesNotExist:
                 service: StylistService = stylist_services.get(uuid=service_uuid)
+                # If there's at least one service in the appointment which originally has
+                # a discount - we will copy discount information from that service instead
+                # of calculating it based on today's information
+                original_service: Optional[AppointmentService] = appointment.services.filter(
+                    is_original=True, applied_discount__isnull=False
+                ).first()
                 calc_price: CalculatedPrice = calculate_price_and_discount_for_client_on_date(
                     service=service,
-                    client=appointment.client, date=appointment.datetime_start_at.date()
+                    client=appointment.client, date=appointment.datetime_start_at.date(),
+                    based_on_existing_service=original_service
                 )
                 AppointmentService.objects.create(
                     appointment=appointment,
@@ -677,7 +684,7 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
                 setattr(appointment, k, v)
 
             if appointment.status != status:
-                if (status == AppointmentStatus.CANCELLED_BY_CLIENT):
+                if status == AppointmentStatus.CANCELLED_BY_CLIENT:
                     generate_client_cancelled_appointment_notification(appointment)
                 appointment.status = status
                 appointment.append_status_history(updated_by=user)
