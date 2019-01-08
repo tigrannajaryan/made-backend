@@ -1018,7 +1018,7 @@ class AppointmentUpdateSerializer(
 
     def validate(self, attrs):
         status = self.initial_data.get('status', None)
-        if status == AppointmentStatus.CHECKED_OUT:
+        if status and status == AppointmentStatus.CHECKED_OUT:
             if self.instance and self.instance.status == AppointmentStatus.CHECKED_OUT:
                 raise serializers.ValidationError({
                     'status': appointment_errors.ERR_NO_SECOND_CHECKOUT
@@ -1105,8 +1105,7 @@ class AppointmentUpdateSerializer(
                 )
 
     def save(self, **kwargs):
-
-        status = self.validated_data['status']
+        status = self.validated_data.get('status', self.instance.status)
         user: User = self.context['user']
         appointment: Appointment = self.instance
         with transaction.atomic():
@@ -1125,8 +1124,12 @@ class AppointmentUpdateSerializer(
 
                 appointment_prices: AppointmentPrices = calculate_appointment_prices(
                     price_before_tax=total_client_price_before_tax,
-                    include_card_fee=self.validated_data['has_card_fee_included'],
-                    include_tax=self.validated_data['has_tax_included']
+                    include_card_fee=self.validated_data.get(
+                        'has_card_fee_included', self.instance.has_card_fee_included
+                    ),
+                    include_tax=self.validated_data.get(
+                        'has_tax_included', self.instance.has_tax_included
+                    )
                 )
 
                 for k, v in appointment_prices._asdict().items():

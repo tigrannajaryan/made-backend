@@ -678,10 +678,12 @@ class TestAppointmentPreviewRequestSerializer(object):
                 {'service_uuid': service.uuid},
             ]
         }
+
         serializer = AppointmentPreviewRequestSerializer(
             data=data, context={
                 'user': client.user,
-                'stylist': stylist
+                'stylist': stylist,
+                'client': client
             }
         )
         assert(not serializer.is_valid(raise_exception=False))
@@ -690,7 +692,8 @@ class TestAppointmentPreviewRequestSerializer(object):
         serializer = AppointmentPreviewRequestSerializer(
             data=data, context={
                 'user': client.user,
-                'stylist': stylist
+                'stylist': stylist,
+                'client': client,
             }
         )
         assert (serializer.is_valid(raise_exception=False))
@@ -724,7 +727,8 @@ class TestAppointmentPreviewRequestSerializer(object):
         serializer = AppointmentPreviewRequestSerializer(
             data=data, context={
                 'user': client.user,
-                'stylist': stylist
+                'stylist': stylist,
+                'client': client
             }
         )
         assert (not serializer.is_valid(raise_exception=False))
@@ -742,10 +746,40 @@ class TestAppointmentPreviewRequestSerializer(object):
         serializer = AppointmentPreviewRequestSerializer(
             data=data, context={
                 'user': client.user,
-                'stylist': stylist
+                'stylist': stylist,
+                'client': client
             }
         )
         assert (not serializer.is_valid(raise_exception=False))
+
+    @pytest.mark.django_db
+    def test_preview_with_existing_appointment(self):
+        salon: Salon = G(Salon, timezone=pytz.UTC)
+        stylist: Stylist = G(
+            Stylist, salon=salon, service_time_gap=datetime.timedelta(minutes=60))
+        service: StylistService = G(
+            StylistService, duration=datetime.timedelta(20), stylist=stylist)
+        client = G(Client)
+        G(PreferredStylist, client=client, stylist=stylist)
+        appointment: Appointment = G(
+            Appointment, client=client, stylist=stylist,
+            datetime_start_at=pytz.UTC.localize(datetime.datetime(2019, 1, 8, 16, 30)),
+        )
+        data = {
+            'stylist_uuid': stylist.uuid,
+            'appointment_uuid': appointment.uuid,
+            'services': [
+                {'service_uuid': service.uuid},
+            ]
+        }
+        serializer = AppointmentPreviewRequestSerializer(
+            data=data, context={
+                'user': client.user,
+                'stylist': stylist,
+                'client': client
+            }
+        )
+        assert (serializer.is_valid(raise_exception=False))
 
 
 class TestAppointmentPreviewResponseSerializer(object):
