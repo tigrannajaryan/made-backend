@@ -3,6 +3,7 @@ import os
 
 from path import Path
 
+from core.constants import EnvVars
 from core.settings.utils import get_file_handler_dict, get_logger_dict
 from integrations.push.types import MobileAppIdType
 
@@ -115,20 +116,20 @@ ALLOWED_HOSTS = ['betterbeauty.local', ]
 
 DATABASE_URL = ''
 
-if 'RDS_DB_NAME' in os.environ:
+if EnvVars.RDS_DB_NAME in os.environ:
     DATABASES = {
         'default': {
             'ENGINE': 'django.contrib.gis.db.backends.postgis',
-            'NAME': os.environ['RDS_DB_NAME'],
-            'USER': os.environ['RDS_USERNAME'],
-            'PASSWORD': os.environ['RDS_PASSWORD'],
-            'HOST': os.environ['RDS_HOSTNAME'],
-            'PORT': os.environ['RDS_PORT'],
+            'NAME': os.environ[EnvVars.RDS_DB_NAME],
+            'USER': os.environ[EnvVars.RDS_USERNAME],
+            'PASSWORD': os.environ[EnvVars.RDS_PASSWORD],
+            'HOST': os.environ[EnvVars.RDS_HOSTNAME],
+            'PORT': os.environ[EnvVars.RDS_PORT],
         }
     }
 
 READ_ONLY_USER_PASSWORD = os.environ.get(
-    'READ_ONLY_USER_PASSWORD', None)
+    EnvVars.READ_ONLY_USER_PASSWORD, None)
 
 # Application definition
 
@@ -273,13 +274,13 @@ TWILIO_SLACK_MOCK_ENABLED = False
 TWILIO_FROM_TEL = '+13477516233'
 
 GOOGLE_AUTOCOMPLETE_API_KEY = os.environ.get(
-    'GOOGLE_AUTOCOMPLETE_API_KEY', '<override in local.py>')
+    EnvVars.GOOGLE_AUTOCOMPLETE_API_KEY, '<override in local.py>')
 
 GOOGLE_GEOCODING_API_KEY = os.environ.get(
-    'GOOGLE_GEOCODING_API_KEY', '<override in local.py>')
+    EnvVars.GOOGLE_GEOCODING_API_KEY, '<override in local.py>')
 
 IPSTACK_API_KEY = os.environ.get(
-    'IPSTACK_API_KEY', '<override in local.py>')
+    EnvVars.IPSTACK_API_KEY, '<override in local.py>')
 
 DJANGO_SILK_ENABLED = False
 
@@ -312,11 +313,11 @@ PUSH_NOTIFICATIONS_SETTINGS = {
         # TODO: verify topic settings
         MobileAppIdType.ANDROID_CLIENT.value: {
             'PLATFORM': 'FCM',
-            'API_KEY': os.environ.get('FCM_SERVER_KEY', ''),
+            'API_KEY': os.environ.get(EnvVars.FCM_SERVER_KEY, ''),
         },
         MobileAppIdType.ANDROID_STYLIST.value: {
             'PLATFORM': 'FCM',
-            'API_KEY': os.environ.get('FCM_SERVER_KEY', ''),
+            'API_KEY': os.environ.get(EnvVars.FCM_SERVER_KEY, ''),
         },
         # certificate settings for iOS apps built locally,
         # with development certificate
