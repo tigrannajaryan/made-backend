@@ -29,7 +29,7 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
             NotificationChannel.PUSH  # NotificationChannel.SMS
         ],
         NotificationCode.REGISTRATION_INCOMPLETE: [
-            NotificationChannel.PUSH  # NotificationChannel.SMS
+            NotificationChannel.PUSH, NotificationChannel.SMS
         ],
         NotificationCode.STYLIST_CANCELLED_APPOINTMENT: [
             NotificationChannel.PUSH  # NotificationChannel.SMS
@@ -38,8 +38,17 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
             NotificationChannel.PUSH  # NotificationChannel.SMS
         ],
         NotificationCode.REMIND_INVITE_CLIENTS: [
-            NotificationChannel.PUSH,  # NotificationChannel.EMAIL
-        ]
+            NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
+        ],
+        NotificationCode.REMIND_DEFINE_SERVICES: [
+            NotificationChannel.PUSH, NotificationChannel.SMS
+        ],
+        NotificationCode.REMIND_DEFINE_HOURS: [
+            NotificationChannel.PUSH, NotificationChannel.SMS
+        ],
+        NotificationCode.REMIND_ADD_PHOTO: [
+            NotificationChannel.PUSH, NotificationChannel.SMS
+        ],
     }
 else:
     NOTIFICATION_CHANNEL_PRIORITY = {
@@ -59,7 +68,7 @@ else:
             NotificationChannel.PUSH  # NotificationChannel.SMS
         ],
         NotificationCode.REGISTRATION_INCOMPLETE: [
-            NotificationChannel.PUSH  # NotificationChannel.SMS
+            NotificationChannel.PUSH, NotificationChannel.SMS
         ],
         NotificationCode.STYLIST_CANCELLED_APPOINTMENT: [
             NotificationChannel.PUSH  # NotificationChannel.SMS
@@ -68,6 +77,15 @@ else:
             NotificationChannel.PUSH  # NotificationChannel.SMS
         ],
         NotificationCode.REMIND_INVITE_CLIENTS: [
-            NotificationChannel.PUSH,  # NotificationChannel.EMAIL
-        ]
+            NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
+        ],
+        NotificationCode.REMIND_ADD_PHOTO: [
+            NotificationChannel.PUSH, NotificationChannel.SMS,
+        ],
+        NotificationCode.REMIND_DEFINE_SERVICES: [
+            NotificationChannel.PUSH, NotificationChannel.SMS
+        ],
+        NotificationCode.REMIND_DEFINE_HOURS: [
+            NotificationChannel.PUSH, NotificationChannel.SMS
+        ],
     }

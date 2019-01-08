@@ -180,6 +180,16 @@ class StylistAvailabilityView(views.APIView):
             data=request.data, many=True,
             context={'user': self.request.user}
         )
+        for weekday_item in serializer.initial_data:
+            if weekday_item.get('is_available', False) is True:
+                if not ('work_start_at' in weekday_item and 'work_end_at' in weekday_item):
+                    raise ValidationError({'non_field_errors': [
+                        {'code': ErrorMessages.ERR_AVAILABLE_TIME_NOT_SET}
+                    ]})
+                if weekday_item['work_start_at'] > weekday_item['work_end_at']:
+                        raise ValidationError({'non_field_errors': [
+                            {'code': ErrorMessages.ERR_END_TIME_GREATER_THAN_START_TIME}
+                        ]})
         serializer.is_valid(raise_exception=True)
         serializer.save(stylist=self.get_object())
         return Response(

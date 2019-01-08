@@ -1,4 +1,5 @@
 import datetime
+import logging
 from io import TextIOBase
 from typing import List, Optional, Tuple
 
@@ -16,8 +17,10 @@ from core.models import UserRole
 from core.utils.phone import to_international_format
 from integrations.push.types import MobileAppIdType
 from integrations.push.utils import has_push_notification_device
+from integrations.twilio import send_sms_message
 from salon.models import (
     Invitation,
+    InvitationStatus,
     PreferredStylist,
     Stylist,
     StylistService,
@@ -26,6 +29,9 @@ from salon.models import (
 from .models import Notification
 from .settings import NOTIFICATION_CHANNEL_PRIORITY
 from .types import NotificationChannel, NotificationCode
+
+
+logger = logging.getLogger(__name__)
 
 
 def is_push_only(code: NotificationCode) -> bool:
@@ -921,12 +927,12 @@ def generate_stylist_registration_incomplete_notifications(dry_run=False) -> int
             inner join public.user as u on st.user_id = u.id
             left outer join salon as sl on
                 st.salon_id = sl.id
-            where st.deactivated_at isnull) as stylist_with_tz_info
+            where st.deactivated_at isnull and u.phone is not null and u.phone <> ''
+            ) as stylist_with_tz_info
         where
             stylist_current_now_t < stylist_maximum_time_to_send_today_t
             and (
-              phone is null
-              or has_business_hours_set is false
+              has_business_hours_set is false
               or not exists(
                 select 1 from stylist_service as ss
                  where ss.stylist_id = stylist_id
@@ -1009,6 +1015,100 @@ def generate_stylist_registration_incomplete_notifications(dry_run=False) -> int
 
 
 @transaction.atomic
+def generate_remind_define_services_notification(dry_run=False) -> int:
+    """
+    Notification to remind stylist to add the services
+
+    Window start: Immediately if current time in [10am..8pm] in stylist’s timezone
+    otherwise delay until next 10am.
+
+    Window end: 20:00
+
+    Discard after: Now+7days
+    :param dry_run:if set to True, don't actually create notifications
+    :return:number of notifications created
+    """
+    code = NotificationCode.REMIND_DEFINE_SERVICES
+    discard_after = timezone.now() + datetime.timedelta(days=7)
+    message = (
+        "Don't forget! Update your services and pricing in Made Pro so clients can start booking."
+    )
+    target = UserRole.STYLIST
+    send_time_window_start = datetime.time(10, 0, 0)
+    send_time_window_end = datetime.time(20, 0, 0)
+    one_day_ago = (timezone.now() - datetime.timedelta(days=1))
+    thirty_days_ago = (timezone.now() - datetime.timedelta(days=30))
+
+    # **Filter Conditions**
+    # -Stylist account is not partial, it is a full profile
+    # -stylist services are not yet defined
+    # -Stylist created account less than 30 days ago
+    # -remind_define_services notification was never sent to this stylist
+    # -there are no pending notifications
+    # -24 hours or more passed since last notification of any type was sent
+
+    stylist_has_services = StylistService.objects.filter(
+        stylist_id=OuterRef('id'), is_enabled=True
+    )
+    stylist_has_prior_notifications = Notification.objects.filter(
+        user_id=OuterRef('user__id'), code=code, target=UserRole.STYLIST
+    )
+    stylist_has_recent_notification = Notification.objects.filter(
+        Q(Q(sent_at__gte=one_day_ago) | Q(pending_to_send=True)),
+        user_id=OuterRef('user__id'), target=UserRole.STYLIST,
+    )
+
+    eligible_stylists_ids = Stylist.objects.filter(
+        deactivated_at__isnull=True,
+        created_at__gte=thirty_days_ago,
+        created_at__lte=one_day_ago,
+    ).exclude(
+        Q(user__phone__isnull=True) | Q(user__phone__exact='')
+    ).annotate(
+        stylist_has_services=Exists(stylist_has_services),
+        client_has_prior_notifications=Exists(stylist_has_prior_notifications),
+        client_has_recent_notification=Exists(stylist_has_recent_notification),
+    ).filter(
+        stylist_has_services=False,
+        client_has_prior_notifications=False,
+        client_has_recent_notification=False
+    ).values_list('id', flat=True)
+
+    if is_push_only(code):
+        stylist_has_registered_devices = Q(
+            user__apnsdevice__active=True) | Q(
+            user__gcmdevice__active=True)
+        eligible_stylists_ids = eligible_stylists_ids.filter(
+            stylist_has_registered_devices
+        )
+
+    eligible_stylists = Stylist.objects.filter(
+        id__in=eligible_stylists_ids
+    ).select_for_update(skip_locked=True)
+
+    notifications_to_create_list: List[Notification] = []
+    for stylist in eligible_stylists.iterator():
+        send_time_window_tz = stylist.salon.timezone
+
+        notifications_to_create_list.append(
+            Notification(
+                user=stylist.user,
+                code=code,
+                target=target,
+                message=message,
+                send_time_window_start=send_time_window_start,
+                send_time_window_end=send_time_window_end,
+                send_time_window_tz=send_time_window_tz,
+                discard_after=discard_after,
+            )
+        )
+    # if any notifications were generated - bulk create them
+    if notifications_to_create_list and not dry_run:
+        Notification.objects.bulk_create(notifications_to_create_list)
+    return len(notifications_to_create_list)
+
+
+@transaction.atomic
 def generate_remind_invite_clients_notifications(dry_run=False) -> int:
     """
     Generate `remind_invite_clients` notifications for stylist matching the criteria:
@@ -1031,7 +1131,7 @@ def generate_remind_invite_clients_notifications(dry_run=False) -> int:
         'invite 10 or more clients usually get their first booking within 24 hours.'
     )
     earliest_time_stylist_created_profile = timezone.now() - datetime.timedelta(days=90)
-    earliest_time_last_notification_sent = timezone.now() - datetime.timedelta(hours=24)
+    one_day_ago = timezone.now() - datetime.timedelta(hours=24)
     earliest_time_same_notification_sent = timezone.now() - datetime.timedelta(days=30)
     target = UserRole.STYLIST
     send_time_window_start = datetime.time(10, 0)
@@ -1042,7 +1142,7 @@ def generate_remind_invite_clients_notifications(dry_run=False) -> int:
     )
     stylist_has_notifications_sent_within_24hours_query = Notification.objects.filter(
         user_id=OuterRef('user__id'), target=UserRole.STYLIST, sent_at__isnull=False,
-        sent_at__gte=earliest_time_last_notification_sent
+        sent_at__gte=one_day_ago
     )
     stylist_has_any_pending_notifications_query = Notification.objects.filter(
         user_id=OuterRef('user__id'), target=UserRole.STYLIST, pending_to_send=True
@@ -1070,11 +1170,255 @@ def generate_remind_invite_clients_notifications(dry_run=False) -> int:
         has_same_notification=False,
         has_enabled_services=True,
         created_at__gte=earliest_time_stylist_created_profile,
+        created_at__lte=one_day_ago,
         user__phone__isnull=False,
         deactivated_at__isnull=True,
         has_business_hours_set=True,
     ).values_list('id', flat=True)
 
+    if is_push_only(code):
+        stylist_has_registered_devices = Q(
+            user__apnsdevice__active=True) | Q(
+            user__gcmdevice__active=True)
+        eligible_stylists_ids = eligible_stylists_ids.filter(
+            stylist_has_registered_devices
+        )
+
+    eligible_stylists = Stylist.objects.filter(
+        id__in=eligible_stylists_ids
+    ).select_for_update(skip_locked=True)
+
+    notifications_to_create_list: List[Notification] = []
+
+    for stylist in eligible_stylists.iterator():
+        notifications_to_create_list.append(
+            Notification(
+                user=stylist.user,
+                code=code,
+                target=target,
+                message=message,
+                send_time_window_start=send_time_window_start,
+                send_time_window_end=send_time_window_end,
+                send_time_window_tz=stylist.salon.timezone,
+                discard_after=discard_after,
+                data={}
+            )
+        )
+    # if any notifications were generated - bulk created them
+    if notifications_to_create_list and not dry_run:
+        Notification.objects.bulk_create(notifications_to_create_list)
+    return len(notifications_to_create_list)
+
+
+@transaction.atomic
+def generate_remind_add_photo_notifications(dry_run=False) -> int:
+    """
+    Generate `remind_add_photo` notifications for stylist matching the criteria:
+    1. Stylist did not invite any clients ever.
+    2. 24 hours or more passed since last notification of any type was sent
+       to this stylist and there are no pending notifications.
+    3. remind_add_photo notification was never sent
+    4. Stylist created account less than 30 days ago.
+    5. Stylist is bookable (has defined hours, services).
+    6. Stylist account is not partial, it is a full profile.
+
+    :param dry_run: if set to True, don't actually create notifications
+    :return: number of notifications created
+    """
+    code = NotificationCode.REMIND_ADD_PHOTO
+    discard_after = timezone.now() + datetime.timedelta(days=7)
+    message = (
+        'We noticed that you do not have a photo in Made Pro. Stylists who '
+        'have a photo have on average about 60% higher chance to get a booking.'
+    )
+    earliest_time_stylist_created_profile = timezone.now() - datetime.timedelta(days=30)
+    one_day_ago = timezone.now() - datetime.timedelta(hours=24)
+    target = UserRole.STYLIST
+    send_time_window_start = datetime.time(10, 0)
+    send_time_window_end = datetime.time(20, 0)
+
+    stylist_has_invitations_query = Invitation.objects.filter(
+        stylist_id=OuterRef('id')
+    )
+    stylist_has_recent_or_unsent_notifications = Notification.objects.filter(
+        Q(Q(sent_at__gte=one_day_ago) | Q(pending_to_send=True)),
+        user_id=OuterRef('user__id'), target=UserRole.STYLIST
+    )
+
+    stylist_has_remind_add_photo_notification_sent = Notification.objects.filter(
+        user_id=OuterRef('user__id'), target=UserRole.STYLIST, code=code
+    )
+
+    stylist_has_enabled_services_query = StylistService.objects.filter(
+        stylist_id=OuterRef('id'), is_enabled=True
+    )
+    eligible_stylists_ids = Stylist.objects.annotate(
+        has_invitations=Exists(stylist_has_invitations_query),
+        has_recent_or_unsent_notifications=Exists(
+            stylist_has_recent_or_unsent_notifications
+        ),
+        has_remind_add_photo_notification_sent=Exists(
+            stylist_has_remind_add_photo_notification_sent
+        ),
+        has_enabled_services=Exists(stylist_has_enabled_services_query),
+    ).filter(
+        Q(Q(user__photo='') | Q(user__photo=None)),
+        has_invitations=False,
+        has_recent_or_unsent_notifications=False,
+        has_remind_add_photo_notification_sent=False,
+        has_enabled_services=True,
+        created_at__gte=earliest_time_stylist_created_profile,
+        created_at__lte=one_day_ago,
+        user__phone__isnull=False,
+        deactivated_at__isnull=True,
+        has_business_hours_set=True,
+    ).values_list('id', flat=True)
+
+    if is_push_only(code):
+        stylist_has_registered_devices = Q(
+            user__apnsdevice__active=True) | Q(
+            user__gcmdevice__active=True)
+        eligible_stylists_ids = eligible_stylists_ids.filter(
+            stylist_has_registered_devices
+        )
+
+    eligible_stylists = Stylist.objects.filter(
+        id__in=eligible_stylists_ids
+    ).select_for_update(skip_locked=True)
+
+    notifications_to_create_list: List[Notification] = []
+
+    for stylist in eligible_stylists.iterator():
+        notifications_to_create_list.append(
+            Notification(
+                user=stylist.user,
+                code=code,
+                target=target,
+                message=message,
+                send_time_window_start=send_time_window_start,
+                send_time_window_end=send_time_window_end,
+                send_time_window_tz=stylist.salon.timezone,
+                discard_after=discard_after,
+                data={}
+            )
+        )
+    # if any notifications were generated - bulk created them
+    if notifications_to_create_list and not dry_run:
+        Notification.objects.bulk_create(notifications_to_create_list)
+    return len(notifications_to_create_list)
+
+
+@transaction.atomic
+def generate_follow_up_invitation_sms(dry_run=False) -> int:
+    """
+    If there is an invitation to a client that is not accepted and the client
+    phone number does not have an account with us send a follow up text message
+    14 day after original invitation is sent.
+    :param dry_run:
+    :param dry_run: if set to True, don't actually create notifications
+    :return: number of SMS messages sent
+    """
+    message = (
+        'Hey! Just following up on the invite {stylist_name} '
+        'sent you about booking on MADE. You see better prices when you book '
+        'with {stylist_name} there. Download the app at: https://madebeauty.com/get/'
+    )
+    earliest_invitation_creation_datetime = timezone.now() - datetime.timedelta(days=60)
+    earliest_time_invitation_sent = timezone.now() - datetime.timedelta(days=14)
+    send_time_window_tz = pytz.timezone(settings.TIME_ZONE)
+
+    send_time_window_start = datetime.time(18, 0)
+    send_time_window_end = datetime.time(20, 0)
+
+    current_now = timezone.now().astimezone(send_time_window_tz)
+    if current_now.time() < send_time_window_start or current_now.time() > send_time_window_end:
+        return 0
+
+    # we want to send SMS's in chunks to not overload Twilio and Slack
+    max_sms_messages_to_send_in_one_run = 20
+
+    eligible_invites = Invitation.objects.filter(
+        created_client__isnull=True,
+        followup_sent_at__isnull=True,
+        created_at__lte=earliest_time_invitation_sent,
+        created_at__gte=earliest_invitation_creation_datetime,
+        status=InvitationStatus.INVITED
+    ).select_for_update(skip_locked=True)[:max_sms_messages_to_send_in_one_run]
+
+    sent_messages = 0
+
+    for invite in eligible_invites.iterator():
+        stylist: Stylist = invite.stylist
+        if stylist.user.first_name:
+            stylist_name = stylist.user.first_name
+        else:
+            stylist_name = stylist.get_full_name()
+        message = message.format(stylist_name=stylist_name)
+        try:
+            if not dry_run:
+                send_sms_message(to_phone=invite.phone, body=message, role=UserRole.CLIENT)
+                invite.followup_sent_at = timezone.now()
+                invite.followup_count += 1
+                invite.save(update_fields=['followup_sent_at', 'followup_count', ])
+            sent_messages += 1
+        except:  # noqa
+            # something went wrong here. We're in the outermost transaction, so just
+            # log the error and move on
+            logger.exception('Could not send SMS to {0}. Exiting'.format(invite.phone))
+            break
+    return sent_messages
+
+
+@transaction.atomic
+def generate_remind_define_hours_notifications(dry_run=False) -> int:
+    """
+    Generate `remind_define_hours` notifications for stylist matching the criteria:
+    1. Stylist working hours are not yet defined
+    2. 24 hours or more passed since last notification of any type was sent to this
+        stylist and there are no pending notifications.
+    3. remind_define_hours notification was never sent to this stylist
+    4. Stylist created account less than 30 days ago.
+    5. Stylist account is not partial, it is a full profile.
+
+    :param dry_run: if set to True, don't actually create notifications
+    :return: number of notifications created
+    """
+    code = NotificationCode.REMIND_DEFINE_HOURS
+    discard_after = timezone.now() + datetime.timedelta(days=7)
+    message = (
+        "Don't forget! Update your hours in Made Pro so clients can start booking."
+    )
+    earliest_time_stylist_created_profile = timezone.now() - datetime.timedelta(days=30)
+    one_day_ago = timezone.now() - datetime.timedelta(hours=24)
+    target = UserRole.STYLIST
+    send_time_window_start = datetime.time(10, 0)
+    send_time_window_end = datetime.time(20, 0)
+
+    stylist_has_recent_or_unsent_notifications = Notification.objects.filter(
+        Q(Q(sent_at__gte=one_day_ago) | Q(pending_to_send=True)),
+        user_id=OuterRef('user__id'), target=UserRole.STYLIST
+    )
+
+    stylist_has_remind_define_hours_notification_sent = Notification.objects.filter(
+        user_id=OuterRef('user__id'), target=UserRole.STYLIST, code=code
+    )
+
+    eligible_stylists_ids = Stylist.objects.annotate(
+        has_recent_or_unsent_notifications=Exists(
+            stylist_has_recent_or_unsent_notifications
+        ),
+        has_remind_define_hours_notification_sent=Exists(
+            stylist_has_remind_define_hours_notification_sent
+        ),
+    ).filter(
+        has_recent_or_unsent_notifications=False,
+        has_remind_define_hours_notification_sent=False,
+        created_at__gte=earliest_time_stylist_created_profile,
+        created_at__lte=one_day_ago,
+        user__phone__isnull=False,
+        deactivated_at__isnull=True,
+        has_business_hours_set=False,
+    ).values_list('id', flat=True)
     if is_push_only(code):
         stylist_has_registered_devices = Q(
             user__apnsdevice__active=True) | Q(

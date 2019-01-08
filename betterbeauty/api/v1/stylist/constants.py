@@ -13,6 +13,7 @@ class ErrorMessages:
     ERR_UNIQUE_CLIENT_NAME = 'err_unique_client_name'
     ERR_INVALID_QUERY_FOR_HOME = 'err_invalid_query_for_home'
     ERR_AVAILABLE_TIME_NOT_SET = 'err_available_time_not_set'
+    ERR_END_TIME_GREATER_THAN_START_TIME = 'err_end_time_greater_than_start_time'
     ERR_INVALID_APPOINTMENT_UUID = 'err_invalid_appointment_uuid'
     ERR_STYLIST_LOCATION_UNAVAILABLE = 'err_stylist_location_unavailable'
     ERR_STYLIST_SPECIAL_DATE_NOT_FOUND = 'err_stylist_special_availability_date_not_found'
