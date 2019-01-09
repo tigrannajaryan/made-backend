@@ -386,14 +386,18 @@ class AppointmentRetriveUpdateView(generics.RetrieveUpdateAPIView):
 class AppointmentPreviewView(views.APIView):
     permission_classes = [ClientPermission, permissions.IsAuthenticated]
 
-    def get_serializer_context(self):
+    def get_stylist(self) -> Optional[Stylist]:
         stylist_uuid = post_or_get_or_data(self.request, 'stylist_uuid', None)
         stylist = None
         if stylist_uuid:
-            stylist = Stylist.objects.get(uuid=stylist_uuid)
+            stylist = Stylist.objects.filter(uuid=stylist_uuid).last()
+        return stylist
+
+    def get_serializer_context(self):
         return {
             'user': self.request.user,
-            'stylist': stylist,
+            'stylist': self.get_stylist(),
+            'client': self.request.user.client,
         }
 
     def post(self, request):

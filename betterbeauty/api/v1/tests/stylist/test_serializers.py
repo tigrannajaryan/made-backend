@@ -886,8 +886,11 @@ class TestAppointmentUpdateSerializer(object):
 
     @pytest.mark.django_db
     def test_validate_services(self):
-        appointment = G(
+        salon = G(Salon, timezone=pytz.UTC)
+        stylist = G(Stylist, salon=salon)
+        appointment: Appointment = G(
             Appointment,
+            stylist=stylist,
             duration=datetime.timedelta(minutes=30)
         )
         stylist_service = G(
@@ -955,6 +958,20 @@ class TestAppointmentUpdateSerializer(object):
             {'code': appointment_errors.ERR_NO_SECOND_CHECKOUT} in
             serializer.errors['field_errors']['status']
         )
+
+        appointment.status = AppointmentStatus.NEW
+        appointment.save(update_fields=['status', ])
+        appointment.services.all().delete()
+        data = {
+            'services': [
+                {'service_uuid': stylist_service.uuid}
+            ],
+        }
+        serializer = AppointmentUpdateSerializer(instance=appointment, data=data, context=context)
+        assert (serializer.is_valid() is True)
+        appointment = serializer.save()
+        assert(appointment.services.count() == 1)
+        assert(appointment.services.first().service_uuid == stylist_service.uuid)
 
     @pytest.mark.django_db
     def test_save_non_checked_out_status(self):

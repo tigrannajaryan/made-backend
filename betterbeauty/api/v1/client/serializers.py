@@ -435,7 +435,7 @@ class AppointmentValidationMixin(object):
     def validate_service_uuid(self, service_uuid: str):
         context: Dict = getattr(self, 'context', {})
         stylist: Stylist = context['stylist']
-        if not stylist.services.filter(
+        if stylist and not stylist.services.filter(
             uuid=service_uuid
         ).exists():
             raise serializers.ValidationError(
@@ -750,8 +750,9 @@ class HistorySerializer(serializers.Serializer):
 class AppointmentPreviewRequestSerializer(
     FormattedErrorMessageMixin, AppointmentValidationMixin, serializers.Serializer
 ):
-    stylist_uuid = serializers.UUIDField()
-    datetime_start_at = serializers.DateTimeField()
+    stylist_uuid = serializers.UUIDField(required=True, allow_null=False)
+    appointment_uuid = serializers.UUIDField(required=False, default=None)
+    datetime_start_at = serializers.DateTimeField(required=False, default=None)
     services = AppointmentServiceSerializer(many=True, required=True, allow_empty=False)
 
     def to_internal_value(self, data):
@@ -759,6 +760,23 @@ class AppointmentPreviewRequestSerializer(
         data['has_tax_included'] = DEFAULT_HAS_TAX_INCLUDED
         data['has_card_fee_included'] = DEFAULT_HAS_CARD_FEE_INCLUDED
         return data
+
+    def validate_datetime_start_at(self, datetime_start_at: datetime.datetime):
+        # if the appointment_uuid was passed on - we don't need to check for correctness
+        # of it; appointment already exists
+        if 'appointment_uuid' in self.initial_data:
+            return datetime_start_at
+        # otherwise, pass validation to the mixin
+        return super(AppointmentPreviewRequestSerializer, self).validate_datetime_start_at(
+            datetime_start_at
+        )
+
+    def validate_appointment_uuid(self, appointment_uuid: Optional[str]):
+        client: Client = self.context['client']
+        if appointment_uuid is not None:
+            if not client.appointments.filter(uuid=appointment_uuid).exists():
+                raise ValidationError(appointment_errors.ERR_APPOINTMENT_DOESNT_EXIST)
+        return appointment_uuid
 
 
 class AppointmentPreviewResponseSerializer(serializers.Serializer):
