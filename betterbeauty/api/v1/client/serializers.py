@@ -743,9 +743,14 @@ class TimeSlotSerializer(FormattedErrorMessageMixin, serializers.Serializer):
     is_booked = serializers.BooleanField()
 
 
+class StylistPhotoUrlSerializer(serializers.Serializer):
+    photo_url = serializers.URLField(source='stylist.get_profile_photo_url')
+
+
 class HomeSerializer(serializers.Serializer):
     upcoming = AppointmentSerializer(many=True)
     last_visited = AppointmentSerializer()
+    preferred_stylists = StylistPhotoUrlSerializer(many=True)
 
 
 class HistorySerializer(serializers.Serializer):

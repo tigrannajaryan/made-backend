@@ -3433,7 +3433,15 @@ curl -X GET \
         "card_fee_percentage": 2.75,
         "has_tax_included": false,
         "has_card_fee_included": false
-    }
+    },
+    "preferred_stylists": [
+        {
+            "photo_url": "media_url/user_uploads/78fcfeb3-cf7f-4416-a149-85c1ffe55052/bed27dd1-4282-4bb7-bb3d-b403aff1f15d-f_7WI6I1d.png"
+        },
+        {
+            "photo_url": "media_url/user_uploads/07dc30df-8424-4e16-b661-64c8354095a6/c64abd96-649c-4c8d-bae5-3fdc07e92b26-f_b3fs1mq.png"
+        }
+    ]
 }
 ```
 

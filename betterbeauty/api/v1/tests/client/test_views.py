@@ -719,6 +719,24 @@ class TestHomeAPIView(object):
         assert (upcoming_appointments.count() == 0)
 
     @freeze_time('2018-05-14 13:00:00 UTC')
+    def test_get_preferred_stylist(self, stylist_data, client_data):
+        client: Client = client_data
+        G(PreferredStylist, client=client, stylist=stylist_data)
+        stylist_2 = G(Stylist)
+        user = stylist_2.user
+        user.photo = ''
+        user.phone = '+19876543210'
+        user.save()
+        G(PreferredStylist, client=client, stylist=stylist_2)
+        stylist_3 = G(Stylist)
+        user = stylist_3.user
+        user.phone = ''
+        user.save()
+        G(PreferredStylist, client=client, stylist=stylist_3)
+        preferred_stylists = HomeView.get_preferred_stylists(client)
+        assert (preferred_stylists.count() == 3)
+
+    @freeze_time('2018-05-14 13:00:00 UTC')
     def test_get_last_visit(self, stylist_data, client_data):
         client: Client = client_data
         G(PreferredStylist, client=client, stylist=stylist_data)
