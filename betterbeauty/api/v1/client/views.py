@@ -1,5 +1,5 @@
 import datetime
-from typing import Optional
+from typing import List, Optional
 
 from dateutil.parser import parse
 
@@ -52,8 +52,12 @@ from core.utils import post_or_get
 from core.utils import post_or_get_or_data
 from integrations.ipstack import get_lat_lng_for_ip_address
 from salon.models import Invitation, Stylist, StylistService
-from salon.types import InvitationStatus
-from salon.utils import get_default_service_uuids
+from salon.types import ClientPriceOnDate, ClientPricingHint, InvitationStatus
+from salon.utils import (
+    generate_client_prices_for_stylist_services,
+    generate_client_pricing_hints,
+    get_default_service_uuids,
+)
 
 
 class ClientProfileView(generics.CreateAPIView, generics.RetrieveUpdateAPIView):
@@ -138,16 +142,25 @@ class StylistServicePriceView(views.APIView):
             services.append(service_queryset.get(
                 uuid=service_uuid
             ))
-            # client_of_stylist can as well be None here, which is OK; in such a case
-            # prices will be returned without discounts
         stylist = services[0].stylist
+        prices: List[ClientPriceOnDate] = generate_client_prices_for_stylist_services(
+            stylist=stylist,
+            services=services,
+            client=client,
+            exclude_fully_booked=False,
+            exclude_unavailable_days=False
+        )
+        pricing_hints: List[ClientPricingHint] = generate_client_pricing_hints(
+            client=client, stylist=stylist, prices_on_dates=prices
+        )
 
         return Response(
             ServicePricingSerializer({
                 'service_uuids': service_uuids,
                 'stylist_uuid': stylist.uuid,
-            }, context={'client': client,
-                        'services': services, 'stylist': stylist}).data
+                'prices': prices,
+                'pricing_hints': pricing_hints
+            }).data
         )
 
 
