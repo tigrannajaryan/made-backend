@@ -449,9 +449,14 @@ class AppointmentValidationMixin(object):
                 appointment_errors.ERR_SERVICE_REQUIRED
             )
         for service in services:
-            self.validate_service_uuid(
-                str(service['service_uuid'])
-            )
+            if 'service_uuid' in service:
+                self.validate_service_uuid(
+                    str(service['service_uuid'])
+                )
+            else:
+                raise serializers.ValidationError(
+                    appointment_errors.ERR_SERVICE_REQUIRED
+                )
         return services
 
     def validate_stylist_uuid(self, stylist_uuid: Optional[str]):
