@@ -2998,6 +2998,12 @@ Either "service_uuids" or "stylist_uuid" must be present.
             "is_fully_booked": false,
             "is_working_day": true
         }
+    ],
+    "pricing_hints": [
+        {
+            "priority": 1,
+            "hint": "Some pricing hint"
+        }
     ]
 }
 ```

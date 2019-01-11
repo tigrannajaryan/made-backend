@@ -1,8 +1,8 @@
 import datetime
 import decimal
 import uuid
-from decimal import Decimal, ROUND_HALF_UP
-from typing import Dict, Iterable, List, Optional, Tuple
+from decimal import Decimal
+from typing import Dict, List, Optional, Tuple
 
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -32,7 +32,6 @@ from appointment.constants import (
 )
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
-from client.constants import END_OF_DAY_BUFFER_TIME_IN_MINUTES
 from client.models import Client, PreferredStylist
 from client.types import CLIENT_PRIVACY_CHOICES, ClientPrivacy
 from core.models import User
@@ -54,10 +53,9 @@ from salon.models import (
     Stylist,
     StylistService,
 )
-from salon.types import InvitationStatus, PriceOnDate
+from salon.types import InvitationStatus
 from salon.utils import (
     calculate_price_and_discount_for_client_on_date,
-    generate_prices_for_stylist_service
 )
 
 
@@ -347,47 +345,19 @@ class ServicePricingRequestSerializer(FormattedErrorMessageMixin, serializers.Se
         raise serializers.ValidationError(ErrorMessages.ERR_NO_STYLIST_OR_SERVICE_UUIDS)
 
 
+class PricingHintSerializer(serializers.Serializer):
+    priority = serializers.IntegerField(read_only=True)
+    hing = serializers.CharField(read_only=True)
+
+
 class ServicePricingSerializer(serializers.Serializer):
     service_uuids = serializers.ListField(child=serializers.UUIDField())
     stylist_uuid = serializers.UUIDField(read_only=True)
-    prices = serializers.SerializerMethodField(read_only=True)
+    prices = StylistServicePriceSerializer(many=True, read_only=True)
+    pricing_hints = PricingHintSerializer(many=True, read_only=True)
 
     class Meta:
-        fields = ['service_uuid', 'service_name', 'prices', ]
-
-    def get_prices(self, object):
-        # TODO: deprecate in favor of salon.utils.generate_client_prices_for_stylist_services
-        # TODO: after improving test coverage for current serializer
-        services = self.context.get('services', [])
-        client: Client = self.context['client']
-        stylist = self.context['stylist']
-        prices_and_dates: Iterable[PriceOnDate] = generate_prices_for_stylist_service(
-            services,
-            client,
-            exclude_fully_booked=False,
-            exclude_unavailable_days=False
-        )
-        prices_and_dates_list = []
-        for obj in prices_and_dates:
-            availability_on_day = stylist.available_days.filter(
-                weekday=obj.date.isoweekday(),
-                is_available=True).last() if obj.date == stylist.get_current_now().date() else None
-            stylist_eod = stylist.salon.timezone.localize(
-                datetime.datetime.combine(
-                    date=obj.date, time=availability_on_day.work_end_at)
-            ) if availability_on_day else None
-            if not stylist_eod or stylist.get_current_now() < (
-                    stylist_eod - stylist.service_time_gap -
-                    datetime.timedelta(minutes=END_OF_DAY_BUFFER_TIME_IN_MINUTES)):
-                prices_and_dates_list.append({
-                    'date': obj.date,
-                    'price': Decimal(obj.calculated_price.price).quantize(0, ROUND_HALF_UP),
-                    'is_fully_booked': obj.is_fully_booked,
-                    'is_working_day': obj.is_working_day,
-                    'discount_type': obj.calculated_price.applied_discount.value
-                    if obj.calculated_price.applied_discount else None
-                })
-        return StylistServicePriceSerializer(prices_and_dates_list, many=True).data
+        fields = ['service_uuid', 'service_name', 'prices', 'pricing_hints', ]
 
 
 class AppointmentValidationMixin(object):

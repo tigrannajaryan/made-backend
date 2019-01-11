@@ -32,6 +32,11 @@ class ClientPriceOnDate(NamedTuple):
     discount_type: Optional[DiscountType]
 
 
+class ClientPricingHint(NamedTuple):
+    priority: int
+    hint: str
+
+
 class TimeSlotAvailability(object):
 
     def __init__(self, start: datetime.datetime, end: datetime.datetime,
@@ -42,3 +47,9 @@ class TimeSlotAvailability(object):
 
 
 TimeSlot = Tuple[datetime.time, datetime.time]
+
+
+class LoyaltyDiscountTransitionInfo(NamedTuple):
+    current_discount_percent: int
+    transitions_to_percent: int
+    transitions_at: Optional[datetime.datetime]
