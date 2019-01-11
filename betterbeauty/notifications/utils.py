@@ -1360,6 +1360,7 @@ def generate_remind_define_discounts_notifications(dry_run=False) -> int:
         ),
         has_enabled_services=Exists(stylist_has_enabled_services_query),
     ).filter(
+        salon__location__isnull=False,
         is_discount_configured=False,
         has_recent_or_unsent_notifications=False,
         has_remind_define_discounts_notification_sent=False,
@@ -1386,7 +1387,6 @@ def generate_remind_define_discounts_notifications(dry_run=False) -> int:
     notifications_to_create_list: List[Notification] = []
 
     for stylist in eligible_stylists.iterator():
-
         nearby_clients_count = Client.objects.filter(
             country__iexact=stylist.salon.country,
             location__distance_lte=(stylist.salon.location, D(m=160934))).count()
