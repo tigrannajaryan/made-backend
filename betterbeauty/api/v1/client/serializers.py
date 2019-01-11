@@ -347,7 +347,7 @@ class ServicePricingRequestSerializer(FormattedErrorMessageMixin, serializers.Se
 
 class PricingHintSerializer(serializers.Serializer):
     priority = serializers.IntegerField(read_only=True)
-    hing = serializers.CharField(read_only=True)
+    hint = serializers.CharField(read_only=True)
 
 
 class ServicePricingSerializer(serializers.Serializer):
