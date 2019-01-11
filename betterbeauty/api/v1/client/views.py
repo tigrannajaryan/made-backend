@@ -46,7 +46,7 @@ from appointment.constants import ErrorMessages as appt_constants
 from appointment.models import Appointment
 from appointment.preview import AppointmentPreviewRequest, build_appointment_preview_dict
 from appointment.types import AppointmentStatus
-from client.models import Client, StylistSearchRequest
+from client.models import Client, PreferredStylist, StylistSearchRequest
 from client.types import ClientPrivacy
 from core.utils import post_or_get
 from core.utils import post_or_get_or_data
@@ -447,14 +447,38 @@ class HomeView(generics.RetrieveAPIView):
     serializer_class = HomeSerializer
 
     def get(self, request, *args, **kwargs):
-        client = self.request.user.client
+        client: Client = self.request.user.client
         upcoming_appointments = self.get_upcoming_appointments(client)
         last_visited_appointment = self.get_last_visited_object(client)
+        preferred_stylists = self.get_preferred_stylists(client)
         serializer = self.get_serializer({
             'upcoming': upcoming_appointments,
-            'last_visited': last_visited_appointment
+            'last_visited': last_visited_appointment,
+            'preferred_stylists': preferred_stylists
         })
         return Response(serializer.data)
+
+    @staticmethod
+    def get_preferred_stylists(client):
+        '''
+        Sorting order:
+        ==============
+
+        1. Initially show the clients with the photo and not partial profile
+        2. Show stylists without partial profile without photo
+        3. Show stylist with partial profile at last
+        :param client:
+        :return:
+        '''
+        preferred_stylists = PreferredStylist.objects.filter(
+            client=client, deleted_at__isnull=True,
+        ).select_related('stylist__user').annotate(sorting_order=Case(
+            When(stylist__user__phone='', then=Value(3)),
+            When(stylist__user__photo='', then=Value(2)),
+            default=1,
+            output_field=IntegerField(),
+        )).order_by('sorting_order')
+        return preferred_stylists
 
     @staticmethod
     def get_upcoming_appointments(client):
