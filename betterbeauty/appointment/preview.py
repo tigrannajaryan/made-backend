@@ -13,7 +13,10 @@ from core.constants import DEFAULT_CARD_FEE, DEFAULT_TAX_RATE
 from core.types import AppointmentPrices
 from core.utils import calculate_appointment_prices
 from salon.models import Stylist, StylistService
-from salon.utils import calculate_price_and_discount_for_client_on_date
+from salon.utils import (
+    calculate_price_and_discount_for_client_on_date,
+    calculate_price_with_discount_based_on_service,
+)
 
 
 class AppointmentPreviewRequest(NamedTuple):
@@ -97,18 +100,23 @@ def build_appointment_preview_dict(
             service: StylistService = stylist.services.get(
                 uuid=service_request_item['service_uuid']
             )
+            original_service: Optional[AppointmentService] = appointment.services.filter(
+                is_original=True, applied_discount__isnull=False
+            ).first() if appointment else None
             if not client_price:
                 # If there's at least one service in the existing appointment which originally has
                 # a discount - we will copy discount information from that service instead
                 # of calculating it based on today's information
-                original_service: Optional[AppointmentService] = appointment.services.filter(
-                    is_original=True, applied_discount__isnull=False
-                ).first() if appointment else None
+
                 client_price = Decimal(calculate_price_and_discount_for_client_on_date(
                     service=service, client=client,
                     date=preview_request.datetime_start_at.date(),
                     based_on_existing_service=original_service
                 ).price)
+            else:
+                client_price = calculate_price_with_discount_based_on_service(
+                    client_price, original_service
+                )
             service_item = AppointmentServicePreview(
                 uuid=None,
                 service_uuid=service.uuid,
