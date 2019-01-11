@@ -554,33 +554,38 @@ def generate_client_pricing_hints(
         client: Client, stylist: Stylist, prices_on_dates: List[ClientPriceOnDate]
 ) -> List[ClientPricingHint]:
     hints: List[ClientPricingHint] = []
+    MIN_DAYS_BEFORE_LOYALTY_DISCOUNT_HINT = 3
     loyalty_discount: LoyaltyDiscountTransitionInfo = get_current_loyalty_discount(stylist, client)
     # 1. Check if current loyalty discount is about to transition to lower level
-    if loyalty_discount.current_discount_percent and loyalty_discount.transitions_to_percent:
-        hints.append(
-            ClientPricingHint(
-                priority=1,
-                hint=(
-                    'Your {current_discount}% loyalty discount '
-                    'reduces to {next_discount}% on {date}.'
-                ).format(
-                    current_discount=loyalty_discount.current_discount_percent,
-                    next_discount=loyalty_discount.transitions_to_percent,
-                    date=loyalty_discount.transitions_at.strftime('%b, %-d')
+    if loyalty_discount.current_discount_percent and loyalty_discount.transitions_at:
+        days_before_discount_ends = (loyalty_discount.transitions_at - timezone.now()).days
+        if days_before_discount_ends <= MIN_DAYS_BEFORE_LOYALTY_DISCOUNT_HINT:
+            if loyalty_discount.transitions_to_percent:
+                # loyalty discount is about to transition to different non-zero percentage
+                hints.append(
+                    ClientPricingHint(
+                        priority=1,
+                        hint=(
+                            'Your {current_discount}% loyalty discount '
+                            'reduces to {next_discount}% on {date}.'
+                        ).format(
+                            current_discount=loyalty_discount.current_discount_percent,
+                            next_discount=loyalty_discount.transitions_to_percent,
+                            date=loyalty_discount.transitions_at.strftime('%b, %-d')
+                        )
+                    )
                 )
-            )
-        )
-    # 2. check if there's current loyalty discount which just ends
-    elif loyalty_discount.current_discount_percent and not loyalty_discount.transitions_to_percent:
-        hints.append(
-            ClientPricingHint(
-                priority=1,
-                hint='Book soon, your loyalty discount expires on {date}.'.format(
-                    date=loyalty_discount.transitions_at.strftime('%b, %-d')
+            # loyalty discount just ends
+            else:
+                hints.append(
+                    ClientPricingHint(
+                        priority=1,
+                        hint='Book soon, your loyalty discount expires on {date}.'.format(
+                            date=loyalty_discount.transitions_at.strftime('%b, %-d')
+                        )
+                    )
                 )
-            )
-        )
-    # 3. Check if there's a local minimum of price between current now and the
+    # 2. Check if there's a local minimum of price between current now and the
     # end of the week
     lowest_price_date = get_date_with_lowest_price_on_current_week(
         stylist=stylist,
