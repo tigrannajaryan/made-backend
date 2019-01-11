@@ -535,7 +535,7 @@ def get_date_with_lowest_price_on_current_week(
     ))
     # There may be a situation when we don't have enough data for this week; return None in
     # this case
-    if len(this_week_prices) < 7:
+    if len(this_week_prices) < 2:
         return None
     # we need to find the ultimate, non-repeating minimum price. Let's sort this week's
     # prices; the first element will be the minimum, but we must check if the second element
