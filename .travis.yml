@@ -41,7 +41,6 @@ addons:
   chrome: stable
 
   artifacts:
-    debug: true
     target_paths: $TRAVIS_BUILD_NUMBER
     bucket: made-backend-test-results
     s3_region: us-east-1
