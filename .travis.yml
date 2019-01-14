@@ -10,6 +10,8 @@ env:
   - BUNDLE_PATH=bundles
   - STAGING_BUNDLE_NAME=staging.zip
   - PRODUCTION_BUNDLE_NAME=production.zip
+  - ARTIFACTS_AWS_ACCESS_KEY="$AWS_ACCESS_KEY"
+  - ARTIFACTS_AWS_SECRET_KEY=$"AWS_SECURE_KEY"
 
 notifications:
   slack:
@@ -18,6 +20,7 @@ notifications:
 branches:
   only:
   - develop
+  - feature/aswin/publish-travis-in-s3
 
 language: python
 python:
@@ -84,13 +87,9 @@ deploy:
     repo: madebeauty/backend
     branch: develop
 
-# Set environment variables for storing artifacts
-#ARTIFACTS_KEY=(AWS access key id)
-#ARTIFACTS_SECRET=(AWS secret access key)
-#ARTIFACTS_BUCKET=(S3 bucket name)
 addons:
   artifacts:
     debug: true
     target_paths: $TRAVIS_BUILD_NUMBER
-    bucket: aws_bucket_name
+    bucket: made-backend-test-results
     s3_region: us-east-1
