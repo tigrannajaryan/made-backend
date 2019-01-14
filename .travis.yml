@@ -20,7 +20,6 @@ notifications:
 branches:
   only:
   - develop
-  - feature/aswin/publish-travis-in-s3-1
 
 language: python
 python:
