@@ -1,6 +1,5 @@
 import datetime
 import decimal
-import uuid
 from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
 
@@ -22,6 +21,7 @@ from api.v1.client.constants import ErrorMessages
 from api.v1.stylist.fields import DurationMinuteField
 from api.v1.stylist.serializers import (
     AppointmentServiceSerializer,
+    AppointmentUpdateSerializer as StylistAppointmentUpdateSerializer,
     StylistServiceCategoryDetailsSerializer,
     StylistServicePriceSerializer,
 )
@@ -54,9 +54,7 @@ from salon.models import (
     StylistService,
 )
 from salon.types import InvitationStatus
-from salon.utils import (
-    calculate_price_and_discount_for_client_on_date,
-)
+from salon.utils import calculate_price_and_discount_for_client_on_date
 
 
 class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
@@ -347,7 +345,7 @@ class ServicePricingRequestSerializer(FormattedErrorMessageMixin, serializers.Se
 
 class PricingHintSerializer(serializers.Serializer):
     priority = serializers.IntegerField(read_only=True)
-    hing = serializers.CharField(read_only=True)
+    hint = serializers.CharField(read_only=True)
 
 
 class ServicePricingSerializer(serializers.Serializer):
@@ -575,64 +573,6 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
     stylist_uuid = serializers.UUIDField(source='stylist.uuid', read_only=True)
     status = serializers.CharField(read_only=False, required=False)
 
-    @staticmethod
-    @transaction.atomic
-    def _update_appointment_services(
-            appointment: Appointment, service_records: List[Dict]
-    ) -> None:
-        """Replace existing appointment services preserving added on appointment creation"""
-        stylist_services = appointment.stylist.services
-        services_to_keep: List[uuid.UUID] = [
-            service_record['service_uuid'] for service_record in service_records
-        ]
-        # Delete services which may have been added during appointment creation,
-        # but are removed during the checkout. E.g. client had decided to change the
-        # service.
-        appointment.services.all().exclude(service_uuid__in=services_to_keep).delete()
-
-        # Add new services supplied during the checkout. These are new services, so
-        # no discounts will be applied (discount applies only during appointment's
-        # initial creation
-
-        for service_record in service_records:
-            service_uuid: uuid.UUID = service_record['service_uuid']
-            service_client_price: Optional[Decimal] = (
-                service_record['client_price'] if 'client_price' in service_record else None)
-            try:
-                appointment_service: AppointmentService = (
-                    appointment.services.get(service_uuid=service_uuid))
-                # service already exists, so we will not re-write it
-                if service_client_price:
-                    appointment_service.set_client_price(service_client_price)
-                continue
-            except AppointmentService.DoesNotExist:
-                service: StylistService = stylist_services.get(uuid=service_uuid)
-                # If there's at least one service in the appointment which originally has
-                # a discount - we will copy discount information from that service instead
-                # of calculating it based on today's information
-                original_service: Optional[AppointmentService] = appointment.services.filter(
-                    is_original=True, applied_discount__isnull=False
-                ).first()
-                calc_price: CalculatedPrice = calculate_price_and_discount_for_client_on_date(
-                    service=service,
-                    client=appointment.client, date=appointment.datetime_start_at.date(),
-                    based_on_existing_service=original_service
-                )
-                AppointmentService.objects.create(
-                    appointment=appointment,
-                    service_uuid=service.uuid,
-                    service_name=service.name,
-                    duration=service.duration,
-                    regular_price=service.regular_price,
-                    calculated_price=calc_price.price,
-                    client_price=service_client_price if service_client_price
-                    else calc_price.price,
-                    is_price_edited=True if service_client_price else False,
-                    applied_discount=calc_price.applied_discount,
-                    discount_percentage=calc_price.discount_percentage,
-                    is_original=False
-                )
-
     def save(self, **kwargs):
 
         status = self.validated_data.get('status', self.instance.status)
@@ -640,7 +580,7 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
         appointment: Appointment = self.instance
         with transaction.atomic():
             if 'services' in self.validated_data:
-                self._update_appointment_services(
+                StylistAppointmentUpdateSerializer.update_appointment_services(
                     appointment, self.validated_data['services']
                 )
             total_client_price_before_tax: Decimal = appointment.services.aggregate(

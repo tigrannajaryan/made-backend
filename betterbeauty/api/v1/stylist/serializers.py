@@ -47,6 +47,7 @@ from salon.models import (
 from salon.types import PriceOnDate
 from salon.utils import (
     calculate_price_and_discount_for_client_on_date,
+    calculate_price_with_discount_based_on_service,
     CalculatedPrice,
     create_stylist_profile_for_user,
     generate_prices_for_stylist_service,
@@ -1048,7 +1049,7 @@ class AppointmentUpdateSerializer(
 
     @staticmethod
     @transaction.atomic
-    def _update_appointment_services(
+    def update_appointment_services(
             appointment: Appointment, service_records: List[Dict]
     ) -> None:
         """Replace existing appointment services preserving added on appointment creation"""
@@ -1089,6 +1090,10 @@ class AppointmentUpdateSerializer(
                     client=appointment.client, date=appointment.datetime_start_at.date(),
                     based_on_existing_service=original_service
                 )
+                if service_client_price:
+                    service_client_price = calculate_price_with_discount_based_on_service(
+                        service_client_price, original_service
+                    )
                 AppointmentService.objects.create(
                     appointment=appointment,
                     service_uuid=service.uuid,
@@ -1113,7 +1118,7 @@ class AppointmentUpdateSerializer(
                 AppointmentStatus.NEW,
                 AppointmentStatus.CHECKED_OUT
             ] and self.validated_data.get('services', []):
-                self._update_appointment_services(
+                self.update_appointment_services(
                     appointment, self.validated_data['services']
                 )
                 total_client_price_before_tax: Decimal = appointment.services.aggregate(

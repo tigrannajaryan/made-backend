@@ -129,7 +129,7 @@ class TestBuildAppointmentPreviewDict(object):
     def test_with_existing_appointment_with_new_services(self):
         stylist: Stylist = G(Stylist)
         existing_service: StylistService = G(
-            StylistService, stylist=stylist, regular_price=20
+            StylistService, stylist=stylist, regular_price=20,
         )
         service: StylistService = G(
             StylistService, stylist=stylist, regular_price=50
@@ -173,10 +173,10 @@ class TestBuildAppointmentPreviewDict(object):
         # we can't compare QuerySets, so will just replace the field
         preview_dict = preview_dict._replace(conflicts_with=None)
         assert (preview_dict == AppointmentPreviewResponse(
-            grand_total=40,
-            total_client_price_before_tax=40,
-            total_tax=calculate_tax(Decimal(40)),
-            total_card_fee=calculate_card_fee(Decimal(40)),
+            grand_total=38,
+            total_client_price_before_tax=38,
+            total_tax=calculate_tax(Decimal(38)),
+            total_card_fee=calculate_card_fee(Decimal(38)),
             duration=stylist.service_time_gap,
             conflicts_with=None,
             has_tax_included=False,
@@ -194,7 +194,7 @@ class TestBuildAppointmentPreviewDict(object):
                 AppointmentServicePreview(
                     service_name=service2.name,
                     service_uuid=service2.uuid,
-                    client_price=5,
+                    client_price=3,  # 50% discount should have been applied + round_half_up to $3
                     regular_price=50,
                     duration=service.duration,
                     is_original=False,

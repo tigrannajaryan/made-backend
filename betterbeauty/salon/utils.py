@@ -535,7 +535,7 @@ def get_date_with_lowest_price_on_current_week(
     ))
     # There may be a situation when we don't have enough data for this week; return None in
     # this case
-    if len(this_week_prices) < 7:
+    if len(this_week_prices) < 2:
         return None
     # we need to find the ultimate, non-repeating minimum price. Let's sort this week's
     # prices; the first element will be the minimum, but we must check if the second element
@@ -602,3 +602,16 @@ def generate_client_pricing_hints(
         )
     # for now, we will only return the first element
     return hints[:1]
+
+
+def calculate_price_with_discount_based_on_service(
+        price: Decimal, original_service: Optional[AppointmentService]
+) -> Decimal:
+    """Calculate discounted price based on discount set for another service"""
+    if original_service is None:
+        return price
+    price_with_discount = price * Decimal(
+        1 - original_service.discount_percentage / 100.0
+    )
+    price_with_discount = Decimal(price_with_discount).quantize(1, ROUND_HALF_UP)
+    return price_with_discount
