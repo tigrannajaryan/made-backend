@@ -1,6 +1,6 @@
 import datetime
 import logging
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional
 from uuid import uuid4
 
@@ -428,7 +428,21 @@ class AppointmentService(models.Model):
         db_table = 'appointment_service'
 
     def set_client_price(self, client_price: Decimal, commit: bool=True):
-        self.client_price = client_price
+        # before applying the client price, we need to apply original discounts to it
+        appointment: Appointment = self.appointment
+        original_service: Optional[AppointmentService] = appointment.services.filter(
+            is_original=True, applied_discount__isnull=False
+        ).exclude(id=self.id).first() if appointment else None
+        if original_service:
+            self.applied_discount = original_service.applied_discount
+            self.discount_percentage = original_service.discount_percentage
+            price_with_discount = client_price * Decimal(
+                1 - original_service.discount_percentage / 100.0
+            )
+            client_price = Decimal(price_with_discount).quantize(1, ROUND_HALF_UP)
+        self.client_price = float(client_price)
         self.is_price_edited = True
         if commit:
-            self.save(update_fields=['client_price', 'is_price_edited'])
+            self.save(update_fields=[
+                'client_price', 'is_price_edited', 'applied_discount', 'discount_percentage'
+            ])
