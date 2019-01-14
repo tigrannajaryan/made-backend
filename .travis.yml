@@ -87,9 +87,9 @@ deploy:
     repo: madebeauty/backend
     branch: develop
 
-addons:
-  artifacts:
-    debug: true
-    target_paths: $TRAVIS_BUILD_NUMBER
-    bucket: made-backend-test-results
-    s3_region: us-east-1
+#addons:
+#  artifacts:
+#    debug: true
+#    target_paths: $TRAVIS_BUILD_NUMBER
+#    bucket: made-backend-test-results
+#    s3_region: us-east-1
