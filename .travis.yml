@@ -47,7 +47,7 @@ addons:
     bucket: made-backend-test-results
     s3_region: us-east-1
     paths:
-      - test-reports/*
+#      - test-reports
       - coverage.xml
 
 install: make install-py
