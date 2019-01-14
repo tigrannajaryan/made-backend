@@ -41,6 +41,12 @@ addons:
   # Chrome is needed for E2E tests
   chrome: stable
 
+  artifacts:
+    debug: true
+    target_paths: $TRAVIS_BUILD_NUMBER
+    bucket: made-backend-test-results
+    s3_region: us-east-1
+
 install: make install-py
 
 before_script: make setup-db
@@ -86,10 +92,3 @@ deploy:
   on:
     repo: madebeauty/backend
     branch: develop
-
-addons:
-  artifacts:
-    debug: true
-    target_paths: $TRAVIS_BUILD_NUMBER
-    bucket: made-backend-test-results
-    s3_region: us-east-1
