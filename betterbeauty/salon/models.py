@@ -12,6 +12,7 @@ from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
+from simple_history.models import HistoricalRecords
 
 from timezone_field import TimeZoneField
 
@@ -112,6 +113,10 @@ class StylistAvailableWeekDay(models.Model):
     work_start_at = models.TimeField(null=True)
     work_end_at = models.TimeField(null=True)
     is_available = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
+
+    history = HistoricalRecords(table_name='historical_stylist_available_day')
 
     class Meta:
         db_table = 'stylist_available_day'
@@ -215,6 +220,10 @@ class StylistWeekdayDiscount(models.Model):
         'Stylist', on_delete=models.CASCADE, related_name='weekday_discounts')
     weekday = models.PositiveSmallIntegerField(choices=WEEKDAY)
     discount_percent = models.PositiveIntegerField(validators=[MaxValueValidator(100)])
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
+
+    history = HistoricalRecords(table_name='historical_stylist_weekday_discount')
 
     class Meta:
         db_table = 'stylist_weekday_discount'
@@ -225,6 +234,7 @@ class Stylist(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
     deactivated_at = models.DateTimeField(default=None, blank=True, null=True)
     salon = models.ForeignKey(Salon, on_delete=models.PROTECT, null=True)
 
@@ -265,6 +275,8 @@ class Stylist(models.Model):
 
     instagram_url = models.CharField(max_length=2084, blank=True, null=True)
     instagram_access_token = models.CharField(max_length=512, blank=True, null=True)
+
+    history = HistoricalRecords(table_name='historical_stylist')
 
     class Meta:
         db_table = 'stylist'
@@ -687,6 +699,10 @@ class StylistService(models.Model):
     is_addon = models.BooleanField(default=False)
 
     deleted_at = models.DateTimeField(null=True, default=None)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
+
+    history = HistoricalRecords(table_name='historical_stylist_service')
 
     objects = StylistServiceManager()
     all_objects = StylistServiceWithDeletedManager()
@@ -714,6 +730,10 @@ class StylistDateRangeDiscount(models.Model):
     discount_percent = models.PositiveIntegerField(validators=[MaxValueValidator(100)])
     dates = DateRangeField()
     # TODO: enforce uniqueness on date range. Django doesn't support it directly
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
+
+    history = HistoricalRecords(table_name='historical_stylist_date_range_discount')
 
     class Meta:
         db_table = 'stylist_date_range_discount'

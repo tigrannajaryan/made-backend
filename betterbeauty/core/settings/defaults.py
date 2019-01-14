@@ -149,6 +149,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'push_notifications',
     'rest_framework',
+    'simple_history',
     'storages',
 
     # Internal apps
@@ -170,6 +171,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',
 
     'core.exceptions.middleware.ExceptionToHTTPStatusCodeMiddleware'
 ]
