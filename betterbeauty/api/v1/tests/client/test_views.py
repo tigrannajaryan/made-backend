@@ -1,7 +1,7 @@
 import datetime
 import json
 import uuid
-from typing import Dict
+from typing import Dict, List
 
 import mock
 import pytest
@@ -33,9 +33,18 @@ from client.types import ClientPrivacy
 from integrations.push.types import MobileAppIdType
 from notifications.models import Notification
 from notifications.types import NotificationCode
-from salon.models import Invitation, Salon, Stylist, StylistService
+from salon.models import (
+    Invitation,
+    Salon,
+    Stylist,
+    StylistAvailableWeekDay,
+    StylistService,
+    StylistWeekdayDiscount,
+    Weekday,
+)
 from salon.tests.test_models import stylist_appointments_data
-from salon.types import InvitationStatus
+from salon.types import ClientPriceOnDate, InvitationStatus
+from salon.utils import generate_client_prices_for_stylist_services
 
 
 class TestClientProfileView:
@@ -380,6 +389,47 @@ class TestStylistServicePriceView(object):
             }, HTTP_AUTHORIZATION=auth_token)
         assert (response.status_code == status.HTTP_400_BAD_REQUEST)
 
+    @pytest.mark.django_db
+    def test_prices(self, client, authorized_client_user):
+        salon: Salon = G(Salon, timezone=pytz.UTC)
+        our_stylist = G(
+            Stylist, salon=salon,
+            first_time_book_discount_percent=10,
+        )
+        G(StylistWeekdayDiscount, weekday=Weekday.THURSDAY,
+          discount_percent=40, stylist=our_stylist)
+        for weekday in range(1, 8):
+            G(
+                StylistAvailableWeekDay, stylist=our_stylist, weekday=weekday,
+                work_start_at=datetime.time(8, 0), work_end_at=datetime.time(18, 0),
+                is_available=True)
+        user, auth_token = authorized_client_user
+        client_obj = user.client
+        G(PreferredStylist, client=client_obj, stylist=our_stylist)
+        service: StylistService = G(
+            StylistService, stylist=our_stylist, duration=datetime.timedelta(0),
+            regular_price=50
+        )
+
+        with freeze_time(pytz.UTC.localize(datetime.datetime(2018, 1, 7, 18, 30))):
+            expected_prices: List[ClientPriceOnDate] = generate_client_prices_for_stylist_services(
+                stylist=our_stylist, services=[service], client=client_obj,
+            )
+            client_service_pricing_url = reverse('api:v1:client:services-pricing')
+            response = client.post(
+                client_service_pricing_url,
+                data={
+                    'stylist_uuid': our_stylist.uuid,
+                    'service_uuids': [str(service.uuid)]
+                }, HTTP_AUTHORIZATION=auth_token
+            )
+            assert(status.is_success(response.status_code))
+            prices = response.data['prices']
+            assert(len(expected_prices) == len(prices))
+            for idx, price_item in enumerate(prices):
+                assert(expected_prices[idx].date.isoformat() == price_item['date'])
+                assert(expected_prices[idx].price == price_item['price'])
+
 
 class TestAppointmentListCreateAPIView(object):
 
@@ -717,6 +767,24 @@ class TestHomeAPIView(object):
         stylist_data.save()
         upcoming_appointments = HomeView.get_upcoming_appointments(client)
         assert (upcoming_appointments.count() == 0)
+
+    @freeze_time('2018-05-14 13:00:00 UTC')
+    def test_get_preferred_stylist(self, stylist_data, client_data):
+        client: Client = client_data
+        G(PreferredStylist, client=client, stylist=stylist_data)
+        stylist_2 = G(Stylist)
+        user = stylist_2.user
+        user.photo = ''
+        user.phone = '+19876543210'
+        user.save()
+        G(PreferredStylist, client=client, stylist=stylist_2)
+        stylist_3 = G(Stylist)
+        user = stylist_3.user
+        user.phone = ''
+        user.save()
+        G(PreferredStylist, client=client, stylist=stylist_3)
+        preferred_stylists = HomeView.get_preferred_stylists(client)
+        assert (preferred_stylists.count() == 3)
 
     @freeze_time('2018-05-14 13:00:00 UTC')
     def test_get_last_visit(self, stylist_data, client_data):

@@ -88,4 +88,7 @@ else:
         NotificationCode.REMIND_DEFINE_HOURS: [
             NotificationChannel.PUSH, NotificationChannel.SMS
         ],
+        NotificationCode.REMIND_DEFINE_DISCOUNTS: [
+            NotificationChannel.PUSH, NotificationChannel.SMS
+        ],
     }

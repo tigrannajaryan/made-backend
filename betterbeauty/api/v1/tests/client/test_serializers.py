@@ -564,8 +564,10 @@ class TestAppointmentUpdateSerializer(object):
         )
 
     @mock.patch(
-        'api.v1.client.serializers.calculate_price_and_discount_for_client_on_date',
-        lambda service, client, date: CalculatedPrice.build(10, DiscountType.WEEKDAY, 90)
+        'api.v1.stylist.serializers.calculate_price_and_discount_for_client_on_date',
+        lambda service, client, date, based_on_existing_service: CalculatedPrice.build(
+            10, DiscountType.WEEKDAY, 90
+        )
     )
     def test_edit_services_list_by_client(self, stylist_data: Stylist, client_data: Client):
         appointment: Appointment = G(Appointment, stylist=stylist_data)
@@ -584,7 +586,8 @@ class TestAppointmentUpdateSerializer(object):
         G(
             AppointmentService, appointment=appointment,
             service_uuid=service.uuid, is_original=True,
-            regular_price=30, calculated_price=20, client_price=20
+            regular_price=30, calculated_price=20, client_price=20,
+            discount_percentage=50, applied_discount=DiscountType.WEEKDAY,
         )
         G(
             AppointmentService, appointment=appointment,
@@ -634,7 +637,7 @@ class TestAppointmentUpdateSerializer(object):
             service_uuid=service_original_with_edited_price.uuid)
         # verify that original prices were kept
         assert(original_service_w_client_price.is_price_edited is True)
-        assert(original_service_w_client_price.client_price == 10)
+        assert(original_service_w_client_price.client_price == 5)  # 50% off $10 client price
         assert (original_service_w_client_price.calculated_price == 20)
 
         # verify that prices were recalculated on a service for which client
@@ -653,7 +656,7 @@ class TestAppointmentUpdateSerializer(object):
             service_uuid=service_new_client_price.uuid)
         assert (new_appt_service_w_client_price.is_price_edited is True)
         assert (new_appt_service_w_client_price.regular_price == 100)
-        assert (new_appt_service_w_client_price.client_price == 5)
+        assert (new_appt_service_w_client_price.client_price == 3)  # 50% off $5 client price
         assert (new_appt_service_w_client_price.calculated_price == 10)
         assert (new_appt_service_w_client_price.applied_discount == DiscountType.WEEKDAY)
         assert (new_appt_service_w_client_price.discount_percentage == 90)
@@ -676,10 +679,12 @@ class TestAppointmentPreviewRequestSerializer(object):
                 {'service_uuid': service.uuid},
             ]
         }
+
         serializer = AppointmentPreviewRequestSerializer(
             data=data, context={
                 'user': client.user,
-                'stylist': stylist
+                'stylist': stylist,
+                'client': client
             }
         )
         assert(not serializer.is_valid(raise_exception=False))
@@ -688,7 +693,8 @@ class TestAppointmentPreviewRequestSerializer(object):
         serializer = AppointmentPreviewRequestSerializer(
             data=data, context={
                 'user': client.user,
-                'stylist': stylist
+                'stylist': stylist,
+                'client': client,
             }
         )
         assert (serializer.is_valid(raise_exception=False))
@@ -722,7 +728,8 @@ class TestAppointmentPreviewRequestSerializer(object):
         serializer = AppointmentPreviewRequestSerializer(
             data=data, context={
                 'user': client.user,
-                'stylist': stylist
+                'stylist': stylist,
+                'client': client
             }
         )
         assert (not serializer.is_valid(raise_exception=False))
@@ -740,10 +747,40 @@ class TestAppointmentPreviewRequestSerializer(object):
         serializer = AppointmentPreviewRequestSerializer(
             data=data, context={
                 'user': client.user,
-                'stylist': stylist
+                'stylist': stylist,
+                'client': client
             }
         )
         assert (not serializer.is_valid(raise_exception=False))
+
+    @pytest.mark.django_db
+    def test_preview_with_existing_appointment(self):
+        salon: Salon = G(Salon, timezone=pytz.UTC)
+        stylist: Stylist = G(
+            Stylist, salon=salon, service_time_gap=datetime.timedelta(minutes=60))
+        service: StylistService = G(
+            StylistService, duration=datetime.timedelta(20), stylist=stylist)
+        client = G(Client)
+        G(PreferredStylist, client=client, stylist=stylist)
+        appointment: Appointment = G(
+            Appointment, client=client, stylist=stylist,
+            datetime_start_at=pytz.UTC.localize(datetime.datetime(2019, 1, 8, 16, 30)),
+        )
+        data = {
+            'stylist_uuid': stylist.uuid,
+            'appointment_uuid': appointment.uuid,
+            'services': [
+                {'service_uuid': service.uuid},
+            ]
+        }
+        serializer = AppointmentPreviewRequestSerializer(
+            data=data, context={
+                'user': client.user,
+                'stylist': stylist,
+                'client': client
+            }
+        )
+        assert (serializer.is_valid(raise_exception=False))
 
 
 class TestAppointmentPreviewResponseSerializer(object):

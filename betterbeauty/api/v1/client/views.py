@@ -1,5 +1,5 @@
 import datetime
-from typing import Optional
+from typing import List, Optional
 
 from dateutil.parser import parse
 
@@ -46,14 +46,18 @@ from appointment.constants import ErrorMessages as appt_constants
 from appointment.models import Appointment
 from appointment.preview import AppointmentPreviewRequest, build_appointment_preview_dict
 from appointment.types import AppointmentStatus
-from client.models import Client, StylistSearchRequest
+from client.models import Client, PreferredStylist, StylistSearchRequest
 from client.types import ClientPrivacy
 from core.utils import post_or_get
 from core.utils import post_or_get_or_data
 from integrations.ipstack import get_lat_lng_for_ip_address
 from salon.models import Invitation, Stylist, StylistService
-from salon.types import InvitationStatus
-from salon.utils import get_default_service_uuids
+from salon.types import ClientPriceOnDate, ClientPricingHint, InvitationStatus
+from salon.utils import (
+    generate_client_prices_for_stylist_services,
+    generate_client_pricing_hints,
+    get_default_service_uuids,
+)
 
 
 class ClientProfileView(generics.CreateAPIView, generics.RetrieveUpdateAPIView):
@@ -138,16 +142,25 @@ class StylistServicePriceView(views.APIView):
             services.append(service_queryset.get(
                 uuid=service_uuid
             ))
-            # client_of_stylist can as well be None here, which is OK; in such a case
-            # prices will be returned without discounts
         stylist = services[0].stylist
+        prices: List[ClientPriceOnDate] = generate_client_prices_for_stylist_services(
+            stylist=stylist,
+            services=services,
+            client=client,
+            exclude_fully_booked=False,
+            exclude_unavailable_days=False
+        )
+        pricing_hints: List[ClientPricingHint] = generate_client_pricing_hints(
+            client=client, stylist=stylist, prices_on_dates=prices
+        )
 
         return Response(
             ServicePricingSerializer({
                 'service_uuids': service_uuids,
                 'stylist_uuid': stylist.uuid,
-            }, context={'client': client,
-                        'services': services, 'stylist': stylist}).data
+                'prices': prices,
+                'pricing_hints': pricing_hints
+            }).data
         )
 
 
@@ -386,14 +399,18 @@ class AppointmentRetriveUpdateView(generics.RetrieveUpdateAPIView):
 class AppointmentPreviewView(views.APIView):
     permission_classes = [ClientPermission, permissions.IsAuthenticated]
 
-    def get_serializer_context(self):
+    def get_stylist(self) -> Optional[Stylist]:
         stylist_uuid = post_or_get_or_data(self.request, 'stylist_uuid', None)
         stylist = None
         if stylist_uuid:
-            stylist = Stylist.objects.get(uuid=stylist_uuid)
+            stylist = Stylist.objects.filter(uuid=stylist_uuid).last()
+        return stylist
+
+    def get_serializer_context(self):
         return {
             'user': self.request.user,
-            'stylist': stylist,
+            'stylist': self.get_stylist(),
+            'client': self.request.user.client,
         }
 
     def post(self, request):
@@ -443,14 +460,38 @@ class HomeView(generics.RetrieveAPIView):
     serializer_class = HomeSerializer
 
     def get(self, request, *args, **kwargs):
-        client = self.request.user.client
+        client: Client = self.request.user.client
         upcoming_appointments = self.get_upcoming_appointments(client)
         last_visited_appointment = self.get_last_visited_object(client)
+        preferred_stylists = self.get_preferred_stylists(client)
         serializer = self.get_serializer({
             'upcoming': upcoming_appointments,
-            'last_visited': last_visited_appointment
+            'last_visited': last_visited_appointment,
+            'preferred_stylists': preferred_stylists
         })
         return Response(serializer.data)
+
+    @staticmethod
+    def get_preferred_stylists(client):
+        '''
+        Sorting order:
+        ==============
+
+        1. Initially show the clients with the photo and not partial profile
+        2. Show stylists without partial profile without photo
+        3. Show stylist with partial profile at last
+        :param client:
+        :return:
+        '''
+        preferred_stylists = PreferredStylist.objects.filter(
+            client=client, deleted_at__isnull=True,
+        ).select_related('stylist__user').annotate(sorting_order=Case(
+            When(stylist__user__phone='', then=Value(3)),
+            When(stylist__user__photo='', then=Value(2)),
+            default=1,
+            output_field=IntegerField(),
+        )).order_by('sorting_order')
+        return preferred_stylists
 
     @staticmethod
     def get_upcoming_appointments(client):

@@ -1,7 +1,7 @@
 import os
 from typing import List
 
-from core.constants import EnvLevel
+from core.constants import EnvLevel, EnvVars
 
 from .defaults import *  # noqa
 from .utils import parse_database_url
@@ -9,7 +9,7 @@ from .utils import parse_database_url
 LEVEL = EnvLevel.DEVELOPMENT
 BASE_URL = 'http://betterbeauty.local:8080'
 
-PG_PORT = os.environ.get('PGPORT', 5432)
+PG_PORT = os.environ.get(EnvVars.PGPORT, 5432)
 
 DATABASE_URL = (
     'postgis://betterbeauty:W8zSrpqUkFzReUqT@127.0.0.1:{0}/betterbeauty'.format(

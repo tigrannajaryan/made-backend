@@ -64,6 +64,8 @@ pytest:
 test: clean lint pytest
 	LEVEL=tests
 
+fasttest: clean pytest
+
 e2e-test:
 	$(PYTHON) tests/e2e.py
 

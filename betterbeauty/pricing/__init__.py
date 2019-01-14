@@ -44,7 +44,7 @@ class DiscountSettings(object):
     revisit_within_5week_percentage: float = 0
     revisit_within_6week_percentage: float = 0
     maximum_discount: float
-    is_maximum_discount_enabled: float
+    is_maximum_discount_enabled: bool
 
 
 class CalculatedPrice(object):

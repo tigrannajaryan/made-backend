@@ -25,10 +25,17 @@ from pricing import (
     calc_client_prices,
     CalculatedPrice,
     DiscountSettings,
+    DiscountType,
 )
 from pricing.constants import COMPLETELY_BOOKED_DEMAND, PRICE_BLOCK_SIZE
 from salon.models import Salon, Stylist, StylistAvailableWeekDay, StylistService
-from salon.types import ClientPriceOnDate, DemandOnDate, PriceOnDate
+from salon.types import (
+    ClientPriceOnDate,
+    ClientPricingHint,
+    DemandOnDate,
+    LoyaltyDiscountTransitionInfo,
+    PriceOnDate,
+)
 
 
 def get_weekday_available_times(stylist: Stylist) -> Dict[int, Tuple[
@@ -270,10 +277,12 @@ def generate_client_prices_for_stylist_services(
         exclude_fully_booked: bool=False,
         exclude_unavailable_days: bool=False
 ) -> List[ClientPriceOnDate]:
-    prices_and_dates = generate_prices_for_stylist_service(
+
+    prices_and_dates: Iterable[PriceOnDate] = generate_prices_for_stylist_service(
         services, client, exclude_fully_booked, exclude_unavailable_days
     )
     client_prices_on_dates: List[ClientPriceOnDate] = []
+
     for obj in prices_and_dates:
         availability_on_day = stylist.available_days.filter(
             weekday=obj.date.isoweekday(),
@@ -297,8 +306,29 @@ def generate_client_prices_for_stylist_services(
 
 
 def calculate_price_and_discount_for_client_on_date(
-        service: StylistService, client: Optional[Client], date: datetime.date
+        service: StylistService, client: Optional[Client], date: datetime.date,
+        based_on_existing_service: Optional[AppointmentService]=None
 ) -> CalculatedPrice:
+    """
+    Calculate client's price and discount for a service on the given date, based
+    either on discounts effective on the date, or copying discount percentage from
+    another previously created service (based_on_existing_service)
+    :param service: Service to calculate prices for
+    :param client: Client for whom price is calculated
+    :param date: Date on which service will happen
+    :param based_on_existing_service: if supplied - discounts will be copied from it
+    :return:
+    """
+    if based_on_existing_service is not None:
+        applied_discount: DiscountType = based_on_existing_service.applied_discount
+        discount_percentage: int = based_on_existing_service.discount_percentage
+        price = service.regular_price * Decimal(1 - discount_percentage / 100.0)
+        client_price: float = float(Decimal(price).quantize(1, ROUND_HALF_UP))
+        return CalculatedPrice.build(
+            applied_discount=applied_discount,
+            discount_percentage=discount_percentage,
+            price=client_price
+        )
 
     price_on_dates: Iterable[PriceOnDate] = (
         generate_prices_for_stylist_service(
@@ -430,3 +460,158 @@ def has_bookable_slots_with_discounts(stylist: Stylist, max_dates_to_look: int=7
             if has_discount_on_this_day:
                 has_available_slots_with_discounts = True
     return has_available_slots_with_discounts
+
+
+def get_loyalty_discount_for_week(stylist: Stylist, week_cnt: int) -> int:
+    """Return loyalty discount that stylist offers within week_cnt weeks after last booking"""
+    if week_cnt not in range(1, 5):
+        return 0
+    loyalty_discount_field_names = {
+        1: 'rebook_within_1_week_discount_percent',
+        2: 'rebook_within_2_weeks_discount_percent',
+        3: 'rebook_within_3_weeks_discount_percent',
+        4: 'rebook_within_4_weeks_discount_percent',
+    }
+    field_name = loyalty_discount_field_names[week_cnt]
+    return getattr(stylist, field_name)
+
+
+def get_current_loyalty_discount(stylist, client) -> LoyaltyDiscountTransitionInfo:
+    last_appointment = get_last_appointment_for_client(stylist, client)
+    MAX_WEEKS_TO_CHECK = 4
+    if not last_appointment:
+        return LoyaltyDiscountTransitionInfo(
+            current_discount_percent=0,
+            transitions_to_percent=0,
+            transitions_at=None
+        )
+    current_now = timezone.now()
+    last_visit_datetime = last_appointment.datetime_start_at
+    for week in range(1, MAX_WEEKS_TO_CHECK + 1):
+        loyalty_discount_for_week = get_loyalty_discount_for_week(stylist, week_cnt=week)
+        if last_visit_datetime + datetime.timedelta(
+                weeks=week
+        ) > current_now and loyalty_discount_for_week:
+            current_discount = loyalty_discount_for_week
+            # try to find what it transitions to. Iterate over remaining discounts
+            # until we find next non-zero discount (if it exists)
+            transitions_at = last_visit_datetime + datetime.timedelta(weeks=week)
+            transitions_to = 0
+            next_week_cnt = 1
+            while week + next_week_cnt <= MAX_WEEKS_TO_CHECK and transitions_to <= 0:
+                transitions_to = get_loyalty_discount_for_week(stylist, week + next_week_cnt)
+                next_week_cnt += 1
+            return LoyaltyDiscountTransitionInfo(
+                current_discount_percent=current_discount,
+                transitions_to_percent=transitions_to,
+                transitions_at=transitions_at
+            )
+    return LoyaltyDiscountTransitionInfo(
+        current_discount_percent=0,
+        transitions_to_percent=0,
+        transitions_at=None
+    )
+
+
+def get_date_with_lowest_price_on_current_week(
+        stylist: Stylist,
+        prices_on_dates: List[ClientPriceOnDate]
+) -> Optional[datetime.date]:
+    """
+    Find the lowest, non-repeating price on this week and return it if it's today or is
+    in the future. Return None otherwise.
+
+    Non-repeating means that we need indeed lowest price, e.g. 1.0 out of [1.0, 2.0, 3.0]
+    If there's repeating low price, e.g. [1.0, 2.0, 1.0, 3.0] - then we will return None
+    """
+
+    # filter out prices of this week only
+    current_date = stylist.with_salon_tz(timezone.now()).date()
+    begin_of_week_date = current_date - datetime.timedelta(days=current_date.isoweekday() - 1)
+    end_of_week_date = current_date + datetime.timedelta(days=7 - current_date.isoweekday())
+    this_week_prices: List[ClientPriceOnDate] = list(filter(
+        lambda price_on_date: begin_of_week_date <= price_on_date.date <= end_of_week_date,
+        prices_on_dates
+    ))
+    # There may be a situation when we don't have enough data for this week; return None in
+    # this case
+    if len(this_week_prices) < 2:
+        return None
+    # we need to find the ultimate, non-repeating minimum price. Let's sort this week's
+    # prices; the first element will be the minimum, but we must check if the second element
+    # is equal to it price-wise (which would mean that there's no single lowest price)
+    prices_on_days_sorted = sorted(this_week_prices, key=lambda price_on_date: price_on_date.price)
+    if prices_on_days_sorted[0].price == prices_on_days_sorted[1].price:
+        # there's no local minimum: there are at least 2 days with equally low price
+        return None
+    if prices_on_days_sorted[0].date < current_date:
+        # the lowest price is already in the past
+        return None
+    return prices_on_days_sorted[0].date
+
+
+def generate_client_pricing_hints(
+        client: Client, stylist: Stylist, prices_on_dates: List[ClientPriceOnDate]
+) -> List[ClientPricingHint]:
+    hints: List[ClientPricingHint] = []
+    MIN_DAYS_BEFORE_LOYALTY_DISCOUNT_HINT = 3
+    loyalty_discount: LoyaltyDiscountTransitionInfo = get_current_loyalty_discount(stylist, client)
+    # 1. Check if current loyalty discount is about to transition to lower level
+    if loyalty_discount.current_discount_percent and loyalty_discount.transitions_at:
+        days_before_discount_ends = (loyalty_discount.transitions_at - timezone.now()).days
+        if days_before_discount_ends <= MIN_DAYS_BEFORE_LOYALTY_DISCOUNT_HINT:
+            if loyalty_discount.transitions_to_percent:
+                # loyalty discount is about to transition to different non-zero percentage
+                hints.append(
+                    ClientPricingHint(
+                        priority=1,
+                        hint=(
+                            'Your {current_discount}% loyalty discount '
+                            'reduces to {next_discount}% on {date}.'
+                        ).format(
+                            current_discount=loyalty_discount.current_discount_percent,
+                            next_discount=loyalty_discount.transitions_to_percent,
+                            date=loyalty_discount.transitions_at.strftime('%b, %-d')
+                        )
+                    )
+                )
+            # loyalty discount just ends
+            else:
+                hints.append(
+                    ClientPricingHint(
+                        priority=1,
+                        hint='Book soon, your loyalty discount expires on {date}.'.format(
+                            date=loyalty_discount.transitions_at.strftime('%b, %-d')
+                        )
+                    )
+                )
+    # 2. Check if there's a local minimum of price between current now and the
+    # end of the week
+    lowest_price_date = get_date_with_lowest_price_on_current_week(
+        stylist=stylist,
+        prices_on_dates=prices_on_dates
+    )
+    if lowest_price_date is not None:
+        hints.append(
+            ClientPricingHint(
+                priority=2,
+                hint='Best price this week is {weekday}.'.format(
+                    weekday=lowest_price_date.strftime('%A')
+                )
+            )
+        )
+    # for now, we will only return the first element
+    return hints[:1]
+
+
+def calculate_price_with_discount_based_on_service(
+        price: Decimal, original_service: Optional[AppointmentService]
+) -> Decimal:
+    """Calculate discounted price based on discount set for another service"""
+    if original_service is None:
+        return price
+    price_with_discount = price * Decimal(
+        1 - original_service.discount_percentage / 100.0
+    )
+    price_with_discount = Decimal(price_with_discount).quantize(1, ROUND_HALF_UP)
+    return price_with_discount

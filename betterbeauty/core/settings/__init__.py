@@ -2,11 +2,11 @@ import importlib
 import logging
 import os
 
-from core.constants import EnvLevel
+from core.constants import EnvLevel, EnvVars
 
 logger = logging.getLogger(__name__)
 
-level = os.environ.get('LEVEL', EnvLevel.DEVELOPMENT)
+level = os.environ.get(EnvVars.LEVEL, EnvLevel.DEVELOPMENT)
 
 globals().update(
     importlib.import_module('core.settings.{0}'.format(level)).__dict__

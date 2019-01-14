@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
@@ -182,5 +183,6 @@ class VerifyCodeView(APIView):
             response_payload = jwt_response_payload_handler(
                 token, user, request=self.request
             )
-
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
         return Response(response_payload)

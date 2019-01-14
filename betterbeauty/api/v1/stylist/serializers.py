@@ -46,6 +46,9 @@ from salon.models import (
 )
 from salon.types import PriceOnDate
 from salon.utils import (
+    calculate_price_and_discount_for_client_on_date,
+    calculate_price_with_discount_based_on_service,
+    CalculatedPrice,
     create_stylist_profile_for_user,
     generate_prices_for_stylist_service,
     get_last_appointment_for_client,
@@ -1015,8 +1018,8 @@ class AppointmentUpdateSerializer(
         fields = ['status', 'services', 'has_tax_included', 'has_card_fee_included', ]
 
     def validate(self, attrs):
-        status = self.initial_data['status']
-        if status == AppointmentStatus.CHECKED_OUT:
+        status = self.initial_data.get('status', None)
+        if status and status == AppointmentStatus.CHECKED_OUT:
             if self.instance and self.instance.status == AppointmentStatus.CHECKED_OUT:
                 raise serializers.ValidationError({
                     'status': appointment_errors.ERR_NO_SECOND_CHECKOUT
@@ -1046,7 +1049,7 @@ class AppointmentUpdateSerializer(
 
     @staticmethod
     @transaction.atomic
-    def _update_appointment_services(
+    def update_appointment_services(
             appointment: Appointment, service_records: List[Dict]
     ) -> None:
         """Replace existing appointment services preserving added on appointment creation"""
@@ -1076,28 +1079,46 @@ class AppointmentUpdateSerializer(
                 continue
             except AppointmentService.DoesNotExist:
                 service: StylistService = stylist_services.get(uuid=service_uuid)
+                # If there's at least one service in the appointment which originally has
+                # a discount - we will copy discount information from that service instead
+                # of calculating it based on today's information.
+                original_service: Optional[AppointmentService] = appointment.services.filter(
+                    is_original=True, applied_discount__isnull=False
+                ).first()
+                calc_price: CalculatedPrice = calculate_price_and_discount_for_client_on_date(
+                    service=service,
+                    client=appointment.client, date=appointment.datetime_start_at.date(),
+                    based_on_existing_service=original_service
+                )
+                if service_client_price:
+                    service_client_price = calculate_price_with_discount_based_on_service(
+                        service_client_price, original_service
+                    )
                 AppointmentService.objects.create(
                     appointment=appointment,
                     service_uuid=service.uuid,
                     service_name=service.name,
                     duration=service.duration,
                     regular_price=service.regular_price,
-                    calculated_price=service.regular_price,
+                    calculated_price=calc_price.price,
                     client_price=service_client_price if service_client_price
-                    else service.regular_price,
+                    else calc_price.price,
                     is_price_edited=True if service_client_price else False,
-                    applied_discount=None,
+                    applied_discount=calc_price.applied_discount,
+                    discount_percentage=calc_price.discount_percentage,
                     is_original=False
                 )
 
     def save(self, **kwargs):
-
-        status = self.validated_data['status']
+        status = self.validated_data.get('status', self.instance.status)
         user: User = self.context['user']
         appointment: Appointment = self.instance
         with transaction.atomic():
-            if status == AppointmentStatus.CHECKED_OUT:
-                self._update_appointment_services(
+            if appointment.status in [
+                AppointmentStatus.NEW,
+                AppointmentStatus.CHECKED_OUT
+            ] and self.validated_data.get('services', []):
+                self.update_appointment_services(
                     appointment, self.validated_data['services']
                 )
                 total_client_price_before_tax: Decimal = appointment.services.aggregate(
@@ -1108,8 +1129,12 @@ class AppointmentUpdateSerializer(
 
                 appointment_prices: AppointmentPrices = calculate_appointment_prices(
                     price_before_tax=total_client_price_before_tax,
-                    include_card_fee=self.validated_data['has_card_fee_included'],
-                    include_tax=self.validated_data['has_tax_included']
+                    include_card_fee=self.validated_data.get(
+                        'has_card_fee_included', self.instance.has_card_fee_included
+                    ),
+                    include_tax=self.validated_data.get(
+                        'has_tax_included', self.instance.has_tax_included
+                    )
                 )
 
                 for k, v in appointment_prices._asdict().items():

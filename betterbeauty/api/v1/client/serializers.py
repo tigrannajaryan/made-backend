@@ -1,8 +1,7 @@
 import datetime
 import decimal
-import uuid
-from decimal import Decimal, ROUND_HALF_UP
-from typing import Dict, Iterable, List, Optional, Tuple
+from decimal import Decimal
+from typing import Dict, List, Optional, Tuple
 
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -22,6 +21,7 @@ from api.v1.client.constants import ErrorMessages
 from api.v1.stylist.fields import DurationMinuteField
 from api.v1.stylist.serializers import (
     AppointmentServiceSerializer,
+    AppointmentUpdateSerializer as StylistAppointmentUpdateSerializer,
     StylistServiceCategoryDetailsSerializer,
     StylistServicePriceSerializer,
 )
@@ -32,7 +32,6 @@ from appointment.constants import (
 )
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
-from client.constants import END_OF_DAY_BUFFER_TIME_IN_MINUTES
 from client.models import Client, PreferredStylist
 from client.types import CLIENT_PRIVACY_CHOICES, ClientPrivacy
 from core.models import User
@@ -54,11 +53,8 @@ from salon.models import (
     Stylist,
     StylistService,
 )
-from salon.types import InvitationStatus, PriceOnDate
-from salon.utils import (
-    calculate_price_and_discount_for_client_on_date,
-    generate_prices_for_stylist_service
-)
+from salon.types import InvitationStatus
+from salon.utils import calculate_price_and_discount_for_client_on_date
 
 
 class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
@@ -347,47 +343,19 @@ class ServicePricingRequestSerializer(FormattedErrorMessageMixin, serializers.Se
         raise serializers.ValidationError(ErrorMessages.ERR_NO_STYLIST_OR_SERVICE_UUIDS)
 
 
+class PricingHintSerializer(serializers.Serializer):
+    priority = serializers.IntegerField(read_only=True)
+    hint = serializers.CharField(read_only=True)
+
+
 class ServicePricingSerializer(serializers.Serializer):
     service_uuids = serializers.ListField(child=serializers.UUIDField())
     stylist_uuid = serializers.UUIDField(read_only=True)
-    prices = serializers.SerializerMethodField(read_only=True)
+    prices = StylistServicePriceSerializer(many=True, read_only=True)
+    pricing_hints = PricingHintSerializer(many=True, read_only=True)
 
     class Meta:
-        fields = ['service_uuid', 'service_name', 'prices', ]
-
-    def get_prices(self, object):
-        # TODO: deprecate in favor of salon.utils.generate_client_prices_for_stylist_services
-        # TODO: after improving test coverage for current serializer
-        services = self.context.get('services', [])
-        client: Client = self.context['client']
-        stylist = self.context['stylist']
-        prices_and_dates: Iterable[PriceOnDate] = generate_prices_for_stylist_service(
-            services,
-            client,
-            exclude_fully_booked=False,
-            exclude_unavailable_days=False
-        )
-        prices_and_dates_list = []
-        for obj in prices_and_dates:
-            availability_on_day = stylist.available_days.filter(
-                weekday=obj.date.isoweekday(),
-                is_available=True).last() if obj.date == stylist.get_current_now().date() else None
-            stylist_eod = stylist.salon.timezone.localize(
-                datetime.datetime.combine(
-                    date=obj.date, time=availability_on_day.work_end_at)
-            ) if availability_on_day else None
-            if not stylist_eod or stylist.get_current_now() < (
-                    stylist_eod - stylist.service_time_gap -
-                    datetime.timedelta(minutes=END_OF_DAY_BUFFER_TIME_IN_MINUTES)):
-                prices_and_dates_list.append({
-                    'date': obj.date,
-                    'price': Decimal(obj.calculated_price.price).quantize(0, ROUND_HALF_UP),
-                    'is_fully_booked': obj.is_fully_booked,
-                    'is_working_day': obj.is_working_day,
-                    'discount_type': obj.calculated_price.applied_discount.value
-                    if obj.calculated_price.applied_discount else None
-                })
-        return StylistServicePriceSerializer(prices_and_dates_list, many=True).data
+        fields = ['service_uuid', 'service_name', 'prices', 'pricing_hints', ]
 
 
 class AppointmentValidationMixin(object):
@@ -435,7 +403,7 @@ class AppointmentValidationMixin(object):
     def validate_service_uuid(self, service_uuid: str):
         context: Dict = getattr(self, 'context', {})
         stylist: Stylist = context['stylist']
-        if not stylist.services.filter(
+        if stylist and not stylist.services.filter(
             uuid=service_uuid
         ).exists():
             raise serializers.ValidationError(
@@ -449,9 +417,14 @@ class AppointmentValidationMixin(object):
                 appointment_errors.ERR_SERVICE_REQUIRED
             )
         for service in services:
-            self.validate_service_uuid(
-                str(service['service_uuid'])
-            )
+            if 'service_uuid' in service:
+                self.validate_service_uuid(
+                    str(service['service_uuid'])
+                )
+            else:
+                raise serializers.ValidationError(
+                    appointment_errors.ERR_SERVICE_REQUIRED
+                )
         return services
 
     def validate_stylist_uuid(self, stylist_uuid: Optional[str]):
@@ -600,57 +573,6 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
     stylist_uuid = serializers.UUIDField(source='stylist.uuid', read_only=True)
     status = serializers.CharField(read_only=False, required=False)
 
-    @staticmethod
-    @transaction.atomic
-    def _update_appointment_services(
-            appointment: Appointment, service_records: List[Dict]
-    ) -> None:
-        """Replace existing appointment services preserving added on appointment creation"""
-        stylist_services = appointment.stylist.services
-        services_to_keep: List[uuid.UUID] = [
-            service_record['service_uuid'] for service_record in service_records
-        ]
-        # Delete services which may have been added during appointment creation,
-        # but are removed during the checkout. E.g. client had decided to change the
-        # service.
-        appointment.services.all().exclude(service_uuid__in=services_to_keep).delete()
-
-        # Add new services supplied during the checkout. These are new services, so
-        # no discounts will be applied (discount applies only during appointment's
-        # initial creation
-
-        for service_record in service_records:
-            service_uuid: uuid.UUID = service_record['service_uuid']
-            service_client_price: Optional[Decimal] = (
-                service_record['client_price'] if 'client_price' in service_record else None)
-            try:
-                appointment_service: AppointmentService = (
-                    appointment.services.get(service_uuid=service_uuid))
-                # service already exists, so we will not re-write it
-                if service_client_price:
-                    appointment_service.set_client_price(service_client_price)
-                continue
-            except AppointmentService.DoesNotExist:
-                service: StylistService = stylist_services.get(uuid=service_uuid)
-                calc_price: CalculatedPrice = calculate_price_and_discount_for_client_on_date(
-                    service=service,
-                    client=appointment.client, date=appointment.datetime_start_at.date()
-                )
-                AppointmentService.objects.create(
-                    appointment=appointment,
-                    service_uuid=service.uuid,
-                    service_name=service.name,
-                    duration=service.duration,
-                    regular_price=service.regular_price,
-                    calculated_price=calc_price.price,
-                    client_price=service_client_price if service_client_price
-                    else calc_price.price,
-                    is_price_edited=True if service_client_price else False,
-                    applied_discount=calc_price.applied_discount,
-                    discount_percentage=calc_price.discount_percentage,
-                    is_original=False
-                )
-
     def save(self, **kwargs):
 
         status = self.validated_data.get('status', self.instance.status)
@@ -658,7 +580,7 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
         appointment: Appointment = self.instance
         with transaction.atomic():
             if 'services' in self.validated_data:
-                self._update_appointment_services(
+                StylistAppointmentUpdateSerializer.update_appointment_services(
                     appointment, self.validated_data['services']
                 )
             total_client_price_before_tax: Decimal = appointment.services.aggregate(
@@ -677,7 +599,7 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
                 setattr(appointment, k, v)
 
             if appointment.status != status:
-                if (status == AppointmentStatus.CANCELLED_BY_CLIENT):
+                if status == AppointmentStatus.CANCELLED_BY_CLIENT:
                     generate_client_cancelled_appointment_notification(appointment)
                 appointment.status = status
                 appointment.append_status_history(updated_by=user)
@@ -731,9 +653,14 @@ class TimeSlotSerializer(FormattedErrorMessageMixin, serializers.Serializer):
     is_booked = serializers.BooleanField()
 
 
+class StylistPhotoUrlSerializer(serializers.Serializer):
+    photo_url = serializers.URLField(source='stylist.get_profile_photo_url')
+
+
 class HomeSerializer(serializers.Serializer):
     upcoming = AppointmentSerializer(many=True)
     last_visited = AppointmentSerializer()
+    preferred_stylists = StylistPhotoUrlSerializer(many=True)
 
 
 class HistorySerializer(serializers.Serializer):
@@ -743,8 +670,9 @@ class HistorySerializer(serializers.Serializer):
 class AppointmentPreviewRequestSerializer(
     FormattedErrorMessageMixin, AppointmentValidationMixin, serializers.Serializer
 ):
-    stylist_uuid = serializers.UUIDField()
-    datetime_start_at = serializers.DateTimeField()
+    stylist_uuid = serializers.UUIDField(required=True, allow_null=False)
+    appointment_uuid = serializers.UUIDField(required=False, default=None)
+    datetime_start_at = serializers.DateTimeField(required=False, default=None)
     services = AppointmentServiceSerializer(many=True, required=True, allow_empty=False)
 
     def to_internal_value(self, data):
@@ -752,6 +680,23 @@ class AppointmentPreviewRequestSerializer(
         data['has_tax_included'] = DEFAULT_HAS_TAX_INCLUDED
         data['has_card_fee_included'] = DEFAULT_HAS_CARD_FEE_INCLUDED
         return data
+
+    def validate_datetime_start_at(self, datetime_start_at: datetime.datetime):
+        # if the appointment_uuid was passed on - we don't need to check for correctness
+        # of it; appointment already exists
+        if 'appointment_uuid' in self.initial_data:
+            return datetime_start_at
+        # otherwise, pass validation to the mixin
+        return super(AppointmentPreviewRequestSerializer, self).validate_datetime_start_at(
+            datetime_start_at
+        )
+
+    def validate_appointment_uuid(self, appointment_uuid: Optional[str]):
+        client: Client = self.context['client']
+        if appointment_uuid is not None:
+            if not client.appointments.filter(uuid=appointment_uuid).exists():
+                raise ValidationError(appointment_errors.ERR_APPOINTMENT_DOESNT_EXIST)
+        return appointment_uuid
 
 
 class AppointmentPreviewResponseSerializer(serializers.Serializer):
