@@ -440,7 +440,7 @@ class AppointmentService(models.Model):
                 1 - original_service.discount_percentage / 100.0
             )
             client_price = Decimal(price_with_discount).quantize(1, ROUND_HALF_UP)
-        self.client_price = float(client_price)
+        self.client_price = client_price
         self.is_price_edited = True
         if commit:
             self.save(update_fields=[
