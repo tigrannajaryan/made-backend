@@ -10,6 +10,8 @@ env:
   - BUNDLE_PATH=bundles
   - STAGING_BUNDLE_NAME=staging.zip
   - PRODUCTION_BUNDLE_NAME=production.zip
+  - ARTIFACTS_AWS_ACCESS_KEY="$AWS_ACCESS_KEY"
+  - ARTIFACTS_AWS_SECRET_KEY="$AWS_SECURE_KEY"
 
 notifications:
   slack:
@@ -45,6 +47,14 @@ addons:
 
   # Chrome is needed for E2E tests
   chrome: stable
+
+  artifacts:
+    target_paths: $TRAVIS_BUILD_NUMBER
+    bucket: made-backend-test-results
+    s3_region: us-east-1
+    paths:
+      - test-reports/
+      - coverage.xml
 
 install: make install-py
 
