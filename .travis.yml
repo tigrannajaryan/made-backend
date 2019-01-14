@@ -12,6 +12,8 @@ env:
   - PRODUCTION_BUNDLE_NAME=production.zip
   - ARTIFACTS_AWS_ACCESS_KEY="$AWS_ACCESS_KEY"
   - ARTIFACTS_AWS_SECRET_KEY=$"AWS_SECURE_KEY"
+  - ARTIFACTS_S3_BUCKET="made-backend-test-results"
+  - ARTIFACTS_S3_REGION=us-east-1
 
 notifications:
   slack:
@@ -44,8 +46,8 @@ addons:
   artifacts:
     debug: true
     target_paths: $TRAVIS_BUILD_NUMBER
-    bucket: made-backend-test-results
-    s3_region: us-east-1
+#    bucket: made-backend-test-results
+#    s3_region: us-east-1
     paths:
 #      - test-reports
       - coverage.xml
