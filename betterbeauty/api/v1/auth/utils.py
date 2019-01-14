@@ -8,6 +8,8 @@ from phonenumbers import region_code_for_number
 from client.models import Client
 from core.models import User
 from core.types import UserRole
+from salon.models import Invitation
+from salon.types import InvitationStatus
 from salon.utils import create_stylist_profile_for_user
 
 
@@ -42,6 +44,8 @@ def create_client_profile_from_phone(phone: str, user: Optional[User]=None)-> Us
         user = create_user_from_phone(phone, UserRole.CLIENT)
     region = get_country_code_from_phone(phone)
     Client.objects.create(user=user, country=region)
+    Invitation.objects.filter(phone=phone, invited_by_client__isnull=False).update(
+        status=InvitationStatus.ACCEPTED)
     return user
 
 

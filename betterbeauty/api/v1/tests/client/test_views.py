@@ -970,3 +970,22 @@ class TestInvitationDeclineView:
         assert (status.is_success(response.status_code))
         invitation.refresh_from_db()
         assert (invitation.status == InvitationStatus.DECLINED)
+
+
+class TestClientToClientInvitationView:
+
+    @pytest.mark.django_db
+    def test_send_invitation(self, client, authorized_client_user):
+        user, auth_token = authorized_client_user
+        client_invitation = reverse('api:v1:client:client-invitation')
+        data = [
+            {
+                'phone': '+13471111111'
+            },
+            {
+                'phone': '+13471111112'
+            }
+        ]
+        response = client.post(client_invitation, HTTP_AUTHORIZATION=auth_token,
+                               data=json.dumps(data), content_type='application/json')
+        assert (status.is_success(response.status_code))

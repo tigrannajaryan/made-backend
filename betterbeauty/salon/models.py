@@ -720,7 +720,10 @@ class StylistDateRangeDiscount(models.Model):
 
 
 class Invitation(models.Model):
-    stylist = models.ForeignKey(Stylist, on_delete=models.CASCADE, related_name='invites')
+    stylist = models.ForeignKey(Stylist, on_delete=models.CASCADE, related_name='invites',
+                                blank=True, null=True)
+    invited_by_client = models.ForeignKey(Client, on_delete=models.CASCADE,
+                                          blank=True, null=True)
     phone = models.CharField(max_length=15)
     status = models.CharField(
         max_length=15, choices=INVITATION_STATUS_CHOICES, default=InvitationStatus.INVITED
@@ -738,3 +741,12 @@ class Invitation(models.Model):
 
     class Meta:
         db_table = 'invitation'
+
+    def clean(self):
+        if self.stylist != self.invited_by_client and not (
+            self.stylist is None or self.invited_by_client is None
+        ):
+            from django.core.validators import NON_FIELD_ERRORS, ValidationError
+            raise ValidationError({
+                NON_FIELD_ERRORS: ['Only stylist or client only should be linked', ],
+            })
