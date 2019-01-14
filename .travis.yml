@@ -13,7 +13,15 @@ env:
 
 notifications:
   slack:
-    secure: Kp83hBovRKXyuBMCD73ofGVFSoh0RPJPELXwyR5gmulED2z5sXhpDvgC+SyLr0DVGKcPf+F4BPL3+3smsyBavC9eqAGmpyHnm9osptHpQoKXwHetZqD3WL4NA0u4MKusjJQHfjsAi+5rw9z/HdMw0tRCGIWmUSOfmXREMx0FbL4K1LohiDQBTymy/B+w+uNHTotUmA2y07bYeqrfYe+jVNsNHGPcZ458XKg0RiBlA10tR5nrfrOR3A3sMMIyoCzMBxR3ehF7vSGZWQo1ZwhlAkeHBVSRhOw+a+9s5V8kCSCMNcGFDbCNC/sUy9Bt6uZ8JxdxgyQ+u1OVL36NPwrfPH6j13F6gKEg5xL09KCc4wXfe++9LU2lWN2wrUokvFZmijjNZnQSFPSzoEN7AUn1BPX1VrIGFc7eFFAwcTY8/5ZhmdK6getmlKzJNZSa+rrDeZd/bnwA+nK7Ce5C0upbO/31ZOE4owL57u1D/68ESVmj/YxiWmrsC1h5RDFoMFuDBGwn0pSyaBm6ClnklzFdus3Kzz9nOARmA+FV0ZiWx4hcQG7gnVpgi8RxkGNKwSKVv2FHTwtMDokY7qDF11YWtrtQXKKS7Fw4xiilFNqAu9zyruECsSkYs3aaIMOzPn9jn0cPyS7epp0baBUkkgmdDOOE6QB2UmLhR/jHi3LRFEo=
+    rooms:
+      - secure: Kp83hBovRKXyuBMCD73ofGVFSoh0RPJPELXwyR5gmulED2z5sXhpDvgC+SyLr0DVGKcPf+F4BPL3+3smsyBavC9eqAGmpyHnm9osptHpQoKXwHetZqD3WL4NA0u4MKusjJQHfjsAi+5rw9z/HdMw0tRCGIWmUSOfmXREMx0FbL4K1LohiDQBTymy/B+w+uNHTotUmA2y07bYeqrfYe+jVNsNHGPcZ458XKg0RiBlA10tR5nrfrOR3A3sMMIyoCzMBxR3ehF7vSGZWQo1ZwhlAkeHBVSRhOw+a+9s5V8kCSCMNcGFDbCNC/sUy9Bt6uZ8JxdxgyQ+u1OVL36NPwrfPH6j13F6gKEg5xL09KCc4wXfe++9LU2lWN2wrUokvFZmijjNZnQSFPSzoEN7AUn1BPX1VrIGFc7eFFAwcTY8/5ZhmdK6getmlKzJNZSa+rrDeZd/bnwA+nK7Ce5C0upbO/31ZOE4owL57u1D/68ESVmj/YxiWmrsC1h5RDFoMFuDBGwn0pSyaBm6ClnklzFdus3Kzz9nOARmA+FV0ZiWx4hcQG7gnVpgi8RxkGNKwSKVv2FHTwtMDokY7qDF11YWtrtQXKKS7Fw4xiilFNqAu9zyruECsSkYs3aaIMOzPn9jn0cPyS7epp0baBUkkgmdDOOE6QB2UmLhR/jHi3LRFEo=
+    on_success: never
+    on_failure: always
+    template:
+      - "Repo `%{repository_slug}` *%{result}* build (<%{build_url}|#%{build_number}>) for commit (<%{compare_url}|%{commit}>) on branch `%{branch}`."
+      - "Execution time: *%{duration}*"
+      - "Author: *%{author}*"
+      - "Message: *%{message}* cc. <@UB8EFAGQ6> <@U9WQAS00N>"
 
 branches:
   only:
