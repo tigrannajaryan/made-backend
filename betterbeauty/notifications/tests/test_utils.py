@@ -119,7 +119,7 @@ def stylist_eligible_for_notification(stylist_created_before_days=89) -> Stylist
 @pytest.fixture
 def stylist_eligible_for_invite_reminder() -> Stylist:
     """Generate a stylist perfectly eligible for REMIND_INVITE_CLIENTS notification"""
-    stylist = stylist_eligible_for_notification(stylist_created_before_days=89)
+    stylist = stylist_eligible_for_notification(stylist_created_before_days=77)
     user = stylist.user
     # let there be the same notification sent > 30 days ago
     G(
@@ -1061,7 +1061,7 @@ class TestGenerateRemindAddPhotoNotifications(object):
     def test_non_recent__or_very_recent_stylist(self,
                                                 stylist_eligible_for_photo_reminder: Stylist):
         stylist_eligible_for_photo_reminder.created_at = timezone.now() - datetime.timedelta(
-            days=32
+            days=61
         )
         stylist_eligible_for_photo_reminder.save()
         assert (generate_remind_add_photo_notifications() == 0)
