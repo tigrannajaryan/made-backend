@@ -30,8 +30,8 @@
       - [Retrieve discounts](#user-content-retrieve-discounts)
       - [Set discounts](#user-content-set-discounts)
       - [Maximum discount](#user-content-maximum-discount)
-    - [**Invitations**](#user-content-invitations)
-      - [Send invitation(s) to the client(s)](#user-content-send-invitations-to-the-clients)
+    - [**Invitations**](#invitations)
+      - [Send invitation(s) to the client(s)](#invitations-to-the-clients)
     - [**Appointments**](#user-content-appointments)
       - [List existing appointments](#user-content-list-existing-appointments)
       - [Retrieve appointments for OneDay](#retrieve-appointments-for-oneday)
@@ -61,6 +61,7 @@
     - [Available Slots](#available-slots)
     - [Home API](#home-api)
     - [History API](#history-api)
+    - [Client Invitation API](#client-to-client-invitations-api)
     - [Decline Invitation API](#decline-invitation-api)
 - **Common**
     - [Stylist Profile Details](#stylist-profile-details)
@@ -3500,6 +3501,45 @@ curl -X POST \
     ]
 }
 ```
+
+## Client to client Invitations API
+
+This is a POST-only API endpoint, which accepts list of phones.
+
+### Send invitation(s) to the client(s)
+**POST /api/v1/client/invitations**
+
+```
+curl -X POST \
+  http://apiserver/api/v1/client/invitations \
+  -H 'Authorization: Token jwt_token' \
+  -H 'Content-Type: application/json' \
+  -d '[
+	{
+		"phone": "12345"
+
+	},
+	{
+		"phone": "45678"
+
+	}
+]'
+```
+
+**Response 201 Created**
+```
+[
+	{
+		"phone": "12345"
+
+	},
+	{
+		"phone": "45678"
+
+	}
+]
+```
+
 
 ## Decline Invitation API
 

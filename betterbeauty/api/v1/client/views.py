@@ -4,7 +4,7 @@ from typing import List, Optional
 from dateutil.parser import parse
 
 from django.contrib.gis.geos import Point
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Case, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -42,6 +42,7 @@ from api.v1.client.serializers import (
     TimeSlotSerializer,
 )
 from api.v1.stylist.constants import MAX_APPOINTMENTS_PER_REQUEST
+from api.v1.stylist.serializers import InvitationSerializer
 from appointment.constants import ErrorMessages as appt_constants
 from appointment.models import Appointment
 from appointment.preview import AppointmentPreviewRequest, build_appointment_preview_dict
@@ -593,3 +594,21 @@ class DeclineInvitationView(generics.DestroyAPIView):
         return {
             'user': self.request.user
         }
+
+
+class InvitationView(generics.ListCreateAPIView):
+    permission_classes = [ClientPermission, permissions.IsAuthenticated]
+    serializer_class = InvitationSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data, many=True)
+        serializer.is_valid(raise_exception=True)
+        client = self.request.user.client
+        with transaction.atomic():
+            created_objects = serializer.save(invited_by_client=client)
+        response_status = status.HTTP_200_OK
+        if len(created_objects) > 0:
+            response_status = status.HTTP_201_CREATED
+        return Response({'invitations':
+                        self.serializer_class(created_objects, many=True).data
+                         }, status=response_status)
