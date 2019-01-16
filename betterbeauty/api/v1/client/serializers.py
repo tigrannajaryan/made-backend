@@ -46,7 +46,7 @@ from notifications.utils import (
     generate_client_cancelled_appointment_notification,
     generate_new_appointment_notification,
 )
-from pricing import CalculatedPrice
+from pricing import CalculatedPrice, DiscountType
 from salon.models import (
     Invitation,
     ServiceCategory,
@@ -485,6 +485,10 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
     card_fee_percentage = serializers.DecimalField(
         max_digits=5, decimal_places=3, coerce_to_string=False, read_only=True
     )
+    total_discount_percentage = serializers.IntegerField(read_only=True)
+    total_discount_amount = serializers.DecimalField(
+        max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
+    )
     has_tax_included = serializers.NullBooleanField(read_only=True)
     has_card_fee_included = serializers.NullBooleanField(read_only=True)
     duration_minutes = DurationMinuteField(source='duration', read_only=True)
@@ -497,7 +501,8 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
             'profile_photo_url', 'salon_name', 'datetime_start_at', 'duration_minutes',
             'status', 'total_tax', 'total_card_fee', 'total_client_price_before_tax',
             'services', 'grand_total', 'has_tax_included', 'has_card_fee_included',
-            'tax_percentage', 'card_fee_percentage',
+            'tax_percentage', 'card_fee_percentage', 'total_discount_percentage',
+            'total_discount_amount',
         ]
 
     def create(self, validated_data):
@@ -535,6 +540,9 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
                 services_with_client_prices.append((service, client_price))
             appointment: Appointment = super(AppointmentSerializer, self).create(data)
             total_client_price_before_tax: Decimal = Decimal(0)
+            total_regular_price_before_tax: Decimal = Decimal(0)
+            discount_percentage: int = 0
+            discount_type: Optional[DiscountType] = None
             for (service, client_price) in services_with_client_prices:
                 AppointmentService.objects.create(
                     appointment=appointment,
@@ -553,12 +561,24 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
                     is_original=True
                 )
                 total_client_price_before_tax += Decimal(client_price.price)
+                total_regular_price_before_tax += Decimal(service.regular_price)
+                # set discount percentage to the first discount received
+                if not discount_percentage:
+                    discount_percentage = client_price.discount_percentage
+                if not discount_type:
+                    discount_type = client_price.applied_discount
 
             # set initial price settings
             appointment_prices: AppointmentPrices = calculate_appointment_prices(
                 price_before_tax=total_client_price_before_tax,
                 include_card_fee=DEFAULT_HAS_CARD_FEE_INCLUDED,
                 include_tax=DEFAULT_HAS_TAX_INCLUDED
+            )
+            appointment.discount_type = discount_type
+            appointment.total_discount_percentage = discount_percentage
+            appointment.total_discount_amount = max(
+                total_regular_price_before_tax - total_client_price_before_tax,
+                Decimal(0)
             )
             for k, v in appointment_prices._asdict().items():
                 setattr(appointment, k, v)
@@ -586,6 +606,9 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
             total_client_price_before_tax: Decimal = appointment.services.aggregate(
                 total_before_tax=Coalesce(Sum('client_price'), 0)
             )['total_before_tax']
+            total_regular_price_before_tax: Decimal = appointment.services.aggregate(
+                total_regular=Coalesce(Sum('regular_price'), 0)
+            )['total_regular']
 
             # update final prices and save appointment
 
@@ -597,6 +620,10 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
 
             for k, v in appointment_prices._asdict().items():
                 setattr(appointment, k, v)
+            appointment.total_discount_amount = max(
+                total_regular_price_before_tax - total_client_price_before_tax,
+                Decimal(0)
+            )
 
             if appointment.status != status:
                 if status == AppointmentStatus.CANCELLED_BY_CLIENT:
@@ -739,6 +766,12 @@ class AppointmentPreviewResponseSerializer(serializers.Serializer):
     )
     has_tax_included = serializers.BooleanField(read_only=True)
     has_card_fee_included = serializers.BooleanField(read_only=True)
+
+    total_discount_percentage = serializers.IntegerField(read_only=True)
+    total_discount_amount = serializers.DecimalField(
+        max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
+    )
+
     services = AppointmentServiceSerializer(many=True)
 
 

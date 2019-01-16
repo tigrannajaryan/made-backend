@@ -20,7 +20,9 @@ from pricing import (
 
 
 def _calculate_discount(regular_price, demand, discount, maximum_discount):
-    return max(regular_price * (1 - demand * discount / 100.0), regular_price - maximum_discount)
+    return max(
+        regular_price * (1 - round(demand * discount) / 100.0), regular_price - maximum_discount
+    )
 
 
 class TestCalcClientPrices(object):

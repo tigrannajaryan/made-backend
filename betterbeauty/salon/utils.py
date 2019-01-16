@@ -25,7 +25,6 @@ from pricing import (
     calc_client_prices,
     CalculatedPrice,
     DiscountSettings,
-    DiscountType,
 )
 from pricing.constants import COMPLETELY_BOOKED_DEMAND, PRICE_BLOCK_SIZE
 from salon.models import Salon, Stylist, StylistAvailableWeekDay, StylistService
@@ -254,7 +253,6 @@ def generate_prices_for_stylist_service(
         [float(x.regular_price) for x in services],
         demand_list
     )
-
     is_fully_booked_list = [d.is_fully_booked for d in demand_on_dates]
     is_working_day_list = [d.is_working_day for d in demand_on_dates]
     prices_on_dates: Iterable[PriceOnDate] = [PriceOnDate._make(x) for x in zip(
@@ -306,29 +304,16 @@ def generate_client_prices_for_stylist_services(
 
 
 def calculate_price_and_discount_for_client_on_date(
-        service: StylistService, client: Optional[Client], date: datetime.date,
-        based_on_existing_service: Optional[AppointmentService]=None
+        service: StylistService, client: Optional[Client], date: datetime.date
 ) -> CalculatedPrice:
     """
     Calculate client's price and discount for a service on the given date, based
-    either on discounts effective on the date, or copying discount percentage from
-    another previously created service (based_on_existing_service)
+    on discounts effective on the date
     :param service: Service to calculate prices for
     :param client: Client for whom price is calculated
     :param date: Date on which service will happen
-    :param based_on_existing_service: if supplied - discounts will be copied from it
     :return:
     """
-    if based_on_existing_service is not None:
-        applied_discount: DiscountType = based_on_existing_service.applied_discount
-        discount_percentage: int = based_on_existing_service.discount_percentage
-        price = service.regular_price * Decimal(1 - discount_percentage / 100.0)
-        client_price: float = float(Decimal(price).quantize(1, ROUND_HALF_UP))
-        return CalculatedPrice.build(
-            applied_discount=applied_discount,
-            discount_percentage=discount_percentage,
-            price=client_price
-        )
 
     price_on_dates: Iterable[PriceOnDate] = (
         generate_prices_for_stylist_service(
@@ -612,6 +597,17 @@ def calculate_price_with_discount_based_on_service(
         return price
     price_with_discount = price * Decimal(
         1 - original_service.discount_percentage / 100.0
+    )
+    price_with_discount = Decimal(price_with_discount).quantize(1, ROUND_HALF_UP)
+    return price_with_discount
+
+
+def calculate_price_with_discount_based_on_appointment(
+        price: Decimal, appointment: Appointment
+) -> Decimal:
+    """Calculate discounted price based on discount set in appointment"""
+    price_with_discount = price * Decimal(
+        1 - appointment.total_discount_percentage / 100.0
     )
     price_with_discount = Decimal(price_with_discount).quantize(1, ROUND_HALF_UP)
     return price_with_discount
