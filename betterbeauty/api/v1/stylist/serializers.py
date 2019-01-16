@@ -1056,10 +1056,7 @@ class AppointmentUpdateSerializer(
     def update_appointment_services(
             appointment: Appointment, service_records: List[Dict]
     ) -> None:
-        """
-            Replace existing appointment services preserving added on appointment creation.
-            Recalculate appointment's totals
-        """
+        """Replace existing appointment services preserving added on appointment creation"""
         stylist_services = appointment.stylist.services
         services_to_keep: List[uuid.UUID] = [
             service_record['service_uuid'] for service_record in service_records
@@ -1073,8 +1070,6 @@ class AppointmentUpdateSerializer(
         # no discounts will be applied (discount applies only during appointment's
         # initial creation
 
-        total_regular_price: Decimal = Decimal(0)
-        total_client_price: Decimal = Decimal(0)
         for service_record in service_records:
             service_uuid: uuid.UUID = service_record['service_uuid']
             service_client_price: Optional[Decimal] = (
@@ -1088,8 +1083,6 @@ class AppointmentUpdateSerializer(
                     # price with this value, and set service's client_price to discounted
                     # value instead
                     appointment_service.set_client_price(service_client_price)
-                regular_price = appointment_service.regular_price
-                client_price = appointment_service.client_price
             except AppointmentService.DoesNotExist:
                 service: StylistService = stylist_services.get(uuid=service_uuid)
                 # if a custom price was provided - we will use it as a regular price;
@@ -1119,8 +1112,6 @@ class AppointmentUpdateSerializer(
                     discount_percentage=discount_percentage,
                     is_original=False
                 )
-            total_regular_price += regular_price
-            total_client_price += client_price
 
     def save(self, **kwargs):
         status = self.validated_data.get('status', self.instance.status)
