@@ -615,3 +615,14 @@ def calculate_price_with_discount_based_on_service(
     )
     price_with_discount = Decimal(price_with_discount).quantize(1, ROUND_HALF_UP)
     return price_with_discount
+
+
+def calculate_price_with_discount_based_on_appointment(
+        price: Decimal, appointment: Appointment
+) -> Decimal:
+    """Calculate discounted price based on discount set in appointment"""
+    price_with_discount = price * Decimal(
+        1 - appointment.total_discount_percentage / 100.0
+    )
+    price_with_discount = Decimal(price_with_discount).quantize(1, ROUND_HALF_UP)
+    return price_with_discount

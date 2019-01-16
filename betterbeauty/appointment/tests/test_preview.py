@@ -73,17 +73,21 @@ class TestBuildAppointmentPreviewDict(object):
             services=[],
             stylist=stylist,
             datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
-            status=AppointmentStatus.NEW
+            status=AppointmentStatus.NEW,
+            total_discount_percentage=0,
+            total_discount_amount=0
         ))
 
     @pytest.mark.django_db
     @mock.patch(
         'appointment.preview.calculate_price_and_discount_for_client_on_date',
-        lambda service, client, date, based_on_existing_service: CalculatedPrice.build(0, None, 0)
+        lambda service, client, date, based_on_existing_service: CalculatedPrice.build(
+            19, DiscountType.WEEKDAY, 5
+        )
     )
     def test_without_existing_appointment_with_new_services(self):
         stylist: Stylist = G(Stylist)
-        service: StylistService = G(StylistService, stylist=stylist)
+        service: StylistService = G(StylistService, stylist=stylist, regular_price=20)
         preview_request = AppointmentPreviewRequest(
             services=[
                 {'service_uuid': service.uuid}
@@ -101,10 +105,10 @@ class TestBuildAppointmentPreviewDict(object):
         # we can't compare QuerySets, so will just replace the field
         preview_dict = preview_dict._replace(conflicts_with=None)
         assert (preview_dict == AppointmentPreviewResponse(
-            grand_total=0,
-            total_client_price_before_tax=0,
-            total_tax=0,
-            total_card_fee=0,
+            grand_total=19,
+            total_client_price_before_tax=19,
+            total_tax=calculate_tax(Decimal(19)),
+            total_card_fee=calculate_card_fee(Decimal(19)),
             duration=stylist.service_time_gap,
             conflicts_with=None,
             has_tax_included=False,
@@ -113,7 +117,7 @@ class TestBuildAppointmentPreviewDict(object):
                 AppointmentServicePreview(
                     service_name=service.name,
                     service_uuid=service.uuid,
-                    client_price=0,
+                    client_price=19,
                     regular_price=service.regular_price,
                     duration=service.duration,
                     is_original=True,
@@ -122,7 +126,9 @@ class TestBuildAppointmentPreviewDict(object):
             ],
             stylist=stylist,
             datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
-            status=AppointmentStatus.NEW
+            status=AppointmentStatus.NEW,
+            total_discount_percentage=5,
+            total_discount_amount=1
         ))
 
     @pytest.mark.django_db
@@ -139,7 +145,8 @@ class TestBuildAppointmentPreviewDict(object):
         )
         appointment: Appointment = G(
             Appointment, stylist=stylist,
-            datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC)
+            datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
+            total_discount_percentage=50, discount_type=DiscountType.WEEKDAY
         )
         appointment_service: AppointmentService = G(
             AppointmentService,
@@ -212,17 +219,21 @@ class TestBuildAppointmentPreviewDict(object):
             ],
             stylist=stylist,
             datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
-            status=appointment.status
+            status=appointment.status,
+            total_discount_percentage=50,
+            total_discount_amount=82
         ))
 
     @pytest.mark.django_db
     @mock.patch(
         'appointment.preview.calculate_price_and_discount_for_client_on_date',
-        lambda service, client, date, based_on_existing_service: CalculatedPrice.build(0, None, 0)
+        lambda service, client, date, based_on_existing_service: CalculatedPrice.build(
+            19, DiscountType.WEEKDAY, 5
+        )
     )
     def test_with_existing_client(self):
         stylist: Stylist = G(Stylist)
-        service: StylistService = G(StylistService, stylist=stylist)
+        service: StylistService = G(StylistService, stylist=stylist, regular_price=20)
         client: Client = G(Client)
         preview_request = AppointmentPreviewRequest(
             services=[
@@ -241,19 +252,21 @@ class TestBuildAppointmentPreviewDict(object):
         # we can't compare QuerySets, so will just replace the field
         preview_dict = preview_dict._replace(conflicts_with=None)
         assert (preview_dict == AppointmentPreviewResponse(
-            grand_total=0,
-            total_client_price_before_tax=0,
-            total_tax=0,
-            total_card_fee=0,
+            grand_total=19,
+            total_client_price_before_tax=19,
+            total_tax=calculate_tax(Decimal(19)),
+            total_card_fee=calculate_card_fee(Decimal(19)),
             duration=stylist.service_time_gap,
             conflicts_with=None,
             has_tax_included=False,
             has_card_fee_included=False,
+            total_discount_percentage=5,
+            total_discount_amount=1,
             services=[
                 AppointmentServicePreview(
                     service_name=service.name,
                     service_uuid=service.uuid,
-                    client_price=0,
+                    client_price=19,
                     regular_price=service.regular_price,
                     duration=service.duration,
                     is_original=True,

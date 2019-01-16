@@ -15,7 +15,7 @@ from core.utils import calculate_appointment_prices
 from salon.models import Stylist, StylistService
 from salon.utils import (
     calculate_price_and_discount_for_client_on_date,
-    calculate_price_with_discount_based_on_service,
+    calculate_price_with_discount_based_on_appointment,
 )
 
 
@@ -50,6 +50,8 @@ class AppointmentPreviewResponse(NamedTuple):
     stylist: Optional[Stylist]
     datetime_start_at: datetime.datetime
     status: AppointmentStatus
+    total_discount_percentage: int
+    total_discount_amount: Decimal
     tax_percentage: float = float(DEFAULT_TAX_RATE) * 100
     card_fee_percentage: float = float(DEFAULT_CARD_FEE) * 100
 
@@ -68,19 +70,22 @@ def build_appointment_preview_dict(
             uuid=preview_request.appointment_uuid
         )
         status = appointment.status
-
+    total_discount_percentage: int = 0
+    if appointment:
+        total_discount_percentage = appointment.total_discount_percentage
     for service_request_item in preview_request.services:
         appointment_service: Optional[AppointmentService] = None
         if appointment:
             appointment_service = appointment.services.filter(
                 service_uuid=service_request_item['service_uuid']
             ).last()
-        client_price: Optional[Decimal] = service_request_item[
+        service_client_price: Optional[Decimal] = service_request_item[
             'client_price'
         ] if 'client_price' in service_request_item else None
+
         if appointment_service:
-            if client_price:
-                appointment_service.set_client_price(client_price, commit=False)
+            if service_client_price:
+                appointment_service.set_client_price(service_client_price, commit=False)
             # service already exists in appointment, and will not be recalculated,
             # so we should take it's data verbatim
             service_item = AppointmentServicePreview(
@@ -92,31 +97,33 @@ def build_appointment_preview_dict(
                 duration=appointment_service.duration,
                 is_original=appointment_service.is_original
             )
+            if not total_discount_percentage:
+                total_discount_percentage = appointment_service.discount_percentage
         else:
             # appointment service doesn't exist in appointment yet, and is to be added, so we
-            # need to calculate the price for it. If appointment itself doesn't exist yet -
-            # we will calculate price with discounts. If appointment already exists -
-            # this is an addition, so no discount will apply
+            # need to calculate the price for it.
             service: StylistService = stylist.services.get(
                 uuid=service_request_item['service_uuid']
             )
-            original_service: Optional[AppointmentService] = appointment.services.filter(
-                is_original=True, applied_discount__isnull=False
-            ).first() if appointment else None
-            if not client_price:
-                # If there's at least one service in the existing appointment which originally has
-                # a discount - we will copy discount information from that service instead
-                # of calculating it based on today's information
+            if not service_client_price:
+                regular_price = service.regular_price
+            else:
+                regular_price = service_client_price
 
-                client_price = Decimal(calculate_price_and_discount_for_client_on_date(
+            if not appointment:
+                calculated_price = calculate_price_and_discount_for_client_on_date(
                     service=service, client=client,
                     date=preview_request.datetime_start_at.date(),
-                    based_on_existing_service=original_service
-                ).price)
-            else:
-                client_price = calculate_price_with_discount_based_on_service(
-                    client_price, original_service
+                    based_on_existing_service=None
                 )
+                client_price = Decimal(calculated_price.price)
+                if not total_discount_percentage:
+                    total_discount_percentage = calculated_price.discount_percentage
+            else:
+                client_price = calculate_price_with_discount_based_on_appointment(
+                    regular_price, appointment
+                )
+
             service_item = AppointmentServicePreview(
                 uuid=None,
                 service_uuid=service.uuid,
@@ -129,6 +136,7 @@ def build_appointment_preview_dict(
         service_items.append(service_item)
 
     total_client_price_before_tax = sum([s.client_price for s in service_items], Decimal(0))
+    total_regular_price = sum([s.regular_price for s in service_items], Decimal(0))
     appointment_prices: AppointmentPrices = calculate_appointment_prices(
         price_before_tax=total_client_price_before_tax,
         include_card_fee=preview_request.has_card_fee_included,
@@ -159,5 +167,9 @@ def build_appointment_preview_dict(
         services=service_items,
         stylist=stylist,
         datetime_start_at=preview_request.datetime_start_at,
-        status=status
+        status=status,
+        total_discount_percentage=total_discount_percentage,
+        total_discount_amount=max(
+            total_regular_price - total_client_price_before_tax, Decimal(0)
+        )
     )

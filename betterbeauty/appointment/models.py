@@ -96,6 +96,12 @@ class Appointment(models.Model):
     has_tax_included = models.NullBooleanField(null=True, default=None)
     has_card_fee_included = models.NullBooleanField(null=True, default=None)
 
+    total_discount_percentage = models.IntegerField(null=True, default=0)
+    total_discount_amount = models.DecimalField(
+        null=True, default=Decimal(0), max_digits=6, decimal_places=2
+    )
+    discount_type = models.CharField(choices=DISCOUNT_TYPE_CHOICES, null=True, max_length=30)
+
     # fields holding Google calendar references for this appointment
     client_google_calendar_id = models.CharField(
         max_length=512, null=True, blank=True, default=None)
@@ -435,14 +441,16 @@ class AppointmentService(models.Model):
         ).exclude(id=self.id).first() if appointment else None
         if original_service:
             self.applied_discount = original_service.applied_discount
-            self.discount_percentage = original_service.discount_percentage
-            price_with_discount = client_price * Decimal(
-                1 - original_service.discount_percentage / 100.0
-            )
-            client_price = Decimal(price_with_discount).quantize(1, ROUND_HALF_UP)
-        self.client_price = client_price
+
+        self.discount_percentage = appointment.total_discount_percentage
+        price_with_discount: Decimal = client_price * Decimal(
+            1 - original_service.discount_percentage / 100.0
+        )
+        self.regular_price = client_price
+        self.client_price = Decimal(price_with_discount).quantize(1, ROUND_HALF_UP)
         self.is_price_edited = True
         if commit:
             self.save(update_fields=[
-                'client_price', 'is_price_edited', 'applied_discount', 'discount_percentage'
+                'client_price', 'regular_price', 'is_price_edited', 'applied_discount',
+                'discount_percentage',
             ])

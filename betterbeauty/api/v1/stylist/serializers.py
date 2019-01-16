@@ -46,9 +46,7 @@ from salon.models import (
 )
 from salon.types import PriceOnDate
 from salon.utils import (
-    calculate_price_and_discount_for_client_on_date,
-    calculate_price_with_discount_based_on_service,
-    CalculatedPrice,
+    calculate_price_with_discount_based_on_appointment,
     create_stylist_profile_for_user,
     generate_prices_for_stylist_service,
     get_last_appointment_for_client,
@@ -1000,6 +998,12 @@ class AppointmentPreviewResponseSerializer(serializers.Serializer):
     )
     has_tax_included = serializers.BooleanField(read_only=True)
     has_card_fee_included = serializers.BooleanField(read_only=True)
+
+    total_discount_percentage = serializers.IntegerField(read_only=True)
+    total_discount_amount = serializers.DecimalField(
+        max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
+    )
+
     services = AppointmentServiceSerializer(many=True)
 
 
@@ -1052,7 +1056,10 @@ class AppointmentUpdateSerializer(
     def update_appointment_services(
             appointment: Appointment, service_records: List[Dict]
     ) -> None:
-        """Replace existing appointment services preserving added on appointment creation"""
+        """
+            Replace existing appointment services preserving added on appointment creation.
+            Recalculate appointment's totals
+        """
         stylist_services = appointment.stylist.services
         services_to_keep: List[uuid.UUID] = [
             service_record['service_uuid'] for service_record in service_records
@@ -1066,6 +1073,8 @@ class AppointmentUpdateSerializer(
         # no discounts will be applied (discount applies only during appointment's
         # initial creation
 
+        total_regular_price: Decimal = Decimal(0)
+        total_client_price: Decimal = Decimal(0)
         for service_record in service_records:
             service_uuid: uuid.UUID = service_record['service_uuid']
             service_client_price: Optional[Decimal] = (
@@ -1075,39 +1084,43 @@ class AppointmentUpdateSerializer(
                     appointment.services.get(service_uuid=service_uuid))
                 # service already exists, so we will not re-write it
                 if service_client_price:
+                    # if client_price was provided, we need to replace service's regular
+                    # price with this value, and set service's client_price to discounted
+                    # value instead
                     appointment_service.set_client_price(service_client_price)
-                continue
+                regular_price = appointment_service.regular_price
+                client_price = appointment_service.client_price
             except AppointmentService.DoesNotExist:
                 service: StylistService = stylist_services.get(uuid=service_uuid)
-                # If there's at least one service in the appointment which originally has
-                # a discount - we will copy discount information from that service instead
-                # of calculating it based on today's information.
-                original_service: Optional[AppointmentService] = appointment.services.filter(
-                    is_original=True, applied_discount__isnull=False
-                ).first()
-                calc_price: CalculatedPrice = calculate_price_and_discount_for_client_on_date(
-                    service=service,
-                    client=appointment.client, date=appointment.datetime_start_at.date(),
-                    based_on_existing_service=original_service
-                )
+                # if a custom price was provided - we will use it as a regular price;
+                # otherwise, we'll take regular price from the service
+
                 if service_client_price:
-                    service_client_price = calculate_price_with_discount_based_on_service(
-                        service_client_price, original_service
-                    )
+                    regular_price = service_client_price
+                else:
+                    regular_price = service.regular_price
+
+                client_price = calculate_price_with_discount_based_on_appointment(
+                    regular_price, appointment
+                )
+                applied_discount = appointment.discount_type
+                discount_percentage = appointment.total_discount_percentage
+
                 AppointmentService.objects.create(
                     appointment=appointment,
                     service_uuid=service.uuid,
                     service_name=service.name,
                     duration=service.duration,
-                    regular_price=service.regular_price,
-                    calculated_price=calc_price.price,
-                    client_price=service_client_price if service_client_price
-                    else calc_price.price,
+                    regular_price=regular_price,
+                    calculated_price=client_price,
+                    client_price=client_price,
                     is_price_edited=True if service_client_price else False,
-                    applied_discount=calc_price.applied_discount,
-                    discount_percentage=calc_price.discount_percentage,
+                    applied_discount=applied_discount,
+                    discount_percentage=discount_percentage,
                     is_original=False
                 )
+            total_regular_price += regular_price
+            total_client_price += client_price
 
     def save(self, **kwargs):
         status = self.validated_data.get('status', self.instance.status)
@@ -1124,6 +1137,9 @@ class AppointmentUpdateSerializer(
                 total_client_price_before_tax: Decimal = appointment.services.aggregate(
                     total_before_tax=Coalesce(Sum('client_price'), 0)
                 )['total_before_tax']
+                total_regular_price_before_tax: Decimal = appointment.services.aggregate(
+                    total_regular=Coalesce(Sum('regular_price'), 0)
+                )['total_regular']
 
                 # update final prices and save appointment
 
@@ -1139,6 +1155,10 @@ class AppointmentUpdateSerializer(
 
                 for k, v in appointment_prices._asdict().items():
                     setattr(appointment, k, v)
+                appointment.total_discount_amount = max(
+                    total_regular_price_before_tax - total_regular_price_before_tax,
+                    Decimal(0)
+                )
 
             if appointment.status != status:
                 if (appointment.status == AppointmentStatus.NEW and
