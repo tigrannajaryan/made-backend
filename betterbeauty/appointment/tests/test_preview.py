@@ -81,7 +81,7 @@ class TestBuildAppointmentPreviewDict(object):
     @pytest.mark.django_db
     @mock.patch(
         'appointment.preview.calculate_price_and_discount_for_client_on_date',
-        lambda service, client, date, based_on_existing_service: CalculatedPrice.build(
+        lambda service, client, date: CalculatedPrice.build(
             19, DiscountType.WEEKDAY, 5
         )
     )
@@ -227,7 +227,7 @@ class TestBuildAppointmentPreviewDict(object):
     @pytest.mark.django_db
     @mock.patch(
         'appointment.preview.calculate_price_and_discount_for_client_on_date',
-        lambda service, client, date, based_on_existing_service: CalculatedPrice.build(
+        lambda service, client, date: CalculatedPrice.build(
             19, DiscountType.WEEKDAY, 5
         )
     )

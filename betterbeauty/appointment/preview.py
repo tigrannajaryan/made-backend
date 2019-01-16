@@ -85,6 +85,10 @@ def build_appointment_preview_dict(
 
         if appointment_service:
             if service_client_price:
+                # client price (overriding current regular price) was provided. We will
+                # temporarily (w/out committing to DB) replace regular price of the service
+                # with client-supplied, and will re-calculate client_price (i.e. client-facing)
+                # with existing appointment's discount
                 appointment_service.set_client_price(service_client_price, commit=False)
             # service already exists in appointment, and will not be recalculated,
             # so we should take it's data verbatim
@@ -105,16 +109,22 @@ def build_appointment_preview_dict(
             service: StylistService = stylist.services.get(
                 uuid=service_request_item['service_uuid']
             )
+            # We need to decide what we use for the base price. If client_price is supplied
+            # we will use it as a base price. Otherwise, we will take base price from stylist's
+            # service
             if not service_client_price:
                 regular_price = service.regular_price
             else:
                 regular_price = service_client_price
-
+            # now when we know the base price, we need to calculate price with discount.
+            # if the appointment we're previewing is based on the existing appointment -
+            # we will just take discount percentage from it. Otherwise, we need to run
+            # pricing calculation for given client and stylist on the given date, and see
+            # if there is any discount there
             if not appointment:
                 calculated_price = calculate_price_and_discount_for_client_on_date(
                     service=service, client=client,
-                    date=preview_request.datetime_start_at.date(),
-                    based_on_existing_service=None
+                    date=preview_request.datetime_start_at.date()
                 )
                 client_price = Decimal(calculated_price.price)
                 if not total_discount_percentage:
