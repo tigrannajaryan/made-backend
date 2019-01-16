@@ -835,6 +835,10 @@ class AppointmentSerializer(
     )
     has_tax_included = serializers.NullBooleanField(read_only=True)
     has_card_fee_included = serializers.NullBooleanField(read_only=True)
+    total_discount_percentage = serializers.IntegerField(read_only=True)
+    total_discount_amount = serializers.DecimalField(
+        max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
+    )
 
     services = AppointmentServiceSerializer(many=True)
 
@@ -852,7 +856,8 @@ class AppointmentSerializer(
             'client_phone', 'datetime_start_at', 'duration_minutes', 'status',
             'total_tax', 'total_card_fee', 'total_client_price_before_tax',
             'services', 'grand_total', 'has_tax_included', 'has_card_fee_included',
-            'tax_percentage', 'card_fee_percentage', 'client_profile_photo_url', 'created_at'
+            'tax_percentage', 'card_fee_percentage', 'client_profile_photo_url', 'created_at',
+            'total_discount_percentage', 'total_discount_amount',
         ]
 
     def validate(self, attrs):

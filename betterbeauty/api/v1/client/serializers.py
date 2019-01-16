@@ -485,6 +485,10 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
     card_fee_percentage = serializers.DecimalField(
         max_digits=5, decimal_places=3, coerce_to_string=False, read_only=True
     )
+    total_discount_percentage = serializers.IntegerField(read_only=True)
+    total_discount_amount = serializers.DecimalField(
+        max_digits=6, decimal_places=2, coerce_to_string=False, read_only=True
+    )
     has_tax_included = serializers.NullBooleanField(read_only=True)
     has_card_fee_included = serializers.NullBooleanField(read_only=True)
     duration_minutes = DurationMinuteField(source='duration', read_only=True)
@@ -497,7 +501,8 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
             'profile_photo_url', 'salon_name', 'datetime_start_at', 'duration_minutes',
             'status', 'total_tax', 'total_card_fee', 'total_client_price_before_tax',
             'services', 'grand_total', 'has_tax_included', 'has_card_fee_included',
-            'tax_percentage', 'card_fee_percentage',
+            'tax_percentage', 'card_fee_percentage', 'total_discount_percentage',
+            'total_discount_amount',
         ]
 
     def create(self, validated_data):
