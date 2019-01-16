@@ -254,7 +254,6 @@ def generate_prices_for_stylist_service(
         [float(x.regular_price) for x in services],
         demand_list
     )
-
     is_fully_booked_list = [d.is_fully_booked for d in demand_on_dates]
     is_working_day_list = [d.is_working_day for d in demand_on_dates]
     prices_on_dates: Iterable[PriceOnDate] = [PriceOnDate._make(x) for x in zip(

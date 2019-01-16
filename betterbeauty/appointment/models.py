@@ -436,15 +436,10 @@ class AppointmentService(models.Model):
     def set_client_price(self, client_price: Decimal, commit: bool=True):
         # before applying the client price, we need to apply original discounts to it
         appointment: Appointment = self.appointment
-        original_service: Optional[AppointmentService] = appointment.services.filter(
-            is_original=True, applied_discount__isnull=False
-        ).exclude(id=self.id).first() if appointment else None
-        if original_service:
-            self.applied_discount = original_service.applied_discount
 
         self.discount_percentage = appointment.total_discount_percentage
         price_with_discount: Decimal = client_price * Decimal(
-            1 - original_service.discount_percentage / 100.0
+            1 - appointment.total_discount_percentage / 100.0
         )
         self.regular_price = client_price
         self.client_price = Decimal(price_with_discount).quantize(1, ROUND_HALF_UP)

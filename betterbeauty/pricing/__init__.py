@@ -164,12 +164,12 @@ def calc_client_prices(
 
                 # Calculate discount percentage to apply as a portion of
                 # maximum applicable discount.
-                discount_percentage = (max_discount.discount_percentage *
-                                       apply_discount_part)
+                discount_percentage = round(
+                    max_discount.discount_percentage * apply_discount_part
+                )
             else:
                 # The current demand is full on all days, no discount
                 discount_percentage = 0
-
             total_price: float = 0
             for regular_price in regular_prices:
                 price = regular_price * (1 - discount_percentage / 100.0)
