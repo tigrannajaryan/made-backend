@@ -1039,7 +1039,8 @@ def generate_remind_define_services_notification(dry_run=False) -> int:
     send_time_window_start = datetime.time(10, 0, 0)
     send_time_window_end = datetime.time(20, 0, 0)
     one_day_ago = (timezone.now() - datetime.timedelta(days=1))
-    thirty_days_ago = (timezone.now() - datetime.timedelta(days=30))
+    earliest_time_stylist_created_profile = (timezone.now() - datetime.timedelta(days=20))
+    earliest_time_same_notification_sent = (timezone.now() - datetime.timedelta(days=7))
 
     # **Filter Conditions**
     # -Stylist account is not partial, it is a full profile
@@ -1059,10 +1060,14 @@ def generate_remind_define_services_notification(dry_run=False) -> int:
         Q(Q(sent_at__gte=one_day_ago) | Q(pending_to_send=True)),
         user_id=OuterRef('user__id'), target=UserRole.STYLIST,
     )
+    stylist_has_same_notification_query = Notification.objects.filter(
+        user_id=OuterRef('user__id'), code=code, target=UserRole.STYLIST,
+        created_at__gte=earliest_time_same_notification_sent
+    )
 
     eligible_stylists_ids = Stylist.objects.filter(
         deactivated_at__isnull=True,
-        created_at__gte=thirty_days_ago,
+        created_at__gte=earliest_time_stylist_created_profile,
         created_at__lte=one_day_ago,
     ).exclude(
         Q(user__phone__isnull=True) | Q(user__phone__exact='')
@@ -1070,9 +1075,11 @@ def generate_remind_define_services_notification(dry_run=False) -> int:
         stylist_has_services=Exists(stylist_has_services),
         client_has_prior_notifications=Exists(stylist_has_prior_notifications),
         client_has_recent_notification=Exists(stylist_has_recent_notification),
+        has_same_notification=Exists(stylist_has_same_notification_query),
     ).filter(
         stylist_has_services=False,
         client_has_prior_notifications=False,
+        has_same_notification=False,
         client_has_recent_notification=False
     ).values_list('id', flat=True)
 
@@ -1132,9 +1139,9 @@ def generate_remind_invite_clients_notifications(dry_run=False) -> int:
         'We noticed that you have not invited any clients to Made Pro. Stylists who '
         'invite 10 or more clients usually get their first booking within 24 hours.'
     )
-    earliest_time_stylist_created_profile = timezone.now() - datetime.timedelta(days=90)
+    earliest_time_stylist_created_profile = timezone.now() - datetime.timedelta(days=79)
     one_day_ago = timezone.now() - datetime.timedelta(hours=24)
-    earliest_time_same_notification_sent = timezone.now() - datetime.timedelta(days=30)
+    earliest_time_same_notification_sent = timezone.now() - datetime.timedelta(days=20)
     target = UserRole.STYLIST
     send_time_window_start = datetime.time(10, 0)
     send_time_window_end = datetime.time(20, 0)
@@ -1220,9 +1227,10 @@ def generate_remind_add_photo_notifications(dry_run=False) -> int:
     2. 24 hours or more passed since last notification of any type was sent
        to this stylist and there are no pending notifications.
     3. remind_add_photo notification was never sent
-    4. Stylist created account less than 30 days ago.
+    4. Stylist created account less than 59 days ago.
     5. Stylist is bookable (has defined hours, services).
     6. Stylist account is not partial, it is a full profile.
+    7. Stylist doesnot have a photo
 
     :param dry_run: if set to True, don't actually create notifications
     :return: number of notifications created
@@ -1233,8 +1241,9 @@ def generate_remind_add_photo_notifications(dry_run=False) -> int:
         'We noticed that you do not have a photo in Made Pro. Stylists who '
         'have a photo have on average about 60% higher chance to get a booking.'
     )
-    earliest_time_stylist_created_profile = timezone.now() - datetime.timedelta(days=30)
+    earliest_time_stylist_created_profile = timezone.now() - datetime.timedelta(days=59)
     one_day_ago = timezone.now() - datetime.timedelta(hours=24)
+    earliest_time_same_notification_sent = timezone.now() - datetime.timedelta(days=15)
     target = UserRole.STYLIST
     send_time_window_start = datetime.time(10, 0)
     send_time_window_end = datetime.time(20, 0)
@@ -1248,7 +1257,8 @@ def generate_remind_add_photo_notifications(dry_run=False) -> int:
     )
 
     stylist_has_remind_add_photo_notification_sent = Notification.objects.filter(
-        user_id=OuterRef('user__id'), target=UserRole.STYLIST, code=code
+        user_id=OuterRef('user__id'), target=UserRole.STYLIST, code=code,
+        created_at__gte=earliest_time_same_notification_sent
     )
 
     stylist_has_enabled_services_query = StylistService.objects.filter(
