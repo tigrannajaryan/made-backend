@@ -1152,7 +1152,7 @@ class AppointmentUpdateSerializer(
                 for k, v in appointment_prices._asdict().items():
                     setattr(appointment, k, v)
                 appointment.total_discount_amount = max(
-                    total_regular_price_before_tax - total_regular_price_before_tax,
+                    total_regular_price_before_tax - total_client_price_before_tax,
                     Decimal(0)
                 )
 
