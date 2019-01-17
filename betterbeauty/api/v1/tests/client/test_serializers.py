@@ -497,7 +497,8 @@ class TestAppointmentUpdateSerializer(object):
         appointment = G(
             Appointment,
             stylist=stylist,
-            duration=datetime.timedelta(minutes=30)
+            duration=datetime.timedelta(minutes=30),
+            total_discount_percentage=10
         )
         context = {
             'stylist': appointment.stylist,
@@ -552,25 +553,29 @@ class TestAppointmentUpdateSerializer(object):
             is_original=False
         )
         assert(added_appointment_service.service_uuid == new_service.uuid)
-        assert(added_appointment_service.client_price == 30)
-        assert(added_appointment_service.regular_price == 40)
+        assert(added_appointment_service.regular_price == 30)  # equal to supplied client_price
+        assert(added_appointment_service.client_price == 27)  # supplied client_price with discount
 
         total_services_cost = sum([s.client_price for s in saved_appointment.services.all()], 0)
+        total_services_regular_cost = sum(
+            [s.regular_price for s in saved_appointment.services.all()], 0)
         assert(saved_appointment.total_client_price_before_tax == total_services_cost)
         assert(saved_appointment.grand_total == total_services_cost)
         assert(saved_appointment.total_tax == calculate_tax(Decimal(total_services_cost)))
         assert(
             saved_appointment.total_card_fee == calculate_card_fee(Decimal(total_services_cost))
         )
-
-    @mock.patch(
-        'api.v1.stylist.serializers.calculate_price_and_discount_for_client_on_date',
-        lambda service, client, date, based_on_existing_service: CalculatedPrice.build(
-            10, DiscountType.WEEKDAY, 90
+        assert(
+            saved_appointment.total_discount_amount ==
+            total_services_regular_cost - total_services_cost
         )
-    )
+
     def test_edit_services_list_by_client(self, stylist_data: Stylist, client_data: Client):
-        appointment: Appointment = G(Appointment, stylist=stylist_data)
+        appointment: Appointment = G(
+            Appointment, stylist=stylist_data,
+            discount_type=DiscountType.WEEKDAY,
+            total_discount_percentage=50
+        )
         service: StylistService = G(
             StylistService, stylist=stylist_data, regular_price=50
         )
@@ -608,7 +613,7 @@ class TestAppointmentUpdateSerializer(object):
                 },
                 {
                     'service_uuid': str(service_new_client_price.uuid),
-                    'client_price': 5
+                    'client_price': 20
                 }
             ]
         }
@@ -646,20 +651,31 @@ class TestAppointmentUpdateSerializer(object):
             service_uuid=service_new.uuid)
         assert(new_appt_service.is_price_edited is False)
         assert(new_appt_service.regular_price == 100)
-        assert(new_appt_service.client_price == 10)
-        assert(new_appt_service.calculated_price == 10)
+        assert(new_appt_service.client_price == 50)  # 50% off regular service
+        assert(new_appt_service.calculated_price == 50)
         assert(new_appt_service.applied_discount == DiscountType.WEEKDAY)
-        assert(new_appt_service.discount_percentage == 90)
+        assert(new_appt_service.discount_percentage == 50)
 
         # verify that client's own price was set
         new_appt_service_w_client_price: AppointmentService = updated_appointment.services.get(
             service_uuid=service_new_client_price.uuid)
         assert (new_appt_service_w_client_price.is_price_edited is True)
-        assert (new_appt_service_w_client_price.regular_price == 100)
-        assert (new_appt_service_w_client_price.client_price == 3)  # 50% off $5 client price
+        assert (new_appt_service_w_client_price.regular_price == 20)
+        assert (new_appt_service_w_client_price.client_price == 10)  # 50% off 20 client price
         assert (new_appt_service_w_client_price.calculated_price == 10)
         assert (new_appt_service_w_client_price.applied_discount == DiscountType.WEEKDAY)
-        assert (new_appt_service_w_client_price.discount_percentage == 90)
+        assert (new_appt_service_w_client_price.discount_percentage == 50)
+
+        # verify appointment totals were recalculated
+        appointment.refresh_from_db()
+        total_services_cost = sum([s.client_price for s in appointment.services.all()], 0)
+        total_services_regular_cost = sum([s.regular_price for s in appointment.services.all()], 0)
+        assert (appointment.total_client_price_before_tax == total_services_cost)
+        assert (appointment.grand_total == total_services_cost)
+        assert (
+            appointment.total_discount_amount ==
+            total_services_regular_cost - total_services_cost
+        )
 
 
 class TestAppointmentPreviewRequestSerializer(object):
@@ -815,7 +831,9 @@ class TestAppointmentPreviewResponseSerializer(object):
                     uuid=service.uuid
                 )
             ],
-            status=AppointmentStatus.NEW
+            status=AppointmentStatus.NEW,
+            total_discount_percentage=10,
+            total_discount_amount=5
         )
         serializer = AppointmentPreviewResponseSerializer()
         output = serializer.to_representation(instance=data)
@@ -849,6 +867,8 @@ class TestAppointmentPreviewResponseSerializer(object):
             'grand_total': 15,
             'has_tax_included': True,
             'has_card_fee_included': False,
+            'total_discount_percentage': 10,
+            'total_discount_amount': 5
         })
 
 
