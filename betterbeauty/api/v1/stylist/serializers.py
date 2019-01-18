@@ -921,7 +921,9 @@ class AppointmentSerializer(
             appointment_prices: AppointmentPrices = calculate_appointment_prices(
                 price_before_tax=total_client_price_before_tax,
                 include_card_fee=DEFAULT_HAS_CARD_FEE_INCLUDED,
-                include_tax=DEFAULT_HAS_TAX_INCLUDED
+                include_tax=DEFAULT_HAS_TAX_INCLUDED,
+                tax_rate=stylist.tax_rate,
+                card_fee=stylist.card_fee,
             )
             for k, v in appointment_prices._asdict().items():
                 setattr(appointment, k, v)
@@ -1146,7 +1148,9 @@ class AppointmentUpdateSerializer(
                     ),
                     include_tax=self.validated_data.get(
                         'has_tax_included', self.instance.has_tax_included
-                    )
+                    ),
+                    tax_rate=appointment.stylist.tax_rate,
+                    card_fee=appointment.stylist.card_fee,
                 )
 
                 for k, v in appointment_prices._asdict().items():
@@ -1702,3 +1706,34 @@ class StylistProfileDetailsSerializer(serializers.ModelSerializer):
         return stylist.salon.public_phone or stylist.user.phone if (
             stylist.salon
         ) else None
+
+
+class StylistSettingsRequestSerializer(FormattedErrorMessageMixin, serializers.Serializer):
+
+    tax_percentage = serializers.DecimalField(max_digits=5, decimal_places=3)
+    card_fee_percentage = serializers.DecimalField(max_digits=5, decimal_places=3)
+
+
+class StylistSettingsResponseSerializer(serializers.Serializer):
+
+    tax_percentage = serializers.SerializerMethodField()
+    card_fee_percentage = serializers.SerializerMethodField()
+    google_calendar_integrated = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Stylist
+        fields = [
+            'tax_percentage', 'card_fee_percentage', 'google_calendar_integrated',
+        ]
+
+    def get_tax_percentage(self, stylist: Stylist):
+        return float(stylist.tax_rate) * 100
+
+    def get_card_fee_percentage(self, stylist: Stylist):
+        return float(stylist.card_fee) * 100
+
+    def get_google_calendar_integrated(self, stylist: Stylist):
+        return bool(
+            stylist.google_access_token and
+            stylist.google_refresh_token
+        )

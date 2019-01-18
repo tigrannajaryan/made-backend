@@ -75,7 +75,9 @@ class TestBuildAppointmentPreviewDict(object):
             datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
             status=AppointmentStatus.NEW,
             total_discount_percentage=0,
-            total_discount_amount=0
+            total_discount_amount=0,
+            tax_percentage=float(stylist.tax_rate) * 100,
+            card_fee_percentage=float(stylist.card_fee) * 100,
         ))
 
     @pytest.mark.django_db
@@ -107,8 +109,8 @@ class TestBuildAppointmentPreviewDict(object):
         assert (preview_dict == AppointmentPreviewResponse(
             grand_total=19,
             total_client_price_before_tax=19,
-            total_tax=calculate_tax(Decimal(19)),
-            total_card_fee=calculate_card_fee(Decimal(19)),
+            total_tax=calculate_tax(Decimal(19), stylist.tax_rate),
+            total_card_fee=calculate_card_fee(Decimal(19), stylist.card_fee),
             duration=stylist.service_time_gap,
             conflicts_with=None,
             has_tax_included=False,
@@ -128,7 +130,9 @@ class TestBuildAppointmentPreviewDict(object):
             datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
             status=AppointmentStatus.NEW,
             total_discount_percentage=5,
-            total_discount_amount=1
+            total_discount_amount=1,
+            tax_percentage=float(stylist.tax_rate) * 100,
+            card_fee_percentage=float(stylist.card_fee) * 100,
         ))
 
     @pytest.mark.django_db
@@ -182,8 +186,8 @@ class TestBuildAppointmentPreviewDict(object):
         assert (preview_dict == AppointmentPreviewResponse(
             grand_total=38,
             total_client_price_before_tax=38,
-            total_tax=calculate_tax(Decimal(38)),
-            total_card_fee=calculate_card_fee(Decimal(38)),
+            total_tax=calculate_tax(Decimal(38), tax_rate=stylist.tax_rate),
+            total_card_fee=calculate_card_fee(Decimal(38), card_fee=stylist.card_fee),
             duration=stylist.service_time_gap,
             conflicts_with=None,
             has_tax_included=False,
@@ -221,7 +225,9 @@ class TestBuildAppointmentPreviewDict(object):
             datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
             status=appointment.status,
             total_discount_percentage=50,
-            total_discount_amount=82
+            total_discount_amount=82,
+            tax_percentage=float(stylist.tax_rate) * 100,
+            card_fee_percentage=float(stylist.card_fee) * 100,
         ))
 
     @pytest.mark.django_db
@@ -254,8 +260,8 @@ class TestBuildAppointmentPreviewDict(object):
         assert (preview_dict == AppointmentPreviewResponse(
             grand_total=19,
             total_client_price_before_tax=19,
-            total_tax=calculate_tax(Decimal(19)),
-            total_card_fee=calculate_card_fee(Decimal(19)),
+            total_tax=calculate_tax(Decimal(19), tax_rate=stylist.tax_rate),
+            total_card_fee=calculate_card_fee(Decimal(19), card_fee=stylist.card_fee),
             duration=stylist.service_time_gap,
             conflicts_with=None,
             has_tax_included=False,
@@ -275,5 +281,8 @@ class TestBuildAppointmentPreviewDict(object):
             ],
             stylist=stylist,
             datetime_start_at=datetime.datetime(2018, 1, 1, 0, 0, tzinfo=pytz.UTC),
-            status=AppointmentStatus.NEW
+            status=AppointmentStatus.NEW,
+            tax_percentage=float(stylist.tax_rate) * 100,
+            card_fee_percentage=float(stylist.card_fee) * 100,
+
         ))

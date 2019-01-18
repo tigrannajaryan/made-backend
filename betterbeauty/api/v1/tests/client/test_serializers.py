@@ -561,9 +561,10 @@ class TestAppointmentUpdateSerializer(object):
             [s.regular_price for s in saved_appointment.services.all()], 0)
         assert(saved_appointment.total_client_price_before_tax == total_services_cost)
         assert(saved_appointment.grand_total == total_services_cost)
-        assert(saved_appointment.total_tax == calculate_tax(Decimal(total_services_cost)))
-        assert(
-            saved_appointment.total_card_fee == calculate_card_fee(Decimal(total_services_cost))
+        assert(saved_appointment.total_tax == calculate_tax(
+            Decimal(total_services_cost), tax_rate=stylist.tax_rate))
+        assert(saved_appointment.total_card_fee == calculate_card_fee(
+            Decimal(total_services_cost), card_fee=stylist.card_fee)
         )
         assert(
             saved_appointment.total_discount_amount ==
@@ -833,7 +834,9 @@ class TestAppointmentPreviewResponseSerializer(object):
             ],
             status=AppointmentStatus.NEW,
             total_discount_percentage=10,
-            total_discount_amount=5
+            total_discount_amount=5,
+            tax_percentage=float(stylist.tax_rate) * 100,
+            card_fee_percentage=float(stylist.card_fee) * 100,
         )
         serializer = AppointmentPreviewResponseSerializer()
         output = serializer.to_representation(instance=data)
