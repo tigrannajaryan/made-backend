@@ -9,7 +9,6 @@ from django.shortcuts import get_object_or_404
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.models import Client
-from core.constants import DEFAULT_CARD_FEE, DEFAULT_TAX_RATE
 from core.types import AppointmentPrices
 from core.utils import calculate_appointment_prices
 from salon.models import Stylist, StylistService
@@ -52,8 +51,8 @@ class AppointmentPreviewResponse(NamedTuple):
     status: AppointmentStatus
     total_discount_percentage: int
     total_discount_amount: Decimal
-    tax_percentage: float = float(DEFAULT_TAX_RATE) * 100
-    card_fee_percentage: float = float(DEFAULT_CARD_FEE) * 100
+    tax_percentage: float
+    card_fee_percentage: float
 
 
 def build_appointment_preview_dict(
@@ -150,7 +149,9 @@ def build_appointment_preview_dict(
     appointment_prices: AppointmentPrices = calculate_appointment_prices(
         price_before_tax=total_client_price_before_tax,
         include_card_fee=preview_request.has_card_fee_included,
-        include_tax=preview_request.has_tax_included
+        include_tax=preview_request.has_tax_included,
+        tax_rate=stylist.tax_rate,
+        card_fee=stylist.card_fee
     )
     duration = stylist.service_time_gap
 
@@ -168,8 +169,8 @@ def build_appointment_preview_dict(
         conflicts_with=conflicts_with,
         total_client_price_before_tax=appointment_prices.total_client_price_before_tax,
         grand_total=appointment_prices.grand_total,
-        tax_percentage=float(DEFAULT_TAX_RATE) * 100,
-        card_fee_percentage=float(DEFAULT_CARD_FEE) * 100,
+        tax_percentage=float(stylist.tax_rate) * 100,
+        card_fee_percentage=float(stylist.card_fee) * 100,
         total_tax=appointment_prices.total_tax,
         total_card_fee=appointment_prices.total_card_fee,
         has_tax_included=appointment_prices.has_tax_included,

@@ -67,6 +67,8 @@ from .serializers import (
     StylistServicePricingRequestSerializer,
     StylistServicePricingSerializer,
     StylistServiceSerializer,
+    StylistSettingsRequestSerializer,
+    StylistSettingsResponseSerializer,
     StylistSettingsRetrieveSerializer,
     StylistSpecialAvailableDateSerializer,
     StylistTodaySerializer,
@@ -798,3 +800,29 @@ class DatesWithAppointmentsView(views.APIView):
             } for special_date in special_available_dates
         ]
         return transformed_dates
+
+
+class StylistSettingsView(views.APIView):
+    permission_classes = [StylistPermission, permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user.stylist
+
+    def get(self, request):
+        return Response(StylistSettingsResponseSerializer(self.get_object()).data)
+
+    def post(self, request):
+        stylist = request.user.stylist
+        serializer = StylistSettingsRequestSerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+        tax_percentage = serializer.validated_data.get('tax_percentage', None)
+        card_fee_percentage = serializer.validated_data.get('card_fee_percentage', None)
+        if tax_percentage or card_fee_percentage:
+            if tax_percentage:
+                stylist.tax_rate = float(tax_percentage) / 100
+            if card_fee_percentage:
+                stylist.card_fee = float(card_fee_percentage) / 100
+            stylist.save()
+        return Response(StylistSettingsResponseSerializer(self.get_object()).data)

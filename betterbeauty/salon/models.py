@@ -19,6 +19,7 @@ from appointment.types import AppointmentStatus
 from appointment.utils import get_appointments_in_datetime_range
 from client.models import Client, PreferredStylist
 from core.choices import WEEKDAY
+from core.constants import DEFAULT_CARD_FEE, DEFAULT_TAX_RATE
 from core.models import User
 from core.types import Weekday
 from integrations.gmaps import GeocodeValidAddress
@@ -262,6 +263,8 @@ class Stylist(models.Model):
     google_integration_added_at = models.DateTimeField(null=True, blank=True, default=None)
     google_access_token = models.CharField(max_length=1024, null=True, blank=True, default=None)
     google_refresh_token = models.CharField(max_length=1024, null=True, blank=True, default=None)
+    tax_rate = models.DecimalField(max_digits=6, decimal_places=2, default=DEFAULT_TAX_RATE)
+    card_fee = models.DecimalField(max_digits=6, decimal_places=2, default=DEFAULT_CARD_FEE)
 
     instagram_url = models.CharField(max_length=2084, blank=True, null=True)
     instagram_access_token = models.CharField(max_length=512, blank=True, null=True)

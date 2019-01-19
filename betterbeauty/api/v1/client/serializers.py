@@ -572,7 +572,9 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
             appointment_prices: AppointmentPrices = calculate_appointment_prices(
                 price_before_tax=total_client_price_before_tax,
                 include_card_fee=DEFAULT_HAS_CARD_FEE_INCLUDED,
-                include_tax=DEFAULT_HAS_TAX_INCLUDED
+                include_tax=DEFAULT_HAS_TAX_INCLUDED,
+                tax_rate=stylist.tax_rate,
+                card_fee=stylist.card_fee,
             )
             appointment.discount_type = discount_type
             appointment.total_discount_percentage = discount_percentage
@@ -615,7 +617,9 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
             appointment_prices: AppointmentPrices = calculate_appointment_prices(
                 price_before_tax=total_client_price_before_tax,
                 include_card_fee=self.instance.has_card_fee_included,
-                include_tax=self.instance.has_tax_included
+                include_tax=self.instance.has_tax_included,
+                tax_rate=appointment.stylist.tax_rate,
+                card_fee=appointment.stylist.card_fee,
             )
 
             for k, v in appointment_prices._asdict().items():

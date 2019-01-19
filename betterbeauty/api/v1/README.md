@@ -50,7 +50,8 @@
     - **Screens**
       - [Home](#user-content-home-screen)
       - [Today](#user-content-today-screen)
-      - [Settings](#user-content-settings-screen)
+      - [Settings](#settings-screen)
+      - [Common Settings](#common-settings-screen)
 - [**Client API**](#client-api)
     - [Profile](#client-profile)
     - [Preferred Stylist](#preferred-stylists)
@@ -2499,6 +2500,43 @@ in one gulp for the Stylist app's Settings screen.
     ],
     "total_week_booked_minutes": 40,
     "total_week_appointments_count: 2
+}
+```
+
+
+## Common Settings Screen
+
+**GET api/v1/stylist/common-settings**
+
+**RESPONSE 200 OK**
+```json
+{
+  "tax_percentage" : 6.5,
+  "card_fee_percentage" : 2.5,
+  "google_calendar_integrated" : true
+}
+```
+
+**POST api/v1/stylist/common-settings**
+
+```
+curl -X POST \
+  http://{{api_server}}/api/v1/stylist/profile-settings \
+  -H 'Authorization: Token {{jwt_token}}' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "tax_percentage": 6.5,
+    "card_fee_percentage": 2.5
+}'
+```
+
+**RESPONSE 200 OK**
+
+```json
+{
+  "tax_percentage" : 6.5,
+  "card_fee_percentage" : 2.5,
+  "google_calendar_integrated" : true
 }
 ```
 
