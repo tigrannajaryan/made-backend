@@ -36,8 +36,9 @@ def get_code(expired=False, redeemed=False, role=UserRole.CLIENT):
 class TestSendCodeView(object):
 
     @pytest.mark.django_db
-    def test_send_code_for_new_number(self, client, mocker):
-        sms_mock = mocker.patch('core.models.send_sms_message')
+    @mock.patch('core.models.send_sms_message')
+    def test_send_code_for_new_number(self, sms_mock, client):
+        sms_mock.return_value = 'message_sid'
         data = {
             'phone': '+19876543210'
         }
@@ -68,7 +69,9 @@ class TestSendCodeView(object):
         )
 
     @pytest.mark.django_db
-    def test_send_code_for_existing_number(self, client):
+    @mock.patch('core.models.send_sms_message')
+    def test_send_code_for_existing_number(self, sms_mock, client):
+        sms_mock.return_value = 'message_sid'
         phone_number = '+19876543210'
         code = G(PhoneSMSCodes,
                  phone=phone_number,
@@ -87,9 +90,11 @@ class TestSendCodeView(object):
         assert (new_code.redeemed_at is None)
 
     @pytest.mark.django_db
+    @mock.patch('core.models.send_sms_message')
     @override_settings(MINUTES_BEFORE_REQUESTING_NEW_CODE=2)
     @pytest.mark.parametrize('role', [UserRole.CLIENT, UserRole.STYLIST])
-    def test_code_successive_attempt(self, client, role):
+    def test_code_successive_attempt(self, sms_mock, client, role):
+        sms_mock.return_value = 'message_sid'
         phone_number = '+19876543210'
         data = {
             'phone': phone_number,
