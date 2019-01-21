@@ -1,5 +1,6 @@
 import datetime
 import uuid
+from decimal import Decimal
 from typing import Any, Dict, List, NamedTuple, Optional
 
 from annoying.functions import get_object_or_None
@@ -821,8 +822,10 @@ class StylistSettingsView(views.APIView):
         card_fee_percentage = serializer.validated_data.get('card_fee_percentage', None)
         if tax_percentage or card_fee_percentage:
             if tax_percentage:
-                stylist.tax_rate = float(tax_percentage) / 100
+                stylist.tax_rate = Decimal(tax_percentage / 100).quantize(
+                    Decimal('.0001'))
             if card_fee_percentage:
-                stylist.card_fee = float(card_fee_percentage) / 100
+                stylist.card_fee = Decimal(card_fee_percentage / 100).quantize(
+                    Decimal('.0001'))
             stylist.save()
         return Response(StylistSettingsResponseSerializer(self.get_object()).data)
