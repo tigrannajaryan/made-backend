@@ -269,6 +269,8 @@ class Stylist(models.Model):
     instagram_url = models.CharField(max_length=2084, blank=True, null=True)
     instagram_access_token = models.CharField(max_length=512, blank=True, null=True)
 
+    must_set_deal_of_week = models.BooleanField(default=True)
+
     class Meta:
         db_table = 'stylist'
 
