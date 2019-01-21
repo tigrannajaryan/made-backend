@@ -1729,10 +1729,10 @@ class StylistSettingsResponseSerializer(serializers.Serializer):
         ]
 
     def get_tax_percentage(self, stylist: Stylist):
-        return Decimal(float(stylist.tax_rate) * 100).quantize(Decimal('.0001'))
+        return Decimal(stylist.tax_rate * 100).quantize(Decimal('.0001'))
 
     def get_card_fee_percentage(self, stylist: Stylist):
-        return Decimal(float(stylist.card_fee) * 100).quantize(Decimal('.0001'))
+        return Decimal(stylist.card_fee * 100).quantize(Decimal('.0001'))
 
     def get_google_calendar_integrated(self, stylist: Stylist):
         return bool(
