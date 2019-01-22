@@ -136,10 +136,16 @@ class SendCodeView(APIView):
         phone_code: PhoneSMSCodes = PhoneSMSCodes.create_or_update_phone_sms_code(
             data['phone'], role=data.get('role', UserRole.CLIENT)
         )
-        phone_code.send()
-        return Response(
-            {}
-        )
+        result = phone_code.send()
+        # if a Twilio error which we don't want to suppress will be raised - it will be
+        # raised in phone_code.send(). However, if it was not raised, but result is None -
+        # this means that an error was suppressed, and we still want to communicate 504
+        # status to the frontend (however bypassing Sentry and/or Victorops)
+        if result:
+            return Response(
+                {}
+            )
+        return Response({}, status=status.HTTP_504_GATEWAY_TIMEOUT)
 
 
 class VerifyCodeView(APIView):

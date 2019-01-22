@@ -28,6 +28,9 @@ def send_sms_message(
         to_phone: str, body: str, role: str
 ) -> Optional[str]:
     result_sid: Optional[str] = None
+    errors_to_suppress = [
+        'Permission to send an SMS has not been enabled for the region',
+    ]
     if settings.TWILIO_SMS_ENABLED:
         try:
             client = Client()
@@ -43,6 +46,11 @@ def send_sms_message(
             )
             result_sid = result.sid
         except TwilioRestException as e:
+            for error_to_suppress in errors_to_suppress:
+                if str(e).find(error_to_suppress) >= 0:
+                    # this is a known error that we want to suppress
+                    logger.warning('Cannot send SMS through twilio', exc_info=True)
+                    return None
             logger.exception('Cannot send SMS through twilio', exc_info=True)
             raise HttpCodeException(status_code=status.HTTP_504_GATEWAY_TIMEOUT)
         except TwilioException as e:
