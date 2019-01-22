@@ -15,6 +15,10 @@ from integrations.slack import send_slack_twilio_message_notification
 logger = logging.getLogger(__name__)
 
 
+class TwilioSuppressedException(TwilioException):
+    pass
+
+
 def render_one_time_sms_for_phone(code: str):
     return render_to_string(
         'sms/twilio_sms_code.txt',
@@ -45,15 +49,14 @@ def send_sms_message(
                 status_callback=status_callback_url
             )
             result_sid = result.sid
-        except TwilioRestException as e:
+        except (TwilioException, TwilioRestException) as e:
             for error_to_suppress in errors_to_suppress:
                 if str(e).find(error_to_suppress) >= 0:
-                    # this is a known error that we want to suppress
+                    # this is a known error that we want to suppress, log it and
+                    # re-raise to be caught on the outer level and handled differently
+                    # from a common Twilio error
                     logger.warning('Cannot send SMS through twilio', exc_info=True)
-                    return None
-            logger.exception('Cannot send SMS through twilio', exc_info=True)
-            raise HttpCodeException(status_code=status.HTTP_504_GATEWAY_TIMEOUT)
-        except TwilioException as e:
+                    raise TwilioSuppressedException()
             logger.exception('Cannot send SMS through twilio', exc_info=True)
             raise HttpCodeException(status_code=status.HTTP_504_GATEWAY_TIMEOUT)
     if settings.TWILIO_SLACK_MOCK_ENABLED:

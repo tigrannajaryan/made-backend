@@ -21,6 +21,7 @@ from core.utils.auth import (
     jwt_response_payload_handler as stylist_jwt_response_payload_handler)
 from core.utils.facebook import verify_fb_token
 from integrations.slack import send_slack_new_user_signup
+from integrations.twilio import TwilioSuppressedException
 from salon.utils import create_stylist_profile_for_user
 
 from .serializers import (
@@ -136,16 +137,17 @@ class SendCodeView(APIView):
         phone_code: PhoneSMSCodes = PhoneSMSCodes.create_or_update_phone_sms_code(
             data['phone'], role=data.get('role', UserRole.CLIENT)
         )
-        result = phone_code.send()
-        # if a Twilio error which we don't want to suppress will be raised - it will be
-        # raised in phone_code.send(). However, if it was not raised, but result is None -
-        # this means that an error was suppressed, and we still want to communicate 504
-        # status to the frontend (however bypassing Sentry and/or Victorops)
-        if result:
-            return Response(
-                {}
-            )
-        return Response({}, status=status.HTTP_504_GATEWAY_TIMEOUT)
+        try:
+            phone_code.send()
+        except TwilioSuppressedException:
+            # if a Twilio error which we don't want to suppress will be raised - it will be
+            # raised in phone_code.send(). However, if it was not raised, but result is None -
+            # this means that an error was suppressed, and we still want to communicate 504
+            # status to the frontend (however bypassing Sentry and/or Victorops)
+            return Response({}, status=status.HTTP_504_GATEWAY_TIMEOUT)
+        return Response(
+            {}
+        )
 
 
 class VerifyCodeView(APIView):
