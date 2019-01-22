@@ -1147,7 +1147,7 @@ def generate_remind_invite_clients_notifications(dry_run=False) -> int:
     send_time_window_end = datetime.time(20, 0)
 
     stylist_has_invitations_query = Invitation.objects.filter(
-        stylist_id=OuterRef('id')
+        stylist_id=OuterRef('id'), invite_target=UserRole.CLIENT.value
     )
     stylist_has_notifications_sent_within_24hours_query = Notification.objects.filter(
         user_id=OuterRef('user__id'), target=UserRole.STYLIST, sent_at__isnull=False,
@@ -1249,7 +1249,7 @@ def generate_remind_add_photo_notifications(dry_run=False) -> int:
     send_time_window_end = datetime.time(20, 0)
 
     stylist_has_invitations_query = Invitation.objects.filter(
-        stylist_id=OuterRef('id')
+        stylist_id=OuterRef('id'), invite_target=UserRole.CLIENT.value
     )
     stylist_has_recent_or_unsent_notifications = Notification.objects.filter(
         Q(Q(sent_at__gte=one_day_ago) | Q(pending_to_send=True)),
@@ -1454,7 +1454,8 @@ def generate_follow_up_invitation_sms(dry_run=False) -> int:
         followup_sent_at__isnull=True,
         created_at__lte=earliest_time_invitation_sent,
         created_at__gte=earliest_invitation_creation_datetime,
-        status=InvitationStatus.INVITED
+        status=InvitationStatus.INVITED,
+        invite_target=UserRole.CLIENT
     ).select_for_update(skip_locked=True)[:max_sms_messages_to_send_in_one_run]
 
     sent_messages = 0

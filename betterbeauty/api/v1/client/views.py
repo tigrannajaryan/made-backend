@@ -49,6 +49,7 @@ from appointment.preview import AppointmentPreviewRequest, build_appointment_pre
 from appointment.types import AppointmentStatus
 from client.models import Client, PreferredStylist, StylistSearchRequest
 from client.types import ClientPrivacy
+from core.types import UserRole
 from core.utils import post_or_get
 from core.utils import post_or_get_or_data
 from integrations.ipstack import get_lat_lng_for_ip_address
@@ -582,7 +583,8 @@ class DeclineInvitationView(generics.DestroyAPIView):
 
     def get_queryset(self):
         return Invitation.objects.filter(
-            phone=self.request.user.phone, stylist__uuid=self.kwargs['uuid']
+            phone=self.request.user.phone, stylist__uuid=self.kwargs['uuid'],
+            invite_target=UserRole.CLIENT.value
         )
 
     def delete(self, request, *args, **kwargs):

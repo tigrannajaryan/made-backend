@@ -44,7 +44,8 @@ def create_client_profile_from_phone(phone: str, user: Optional[User]=None)-> Us
         user = create_user_from_phone(phone, UserRole.CLIENT)
     region = get_country_code_from_phone(phone)
     Client.objects.create(user=user, country=region)
-    Invitation.objects.filter(phone=phone, invited_by_client__isnull=False).update(
+    Invitation.objects.filter(phone=phone, invited_by_client__isnull=False,
+                              invite_target=UserRole.CLIENT.value).update(
         status=InvitationStatus.ACCEPTED)
     return user
 

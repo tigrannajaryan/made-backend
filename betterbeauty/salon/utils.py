@@ -27,11 +27,12 @@ from pricing import (
     DiscountSettings,
 )
 from pricing.constants import COMPLETELY_BOOKED_DEMAND, PRICE_BLOCK_SIZE
-from salon.models import Salon, Stylist, StylistAvailableWeekDay, StylistService
+from salon.models import Invitation, Salon, Stylist, StylistAvailableWeekDay, StylistService
 from salon.types import (
     ClientPriceOnDate,
     ClientPricingHint,
     DemandOnDate,
+    InvitationStatus,
     LoyaltyDiscountTransitionInfo,
     PriceOnDate,
 )
@@ -366,6 +367,9 @@ def create_stylist_profile_for_user(user: User, **kwargs) -> Stylist:
             current_roles.append(UserRole.STYLIST.value)
             user.role = current_roles
             user.save(update_fields=['role', ])
+        Invitation.objects.filter(phone=user.phone, invited_by_client__isnull=False,
+                                  invite_target=UserRole.STYLIST.value).update(
+            status=InvitationStatus.ACCEPTED)
         return stylist
 
 

@@ -35,7 +35,7 @@ from appointment.types import AppointmentStatus
 from client.models import Client, PreferredStylist
 from client.types import CLIENT_PRIVACY_CHOICES, ClientPrivacy
 from core.models import User
-from core.types import AppointmentPrices
+from core.types import AppointmentPrices, UserRole
 from core.utils import calculate_appointment_prices
 from integrations.slack import (
     send_slack_auto_booking_notification,
@@ -197,7 +197,8 @@ class ClientProfileStatusSerializer(serializers.ModelSerializer):
 
     def get_has_invitation(self, client: Client) -> bool:
         has_invitation: bool = Invitation.objects.filter(
-            phone=client.user.phone, status=InvitationStatus.INVITED).exists()
+            phone=client.user.phone, status=InvitationStatus.INVITED,
+            invite_target=UserRole.CLIENT.value).exists()
         return has_invitation
 
 
@@ -292,7 +293,8 @@ class AddPreferredClientsSerializer(FormattedErrorMessageMixin, serializers.Mode
                     'deleted_at': None
                 })
             Invitation.objects.filter(phone=client.user.phone, stylist=stylist,
-                                      status=InvitationStatus.INVITED).update(
+                                      status=InvitationStatus.INVITED,
+                                      invite_target=UserRole.CLIENT.value).update(
                 status=InvitationStatus.ACCEPTED, accepted_at=timezone.now(),
                 created_client=client)
             self.instance = preferred_stylist

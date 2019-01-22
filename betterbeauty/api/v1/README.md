@@ -3562,11 +3562,16 @@ curl -X POST \
 }
 ```
 
-## Client to client Invitations API
+## Client Invitations API
+
+### Send invitation(s) to the client(s)
 
 This is a POST-only API endpoint, which accepts list of phones.
 
-### Send invitation(s) to the client(s)
+ - `phone` is a mandatory field
+ - `invite_target` is optional field. Possible values `client`, `stylist`. 
+    It defaults to `client` if not set.
+ 
 **POST /api/v1/client/invitations**
 
 ```
@@ -3576,7 +3581,8 @@ curl -X POST \
   -H 'Content-Type: application/json' \
   -d '[
 	{
-		"phone": "12345"
+		"phone": "12345",
+		"invite_target": "stylist"
 
 	},
 	{
@@ -3590,11 +3596,13 @@ curl -X POST \
 ```
 [
 	{
-		"phone": "12345"
+		"phone": "12345",
+		"invite_target": "stylist"
 
 	},
 	{
-		"phone": "45678"
+		"phone": "45678",
+		"invite_target": "client"
 
 	}
 ]
