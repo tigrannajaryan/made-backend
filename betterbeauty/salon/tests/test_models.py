@@ -20,8 +20,9 @@ from salon.models import (
     StylistAvailableWeekDay,
     StylistService,
     StylistSpecialAvailableDate,
+    StylistWeekdayDiscount,
 )
-from salon.types import TimeSlot
+from salon.types import DealOfWeekError, TimeSlot
 
 
 def stylist_appointments_data(stylist: Stylist) -> Dict[str, Appointment]:
@@ -542,3 +543,94 @@ class TestStylistAvailableWeekDay(object):
             for_date=special_date
         )
         assert(len(special_date_slots) == 0)
+
+
+class TestStylistWeekdayDiscount(object):
+    @pytest.mark.django_db
+    def test_set_deal_of_week_low_percentage(self):
+        salon = G(Salon, timezone=pytz.UTC)
+        stylist = G(Stylist, salon=salon)
+        friday_discount: StylistWeekdayDiscount = G(
+            StylistWeekdayDiscount, weekday=Weekday.FRIDAY, stylist=stylist,
+            discount_percent=29, is_deal_of_week=False
+        )
+        with freeze_time(pytz.UTC.localize(datetime.datetime(2019, 1, 22, 12, 0))):
+            # today is Tuesday
+            result = friday_discount.set_deal_of_week(True)
+            assert(result == DealOfWeekError.ERR_PERCENTAGE_TOO_LOW)
+            friday_discount.discount_percent = 30
+            friday_discount.save()
+            result = friday_discount.set_deal_of_week(True)
+            assert(result is None)
+            friday_discount.discount_percent = 25
+            friday_discount.save()
+            result = friday_discount.set_deal_of_week(False)
+            assert (result is None)
+
+    @pytest.mark.django_db
+    def test_set_deal_of_week_date_too_close(self):
+        salon = G(Salon, timezone=pytz.UTC)
+        stylist = G(Stylist, salon=salon)
+        friday_discount: StylistWeekdayDiscount = G(
+            StylistWeekdayDiscount, weekday=Weekday.FRIDAY, stylist=stylist,
+            discount_percent=30, is_deal_of_week=True
+        )
+        with freeze_time(pytz.UTC.localize(datetime.datetime(2019, 1, 23, 12, 0))):
+            # Today is Wednesday
+            result = friday_discount.set_deal_of_week(False)
+            assert(result == DealOfWeekError.ERR_DATE_TOO_CLOSE)
+        friday_discount.delete()
+        monday_discount: StylistWeekdayDiscount = G(
+            StylistWeekdayDiscount, weekday=Weekday.MONDAY, stylist=stylist,
+            discount_percent=30, is_deal_of_week=True
+        )
+        with freeze_time(pytz.UTC.localize(datetime.datetime(2019, 1, 26, 12, 0))):
+            # Today is Saturday
+            result = monday_discount.set_deal_of_week(False)
+            assert(result is DealOfWeekError.ERR_DATE_TOO_CLOSE)
+
+    @pytest.mark.django_db
+    def test_set_deal_with_existing_deals_no_conflicts(self):
+        salon = G(Salon, timezone=pytz.UTC)
+        stylist = G(Stylist, salon=salon)
+        friday_discount: StylistWeekdayDiscount = G(
+            StylistWeekdayDiscount, weekday=Weekday.FRIDAY, stylist=stylist,
+            discount_percent=30, is_deal_of_week=False
+        )
+        saturday_discount: StylistWeekdayDiscount = G(
+            StylistWeekdayDiscount, weekday=Weekday.SATURDAY, stylist=stylist,
+            discount_percent=30, is_deal_of_week=True
+        )
+        with freeze_time(pytz.UTC.localize(datetime.datetime(2019, 1, 22, 12, 0))):
+            # Today is Tuesday
+            result = friday_discount.set_deal_of_week(True)
+            assert(result is None)
+            friday_discount.refresh_from_db()
+            assert(friday_discount.is_deal_of_week is True)
+            saturday_discount.refresh_from_db()
+            assert(saturday_discount.is_deal_of_week is False)
+
+    @pytest.mark.django_db
+    def test_set_deal_with_existing_deals_with_conflicts(self):
+        salon = G(Salon, timezone=pytz.UTC)
+        stylist = G(Stylist, salon=salon)
+        friday_discount: StylistWeekdayDiscount = G(
+            StylistWeekdayDiscount, weekday=Weekday.FRIDAY, stylist=stylist,
+            discount_percent=30, is_deal_of_week=True
+        )
+        saturday_discount: StylistWeekdayDiscount = G(
+            StylistWeekdayDiscount, weekday=Weekday.SATURDAY, stylist=stylist,
+            discount_percent=30, is_deal_of_week=False
+        )
+        with freeze_time(pytz.UTC.localize(datetime.datetime(2019, 1, 23, 12, 0))):
+            # Today is Wednesday
+            result = saturday_discount.set_deal_of_week(True)
+            # verify that transaction will fail - setting Saturday to True means
+            # that we should un-set existing deal on Friday, which cannot be done
+            # on Wednesday
+            assert (result == DealOfWeekError.ERR_DATE_TOO_CLOSE)
+            # verify that nothing changed in the DB
+            friday_discount.refresh_from_db()
+            assert (friday_discount.is_deal_of_week is True)
+            saturday_discount.refresh_from_db()
+            assert (saturday_discount.is_deal_of_week is False)

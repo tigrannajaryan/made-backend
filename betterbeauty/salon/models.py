@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib.gis.db.models.fields import PointField
 from django.contrib.postgres.fields import ArrayField, DateRangeField
 from django.core.validators import MaxValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q
 from django.utils import timezone
 
@@ -25,7 +25,7 @@ from core.types import Weekday
 from integrations.gmaps import GeocodeValidAddress
 from .choices import INVITATION_STATUS_CHOICES
 from .contstants import DEFAULT_SERVICE_GAP_TIME_MINUTES, DEFAULT_WORKING_HOURS
-from .types import InvitationStatus, TimeSlot, TimeSlotAvailability
+from .types import DealOfWeekError, InvitationStatus, TimeSlot, TimeSlotAvailability
 
 logger = logging.getLogger(__name__)
 
@@ -211,15 +211,66 @@ class Speciality(models.Model):
         return self.name
 
 
+class DealOfWeekException(BaseException):
+    pass
+
+
 class StylistWeekdayDiscount(models.Model):
     stylist = models.ForeignKey(
         'Stylist', on_delete=models.CASCADE, related_name='weekday_discounts')
     weekday = models.PositiveSmallIntegerField(choices=WEEKDAY)
     discount_percent = models.PositiveIntegerField(validators=[MaxValueValidator(100)])
+    is_deal_of_week = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'stylist_weekday_discount'
         unique_together = ('stylist', 'weekday', )
+
+    def set_deal_of_week(self, is_deal_of_week: bool) -> Optional[DealOfWeekError]:
+        """
+        Set or unset current weekday as deal of the week, updating other weekday
+        discounts to avoid multiple day of week deals
+        :param is_deal_of_week: boolean, True or False
+        :return: None if operation is successful, or error code if unsuccessful
+        """
+        MINIMUM_DAYS_BEFORE_CHANGE = 2
+        MINIMUM_DISCOUNT_PERCENTAGE = 30
+
+        result = None
+
+        if is_deal_of_week == self.is_deal_of_week:
+            # nothing changes, so we just return
+            return None
+        if is_deal_of_week is False:
+            # we should prohibit un-setting deal of week if it's less than
+            # MINIMUM_DAYS_BEFORE_CHANGE before the weekday
+            current_weekday = self.stylist.get_current_now().isoweekday()
+            days_before_weekday = self.weekday - current_weekday
+            if days_before_weekday < 0:
+                days_before_weekday += 7
+            if days_before_weekday <= MINIMUM_DAYS_BEFORE_CHANGE:
+                return DealOfWeekError.ERR_DATE_TOO_CLOSE
+        if is_deal_of_week is True and self.discount_percent < MINIMUM_DISCOUNT_PERCENTAGE:
+            # we should disallow setting deal if percentage is below the threshold
+            return DealOfWeekError.ERR_PERCENTAGE_TOO_LOW
+        self.is_deal_of_week = is_deal_of_week
+        if self.id:
+            # if object already exists - we will save, but if we're setting the new deal -
+            # we should unset other previously set deals. Same rules should apply - if an
+            # existing deal cannot be unset now - we should return appropriate error code
+            try:
+                with transaction.atomic():
+                    if is_deal_of_week is True:
+                        for weekday_discount in self.stylist.weekday_discounts.all().exclude(
+                            weekday=self.weekday
+                        ):
+                            result = weekday_discount.set_deal_of_week(False)
+                            if result is not None:
+                                raise DealOfWeekException()
+                    self.save(update_fields=['is_deal_of_week', ])
+            except DealOfWeekException:
+                return result
+        return None
 
 
 class Stylist(models.Model):

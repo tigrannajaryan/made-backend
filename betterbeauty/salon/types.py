@@ -53,3 +53,8 @@ class LoyaltyDiscountTransitionInfo(NamedTuple):
     current_discount_percent: int
     transitions_to_percent: int
     transitions_at: Optional[datetime.datetime]
+
+
+class DealOfWeekError(StrEnum):
+    ERR_DATE_TOO_CLOSE = 'err_date_too_close'
+    ERR_PERCENTAGE_TOO_LOW = 'err_percentage_too_low'
