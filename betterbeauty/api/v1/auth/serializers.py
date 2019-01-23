@@ -189,7 +189,8 @@ class ClientAuthTokenSerializer(FormattedErrorMessageMixin, serializers.Serializ
         user = self.context['user']
         if user.is_client():
             invitations = Invitation.objects.filter(
-                phone=user.phone, status=InvitationStatus.INVITED, stylist_id__isnull=False
+                phone=user.phone, status=InvitationStatus.INVITED, stylist_id__isnull=False,
+                invite_target=UserRole.CLIENT.value
             ).order_by('-created_at')[:5]
             return StylistSerializerWithInvitation(invitations, many=True).data
 

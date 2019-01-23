@@ -18,10 +18,10 @@ from timezone_field import TimeZoneField
 from appointment.types import AppointmentStatus
 from appointment.utils import get_appointments_in_datetime_range
 from client.models import Client, PreferredStylist
-from core.choices import WEEKDAY
+from core.choices import CLIENT_OR_STYLIST_ROLE, WEEKDAY
 from core.constants import DEFAULT_CARD_FEE, DEFAULT_TAX_RATE
 from core.models import User
-from core.types import Weekday
+from core.types import UserRole, Weekday
 from integrations.gmaps import GeocodeValidAddress
 from .choices import INVITATION_STATUS_CHOICES
 from .contstants import DEFAULT_SERVICE_GAP_TIME_MINUTES, DEFAULT_WORKING_HOURS
@@ -780,6 +780,8 @@ class Invitation(models.Model):
                                 blank=True, null=True)
     invited_by_client = models.ForeignKey(Client, on_delete=models.CASCADE,
                                           blank=True, null=True)
+    invite_target = models.CharField(choices=CLIENT_OR_STYLIST_ROLE, default=UserRole.CLIENT.value,
+                                     max_length=10)
     phone = models.CharField(max_length=15)
     status = models.CharField(
         max_length=15, choices=INVITATION_STATUS_CHOICES, default=InvitationStatus.INVITED

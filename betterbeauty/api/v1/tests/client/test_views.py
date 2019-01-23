@@ -980,7 +980,8 @@ class TestClientToClientInvitationView:
         client_invitation = reverse('api:v1:client:client-invitation')
         data = [
             {
-                'phone': '+13471111111'
+                'phone': '+13471111111',
+                'invite_target': 'stylist'
             },
             {
                 'phone': '+13471111112'
@@ -989,3 +990,5 @@ class TestClientToClientInvitationView:
         response = client.post(client_invitation, HTTP_AUTHORIZATION=auth_token,
                                data=json.dumps(data), content_type='application/json')
         assert (status.is_success(response.status_code))
+        assert (response.data['invitations'][0]['invite_target'] == 'stylist')
+        assert (response.data['invitations'][1]['invite_target'] == 'client')

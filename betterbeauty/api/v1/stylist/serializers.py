@@ -24,6 +24,7 @@ from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
 from client.models import Client, PreferredStylist
 from client.types import ClientPrivacy
+from core.choices import CLIENT_OR_STYLIST_ROLE
 from core.models import User
 from core.types import AppointmentPrices, UserRole, Weekday
 from core.utils import (
@@ -1317,10 +1318,13 @@ class InvitationSerializer(FormattedErrorMessageMixin, serializers.ModelSerializ
 
     phone = PhoneNumberField(required=True)
     status = serializers.CharField(read_only=True)
+    invite_target = serializers.ChoiceField(choices=CLIENT_OR_STYLIST_ROLE,
+                                            default=UserRole.CLIENT.value,
+                                            required=False,)
 
     class Meta:
         model = Invitation
-        fields = ['phone', 'status']
+        fields = ['phone', 'status', 'invite_target']
 
 
 class StylistSettingsRetrieveSerializer(serializers.ModelSerializer):
