@@ -6,11 +6,12 @@ from django.views.static import serve
 
 from api import urls as api_urls
 from .constants import EnvLevel
-from .views import HealthCheckView
+from .views import EmailVerificationView, HealthCheckView
 
 urlpatterns = [
     path('djangoadmin/', admin.site.urls),
     url(r'^api/', include(api_urls, namespace='api')),
+    url('^email/confirm$', EmailVerificationView.as_view(), name="email-verification")
 
 ]
 

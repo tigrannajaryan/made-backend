@@ -15,7 +15,7 @@ from rest_framework.validators import UniqueValidator
 
 from api.common.fields import PhoneNumberField
 from api.common.mixins import FormattedErrorMessageMixin
-from api.common.utils import save_profile_photo
+from api.common.utils import save_profile_photo, send_email_verification
 from appointment.constants import (
     APPOINTMENT_STYLIST_SETTABLE_STATUSES,
     DEFAULT_HAS_CARD_FEE_INCLUDED, DEFAULT_HAS_TAX_INCLUDED, ErrorMessages as appointment_errors,
@@ -221,6 +221,7 @@ class StylistSerializer(
 
     def update(self, stylist: Stylist, validated_data) -> Stylist:
         is_profile_already_complete = False
+        old_email = stylist.email
         if stylist.is_profile_bookable:
             is_profile_already_complete = True
         with transaction.atomic():
@@ -244,6 +245,11 @@ class StylistSerializer(
                     stylist.user, validated_data.get('profile_photo_id')
                 )
         stylist = super(StylistSerializer, self).update(stylist, validated_data)
+        if old_email != validated_data.get('email'):
+            stylist.email_verified = False
+            send_email_verification(stylist,
+                                    UserRole.STYLIST.value,
+                                    request=self.context['request'])
         if not is_profile_already_complete:
             send_slack_stylist_profile_update(stylist)
         return stylist
