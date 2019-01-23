@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import timedelta
 from random import randint
-from typing import List
+from typing import List, Optional
 
 from django.conf import settings
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
@@ -199,15 +199,16 @@ class PhoneSMSCodes(models.Model):
             phone_sms_code = phone_sms_code.update_phone_sms_code()
         return phone_sms_code
 
-    def send(self):
+    def send(self) -> Optional[str]:
         to_phone: str = self.phone
         code = self.code
         message = render_one_time_sms_for_phone(code)
-        send_sms_message(
+        result = send_sms_message(
             to_phone=to_phone,
             body=message,
             role=str(self.role)
         )
+        return result
 
 
 class AnalyticsSession(models.Model):
