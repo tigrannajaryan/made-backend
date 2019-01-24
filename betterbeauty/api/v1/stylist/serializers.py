@@ -724,12 +724,11 @@ class StylistDiscountsSerializer(
             stylist.is_discount_configured = True
             if 'deal_of_week_weekday' in validated_data:
                 deal_of_week_weekday = validated_data.pop('deal_of_week_weekday')
-                weekday_discount_for_deal: StylistWeekdayDiscount = stylist.weekday_discounts.get(
+                weekday_discount_for_deal = stylist.weekday_discounts.filter(
                     weekday=deal_of_week_weekday
-                )
-                result = weekday_discount_for_deal.set_deal_of_week(is_deal_of_week=True)
-                if result is not None:
-                    raise serializers.ValidationError({'deal_of_week_weekday': result})
+                ).last()
+                if weekday_discount_for_deal:
+                    weekday_discount_for_deal.set_deal_of_week(is_deal_of_week=True)
             return super(StylistDiscountsSerializer, self).update(stylist, validated_data)
 
     class Meta:
