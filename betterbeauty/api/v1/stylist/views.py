@@ -823,9 +823,9 @@ class StylistSettingsView(views.APIView):
         if tax_percentage or card_fee_percentage:
             if tax_percentage:
                 stylist.tax_rate = Decimal(tax_percentage / 100).quantize(
-                    Decimal('.0001'))
+                    Decimal('.00001'))
             if card_fee_percentage:
                 stylist.card_fee = Decimal(card_fee_percentage / 100).quantize(
-                    Decimal('.0001'))
+                    Decimal('.00001'))
             stylist.save()
         return Response(StylistSettingsResponseSerializer(self.get_object()).data)
