@@ -514,6 +514,7 @@ class TestStylistDiscountsSerializer(object):
             'first_booking': 10,
             'rebook_within_1_week': 20,
             'rebook_within_2_weeks': 30,
+            'deal_of_week_weekday': 2,
             'weekdays': [
                 {
                     'weekday': 1,
@@ -537,6 +538,8 @@ class TestStylistDiscountsSerializer(object):
         assert(stylist.rebook_within_2_weeks_discount_percent == 30)
         assert(stylist.weekday_discounts.get(weekday=1).discount_percent == 40)
         assert (stylist.weekday_discounts.get(weekday=2).discount_percent == 50)
+        weekday_discount = stylist.weekday_discounts.get(weekday=Weekday.TUESDAY)
+        assert(weekday_discount.is_deal_of_week is True)
 
 
 class TestStylistTodaySerializer(object):

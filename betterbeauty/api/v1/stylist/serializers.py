@@ -627,10 +627,13 @@ class StylistWeekdayDiscountSerializer(
     )
     weekday_verbose = serializers.CharField(source='get_weekday_display', read_only=True)
     is_working_day = serializers.SerializerMethodField()
+    is_deal_of_week = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = StylistWeekdayDiscount
-        fields = ['weekday', 'weekday_verbose', 'discount_percent', 'is_working_day']
+        fields = [
+            'weekday', 'weekday_verbose', 'discount_percent', 'is_working_day', 'is_deal_of_week',
+        ]
 
     def get_is_working_day(self, stylist_weekday_discount: StylistWeekdayDiscount):
         return stylist_weekday_discount.stylist.available_days.filter(
@@ -664,6 +667,48 @@ class StylistDiscountsSerializer(
         source='rebook_within_4_weeks_discount_percent',
         min_value=0, max_value=100
     )
+    deal_of_week_weekday = serializers.SerializerMethodField()
+
+    def get_deal_of_week_weekday(self, stylist: Stylist) -> int:
+        deal_of_week: Optional[StylistWeekdayDiscount] = stylist.weekday_discounts.filter(
+            is_deal_of_week=True
+        ).last()
+        if deal_of_week:
+            return deal_of_week.weekday
+        return 0
+
+    def validate(self, attrs):
+        if 'deal_of_week_weekday' in self.initial_data:
+            deal_of_week_weekday = self.initial_data['deal_of_week_weekday']
+            self.validate_deal_of_week_weekday(deal_of_week_weekday)
+            attrs['deal_of_week_weekday'] = deal_of_week_weekday
+        return super(StylistDiscountsSerializer, self).validate(attrs)
+
+    def validate_deal_of_week_weekday(self, deal_of_week_weekday: Optional[int]):
+        if not deal_of_week_weekday:
+            return deal_of_week_weekday
+        stylist: Stylist = self.instance
+
+        deal_of_week: Optional[StylistWeekdayDiscount] = stylist.weekday_discounts.filter(
+            weekday=deal_of_week_weekday
+        ).last()
+        if not deal_of_week:
+            return deal_of_week_weekday
+        # let's check if we're about to change percentage for the target discount
+        target_discount_percent = None
+        if 'weekdays' in self.initial_data:
+            target_discounts = list(filter(
+                lambda discount: (discount.get('weekday', None) == deal_of_week_weekday and
+                                    discount.get('discount_percent', None) is not None),
+                self.initial_data['weekdays']
+            ))
+            if len(target_discounts) > 0:
+                target_discount = target_discounts[0]
+                target_discount_percent = target_discount['discount_percent']
+        can_change, error = deal_of_week.can_set_as_deal_of_week(True, target_discount_percent)
+        if not can_change:
+            raise serializers.ValidationError(error)
+        return deal_of_week_weekday
 
     def update(self, stylist: Stylist, validated_data):
         with transaction.atomic():
@@ -677,13 +722,20 @@ class StylistDiscountsSerializer(
                     discount_serializer.is_valid(raise_exception=True)
                     discount_serializer.save(stylist=stylist)
             stylist.is_discount_configured = True
+            if 'deal_of_week_weekday' in validated_data:
+                deal_of_week_weekday = validated_data.pop('deal_of_week_weekday')
+                weekday_discount_for_deal = stylist.weekday_discounts.filter(
+                    weekday=deal_of_week_weekday
+                ).last()
+                if weekday_discount_for_deal:
+                    weekday_discount_for_deal.set_deal_of_week(is_deal_of_week=True)
             return super(StylistDiscountsSerializer, self).update(stylist, validated_data)
 
     class Meta:
         model = Stylist
         fields = [
             'weekdays', 'first_booking', 'rebook_within_1_week', 'rebook_within_2_weeks',
-            'rebook_within_3_weeks', 'rebook_within_4_weeks',
+            'rebook_within_3_weeks', 'rebook_within_4_weeks', 'deal_of_week_weekday',
         ]
 
 
