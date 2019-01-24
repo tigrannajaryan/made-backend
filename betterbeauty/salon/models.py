@@ -226,21 +226,14 @@ class StylistWeekdayDiscount(models.Model):
         db_table = 'stylist_weekday_discount'
         unique_together = ('stylist', 'weekday', )
 
-    def set_deal_of_week(self, is_deal_of_week: bool) -> Optional[DealOfWeekError]:
-        """
-        Set or unset current weekday as deal of the week, updating other weekday
-        discounts to avoid multiple day of week deals
-        :param is_deal_of_week: boolean, True or False
-        :return: None if operation is successful, or error code if unsuccessful
-        """
+    def can_set_as_deal_of_week(
+            self, is_deal_of_week: bool, with_target_discount: Optional[int]=None
+    ) -> Tuple[bool, Optional[DealOfWeekError]]:
+        """Check if can be set/unset as deal of week, return optional error code"""
         MINIMUM_DAYS_BEFORE_CHANGE = 2
         MINIMUM_DISCOUNT_PERCENTAGE = 30
-
-        result = None
-
         if is_deal_of_week == self.is_deal_of_week:
-            # nothing changes, so we just return
-            return None
+            return True, None
         if is_deal_of_week is False:
             # we should prohibit un-setting deal of week if it's less than
             # MINIMUM_DAYS_BEFORE_CHANGE before the weekday
@@ -249,10 +242,41 @@ class StylistWeekdayDiscount(models.Model):
             if days_before_weekday < 0:
                 days_before_weekday += 7
             if days_before_weekday <= MINIMUM_DAYS_BEFORE_CHANGE:
-                return DealOfWeekError.ERR_DATE_TOO_CLOSE
-        if is_deal_of_week is True and self.discount_percent < MINIMUM_DISCOUNT_PERCENTAGE:
-            # we should disallow setting deal if percentage is below the threshold
-            return DealOfWeekError.ERR_PERCENTAGE_TOO_LOW
+                return False, DealOfWeekError.ERR_DATE_TOO_CLOSE
+        if is_deal_of_week is True:
+            if with_target_discount is None:
+                with_target_discount = self.discount_percent
+            if with_target_discount < MINIMUM_DISCOUNT_PERCENTAGE:
+                # we should disallow setting deal if percentage is below the threshold
+                return False, DealOfWeekError.ERR_PERCENTAGE_TOO_LOW
+            # check if we can unset other days
+            for another_weekday_discount in self.stylist.weekday_discounts.all().exclude(
+                    weekday=self.weekday
+            ):
+                can_change, error = another_weekday_discount.can_set_as_deal_of_week(
+                    False
+                )
+                if not can_change:
+                    return can_change, error
+        return True, None
+
+    def set_deal_of_week(self, is_deal_of_week: bool) -> Optional[DealOfWeekError]:
+        """
+        Set or unset current weekday as deal of the week, updating other weekday
+        discounts to avoid multiple day of week deals
+        :param is_deal_of_week: boolean, True or False
+        :return: None if operation is successful, or error code if unsuccessful
+        """
+        result = None
+
+        if is_deal_of_week == self.is_deal_of_week:
+            # nothing changes, so we just return
+            return None
+
+        can_be_set, error = self.can_set_as_deal_of_week(is_deal_of_week)
+        if not can_be_set:
+            return error
+
         self.is_deal_of_week = is_deal_of_week
         if self.id:
             # if object already exists - we will save, but if we're setting the new deal -

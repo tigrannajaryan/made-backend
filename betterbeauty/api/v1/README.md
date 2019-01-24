@@ -1429,37 +1429,44 @@ curl -H 'Authorization: Token jwt_token' http://apiserver/api/v1/stylist/discoun
         {
             "weekday": 1,
             "weekday_verbose": "Monday",
-            "discount_percent": 0
+            "discount_percent": 30,
+            "is_deal_of_week": true
         },
         {
             "weekday": 2,
             "weekday_verbose": "Tuesday",
-            "discount_percent": 0
+            "discount_percent": 0,
+            "is_deal_of_week": false
         },
         {
             "weekday": 3,
             "weekday_verbose": "Wednesday",
-            "discount_percent": 0
+            "discount_percent": 0,
+            "is_deal_of_week": false
         },
         {
             "weekday": 4,
             "weekday_verbose": "Thursday",
-            "discount_percent": 0
+            "discount_percent": 0,
+            "is_deal_of_week": false
         },
         {
             "weekday": 5,
             "weekday_verbose": "Friday",
-            "discount_percent": 0
+            "discount_percent": 0,
+            "is_deal_of_week": false
         },
         {
             "weekday": 6,
             "weekday_verbose": "Saturday",
-            "discount_percent": 0
+            "discount_percent": 0,
+            "is_deal_of_week": false
         },
         {
             "weekday": 7,
             "weekday_verbose": "Sunday",
-            "discount_percent": 0
+            "discount_percent": 0,
+            "is_deal_of_week": false
         }
     ],
     "first_booking": 0,
@@ -1467,6 +1474,7 @@ curl -H 'Authorization: Token jwt_token' http://apiserver/api/v1/stylist/discoun
     "rebook_within_2_weeks": 0,
     "rebook_within_3_weeks": 0,
     "rebook_within_4_weeks": 0,
+    "deal_of_week_weekday": 1
 }
 ```
 
@@ -1484,7 +1492,7 @@ curl -X POST \
     "weekdays": [
         {
             "weekday": 4,
-            "discount_percent": 20
+            "discount_percent": 30
         },
         {
             "weekday": 1,
@@ -1495,7 +1503,8 @@ curl -X POST \
     "rebook_within_1_week": 20,
     "rebook_within_2_weeks": 30,
     "rebook_within_3_weeks": 0,
-    "rebook_within_4_weeks": 0
+    "rebook_within_4_weeks": 0,
+    "deal_of_week_weekday": 4
 }'
 ```
 
@@ -1507,44 +1516,52 @@ curl -X POST \
         {
             "weekday": 1,
             "weekday_verbose": "Monday",
-            "discount_percent": 20
+            "discount_percent": 20,
+            "is_deal_of_week": false
         },
         {
             "weekday": 2,
             "weekday_verbose": "Tuesday",
-            "discount_percent": 0
+            "discount_percent": 0,
+            "is_deal_of_week": false
         },
         {
             "weekday": 3,
             "weekday_verbose": "Wednesday",
-            "discount_percent": 0
+            "discount_percent": 0,
+            "is_deal_of_week": false
         },
         {
             "weekday": 4,
             "weekday_verbose": "Thursday",
-            "discount_percent": 20
+            "discount_percent": 30,
+            "is_deal_of_week": true
         },
         {
             "weekday": 5,
             "weekday_verbose": "Friday",
-            "discount_percent": 0
+            "discount_percent": 0,
+            "is_deal_of_week": false
         },
         {
             "weekday": 6,
             "weekday_verbose": "Saturday",
-            "discount_percent": 0
+            "discount_percent": 0,
+            "is_deal_of_week": false
         },
         {
             "weekday": 7,
             "weekday_verbose": "Sunday",
-            "discount_percent": 0
+            "discount_percent": 0,
+            "is_deal_of_week": false
         }
     ],
     "first_booking": 10,
     "rebook_within_1_week": 20,
     "rebook_within_2_weeks": 30,
     "rebook_within_3_weeks": 0,
-    "rebook_within_4_weeks": 0
+    "rebook_within_4_weeks": 0,
+    "deal_of_week_weekday": 4
 }
 
 ```
