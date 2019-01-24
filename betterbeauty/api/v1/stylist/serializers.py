@@ -488,13 +488,14 @@ class StylistProfileStatusSerializer(serializers.ModelSerializer):
     has_business_hours_set = serializers.BooleanField(read_only=True)
     has_weekday_discounts_set = serializers.SerializerMethodField()
     has_other_discounts_set = serializers.SerializerMethodField()
+    has_deal_of_week_set = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Stylist
         fields = [
             'has_personal_data', 'has_picture_set', 'has_services_set',
             'has_business_hours_set', 'has_weekday_discounts_set', 'has_other_discounts_set',
-            'has_invited_clients',
+            'has_invited_clients', 'has_deal_of_week_set',
         ]
 
     def get_has_personal_data(self, stylist: Stylist) -> bool:
