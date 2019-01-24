@@ -1766,9 +1766,9 @@ class StylistProfileDetailsSerializer(serializers.ModelSerializer):
 
 class StylistSettingsRequestSerializer(FormattedErrorMessageMixin, serializers.Serializer):
 
-    tax_percentage = serializers.DecimalField(max_digits=4, decimal_places=2,
+    tax_percentage = serializers.DecimalField(max_digits=5, decimal_places=3,
                                               required=False, default=None)
-    card_fee_percentage = serializers.DecimalField(max_digits=4, decimal_places=2,
+    card_fee_percentage = serializers.DecimalField(max_digits=5, decimal_places=3,
                                                    required=False, default=None)
 
 
@@ -1785,10 +1785,10 @@ class StylistSettingsResponseSerializer(serializers.Serializer):
         ]
 
     def get_tax_percentage(self, stylist: Stylist):
-        return Decimal(stylist.tax_rate * 100).quantize(Decimal('.0001'))
+        return Decimal(stylist.tax_rate * 100).quantize(Decimal('.00001'))
 
     def get_card_fee_percentage(self, stylist: Stylist):
-        return Decimal(stylist.card_fee * 100).quantize(Decimal('.0001'))
+        return Decimal(stylist.card_fee * 100).quantize(Decimal('.00001'))
 
     def get_google_calendar_integrated(self, stylist: Stylist):
         return bool(
