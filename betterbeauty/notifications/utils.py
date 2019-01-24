@@ -1564,3 +1564,167 @@ def generate_remind_define_hours_notifications(dry_run=False) -> int:
     if notifications_to_create_list and not dry_run:
         Notification.objects.bulk_create(notifications_to_create_list)
     return len(notifications_to_create_list)
+
+
+@transaction.atomic
+def generate_deal_of_week_notifications(dry_run=False) -> int:
+    """
+    Generate `deal_of_week` notifications for clients matching the criteria:
+    1. there is a stylist within 10 miles radius from client's zipcode and this
+      stylist has a "deal of the week" in 1..2 days from today.
+    2. Last notification of this type was sent more than 4 weeks ago to this client
+    3. Last notification of any type was sent more than 24 hours ago to this client
+    4. Stylist should be generally bookable
+
+    :param dry_run: if set to True, don't actually create notifications
+    :return: number of notifications created
+    """
+    code = NotificationCode.DEAL_OF_THE_WEEK
+    target = UserRole.CLIENT
+    send_time_window_start = datetime.time(11, 0)
+    send_time_window_end = datetime.time(18, 0)
+    message = (
+        'Great news, {stylist_name} on Made has added a "Deal of the Week" on '
+        '{weekday} with {deal_percent}% discount! Check them out in Made app.'
+    )
+
+    minimum_distance_miles = 10
+    minimum_distance_meters = minimum_distance_miles * 1609
+
+    eligible_clients_queryset = Client.objects.raw(
+        '''
+  SELECT
+    DISTINCT ON (id)
+    id,
+    client_user_id,
+    stylist_first_name,
+    stylist_uuid,
+    deal_percent,
+    deal_weekday,
+    days_before_discount,
+    salon_timezone
+  FROM (
+     SELECT
+       *,
+       CASE WHEN deal_weekday > current_weekday
+         THEN deal_weekday - current_weekday
+       ELSE deal_weekday - current_weekday + 7
+       END days_before_discount
+     FROM (
+        SELECT
+          cl.id id,
+          cu.id client_user_id,
+          swd.weekday deal_weekday,
+          swd.discount_percent deal_percent,
+          ST_DISTANCE(sl.location, cl.location) distance,
+          extract(
+             ISODOW FROM TIMESTAMPTZ %(current_now_with_tz)s
+             AT TIME ZONE sl.timezone) current_weekday,
+          su.first_name stylist_first_name,
+          st.uuid stylist_uuid,
+          sl.timezone salon_timezone,
+          sad.is_available
+        FROM
+          public.client cl
+          INNER JOIN public.preferred_stylist ps ON ps.client_id = cl.id
+          INNER JOIN public.stylist st ON ps.stylist_id = st.id
+          INNER JOIN public.user cu ON cu.id = cl.user_id
+          INNER JOIN public.user su ON su.id = st.user_id
+          INNER JOIN public.salon sl ON sl.id = st.salon_id
+          LEFT OUTER JOIN public.stylist_weekday_discount swd ON swd.stylist_id = st.id
+          LEFT OUTER JOIN public.stylist_available_day sad ON sad.stylist_id = st.id AND
+                                                              sad.weekday = swd.weekday
+        WHERE
+          ps.deleted_at ISNULL AND
+          -- stylist is generally bookable
+          su.phone IS NOT NULL AND
+          st.has_business_hours_set AND
+          EXISTS(SELECT 1
+                 FROM public.stylist_service
+                 WHERE cu.is_active IS TRUE AND stylist_service.stylist_id = st.id) AND
+          -- deal of the week is defined
+          swd.is_deal_of_week = TRUE AND
+          swd.discount_percent > 0 AND
+          -- locations of stylist and client are known
+          sl.location IS NOT NULL AND
+          cl.location IS NOT NULL AND
+          sad.is_available IS TRUE AND
+          -- no previous notification was sent in the last 24 hours
+          NOT EXISTS(SELECT 1
+                     FROM public.notification
+                     WHERE user_id = cu.id AND
+                           target = %(target)s AND
+                           code != %(code)s AND
+                           ((TIMESTAMPTZ %(current_now_with_tz)s
+                           AT TIME ZONE sl.timezone) - created_at) <=
+                           INTERVAL '24 hours')
+          AND
+          -- no notification of the same type was sent in the last 4 weeks
+          NOT EXISTS(SELECT 1
+                     FROM public.notification
+                     WHERE user_id = cu.id AND
+                           target = %(target)s AND
+                           code = %(code)s AND
+                           ((TIMESTAMPTZ %(current_now_with_tz)s
+                           AT TIME ZONE sl.timezone) - created_at) <=
+                           INTERVAL '4 weeks')
+          ) main
+     WHERE distance < %(minimum_distance_meters)s
+     FOR UPDATE SKIP LOCKED
+   ) main_with_time_diff
+  WHERE
+    days_before_discount BETWEEN 1 AND 2
+  ORDER BY
+    id, days_before_discount
+      ''',
+        {
+            'current_now_with_tz': timezone.now().isoformat(),
+            'minimum_distance_meters': minimum_distance_meters,
+            'code': code,
+            'target': target
+
+        }
+    )
+    notifications_to_create_list: List[Notification] = []
+    for client in eligible_clients_queryset:
+        salon_timezone = pytz.timezone(client.salon_timezone)
+        current_salon_date = timezone.now().astimezone(salon_timezone).date()
+        current_weekday = current_salon_date.isoweekday()
+        deal_weekday = client.deal_weekday
+        days_delta = deal_weekday - current_weekday
+        if days_delta < 0:
+            days_delta += 7
+        deal_date = current_salon_date + datetime.timedelta(days=days_delta)
+        deal_weekday_str = deal_date.strftime('%A')
+        message = message.format(
+            stylist_name=client.stylist_first_name,
+            weekday=deal_weekday_str,
+            deal_percent=client.deal_percent
+        )
+        discard_after = salon_timezone.localize(
+            datetime.datetime.combine(
+                deal_date,
+                datetime.time(0, 0)
+            )
+        )
+        notifications_to_create_list.append(
+            Notification(
+                user_id=client.client_user_id,
+                code=code,
+                target=target,
+                message=message,
+                send_time_window_start=send_time_window_start,
+                send_time_window_end=send_time_window_end,
+                send_time_window_tz=salon_timezone,
+                discard_after=discard_after,
+                data={
+                    'stylist_uuid': str(client.stylist_uuid),
+                    'deal_weekday': client.deal_weekday,
+                    'deal_date': deal_date.isoformat()
+                }
+            )
+        )
+    # if any notifications were generated - bulk created them
+    if notifications_to_create_list and not dry_run:
+        Notification.objects.bulk_create(notifications_to_create_list)
+    return len(notifications_to_create_list)

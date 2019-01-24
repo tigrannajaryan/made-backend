@@ -29,3 +29,4 @@ class NotificationCode(StrEnum):
     REMIND_ADD_PHOTO = 'remind_add_photo'
     REMIND_DEFINE_HOURS = 'remind_define_hours'
     REMIND_DEFINE_DISCOUNTS = 'remind_define_disounts'
+    DEAL_OF_THE_WEEK = 'deal_of_the_week'
