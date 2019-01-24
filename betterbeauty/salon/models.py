@@ -399,12 +399,22 @@ class Stylist(models.Model):
         return super(Stylist, self).delete(using, keep_parents)
 
     @property
+    def has_deal_of_week_set(self):
+        return self.weekday_discounts.filter(
+            is_deal_of_week=True
+        ).exists()
+
+    @property
     def is_profile_bookable(self):
         """Return True if has phone, working hours and services"""
+        has_necessary_deal_of_week_set = True
+        if self.must_set_deal_of_week and not self.has_deal_of_week_set:
+            has_necessary_deal_of_week_set = False
         return bool(
             self.user.phone and
             self.has_services_set and
-            self.has_business_hours_set
+            self.has_business_hours_set and
+            has_necessary_deal_of_week_set
         )
 
     def get_specialities_list(self):
