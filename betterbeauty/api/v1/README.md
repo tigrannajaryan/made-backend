@@ -284,7 +284,7 @@ the token - authorize with existing user's credentials, or register new user.
         "has_weekday_discounts_set": false,
         "has_other_discounts_set": false,
         "has_invited_clients": false,
-        "has_deal_of_week_set": false
+        "must_select_deal_of_week": false
     }
 }
 ```
@@ -349,7 +349,7 @@ If the token has not yet expired, it can be refreshed to a new one:
         "has_weekday_discounts_set": false,
         "has_other_discounts_set": false,
         "has_invited_clients": false,
-        "has_deal_of_week_set": false
+        "must_select_deal_of_week": false
     },
     "role": [
         "stylist"
@@ -450,7 +450,7 @@ curl -X POST http://apiserver/api/v1/auth/get-token-fb \
         "has_weekday_discounts_set": false,
         "has_other_discounts_set": false,
         "has_invited_clients": false,
-        "has_deal_of_week_set": false
+        "must_select_deal_of_week": false
     }
 }
 ```
@@ -614,7 +614,7 @@ curl -X POST \
         "has_weekday_discounts_set": true,
         "has_other_discounts_set": true,
         "has_invited_clients": true,
-        "has_deal_of_week_set": true
+        "must_select_deal_of_week": true
     },
      "user_uuid": "0ad92eca-2eae-4bef-b6d4-a3323597108c"
 }
