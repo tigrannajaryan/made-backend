@@ -516,8 +516,10 @@ def get_date_with_lowest_price_on_current_week(
 
     # filter out prices of this week only
     current_date = stylist.with_salon_tz(timezone.now()).date()
-    begin_of_week_date = current_date - datetime.timedelta(days=current_date.isoweekday() - 1)
-    end_of_week_date = current_date + datetime.timedelta(days=7 - current_date.isoweekday())
+    # Sunday is the beginning of the week
+    weekday = current_date.weekday()
+    begin_of_week_date = current_date - datetime.timedelta(days=weekday)
+    end_of_week_date = current_date + datetime.timedelta(days=6 - weekday)
     this_week_prices: List[ClientPriceOnDate] = list(filter(
         lambda price_on_date: begin_of_week_date <= price_on_date.date <= end_of_week_date,
         prices_on_dates
