@@ -825,7 +825,7 @@ class SearchStylistSerializer(
     first_name = serializers.CharField(source='user__first_name')
     last_name = serializers.CharField(source='user__last_name')
     phone = serializers.SerializerMethodField()
-    is_profile_bookable = serializers.SerializerMethodField()
+    is_profile_bookable = serializers.BooleanField(read_only=True)
     followers_count = serializers.IntegerField()
     specialities = serializers.SerializerMethodField()
     preference_uuid = serializers.CharField()
