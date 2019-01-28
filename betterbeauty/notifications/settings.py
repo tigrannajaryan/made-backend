@@ -52,6 +52,9 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
         NotificationCode.REMIND_DEFINE_DISCOUNTS: [
             NotificationChannel.PUSH, NotificationChannel.SMS
         ],
+        NotificationCode.DEAL_OF_THE_WEEK: [
+            NotificationChannel.PUSH
+        ],
     }
 else:
     NOTIFICATION_CHANNEL_PRIORITY = {
@@ -92,6 +95,9 @@ else:
             NotificationChannel.PUSH, NotificationChannel.SMS
         ],
         NotificationCode.REMIND_DEFINE_DISCOUNTS: [
+            NotificationChannel.PUSH, NotificationChannel.SMS
+        ],
+        NotificationCode.DEAL_OF_THE_WEEK: [
             NotificationChannel.PUSH, NotificationChannel.SMS
         ],
     }

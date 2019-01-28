@@ -36,6 +36,7 @@ from salon.models import (
 )
 from salon.utils import create_stylist_profile_for_user
 from ..utils import (
+    generate_deal_of_week_notifications,
     generate_follow_up_invitation_sms,
     generate_hint_to_first_book_notifications,
     generate_hint_to_rebook_notifications,
@@ -1379,3 +1380,126 @@ class TestGenerateRemindDefineHoursNotifications(object):
         stylist_eligible_for_hours_reminder.has_business_hours_set = True
         stylist_eligible_for_hours_reminder.save()
         assert (generate_remind_define_hours_notifications() == 0)
+
+
+class TestGenerateDealOfWeekNotification(object):
+    @freeze_time('2019-1-21 12:00:00 UTC')
+    @pytest.mark.django_db
+    def test_positive_path(self):
+        user1: User = G(User, phone='123')
+        user2: User = G(User, phone='345')
+        salon1: Salon = G(Salon, timezone=pytz.UTC, location=Point(-73.9734388, 40.7718351))
+        salon2: Salon = G(Salon, timezone=pytz.UTC, location=Point(-72, 40.65))
+        stylist1: Stylist = G(Stylist, salon=salon1, user=user1, has_business_hours_set=True)
+        G(StylistService, stylist=stylist1, is_enabled=True)
+        stylist2: Stylist = G(Stylist, salon=salon2, user=user2, has_business_hours_set=True)
+        G(StylistService, stylist=stylist2, is_enabled=True)
+        client1 = G(Client, location=Point(-73.972282, 40.7724047))
+        client2 = G(Client, location=Point(-73.972282, 40.7724047))
+        G(PreferredStylist, stylist=stylist1, client=client1)
+        G(PreferredStylist, stylist=stylist2, client=client2)
+        G(StylistAvailableWeekDay, stylist=stylist1, weekday=Weekday.WEDNESDAY, is_available=True)
+        G(StylistAvailableWeekDay, stylist=stylist2, weekday=Weekday.WEDNESDAY, is_available=True)
+        G(
+            StylistWeekdayDiscount,
+            weekday=Weekday.WEDNESDAY,
+            stylist=stylist1, discount_percent=30, is_deal_of_week=True
+        )
+        G(
+            StylistWeekdayDiscount,
+            weekday=Weekday.WEDNESDAY,
+            stylist=stylist2, discount_percent=30, is_deal_of_week=True
+        )
+        result = generate_deal_of_week_notifications()
+        assert(result == 1)
+        notification: Notification = Notification.objects.last()
+        assert(notification.user == client1.user)
+        assert(notification.code == NotificationCode.DEAL_OF_THE_WEEK)
+        assert('Wednesday' in notification.message)
+        assert(stylist1.user.first_name in notification.message)
+        assert('30%' in notification.message)
+        result = generate_deal_of_week_notifications()
+        assert (result == 0)
+
+    @freeze_time('2019-1-21 12:00:00 UTC')
+    @pytest.mark.django_db
+    def test_existing_deal_notification(self):
+        user1: User = G(User, phone='123')
+        salon1: Salon = G(Salon, timezone=pytz.UTC, location=Point(-73.9734388, 40.7718351))
+        stylist1: Stylist = G(Stylist, salon=salon1, user=user1, has_business_hours_set=True)
+        G(StylistService, stylist=stylist1, is_enabled=True)
+        client1 = G(Client, location=Point(-73.972282, 40.7724047))
+        G(PreferredStylist, stylist=stylist1, client=client1)
+        G(
+            StylistWeekdayDiscount,
+            weekday=Weekday.WEDNESDAY,
+            stylist=stylist1, discount_percent=30, is_deal_of_week=True
+        )
+        G(StylistAvailableWeekDay, stylist=stylist1, weekday=Weekday.WEDNESDAY, is_available=True)
+        existing_notification: Notification = G(
+            Notification,
+            code=NotificationCode.DEAL_OF_THE_WEEK,
+            target=UserRole.CLIENT,
+            user=client1.user,
+            created_at=timezone.now() - datetime.timedelta(weeks=3)
+        )
+        result = generate_deal_of_week_notifications()
+        assert (result == 0)
+        existing_notification.created_at = timezone.now() - datetime.timedelta(days=29)
+        existing_notification.save()
+        result = generate_deal_of_week_notifications()
+        assert (result == 1)
+
+    @freeze_time('2019-1-21 12:00:00 UTC')
+    @pytest.mark.django_db
+    def test_existing_different_notification(self):
+        user1: User = G(User, phone='123')
+        salon1: Salon = G(Salon, timezone=pytz.UTC, location=Point(-73.9734388, 40.7718351))
+        stylist1: Stylist = G(Stylist, salon=salon1, user=user1, has_business_hours_set=True)
+        G(StylistService, stylist=stylist1, is_enabled=True)
+        client1 = G(Client, location=Point(-73.972282, 40.7724047))
+        G(PreferredStylist, stylist=stylist1, client=client1)
+        G(
+            StylistWeekdayDiscount,
+            weekday=Weekday.WEDNESDAY,
+            stylist=stylist1, discount_percent=30, is_deal_of_week=True
+        )
+        G(StylistAvailableWeekDay, stylist=stylist1, weekday=Weekday.WEDNESDAY, is_available=True)
+        existing_notification: Notification = G(
+            Notification,
+            code=NotificationCode.REMIND_ADD_PHOTO,
+            target=UserRole.CLIENT,
+            user=client1.user,
+            created_at=timezone.now() - datetime.timedelta(hours=20)
+        )
+        result = generate_deal_of_week_notifications()
+        assert (result == 0)
+        existing_notification.created_at = timezone.now() - datetime.timedelta(hours=29)
+        existing_notification.save()
+        result = generate_deal_of_week_notifications()
+        assert (result == 1)
+
+    @freeze_time('2019-1-21 12:00:00 UTC')
+    @pytest.mark.django_db
+    def test_non_working_day_on_deal_date(self):
+        user1: User = G(User, phone='123')
+        salon1: Salon = G(Salon, timezone=pytz.UTC, location=Point(-73.9734388, 40.7718351))
+        stylist1: Stylist = G(Stylist, salon=salon1, user=user1, has_business_hours_set=True)
+        G(StylistService, stylist=stylist1, is_enabled=True)
+        client1 = G(Client, location=Point(-73.972282, 40.7724047))
+        G(PreferredStylist, stylist=stylist1, client=client1)
+        G(
+            StylistWeekdayDiscount,
+            weekday=Weekday.WEDNESDAY,
+            stylist=stylist1, discount_percent=30, is_deal_of_week=True
+        )
+        non_working_day = G(
+            StylistAvailableWeekDay, weekday=Weekday.WEDNESDAY, stylist=stylist1,
+            is_available=False
+        )
+        result = generate_deal_of_week_notifications()
+        assert (result == 0)
+        non_working_day.is_available = True
+        non_working_day.save()
+        result = generate_deal_of_week_notifications()
+        assert (result == 1)
