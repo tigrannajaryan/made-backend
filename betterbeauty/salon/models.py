@@ -405,6 +405,12 @@ class Stylist(models.Model):
         ).exists()
 
     @property
+    def must_select_deal_of_week(self):
+        if not self.must_set_deal_of_week:
+            return False
+        return not self.has_deal_of_week_set
+
+    @property
     def is_profile_bookable(self):
         """Return True if has phone, working hours and services"""
         has_necessary_deal_of_week_set = True
