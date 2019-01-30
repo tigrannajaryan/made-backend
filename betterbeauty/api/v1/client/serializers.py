@@ -673,7 +673,12 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
 
     def validate(self, attrs):
         status = self.instance.status
-        if status != AppointmentStatus.NEW:
+        # Next 4 lines are to skip the validation since rating and comment will be added only
+        # after checkout. This logic checks if there is keys other than `rating` or `comment`.
+        keys = attrs.keys()
+        keys_to_skip = ['rating', 'comment']
+        keys = [x for x in keys if x not in keys_to_skip]
+        if len(keys) and (status != AppointmentStatus.NEW):
             raise serializers.ValidationError(appointment_errors.ERR_CANNOT_MODIFY_APPOINTMENT)
         return attrs
 
