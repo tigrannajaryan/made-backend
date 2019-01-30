@@ -26,8 +26,7 @@ from pricing import DISCOUNT_TYPE_CHOICES
 from salon.models import Stylist
 
 from .choices import APPOINTMENT_STATUS_CHOICES
-from .types import AppointmentStatus
-
+from .types import AppointmentStatus, RATINGS_CHOICES
 
 logger = logging.getLogger(__file__)
 
@@ -120,6 +119,9 @@ class Appointment(models.Model):
     stylist_new_appointment_notification_sent_at = models.DateTimeField(
         null=True, blank=True, default=None
     )
+
+    rating = models.IntegerField(choices=RATINGS_CHOICES, blank=True, null=True, default=None)
+    comment = models.TextField(blank=True, null=True, default=None)
 
     objects = AppointmentManager()
     all_objects = AppointmentAllObjectsManager()

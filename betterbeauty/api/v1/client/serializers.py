@@ -31,7 +31,7 @@ from appointment.constants import (
     ErrorMessages as appointment_errors
 )
 from appointment.models import Appointment, AppointmentService
-from appointment.types import AppointmentStatus
+from appointment.types import AppointmentStatus, RATINGS_CHOICES
 from client.models import Client, PreferredStylist
 from client.types import CLIENT_PRIVACY_CHOICES, ClientPrivacy
 from core.models import User
@@ -495,6 +495,7 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
     has_card_fee_included = serializers.NullBooleanField(read_only=True)
     duration_minutes = DurationMinuteField(source='duration', read_only=True)
     status = serializers.CharField(read_only=True)
+    rating = serializers.ChoiceField(choices=RATINGS_CHOICES, required=False)
 
     class Meta:
         model = Appointment
@@ -504,7 +505,7 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
             'status', 'total_tax', 'total_card_fee', 'total_client_price_before_tax',
             'services', 'grand_total', 'has_tax_included', 'has_card_fee_included',
             'tax_percentage', 'card_fee_percentage', 'total_discount_percentage',
-            'total_discount_amount',
+            'total_discount_amount', 'rating', 'comment'
         ]
 
     def create(self, validated_data):
@@ -602,6 +603,8 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
         status = self.validated_data.get('status', self.instance.status)
         user: User = self.context['user']
         appointment: Appointment = self.instance
+        appointment.rating = self.validated_data.get('rating', self.instance.rating)
+        appointment.comment = self.validated_data.get('comment', self.instance.comment)
         with transaction.atomic():
             if 'services' in self.validated_data:
                 StylistAppointmentUpdateSerializer.update_appointment_services(
