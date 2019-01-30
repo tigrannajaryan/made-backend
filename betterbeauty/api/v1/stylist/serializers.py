@@ -1721,6 +1721,7 @@ class StylistProfileDetailsSerializer(serializers.ModelSerializer):
     )
     instagram_integrated = serializers.BooleanField(read_only=True)
     location = LocationSerializer(source='salon.location', read_only=True, allow_null=True)
+    rating_percentage = serializers.SerializerMethodField()
 
     class Meta:
         model = Stylist
@@ -1728,7 +1729,7 @@ class StylistProfileDetailsSerializer(serializers.ModelSerializer):
             'uuid', 'first_name', 'last_name', 'profile_photo_url', 'is_preferred',
             'salon_name', 'salon_address', 'followers_count', 'working_hours', 'instagram_url',
             'website_url', 'email', 'phone', 'is_profile_bookable', 'preference_uuid',
-            'instagram_integrated', 'location',
+            'instagram_integrated', 'location', 'rating_percentage'
         ]
 
     def get_is_preferred(self, stylist: Stylist) -> bool:
@@ -1764,6 +1765,9 @@ class StylistProfileDetailsSerializer(serializers.ModelSerializer):
             stylist.salon
         ) else None
 
+    def get_rating_percentage(self, stylist: Stylist) -> Optional[int]:
+        return stylist.get_rating_percentage()
+
 
 class StylistSettingsRequestSerializer(FormattedErrorMessageMixin, serializers.Serializer):
 
@@ -1796,3 +1800,16 @@ class StylistSettingsResponseSerializer(serializers.Serializer):
             stylist.google_access_token and
             stylist.google_refresh_token
         )
+
+
+class AppointmentRatingSerializer(serializers.ModelSerializer):
+
+    client_name = serializers.CharField(source="client.user.get_full_name")
+    client_photo_url = serializers.CharField(source="client.get_profile_photo_url", default=None)
+    rating = serializers.IntegerField()
+    comment = serializers.CharField()
+    appointment_datetime = serializers.DateTimeField(source='datetime_start_at')
+
+    class Meta:
+        model = Appointment
+        fields = ['client_name', 'client_photo_url', 'rating', 'appointment_datetime', 'comment']

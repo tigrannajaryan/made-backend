@@ -1,5 +1,6 @@
 import datetime
 import logging
+import math
 import uuid
 
 from typing import List, Optional, Tuple
@@ -10,7 +11,7 @@ from django.contrib.gis.db.models.fields import PointField
 from django.contrib.postgres.fields import ArrayField, DateRangeField
 from django.core.validators import MaxValueValidator
 from django.db import models, transaction
-from django.db.models import Q
+from django.db.models import Avg, Q
 from django.utils import timezone
 
 from timezone_field import TimeZoneField
@@ -702,6 +703,14 @@ class Stylist(models.Model):
         self.save(update_fields=[
             'google_access_token', 'google_refresh_token', 'google_integration_added_at'
         ])
+
+    def get_rating_percentage(self) -> Optional[int]:
+        appointments = self.appointments.filter(
+            rating__isnull=False,).aggregate(avg_rating=Avg('rating'))
+        if (appointments['avg_rating']):
+            return int(math.ceil(appointments['avg_rating'] * 100))
+        else:
+            return None
 
 
 class ServiceCategory(models.Model):
