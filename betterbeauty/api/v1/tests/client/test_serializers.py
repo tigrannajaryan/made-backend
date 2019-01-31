@@ -678,6 +678,45 @@ class TestAppointmentUpdateSerializer(object):
             total_services_regular_cost - total_services_cost
         )
 
+    @pytest.mark.django_db
+    def test_validate_rating(self, stylist_data: Stylist, client_data: Client):
+        salon: Salon = G(Salon, timezone=pytz.timezone(settings.TIME_ZONE))
+        stylist: Stylist = G(Stylist, salon=salon)
+        appointment: Appointment = G(
+            Appointment,
+            stylist=stylist,
+            duration=datetime.timedelta(minutes=30),
+            status=AppointmentStatus.NEW.value
+        )
+        data = {
+            'rating': 1,
+            'comment': "She is the best stylist in town !"
+        }
+        serializer = AppointmentUpdateSerializer(instance=appointment, data=data, partial=True)
+        assert (serializer.is_valid() is True)
+
+        appointment = G(
+            Appointment,
+            stylist=stylist,
+            duration=datetime.timedelta(minutes=30),
+            status=AppointmentStatus.CHECKED_OUT.value
+        )
+        data = {
+            'rating': 0,
+            'comment': "She is the worst stylist in town :("
+        }
+        serializer = AppointmentUpdateSerializer(instance=appointment, data=data, partial=True)
+        assert (serializer.is_valid() is True)
+
+        data = {
+            'rating': 2
+        }
+        serializer = AppointmentUpdateSerializer(instance=appointment, data=data, partial=True)
+        assert (serializer.is_valid() is False)
+
+        assert ({'code': 'invalid_choice'} in
+                serializer.errors['field_errors']['rating'])
+
 
 class TestAppointmentPreviewRequestSerializer(object):
     @pytest.mark.django_db
