@@ -5,7 +5,6 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from core.constants import EnvLevel
 from notifications.types import NotificationCode
 from notifications.utils import (
     generate_deal_of_week_notifications,
@@ -199,20 +198,19 @@ class Command(BaseCommand):
             sms_count, (time_end - time_start).total_seconds(),
         ), self.stdout)
 
-        if settings.LEVEL != EnvLevel.PRODUCTION:
-            stdout_and_log(
-                'Generating {0} notifications'.format(NotificationCode.DEAL_OF_THE_WEEK),
-                self.stdout
-            )
-            time_start = timezone.now()
-            notification_count = generate_deal_of_week_notifications(
-                dry_run=dry_run
-            )
-            time_end = timezone.now()
-            stdout_and_log('...{0} {2} notifications generated; took {1} seconds'.format(
-                notification_count, (time_end - time_start).total_seconds(),
-                NotificationCode.DEAL_OF_THE_WEEK
-            ), self.stdout)
+        stdout_and_log(
+            'Generating {0} notifications'.format(NotificationCode.DEAL_OF_THE_WEEK),
+            self.stdout
+        )
+        time_start = timezone.now()
+        notification_count = generate_deal_of_week_notifications(
+            dry_run=dry_run
+        )
+        time_end = timezone.now()
+        stdout_and_log('...{0} {2} notifications generated; took {1} seconds'.format(
+            notification_count, (time_end - time_start).total_seconds(),
+            NotificationCode.DEAL_OF_THE_WEEK
+        ), self.stdout)
 
         if force_send:
             self.stdout.write('Going to send push notifications now')
