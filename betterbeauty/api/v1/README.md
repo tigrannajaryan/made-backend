@@ -2926,6 +2926,7 @@ curl -X POST \
             "salon_name": "Jane Salon",
             "salon_address": "111",
             "instagram_url": null,
+            "rating_percentage": 33,
             "website_url": null,
             "salon_city": "Brooklyn",
             "salon_zipcode": "10005",
