@@ -66,6 +66,7 @@
     - [Decline Invitation API](#decline-invitation-api)
 - **Common**
     - [Stylist Profile Details](#stylist-profile-details)
+    - [Stylist Ratings](#stylist-ratings)
 - **Uploads**
     - [Files](#files-upload)
     - [Images](#user-content-image-upload)
@@ -3781,9 +3782,56 @@ Note: role can be "stylist" or "client" depending on the app which sends the req
     "location": {
         "lat": 3.2692488,
         "lng": 73.00267099999999
-    }
+    },
+    "rating_percentage": 33
 }
 ```
+
+## Stylist Ratings
+
+**GET api/v1/common/stylist-profile/<stylist-uuid>/rating**
+
+**REQUEST**
+
+```
+curl -X GET \
+  http://api_server/api/v1/common/stylist-profile/3c1cc23e-2a36-43cf-a865-55b078bcae77/rating \
+  -H 'Authorization: Token <jwt_token>' \
+  -H 'Content-Type: application/json'
+```
+
+**RESPONSE 200 OK**
+
+```json
+{
+    "rating": [
+        {
+            "client_name": "Mark Zuckerberg",
+            "client_photo_url": "http://media_url/media.png",
+            "rating": 0,
+            "appointment_datetime": "2018-10-26T16:00:00-04:00",
+            "comment": "worst service"
+        },
+        {
+            "client_name": "Steve jobs",
+            "client_photo_url": "http://media_url/media.png",
+            "rating": 1,
+            "appointment_datetime": "2019-02-01T13:00:00-05:00",
+            "comment": "best of all"
+        },
+        {
+            "client_name": "Albert Einstein",
+            "client_photo_url": "http://media_url/media.png",
+            "rating": 0,
+            "appointment_datetime": "2019-02-01T13:30:00-05:00",
+            "comment": "worst service"
+        }
+    ]
+}
+```
+  
+
+
 
 # Files upload
 ## Image upload

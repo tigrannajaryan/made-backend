@@ -4,6 +4,7 @@ from .views import (
     AnalyticsSessionsView,
     AnalyticsViewsView,
     CommonStylistDetailView,
+    CommonStylistProfileRatingView,
     IntegrationAddView,
     NotificationAckView,
     RegisterDeviceView,
@@ -24,6 +25,8 @@ urlpatterns = [
     url('^analytics/sessions$', AnalyticsSessionsView.as_view(), name='analytics_sessions'),
     url('^stylist-profile/(?P<stylist_uuid>[0-9a-f\-]+)$',
         CommonStylistDetailView.as_view(), name='stylist-profile-detail'),
+    url('^stylist-profile/(?P<stylist_uuid>[0-9a-f\-]+)/rating$',
+        CommonStylistProfileRatingView.as_view(), name='stylist-profile-rating'),
     url('^stylist/(?P<stylist_uuid>[0-9a-f\-]+)/instagram-photos',
         StylistInstagramPhotosRetrieveView.as_view(), name='instagram-photos'),
 ]
