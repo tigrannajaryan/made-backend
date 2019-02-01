@@ -838,12 +838,13 @@ class SearchStylistSerializer(
     specialities = serializers.SerializerMethodField()
     preference_uuid = serializers.CharField()
     instagram_integrated = serializers.BooleanField(read_only=True)
+    rating_percentage = serializers.IntegerField()
 
     class Meta:
         model = Stylist
         fields = [
             'uuid', 'first_name', 'last_name', 'phone', 'profile_photo_url',
-            'salon_name', 'salon_address', 'instagram_url',
+            'salon_name', 'salon_address', 'instagram_url', 'rating_percentage',
             'website_url', 'salon_city', 'salon_zipcode', 'salon_state', 'is_profile_bookable',
             'followers_count', 'specialities', 'preference_uuid', 'instagram_integrated',
         ]
