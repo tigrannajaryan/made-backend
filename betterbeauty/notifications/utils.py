@@ -1735,3 +1735,82 @@ def generate_deal_of_week_notifications(dry_run=False) -> int:
     if notifications_to_create_list and not dry_run:
         Notification.objects.bulk_create(notifications_to_create_list)
     return len(notifications_to_create_list)
+
+
+@transaction.atomic
+def generate_invite_your_stylist_notifications(dry_run=False) -> int:
+    """
+    Generate `invite_your_stylist` notifications for clients matching the criteria:
+    1. Client has no preferred stylist
+    2. Client has registered no more than 90 days ago
+    3. Last notification of this type was sent more than 4 weeks ago to this client
+    4. Last notification of any type was sent more than 24 hours ago to this client
+
+    :param dry_run: if set to True, don't actually create notifications
+    :return: number of notifications created
+    """
+    code = NotificationCode.INVITE_YOUR_STYLIST
+    target = UserRole.CLIENT
+    send_time_window_start = datetime.time(11, 0)
+    send_time_window_end = datetime.time(18, 0)
+    earliest_time_client_created = timezone.now() - datetime.timedelta(days=90)
+    message = (
+        'Did you know you can now invite your stylist to accept appointments in Made? '
+        'You can do it from the search screen in Made app.'
+    )
+    notifications_to_create_list: List[Notification] = []
+
+    client_has_prior_notifications_with_same_code_subquery = Notification.objects.filter(
+        user_id=OuterRef('user__id'), code=code,
+        created_at__gte=timezone.now() - datetime.timedelta(weeks=4),
+        target=UserRole.CLIENT
+    )
+
+    client_has_recent_notifications_subquery = Notification.objects.filter(
+        user_id=OuterRef('user__id'),
+        created_at__gte=timezone.now() - datetime.timedelta(hours=24),
+        target=UserRole.CLIENT
+    ).exclude(code=code)
+    eligible_client_ids = Client.objects.filter(
+        preferred_stylists__isnull=True,
+        created_at__gte=earliest_time_client_created
+    ).annotate(
+        client_has_prior_notifications_with_same_code=Exists(
+            client_has_prior_notifications_with_same_code_subquery
+        ),
+        client_has_recent_notifications=Exists(client_has_recent_notifications_subquery)
+    ).filter(
+        client_has_prior_notifications_with_same_code=False,
+        client_has_recent_notifications=False
+    ).values_list('id', flat=True)
+
+    if is_push_only(code):
+        client_has_registered_devices = Q(
+            user__apnsdevice__active=True) | Q(
+            user__gcmdevice__active=True)
+        eligible_client_ids = eligible_client_ids.filter(
+            client_has_registered_devices
+        )
+    eligible_clients_queryset = Client.objects.filter(
+        id__in=eligible_client_ids
+    ).select_for_update(skip_locked=True)
+
+    for client in eligible_clients_queryset:
+        discard_after = client.created_at + datetime.timedelta(days=90)
+        notifications_to_create_list.append(
+            Notification(
+                user=client.user,
+                code=code,
+                target=target,
+                message=message,
+                send_time_window_start=send_time_window_start,
+                send_time_window_end=send_time_window_end,
+                send_time_window_tz=pytz.timezone(settings.TIME_ZONE),
+                discard_after=discard_after,
+                data={}
+            )
+        )
+    # if any notifications were generated - bulk created them
+    if notifications_to_create_list and not dry_run:
+        Notification.objects.bulk_create(notifications_to_create_list)
+    return len(notifications_to_create_list)

@@ -58,6 +58,9 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
         NotificationCode.DEAL_OF_THE_WEEK_PROMO: [
             NotificationChannel.PUSH, NotificationChannel.SMS
         ],
+        NotificationCode.INVITE_YOUR_STYLIST: [
+            NotificationChannel.PUSH,  # NotificationChannel.EMAIL
+        ],
     }
 else:
     NOTIFICATION_CHANNEL_PRIORITY = {
@@ -105,5 +108,8 @@ else:
         ],
         NotificationCode.DEAL_OF_THE_WEEK_PROMO: [
             NotificationChannel.PUSH, NotificationChannel.SMS
+        ],
+        NotificationCode.INVITE_YOUR_STYLIST: [
+            NotificationChannel.PUSH,  # NotificationChannel.EMAIL
         ],
     }
