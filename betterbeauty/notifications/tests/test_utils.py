@@ -1265,8 +1265,7 @@ class TestGenerateFollowUpInvitationSms(object):
         assert (invitation.followup_count == 1)
         assert (invitation.followup_sent_at == timezone.now())
         assert (sms_mock.call_count == 1)
-        assert ('Fred' in sms_mock.call_args[1]['body'])
-        assert ('McBob' not in sms_mock.call_args[1]['body'])
+        assert ('you book with Fred there.' in sms_mock.call_args[1]['body'])
 
     @pytest.mark.django_db
     @mock.patch('notifications.utils.send_sms_message')
@@ -1287,6 +1286,7 @@ class TestGenerateFollowUpInvitationSms(object):
         assert (sms_mock.call_count == 1)
         assert ('Jenny' in sms_mock.call_args[1]['body'])
         assert ('McBob' not in sms_mock.call_args[1]['body'])
+        assert ('you book there.' in sms_mock.call_args[1]['body'])
 
     @pytest.mark.django_db
     @mock.patch('notifications.utils.send_sms_message')

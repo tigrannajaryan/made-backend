@@ -1433,7 +1433,7 @@ def generate_follow_up_invitation_sms(dry_run=False) -> int:
     message = (
         'Hey! Just following up on the invite {inviter_name} '
         'sent you about booking on MADE. You see better prices when you book '
-        'with {inviter_name} there. Download the app at: https://madebeauty.com/get/'
+        '{stylist_mention}there. Download the app at: https://madebeauty.com/get/'
     )
     earliest_invitation_creation_datetime = timezone.now() - datetime.timedelta(days=60)
     earliest_time_invitation_sent = timezone.now() - datetime.timedelta(days=14)
@@ -1467,7 +1467,13 @@ def generate_follow_up_invitation_sms(dry_run=False) -> int:
         invitation_author_name = invitation_author_user.first_name
         if not invitation_author_name:
             invitation_author_name = invitation_author_user.get_full_name()
-        message = message.format(inviter_name=invitation_author_name)
+        stylist_mention = 'with {inviter_name} '.format(
+            inviter_name=invitation_author_name
+        ) if invite.stylist else ''
+        message = message.format(
+            inviter_name=invitation_author_name,
+            stylist_mention=stylist_mention
+        )
         try:
             if not dry_run:
                 send_sms_message(to_phone=invite.phone, body=message, role=UserRole.CLIENT)
