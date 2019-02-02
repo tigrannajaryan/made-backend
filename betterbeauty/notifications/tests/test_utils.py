@@ -1251,6 +1251,46 @@ class TestGenerateFollowUpInvitationSms(object):
     @pytest.mark.django_db
     @mock.patch('notifications.utils.send_sms_message')
     @freeze_time('2018-12-31 23:30 UTC')  # 6:30pm EST
+    def test_positive_path_invitation_stylist_invites_client(self, sms_mock):
+        user: User = G(User, first_name='Fred', last_name='McBob')
+        stylist: Stylist = G(Stylist, user=user)
+        invitation: Invitation = G(
+            Invitation, status=InvitationStatus.INVITED, created_client=None,
+            created_at=timezone.now() - datetime.timedelta(days=15),
+            followup_sent_at=None, followup_count=0, stylist=stylist,
+            invited_by_client=None
+        )
+        assert (generate_follow_up_invitation_sms() == 1)
+        invitation.refresh_from_db()
+        assert (invitation.followup_count == 1)
+        assert (invitation.followup_sent_at == timezone.now())
+        assert (sms_mock.call_count == 1)
+        assert ('you book with Fred there.' in sms_mock.call_args[1]['body'])
+
+    @pytest.mark.django_db
+    @mock.patch('notifications.utils.send_sms_message')
+    @freeze_time('2018-12-31 23:30 UTC')  # 6:30pm EST
+    def test_positive_path_invitation_client_invites_client(self, sms_mock):
+        user: User = G(User, first_name='Jenny', last_name='McBob')
+        inviting_client: Client = G(Client, user=user)
+        invitation: Invitation = G(
+            Invitation, status=InvitationStatus.INVITED, created_client=None,
+            created_at=timezone.now() - datetime.timedelta(days=15),
+            followup_sent_at=None, followup_count=0, invited_by_client=inviting_client,
+            stylist=None
+        )
+        assert (generate_follow_up_invitation_sms() == 1)
+        invitation.refresh_from_db()
+        assert (invitation.followup_count == 1)
+        assert (invitation.followup_sent_at == timezone.now())
+        assert (sms_mock.call_count == 1)
+        assert ('Jenny' in sms_mock.call_args[1]['body'])
+        assert ('McBob' not in sms_mock.call_args[1]['body'])
+        assert ('you book there.' in sms_mock.call_args[1]['body'])
+
+    @pytest.mark.django_db
+    @mock.patch('notifications.utils.send_sms_message')
+    @freeze_time('2018-12-31 23:30 UTC')  # 6:30pm EST
     def test_recent_invitation(self, sms_mock):
         invitation: Invitation = G(
             Invitation, status=InvitationStatus.INVITED, created_client=None,
