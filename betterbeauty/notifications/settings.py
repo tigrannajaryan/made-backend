@@ -53,7 +53,10 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
             NotificationChannel.PUSH, NotificationChannel.SMS
         ],
         NotificationCode.DEAL_OF_THE_WEEK: [
-            NotificationChannel.PUSH
+            NotificationChannel.PUSH, NotificationChannel.SMS
+        ],
+        NotificationCode.DEAL_OF_THE_WEEK_PROMO: [
+            NotificationChannel.PUSH, NotificationChannel.SMS
         ],
     }
 else:
@@ -98,6 +101,9 @@ else:
             NotificationChannel.PUSH, NotificationChannel.SMS
         ],
         NotificationCode.DEAL_OF_THE_WEEK: [
+            NotificationChannel.PUSH, NotificationChannel.SMS
+        ],
+        NotificationCode.DEAL_OF_THE_WEEK_PROMO: [
             NotificationChannel.PUSH, NotificationChannel.SMS
         ],
     }

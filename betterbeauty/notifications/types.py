@@ -30,3 +30,4 @@ class NotificationCode(StrEnum):
     REMIND_DEFINE_HOURS = 'remind_define_hours'
     REMIND_DEFINE_DISCOUNTS = 'remind_define_disounts'
     DEAL_OF_THE_WEEK = 'deal_of_the_week'
+    DEAL_OF_THE_WEEK_PROMO = 'deal_of_the_week_promo'
