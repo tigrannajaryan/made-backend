@@ -48,6 +48,8 @@ class Client(models.Model):
 
     created_at = models.DateTimeField(null=True, auto_now_add=True)
 
+    stripe_id = models.CharField(null=True, blank=True, max_length=64, default=None)
+
     def geo_code_address(self):
         geo_coded_address = GeoCode(self.zip_code).geo_code(country=self.country)
         if geo_coded_address:

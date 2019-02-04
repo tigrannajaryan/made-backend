@@ -153,6 +153,7 @@ INSTALLED_APPS = [
 
     # Internal apps
     'api',
+    'billing',
     'appointment',
     'client',
     'core',
