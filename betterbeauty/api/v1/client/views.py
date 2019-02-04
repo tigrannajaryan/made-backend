@@ -234,7 +234,8 @@ class SearchStylistView(generics.ListAPIView):
                 sp.text AS sp_text,
                 services_count,
                 followers_count,
-                preference_uuid
+                preference_uuid,
+                cast((average_rating*100) as int) as rating_percentage
             FROM
                 stylist as st
             JOIN "user" on
@@ -297,6 +298,17 @@ class SearchStylistView(generics.ListAPIView):
                 GROUP BY
                     sp.stylist_id ) sp ON
                 st.id = sp.stylist_id
+            LEFT JOIN (
+                SELECT
+                    AVG(apnt.rating) as average_rating,
+                    apnt.stylist_id
+                FROM
+                    appointment as apnt
+                WHERE
+                    apnt.rating IS NOT NULL
+                GROUP BY
+                    apnt.stylist_id) AS apnt ON
+                st.id=apnt.stylist_id
             WHERE
             st.deactivated_at ISNULL AND (
             -- Fuzzy search query term (omit if query is NULL)

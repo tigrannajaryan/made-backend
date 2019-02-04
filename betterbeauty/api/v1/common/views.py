@@ -11,7 +11,8 @@ from rest_framework.response import Response
 
 from api.common.constants import HIGH_LEVEL_API_ERROR_CODES
 from api.common.permissions import ClientOrStylistPermission
-from api.v1.stylist.serializers import StylistProfileDetailsSerializer
+from api.v1.stylist.serializers import AppointmentRatingSerializer, StylistProfileDetailsSerializer
+from appointment.models import Appointment
 from core.models import User
 from core.utils import post_or_get_or_data
 from integrations.google.types import GoogleIntegrationErrors, GoogleIntegrationType
@@ -180,6 +181,21 @@ class CommonStylistDetailView(views.APIView):
             'client': client,
             'request_role': request_role
         }
+
+
+class CommonStylistProfileRatingView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated, ClientOrStylistPermission]
+
+    def get(self, request, *args, **kwargs):
+        stylist_uuid = kwargs['stylist_uuid']
+        stylist = self.get_object(stylist_uuid)
+        appointments = Appointment.objects.filter(stylist=stylist, rating__isnull=False)
+        response_data = AppointmentRatingSerializer(appointments, many=True).data
+        return Response(data={'rating': response_data}, status=status.HTTP_200_OK)
+
+    def get_object(self, stylist_uuid) -> Stylist:
+        stylist: Stylist = Stylist.objects.get(uuid=stylist_uuid)
+        return stylist
 
 
 class AnalyticsSessionsView(generics.CreateAPIView):

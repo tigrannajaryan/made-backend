@@ -15,7 +15,7 @@ from django.utils import timezone
 from appointment.models import Appointment
 from appointment.types import AppointmentStatus
 from client.models import Client
-from core.models import UserRole
+from core.models import User, UserRole
 from core.utils.phone import to_international_format
 from integrations.push.types import MobileAppIdType
 from integrations.push.utils import has_push_notification_device
@@ -1431,9 +1431,9 @@ def generate_follow_up_invitation_sms(dry_run=False) -> int:
     :return: number of SMS messages sent
     """
     message = (
-        'Hey! Just following up on the invite {stylist_name} '
+        'Hey! Just following up on the invite {inviter_name} '
         'sent you about booking on MADE. You see better prices when you book '
-        'with {stylist_name} there. Download the app at: https://madebeauty.com/get/'
+        '{stylist_mention}there. Download the app at: https://madebeauty.com/get/'
     )
     earliest_invitation_creation_datetime = timezone.now() - datetime.timedelta(days=60)
     earliest_time_invitation_sent = timezone.now() - datetime.timedelta(days=14)
@@ -1448,25 +1448,32 @@ def generate_follow_up_invitation_sms(dry_run=False) -> int:
 
     # we want to send SMS's in chunks to not overload Twilio and Slack
     max_sms_messages_to_send_in_one_run = 20
-
+    invitation_author = Q(stylist__isnull=False) | Q(invited_by_client__isnull=False)
     eligible_invites = Invitation.objects.filter(
+        Q(invitation_author),
         created_client__isnull=True,
         followup_sent_at__isnull=True,
         created_at__lte=earliest_time_invitation_sent,
         created_at__gte=earliest_invitation_creation_datetime,
         status=InvitationStatus.INVITED,
-        invite_target=UserRole.CLIENT
+        invite_target=UserRole.CLIENT,
     ).select_for_update(skip_locked=True)[:max_sms_messages_to_send_in_one_run]
 
     sent_messages = 0
 
     for invite in eligible_invites.iterator():
-        stylist: Stylist = invite.stylist
-        if stylist.user.first_name:
-            stylist_name = stylist.user.first_name
-        else:
-            stylist_name = stylist.get_full_name()
-        message = message.format(stylist_name=stylist_name)
+        invitation_author = invite.stylist if invite.stylist else invite.invited_by_client
+        invitation_author_user: User = invitation_author.user
+        invitation_author_name = invitation_author_user.first_name
+        if not invitation_author_name:
+            invitation_author_name = invitation_author_user.get_full_name()
+        stylist_mention = 'with {inviter_name} '.format(
+            inviter_name=invitation_author_name
+        ) if invite.stylist else ''
+        message = message.format(
+            inviter_name=invitation_author_name,
+            stylist_mention=stylist_mention
+        )
         try:
             if not dry_run:
                 send_sms_message(to_phone=invite.phone, body=message, role=UserRole.CLIENT)
