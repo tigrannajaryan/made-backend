@@ -15,3 +15,6 @@ LOW_LEVEL_JWT_ERROR_CODES = {
 
 class ErrorMessages:
     INVALID_PHONE_NUMBER = 'err_invalid_phone_number'
+
+
+EMAIL_VERIFICATION_FROM_ID = 'MadeBeauty <noreply@madebeauty.com>'

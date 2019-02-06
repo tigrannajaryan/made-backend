@@ -967,7 +967,6 @@ class TestClientProfileSerializer(object):
             'last_name': 'McBob',
             'birthday': '2018-10-16',
             'zip_code': '12345',
-            'email': 'client@example.com',
             'privacy': 'private'
         }
 
@@ -979,7 +978,6 @@ class TestClientProfileSerializer(object):
         assert(user.last_name == 'McBob')
         assert(client.birthday == datetime.date(2018, 10, 16))
         assert(client.zip_code == '12345')
-        assert(client.email == 'client@example.com')
         assert(user.email != 'client@example.com')
         assert(client.privacy == ClientPrivacy.PRIVATE)
 

@@ -26,6 +26,7 @@ class Client(models.Model):
     zip_code = models.CharField(max_length=10, blank=True, null=True)
     birthday = models.DateField(blank=True, null=True)
     email = models.EmailField(null=True, blank=True)
+    email_verified = models.BooleanField(default=False)
     city = models.CharField(blank=True, null=True, max_length=64)
     state = models.CharField(blank=True, null=True, max_length=25)
     country = models.CharField(max_length=20, blank=True, null=True)
@@ -67,6 +68,9 @@ class Client(models.Model):
 
     class Meta:
         db_table = 'client'
+
+    def get_full_name(self) -> str:
+        return self.user.get_full_name()
 
     def __str__(self):
         return '{0} ({1})'.format(self.user.get_full_name(), self.user.phone)

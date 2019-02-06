@@ -106,7 +106,8 @@ class StylistView(
 
     def get_serializer_context(self):
         return {
-            'user': self.request.user
+            'user': self.request.user,
+            'request': self.request
         }
 
 
