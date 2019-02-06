@@ -82,5 +82,4 @@ PUSH_NOTIFICATIONS_SETTINGS['APPLICATIONS'].update({  # type: ignore
 GOOGLE_OAUTH_CREDENTIALS_FILE_PATH = Path(
     ROOT_PATH.parent / 'google_credentials' / 'webclient-staging.json')
 
-# EMAIL_BACKEND = 'core.utils.slack_email_backend.EmailBackend'
-EMAIL_BACKEND = 'django_ses.SESBackend'
+EMAIL_BACKEND = 'core.utils.slack_email_backend.EmailBackend'

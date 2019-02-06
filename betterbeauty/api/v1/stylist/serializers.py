@@ -244,9 +244,10 @@ class StylistSerializer(
                 save_profile_photo(
                     stylist.user, validated_data.get('profile_photo_id')
                 )
-        stylist = super(StylistSerializer, self).update(stylist, validated_data)
         if old_email != validated_data.get('email'):
             stylist.email_verified = False
+        stylist = super(StylistSerializer, self).update(stylist, validated_data)
+        if old_email != validated_data.get('email'):
             send_email_verification(stylist,
                                     UserRole.STYLIST.value,
                                     request=self.context['request'])
