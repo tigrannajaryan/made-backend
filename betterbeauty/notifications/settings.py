@@ -61,6 +61,9 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
         NotificationCode.INVITE_YOUR_STYLIST: [
             NotificationChannel.PUSH,  # NotificationChannel.EMAIL
         ],
+        NotificationCode.CLIENT_REGISTRATION_INCOMPLETE: [
+            NotificationChannel.PUSH
+        ],
     }
 else:
     NOTIFICATION_CHANNEL_PRIORITY = {
@@ -111,5 +114,8 @@ else:
         ],
         NotificationCode.INVITE_YOUR_STYLIST: [
             NotificationChannel.PUSH,  # NotificationChannel.EMAIL
+        ],
+        NotificationCode.CLIENT_REGISTRATION_INCOMPLETE: [
+            NotificationChannel.PUSH
         ],
     }

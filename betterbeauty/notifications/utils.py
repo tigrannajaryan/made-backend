@@ -869,6 +869,70 @@ def generate_tomorrow_appointments_notifications(dry_run=False) -> int:
 
 
 @transaction.atomic
+def generate_client_registration_incomplete_notifications(dry_run=False) -> int:
+    code = NotificationCode.CLIENT_REGISTRATION_INCOMPLETE
+    discard_after = timezone.now() + datetime.timedelta(days=30)
+    message = (
+        'Want to get the best promotion in town? Tap now to complete your profile!'
+    )
+    one_day_ago = (timezone.now() - datetime.timedelta(days=1))
+    target = UserRole.CLIENT
+    send_time_window_start = datetime.time(11, 0)
+    send_time_window_end = datetime.time(18, 0)
+
+    client_has_recent_notification_subquery = Notification.objects.filter(
+        Q(Q(sent_at__gte=one_day_ago) | Q(pending_to_send=True)),
+        user_id=OuterRef('user__id'), target=target,
+    )
+
+    client_has_same_notifications_subquery = Notification.objects.filter(
+        user_id=OuterRef('user__id'), target=target, code=code)
+    eligible_clients_ids = Client.objects.filter(
+        created_at__lte=one_day_ago,
+        profile_completeness__lt=1,
+    ).annotate(
+        client_has_same_notifications=Exists(client_has_same_notifications_subquery),
+        client_has_recent_notification=Exists(client_has_recent_notification_subquery),
+    ).filter(
+        client_has_same_notifications=False,
+        client_has_recent_notification=False
+    ).values_list('id', flat=True)
+
+    if is_push_only(code):
+        client_has_registered_devices = Q(
+            user__apnsdevice__active=True) | Q(
+            user__gcmdevice__active=True)
+        eligible_clients_ids = eligible_clients_ids.filter(
+            client_has_registered_devices
+        )
+
+    eligible_clients = Client.objects.filter(
+        id__in=eligible_clients_ids
+    ).select_for_update(skip_locked=True)
+
+    notifications_to_create_list: List[Notification] = []
+    for client in eligible_clients.iterator():
+        send_time_window_tz = pytz.timezone(settings.TIME_ZONE)
+
+        notifications_to_create_list.append(
+            Notification(
+                user=client.user,
+                code=code,
+                target=target,
+                message=message,
+                send_time_window_start=send_time_window_start,
+                send_time_window_end=send_time_window_end,
+                send_time_window_tz=send_time_window_tz,
+                discard_after=discard_after,
+            )
+        )
+    # if any notifications were generated - bulk create them
+    if notifications_to_create_list and not dry_run:
+        Notification.objects.bulk_create(notifications_to_create_list)
+    return len(notifications_to_create_list)
+
+
+@transaction.atomic
 def generate_stylist_registration_incomplete_notifications(dry_run=False) -> int:
     """
     Generate registration_incomplete notifications for stylists after 24 hours
