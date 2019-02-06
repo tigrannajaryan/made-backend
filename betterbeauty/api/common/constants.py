@@ -17,4 +17,4 @@ class ErrorMessages:
     INVALID_PHONE_NUMBER = 'err_invalid_phone_number'
 
 
-EMAIL_VERIFICATION_FROM_ID = 'noreply@madebeauty.com'
+EMAIL_VERIFICATION_FROM_ID = 'MadeBeauty <noreply@madebeauty.com>'
