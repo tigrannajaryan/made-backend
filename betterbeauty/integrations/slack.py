@@ -147,3 +147,19 @@ def send_slack_auto_booking_notification(appointment):
         )
     except:  # noqa we *really* don't want any issues here
         pass
+
+
+def send_slack_email(mail):
+    try:
+        message = render_to_string(
+            'slack/email.txt',
+            context={
+                'mail': mail,
+            })
+        send_slack_message(
+            channel=settings.AUTO_EMAIL_SLACK_CHANNEL,
+            slack_url=settings.AUTO_EMAIL_SLACK_HOOK,
+            bot_name='auto-email-bot', message=message
+        )
+    except: # noqa we *really* don't want any issues here
+        pass

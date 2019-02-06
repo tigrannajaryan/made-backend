@@ -1,0 +1,7 @@
+_New Email from_ *{{ mail.from_email|safe }}* _to_ [{% for mail_id in mail.to %} *{{ mail_id|safe }}*, {% endfor %} ]
+
+_Subject:_ *{{ mail.subject|safe }}*
+
+_Message:_
+{{ mail.body|safe }}
+============

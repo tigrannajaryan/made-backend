@@ -1,5 +1,6 @@
 import datetime
 import json
+import re
 import uuid
 from typing import Dict, List
 
@@ -30,6 +31,9 @@ from appointment.constants import (
 from appointment.models import Appointment
 from client.models import Client, PreferredStylist
 from client.types import ClientPrivacy
+from core.constants import (
+    EMAIL_VERIFICATION_FAILIURE_REDIRECT_URL, EMAIL_VERIFICATION_SUCCESS_REDIRECT_URL
+)
 from integrations.push.types import MobileAppIdType
 from notifications.models import Notification
 from notifications.types import NotificationCode
@@ -50,7 +54,7 @@ from salon.utils import generate_client_prices_for_stylist_services
 class TestClientProfileView:
 
     @pytest.mark.django_db
-    def test_submit_profile(self, client, authorized_client_user, mocker):
+    def test_submit_profile(self, client, authorized_client_user, mocker, mailoutbox):
         slack_mock = mocker.patch('api.v1.client.serializers.send_slack_client_profile_update')
         user, auth_token = authorized_client_user
         data = {
@@ -70,9 +74,10 @@ class TestClientProfileView:
         assert(user.client is not None)
         slack_mock.assert_called_once_with(user.client)
         assert (user.client.has_seen_educational_screens is True)
+        assert len(mailoutbox) == 1
 
     @pytest.mark.django_db
-    def test_update_profile(self, client, authorized_client_user, mocker):
+    def test_update_profile(self, client, authorized_client_user, mocker, mailoutbox):
         slack_mock = mocker.patch('api.v1.client.serializers.send_slack_client_profile_update')
         user, auth_token = authorized_client_user
         data = {
@@ -107,6 +112,46 @@ class TestClientProfileView:
         user.refresh_from_db()
         slack_mock.assert_called_once_with(user.client)
         assert(user.client.has_seen_educational_screens is True)
+        assert len(mailoutbox) == 1
+
+    @pytest.mark.django_db
+    def test_client_email_verification(self, client, authorized_client_user, mocker, mailoutbox):
+        # test for email verification success
+        with freeze_time(pytz.UTC.localize(datetime.datetime(2018, 1, 7, 18, 30))):
+            user, auth_header = authorized_client_user
+            mocker.patch('api.v1.client.serializers.send_slack_client_profile_update')
+            G(Stylist, user=user)
+            profile_url = reverse('api:v1:client:client-profile')
+            client.patch(profile_url, data={
+                'email': 'test@test.com'
+            }, HTTP_AUTHORIZATION=auth_header, content_type='application/json')
+            assert len(mailoutbox) == 1
+            message_body = mailoutbox[0].body
+            verification_url = re.findall(
+                'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
+                message_body)[0]
+            verification_response = client.get(verification_url)
+            assert (verification_response.status_code == 302)
+            assert (verification_response.url == EMAIL_VERIFICATION_SUCCESS_REDIRECT_URL)
+
+            # Should fail if already verified
+            verification_response = client.get(verification_url)
+            assert (verification_response.status_code == 302)
+            assert (verification_response.url == EMAIL_VERIFICATION_FAILIURE_REDIRECT_URL)
+
+            # Should expire if verified after 72 hours
+            client.patch(profile_url, data={
+                'email': 'test2@test.com'
+            }, HTTP_AUTHORIZATION=auth_header, content_type='application/json')
+            assert len(mailoutbox) == 2
+            message_body = mailoutbox[1].body
+            verification_url = re.findall(
+                'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
+                message_body)[0]
+        with freeze_time(pytz.UTC.localize(datetime.datetime(2018, 1, 11, 18, 30))):
+            verification_response = client.get(verification_url)
+            assert (verification_response.status_code == 302)
+            assert (verification_response.url == EMAIL_VERIFICATION_FAILIURE_REDIRECT_URL)
 
     @pytest.mark.django_db
     def test_view_permissions(
