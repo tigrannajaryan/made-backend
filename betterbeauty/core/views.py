@@ -1,6 +1,7 @@
 import logging
 import os
 import random
+from typing import Union
 
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
@@ -9,9 +10,19 @@ from django.conf import settings
 from django.core.files.storage import default_storage
 from django.db import connection as db_connection
 from django.db.utils import OperationalError
+from django.http import HttpResponseRedirect
 from rest_framework import permissions, response, status, views
 
-from core.constants import ENV_BLACKLIST, EnvLevel
+from api.common.utils import email_verification_token
+from client.models import Client
+from core.constants import (
+    EMAIL_VERIFICATION_FAILIURE_REDIRECT_URL,
+    EMAIL_VERIFICATION_SUCCESS_REDIRECT_URL,
+    ENV_BLACKLIST,
+    EnvLevel,
+)
+from core.types import UserRole
+from salon.models import Stylist
 
 logger = logging.getLogger(__name__)
 
@@ -83,3 +94,26 @@ class HealthCheckView(views.APIView):
         if is_healthy:
             return response.Response(status=status.HTTP_200_OK)
         return response.Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+class EmailVerificationView(views.View):
+
+    def get(self, request):
+        email = request.GET.get("email", None)
+        code = request.GET.get("code", None)
+        role = request.GET.get("role", None)
+        uuid = request.GET.get("u", None)
+        if not (email and code and role):
+            raise KeyError
+        client_or_stylist: Union[Client, Stylist] = None
+        if role == UserRole.CLIENT.value:
+            client_or_stylist = Client.objects.get(email=email, uuid=uuid)
+        elif role == UserRole.STYLIST.value:
+            client_or_stylist = Stylist.objects.get(email=email, uuid=uuid)
+        is_valid_code = email_verification_token.check_token(client_or_stylist, code)
+        if is_valid_code:
+            client_or_stylist.email_verified = True
+            client_or_stylist.save()
+            return HttpResponseRedirect(
+                redirect_to=EMAIL_VERIFICATION_SUCCESS_REDIRECT_URL)
+        return HttpResponseRedirect(redirect_to=EMAIL_VERIFICATION_FAILIURE_REDIRECT_URL)

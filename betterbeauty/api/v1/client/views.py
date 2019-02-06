@@ -67,6 +67,11 @@ class ClientProfileView(generics.CreateAPIView, generics.RetrieveUpdateAPIView):
     serializer_class = ClientProfileSerializer
     permission_classes = [ClientPermission, permissions.IsAuthenticated]
 
+    def get_serializer_context(self):
+        return {
+            'request': self.request
+        }
+
     def post(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
 

@@ -1,0 +1,7 @@
+Dear {{full_name}},
+
+Your account registration is almost complete. To complete your registration, you need to verify your email address by clicking on the link below:
+
+{{full_url}}
+
+If the above link is not clickable, copy and paste the link into your web browser's address bar.

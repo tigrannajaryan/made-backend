@@ -334,6 +334,7 @@ class Stylist(models.Model):
     is_maximum_discount_enabled = models.BooleanField(default=False)
 
     email = models.EmailField(blank=True, null=True)
+    email_verified = models.BooleanField(default=False)
     website_url = models.CharField(max_length=2084, blank=True, null=True)
 
     google_integration_added_at = models.DateTimeField(null=True, blank=True, default=None)
