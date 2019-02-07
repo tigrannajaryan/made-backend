@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from django.apps import apps
 from django.contrib.gis.db.models import PointField
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
@@ -178,6 +179,8 @@ class StylistSearchRequest(models.Model):
     requested_at = models.DateTimeField(auto_now_add=True)
     user_location = PointField(srid=4326, null=True)
     user_ip_addr = models.GenericIPAddressField(null=True)
+    stylists_found = ArrayField(models.IntegerField(), default=list)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     class Meta:
         db_table = 'stylist_search_request'
