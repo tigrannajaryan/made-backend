@@ -189,7 +189,9 @@ class CommonStylistProfileRatingView(views.APIView):
     def get(self, request, *args, **kwargs):
         stylist_uuid = kwargs['stylist_uuid']
         stylist = self.get_object(stylist_uuid)
-        appointments = Appointment.objects.filter(stylist=stylist, rating__isnull=False)
+        appointments = Appointment.objects.filter(stylist=stylist, rating__isnull=False).order_by(
+            '-datetime_start_at'
+        )
         response_data = AppointmentRatingSerializer(appointments, many=True).data
         return Response(data={'rating': response_data}, status=status.HTTP_200_OK)
 
