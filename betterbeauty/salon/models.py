@@ -1,6 +1,5 @@
 import datetime
 import logging
-import math
 import uuid
 
 from typing import List, Optional, Tuple
@@ -709,7 +708,7 @@ class Stylist(models.Model):
         appointments = self.appointments.filter(
             rating__isnull=False,).aggregate(avg_rating=Avg('rating'))
         if (appointments['avg_rating']):
-            return int(math.ceil(appointments['avg_rating'] * 100))
+            return round(appointments['avg_rating'] * 100)
         else:
             return None
 
