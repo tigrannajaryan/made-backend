@@ -35,6 +35,7 @@ from pricing import CalculatedPrice, DiscountType
 from salon.models import (
     Salon,
     Stylist,
+    StylistAvailableWeekDay,
     StylistService,
 )
 
@@ -716,6 +717,34 @@ class TestAppointmentUpdateSerializer(object):
 
         assert ({'code': 'invalid_choice'} in
                 serializer.errors['field_errors']['rating'])
+
+    @pytest.mark.django_db
+    @freeze_time('2019-02-04T09:00:00-05:00')
+    def test_validate_changing_date(self):
+        salon: Salon = G(Salon, timezone=pytz.timezone(settings.TIME_ZONE))
+        stylist: Stylist = G(Stylist, salon=salon)
+        appointment: Appointment = G(
+            Appointment,
+            datetime_start_at=(timezone.now() + datetime.timedelta(days=1)
+                               ).replace(hour=13, minute=0, second=0, microsecond=0),
+            stylist=stylist,
+            duration=datetime.timedelta(minutes=30),
+            status=AppointmentStatus.NEW.value
+        )
+        G(StylistAvailableWeekDay, stylist=stylist,
+          weekday=appointment.datetime_start_at.isoweekday(),
+          is_available=True,
+          work_start_at=datetime.time(9, 0, 0),
+          work_end_at=datetime.time(17, 0, 0))
+        data = {
+            'datetime_start_at': appointment.datetime_start_at + datetime.timedelta(hours=1),
+        }
+        serializer = AppointmentUpdateSerializer(instance=appointment, data=data, partial=True,
+                                                 context={'stylist': stylist,
+                                                          'user': stylist.user})
+        assert (serializer.is_valid() is True)
+        serializer.save()
+        assert (serializer.data['datetime_start_at'] == '2019-02-05T09:00:00-05:00')
 
 
 class TestAppointmentPreviewRequestSerializer(object):

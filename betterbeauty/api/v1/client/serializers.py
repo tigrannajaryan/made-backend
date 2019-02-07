@@ -609,6 +609,8 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
         appointment: Appointment = self.instance
         appointment.rating = self.validated_data.get('rating', self.instance.rating)
         appointment.comment = self.validated_data.get('comment', self.instance.comment)
+        appointment.datetime_start_at = self.validated_data.get(
+            'datetime_start_at', self.instance.datetime_start_at)
         with transaction.atomic():
             if 'services' in self.validated_data:
                 StylistAppointmentUpdateSerializer.update_appointment_services(
