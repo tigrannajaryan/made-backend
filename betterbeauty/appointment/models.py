@@ -123,6 +123,10 @@ class Appointment(models.Model):
     rating = models.IntegerField(choices=RATINGS_CHOICES, blank=True, null=True, default=None)
     comment = models.TextField(blank=True, null=True, default=None)
 
+    payment_method = models.ForeignKey(
+        'billing.PaymentMethod', null=True, blank=True, on_delete=models.SET_NULL
+    )
+
     objects = AppointmentManager()
     all_objects = AppointmentAllObjectsManager()
 
