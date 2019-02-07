@@ -1,7 +1,7 @@
 from uuid import uuid4
 
 from django.contrib.postgres.fields import JSONField
-from django.db import models
+from django.db import models, transaction
 
 from .constants import ChargeStatusChoices, PaymentMethodChoices
 from .types import ChargeStatus, PaymentMethodType
@@ -9,7 +9,9 @@ from .types import ChargeStatus, PaymentMethodType
 
 class PaymentMethod(models.Model):
     uuid = models.UUIDField(unique=True, default=uuid4, editable=False)
-    client = models.ForeignKey('client.Client', on_delete=models.CASCADE)
+    client = models.ForeignKey(
+        'client.Client', on_delete=models.CASCADE, related_name='payment_methods'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField()
     stripe_id = models.CharField(max_length=64)
@@ -30,6 +32,15 @@ class PaymentMethod(models.Model):
             self.card_brand.upper(),
             self.client.get_full_name()
         )
+
+    @transaction.atomic()
+    def set_active(self):
+        """Set current payment method active, and deactivate other active methods if any"""
+        self.client.payment_methods.filter(is_active=True).exclude(id=self.id).update(
+            is_active=False
+        )
+        self.is_active = True
+        self.save(update_fields=['is_active', ])
 
 
 class Charge(models.Model):
