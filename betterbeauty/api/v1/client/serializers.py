@@ -15,7 +15,7 @@ from rest_framework.exceptions import ValidationError
 from api.common.fields import PhoneNumberField
 from api.common.mixins import FormattedErrorMessageMixin
 
-from api.common.utils import save_profile_photo
+from api.common.utils import save_profile_photo, send_email_verification
 from api.v1.client.constants import ErrorMessages
 
 from api.v1.stylist.fields import DurationMinuteField
@@ -125,6 +125,7 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
         client_data = self.validated_data.pop('client', None)
         user: User = self.instance
         client = user.client
+        old_email = client.email
         if should_save_photo:
             save_profile_photo(
                 user, profile_photo_id
@@ -141,6 +142,9 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
                     'city', 'state', 'location', 'is_address_geocoded', 'last_geo_coded'])
             for k, v in client_data.items():
                 setattr(client, k, v)
+        if old_email != client.email:
+            client.email_verified = False
+            send_email_verification(client, UserRole.CLIENT.value, request=self.context['request'])
         client.save()
         user = super(ClientProfileSerializer, self).save(**kwargs)
         if not is_profile_already_complete:
@@ -605,6 +609,8 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
         appointment: Appointment = self.instance
         appointment.rating = self.validated_data.get('rating', self.instance.rating)
         appointment.comment = self.validated_data.get('comment', self.instance.comment)
+        appointment.datetime_start_at = self.validated_data.get(
+            'datetime_start_at', self.instance.datetime_start_at)
         with transaction.atomic():
             if 'services' in self.validated_data:
                 StylistAppointmentUpdateSerializer.update_appointment_services(

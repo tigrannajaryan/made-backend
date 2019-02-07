@@ -49,7 +49,7 @@ INSTALLED_APPS += ['raven.contrib.django.raven_compat', ]  # noqa
 
 # Twilio
 TWILIO_SMS_ENABLED = True
-TWILIO_SLACK_MOCK_ENABLED = False
+TWILIO_SLACK_MOCK_ENABLED = True
 
 IS_GEOCODING_ENABLED = True
 
@@ -81,3 +81,6 @@ GOOGLE_OAUTH_CREDENTIALS_FILE_PATH = Path(
     ROOT_PATH.parent / 'google_credentials' / 'webclient-production.json')
 
 MINUTES_BEFORE_REQUESTING_NEW_CODE = 2
+
+# EMAIL_BACKEND = 'django_ses.SESBackend'
+EMAIL_BACKEND = 'core.utils.slack_email_backend.EmailBackend'

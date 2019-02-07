@@ -41,6 +41,7 @@ from ..utils import (
     generate_hint_to_first_book_notifications,
     generate_hint_to_rebook_notifications,
     generate_hint_to_select_stylist_notifications,
+    generate_invite_your_stylist_notifications,
     generate_new_appointment_notification,
     generate_remind_add_photo_notifications,
     generate_remind_define_discounts_notifications,
@@ -1542,4 +1543,79 @@ class TestGenerateDealOfWeekNotification(object):
         non_working_day.is_available = True
         non_working_day.save()
         result = generate_deal_of_week_notifications()
+        assert (result == 1)
+
+
+class TestGenerateInviteYourStylistNotification(object):
+    @pytest.mark.django_db
+    def test_positive_path(self):
+        client: Client = G(
+            Client, created_at=timezone.now() - datetime.timedelta(days=80)
+        )
+        G(APNSDevice, user=client.user, application_id=MobileAppIdType.IOS_CLIENT_DEV)
+        result = generate_invite_your_stylist_notifications(dry_run=False)
+        assert(result == 1)
+        notification: Notification = Notification.objects.last()
+        assert(notification.code == NotificationCode.INVITE_YOUR_STYLIST)
+        assert(notification.target == UserRole.CLIENT)
+        assert(notification.user == client.user)
+
+    @pytest.mark.django_db
+    def test_prior_notification_with_same_code(self):
+        client: Client = G(
+            Client, created_at=timezone.now() - datetime.timedelta(days=80)
+        )
+        G(APNSDevice, user=client.user, application_id=MobileAppIdType.IOS_CLIENT_DEV)
+        prior_notification: Notification = G(
+            Notification,
+            target=UserRole.CLIENT,
+            user=client.user,
+            code=NotificationCode.INVITE_YOUR_STYLIST,
+            created_at=timezone.now() - datetime.timedelta(weeks=3)
+        )
+        result = generate_invite_your_stylist_notifications(dry_run=False)
+        assert (result == 0)
+        prior_notification.created_at = timezone.now() - datetime.timedelta(weeks=5)
+        prior_notification.save()
+        result = generate_invite_your_stylist_notifications(dry_run=False)
+        assert (result == 1)
+
+    @pytest.mark.django_db
+    def test_prior_notification_with_different_code(self):
+        client: Client = G(
+            Client, created_at=timezone.now() - datetime.timedelta(days=80)
+        )
+        G(APNSDevice, user=client.user, application_id=MobileAppIdType.IOS_CLIENT_DEV)
+        prior_notification: Notification = G(
+            Notification,
+            target=UserRole.CLIENT,
+            user=client.user,
+            code='some_code',
+            created_at=timezone.now() - datetime.timedelta(hours=23)
+        )
+        result = generate_invite_your_stylist_notifications(dry_run=False)
+        assert (result == 0)
+        prior_notification.created_at = timezone.now() - datetime.timedelta(hours=25)
+        prior_notification.save()
+        result = generate_invite_your_stylist_notifications(dry_run=False)
+        assert (result == 1)
+
+    @pytest.mark.django_db
+    def test_already_has_or_had_preferred_stylist(self):
+        client: Client = G(
+            Client, created_at=timezone.now() - datetime.timedelta(days=80)
+        )
+        G(APNSDevice, user=client.user, application_id=MobileAppIdType.IOS_CLIENT_DEV)
+        stylist: Stylist = G(Stylist)
+        preferred_stylist: PreferredStylist = G(
+            PreferredStylist, client=client, stylist=stylist, deleted_at=None
+        )
+        result = generate_invite_your_stylist_notifications(dry_run=False)
+        assert (result == 0)
+        preferred_stylist.deleted_at = timezone.now()
+        preferred_stylist.save()
+        result = generate_invite_your_stylist_notifications(dry_run=False)
+        assert (result == 0)
+        preferred_stylist.hard_delete()
+        result = generate_invite_your_stylist_notifications(dry_run=False)
         assert (result == 1)

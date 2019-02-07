@@ -290,6 +290,7 @@ IS_SLACK_ENABLED = True
 TWILLIO_SLACK_CHANNEL = '#auto-twilio-dev'
 AUTO_SIGNUP_SLACK_CHANNEL = '#auto-signup-dev'
 AUTO_BOOKING_SLACK_CHANNEL = '#auto-booking-dev'
+AUTO_EMAIL_SLACK_CHANNEL = '#auto-email-dev'
 
 # slack hooks
 TWILLIO_SLACK_HOOK = (
@@ -300,6 +301,9 @@ AUTO_SIGNUP_SLACK_HOOK = (
 )
 AUTO_BOOKING_SLACK_HOOK = (
     'https://hooks.slack.com/services/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'
+)
+AUTO_EMAIL_SLACK_HOOK = (
+    'https://hooks.slack.com/services/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'
 )
 
 #  notifications

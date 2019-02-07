@@ -12,6 +12,7 @@ from notifications.utils import (
     generate_hint_to_first_book_notifications,
     generate_hint_to_rebook_notifications,
     generate_hint_to_select_stylist_notifications,
+    generate_invite_your_stylist_notifications,
     generate_remind_add_photo_notifications,
     generate_remind_define_discounts_notifications,
     generate_remind_define_hours_notifications,
@@ -210,6 +211,20 @@ class Command(BaseCommand):
         stdout_and_log('...{0} {2} notifications generated; took {1} seconds'.format(
             notification_count, (time_end - time_start).total_seconds(),
             NotificationCode.DEAL_OF_THE_WEEK
+        ), self.stdout)
+
+        stdout_and_log(
+            'Generating {0} notifications'.format(NotificationCode.INVITE_YOUR_STYLIST),
+            self.stdout
+        )
+        time_start = timezone.now()
+        notification_count = generate_invite_your_stylist_notifications(
+            dry_run=dry_run
+        )
+        time_end = timezone.now()
+        stdout_and_log('...{0} {2} notifications generated; took {1} seconds'.format(
+            notification_count, (time_end - time_start).total_seconds(),
+            NotificationCode.INVITE_YOUR_STYLIST
         ), self.stdout)
 
         if force_send:

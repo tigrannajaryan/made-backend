@@ -1,4 +1,5 @@
 import datetime
+import re
 
 import mock
 import pytest
@@ -8,6 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from django_dynamic_fixture import G
+from freezegun import freeze_time
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
@@ -19,6 +21,9 @@ from api.v1.stylist.views import StylistView
 from appointment.constants import AppointmentStatus, ErrorMessages as appointment_errors
 from appointment.models import Appointment, AppointmentService
 from client.models import Client, PreferredStylist
+from core.constants import (
+    EMAIL_VERIFICATION_FAILIURE_REDIRECT_URL, EMAIL_VERIFICATION_SUCCESS_REDIRECT_URL
+)
 from core.models import User
 from core.types import UserRole
 from salon.models import (
@@ -71,6 +76,45 @@ class TestStylistView(object):
         data = response.data
         assert (not data['first_name'])
         assert ('id' not in data)
+
+    @pytest.mark.django_db
+    def test_stylist_email_verification(self, client, mailoutbox):
+        # test for email verification success
+        with freeze_time(pytz.UTC.localize(datetime.datetime(2018, 1, 7, 18, 30))):
+            user, token = self._create_and_authorize_user(client)
+            G(Stylist, user=user)
+            profile_url = reverse('api:v1:stylist:profile')
+            auth_header = 'Token {0}'.format(token)
+            client.patch(profile_url, data={
+                'email': 'test@example.com'
+            }, HTTP_AUTHORIZATION=auth_header, content_type='application/json')
+            assert len(mailoutbox) == 1
+            message_body = mailoutbox[0].body
+            verification_url = re.findall(
+                'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
+                message_body)[0]
+            verification_response = client.get(verification_url)
+            assert (verification_response.status_code == 302)
+            assert (verification_response.url == EMAIL_VERIFICATION_SUCCESS_REDIRECT_URL)
+
+            # Should fail if already verified
+            verification_response = client.get(verification_url)
+            assert (verification_response.status_code == 302)
+            assert (verification_response.url == EMAIL_VERIFICATION_FAILIURE_REDIRECT_URL)
+
+            # Should expire if verified after 72 hours
+            client.patch(profile_url, data={
+                'email': 'test2@example.com'
+            }, HTTP_AUTHORIZATION=auth_header, content_type='application/json')
+            assert len(mailoutbox) == 2
+            message_body = mailoutbox[1].body
+            verification_url = re.findall(
+                'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
+                message_body)[0]
+        with freeze_time(pytz.UTC.localize(datetime.datetime(2018, 1, 11, 18, 30))):
+            verification_response = client.get(verification_url)
+            assert (verification_response.status_code == 302)
+            assert (verification_response.url == EMAIL_VERIFICATION_FAILIURE_REDIRECT_URL)
 
 
 class TestStylistServiceView(object):
