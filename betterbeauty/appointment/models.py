@@ -92,6 +92,8 @@ class Appointment(models.Model):
         max_digits=6, decimal_places=2, null=True, blank=True)
     grand_total = models.DecimalField(
         max_digits=4, decimal_places=0, null=True, blank=True)
+    stylist_payout_amount = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True)
     has_tax_included = models.NullBooleanField(null=True, default=None)
     has_card_fee_included = models.NullBooleanField(null=True, default=None)
 
@@ -159,6 +161,33 @@ class Appointment(models.Model):
                                                 status=self.status,
                                                 updated_at=current_now,
                                                 updated_by=updated_by)
+
+    @transaction.atomic
+    def charge_client(self, payment_method_uuid):
+        client: Client = self.client
+
+        if not client:
+            return
+
+        payment_method = self.client.payment_methods.get(uuid=payment_method_uuid)
+        self.payment_method = payment_method
+        self.save(update_fields=['payment_method', ])
+        from billing.models import Charge
+
+        charge_description = 'Appointment on {formatted_date} with {stylist_first_name}'.format(
+            stylist_first_name=self.stylist.user.first_name,
+            formatted_date=self.stylist.with_salon_tz(self.datetime_start_at).strftime(
+                '%b %-d'
+            )
+        )
+        charge: Charge = Charge.objects.create(
+            client=client,
+            payment_method=payment_method,
+            appointment=self,
+            amount=self.grand_total,
+            description=charge_description
+        )
+        charge.run_stripe_charge()
 
     @property
     def duration(self) -> datetime.timedelta:

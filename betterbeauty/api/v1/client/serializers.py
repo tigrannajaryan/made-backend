@@ -2,6 +2,7 @@ import datetime
 import decimal
 from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
+from uuid import UUID
 
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -11,6 +12,7 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from stripe.error import CardError, StripeError
 
 from api.common.fields import PhoneNumberField
 from api.common.mixins import FormattedErrorMessageMixin
@@ -514,7 +516,7 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
             'status', 'total_tax', 'total_card_fee', 'total_client_price_before_tax',
             'services', 'grand_total', 'has_tax_included', 'has_card_fee_included',
             'tax_percentage', 'card_fee_percentage', 'total_discount_percentage',
-            'total_discount_amount', 'rating', 'comment'
+            'total_discount_amount', 'rating', 'comment',
         ]
 
     def create(self, validated_data):
@@ -606,8 +608,27 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
 class AppointmentUpdateSerializer(AppointmentSerializer):
     stylist_uuid = serializers.UUIDField(source='stylist.uuid', read_only=True)
     status = serializers.CharField(read_only=False, required=False)
+    payment_method_uuid = serializers.UUIDField(default=None, write_only=True)
 
-    def save(self, **kwargs):
+    class Meta:
+        model = Appointment
+        fields = AppointmentSerializer.Meta.fields + [
+            'payment_method_uuid',
+        ]
+
+    def validate_payment_method_uuid(self, uuid: UUID):
+        client: Client = self.instance.client
+        if uuid is not None:
+            if not client.payment_methods.filter(
+                uuid=uuid, is_active=True
+            ).exists():
+                raise ValidationError('err_payment_method_not_found')
+            return uuid
+
+    def should_charge_client(self):
+        return self.validated_data.get('payment_method_uuid', None) is not None
+
+    def save_appointment(self, **kwargs):
 
         status = self.validated_data.get('status', self.instance.status)
         user: User = self.context['user']
@@ -629,13 +650,14 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
             )['total_regular']
 
             # update final prices and save appointment
-
+            is_stripe_payment = 'payment_method_uuid' in self.validated_data
             appointment_prices: AppointmentPrices = calculate_appointment_prices(
                 price_before_tax=total_client_price_before_tax,
                 include_card_fee=self.instance.has_card_fee_included,
                 include_tax=self.instance.has_tax_included,
                 tax_rate=appointment.stylist.tax_rate,
                 card_fee=appointment.stylist.card_fee,
+                is_stripe_payment=is_stripe_payment
             )
 
             for k, v in appointment_prices._asdict().items():
@@ -651,6 +673,11 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
                 appointment.status = status
                 appointment.append_status_history(updated_by=user)
 
+                if status == AppointmentStatus.CHECKED_OUT and self.should_charge_client():
+                    # check if there's no charge
+                    # create charge
+                    appointment.charge_client()
+
             appointment.save(**kwargs)
             # If status is changing try to cancel new appointment notification if it's not
             # sent yet
@@ -662,6 +689,12 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
                 appointment.refresh_from_db()
 
         return appointment
+
+    def save(self, **kwargs):
+        try:
+            return self.save_appointment(**kwargs)
+        except (CardError, StripeError) as error:
+            raise
 
     def validate_status(self, status: AppointmentStatus) -> AppointmentStatus:
         if status == AppointmentStatus.CHECKED_OUT:

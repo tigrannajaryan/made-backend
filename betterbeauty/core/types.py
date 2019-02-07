@@ -37,6 +37,7 @@ class AppointmentPrices(NamedTuple):
     grand_total: Decimal
     has_tax_included: bool
     has_card_fee_included: bool
+    stylist_payout_amount: Decimal
 
 
 class MobileOSType(StrEnum):
