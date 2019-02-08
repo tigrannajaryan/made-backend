@@ -64,6 +64,9 @@
     - [History API](#history-api)
     - [Client Invitation API](#client-to-client-invitations-api)
     - [Decline Invitation API](#decline-invitation-api)
+    - [Payment Methods](#payment-methods)
+      - [Add Payment Method](#add-payment-method)
+      - [Retrieve Payment Methods](#retrieve-payment-methods)
 - **Common**
     - [Stylist Profile Details](#stylist-profile-details)
     - [Stylist Ratings](#stylist-ratings)
@@ -2761,7 +2764,8 @@ curl -X GET \
     "has_seen_educational_screens": true,
     "google_api_key": "<api-key>",
     "google_calendar_integrated": false,
-    "profile_completeness": 0.83
+    "profile_completeness": 0.83,
+    "stripe_public_key": "stripe_publishable_key"
 }
 ```
 
@@ -2799,7 +2803,8 @@ curl -X POST \
     "has_seen_educational_screens": true,
     "google_api_key": "<api-key>",
     "google_calendar_integrated": false,
-    "profile_completeness": 0.83
+    "profile_completeness": 0.83,
+    "stripe_public_key": "stripe_publishable_key"
 }
 ```
 
@@ -3882,7 +3887,42 @@ curl -X GET \
 ```
   
 
+## Payment Methods
+### Add payment method
+**PUT /api/v1/client/payment-methods**
 
+```
+curl -X PUT \
+  http://apiserver/api/v1/client/payment-methods \
+  -H 'Authorization: Token jwt_token' \
+  -H 'Content-Type: application/json' \
+  -d '{"stripe_token": "stripe_token_from_stripe_js"}'
+```
+
+**Response 200 OK**
+```
+{
+    "card_last4": "4242",
+    "uuid": "payment_method_uuid",
+    "card_brand": "visa"
+}
+```
+
+### Retrieve payment methods
+
+**GET /api/v1/client/payment-methods**
+**Response 200 OK**
+```
+{
+    "payment_methods": [
+        {
+            "card_last4": "4242",
+            "uuid": "payment_method_uuid",
+            "card_brand": "visa"
+        }
+    ]
+}
+```
 
 # Files upload
 ## Image upload
