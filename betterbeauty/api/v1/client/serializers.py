@@ -609,11 +609,12 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
     stylist_uuid = serializers.UUIDField(source='stylist.uuid', read_only=True)
     status = serializers.CharField(read_only=False, required=False)
     payment_method_uuid = serializers.UUIDField(default=None, write_only=True)
+    pay_via_made = serializers.BooleanField(write_only=True, default=False)
 
     class Meta:
         model = Appointment
         fields = AppointmentSerializer.Meta.fields + [
-            'payment_method_uuid',
+            'payment_method_uuid', 'pay_via_made'
         ]
 
     def validate_payment_method_uuid(self, uuid: UUID):
@@ -625,12 +626,10 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
                 raise ValidationError('err_payment_method_not_found')
             return uuid
 
-    def should_charge_client(self):
-        return self.validated_data.get('payment_method_uuid', None) is not None
-
     def save_appointment(self, **kwargs):
 
         status = self.validated_data.get('status', self.instance.status)
+        pay_via_made: bool = self.validated_data.pop('pay_via_made', False)
         user: User = self.context['user']
         appointment: Appointment = self.instance
         appointment.rating = self.validated_data.get('rating', self.instance.rating)
@@ -656,7 +655,7 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
                 include_tax=self.instance.has_tax_included,
                 tax_rate=appointment.stylist.tax_rate,
                 card_fee=appointment.stylist.card_fee,
-                is_stripe_payment=self.should_charge_client()
+                is_stripe_payment=pay_via_made
             )
 
             for k, v in appointment_prices._asdict().items():
@@ -672,9 +671,9 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
                 appointment.status = status
                 appointment.append_status_history(updated_by=user)
 
-                if status == AppointmentStatus.CHECKED_OUT and self.should_charge_client():
+                if status == AppointmentStatus.CHECKED_OUT and pay_via_made:
                     payment_method_uuid = None
-                    if self.should_charge_client():
+                    if self.validated_data.get('payment_method_uuid', None):
                         payment_method = appointment.client.payment_methods.get(
                             uuid=self.validated_data['payment_method_uuid']
                         )

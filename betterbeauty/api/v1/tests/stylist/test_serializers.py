@@ -1130,7 +1130,7 @@ class TestAppointmentUpdateSerializer(object):
             ],
             'has_tax_included': False,
             'has_card_fee_included': False,
-            'payment_method_uuid': payment_method.uuid
+            'pay_via_made': True
         }
 
         serializer = AppointmentUpdateSerializer(

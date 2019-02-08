@@ -1085,12 +1085,13 @@ class AppointmentUpdateSerializer(
     has_tax_included = serializers.NullBooleanField(required=False)
     has_card_fee_included = serializers.NullBooleanField(required=False)
     payment_method_uuid = serializers.UUIDField(default=None, write_only=True)
+    pay_via_made = serializers.BooleanField(write_only=True, default=False)
 
     class Meta:
         model = Appointment
         fields = [
             'status', 'services', 'has_tax_included', 'has_card_fee_included',
-            'payment_method_uuid',
+            'payment_method_uuid', 'pay_via_made',
         ]
 
     def validate_payment_method_uuid(self, uuid: uuid.UUID):
@@ -1103,11 +1104,6 @@ class AppointmentUpdateSerializer(
             ).exists():
                 raise serializers.ValidationError('err_payment_method_not_found')
             return uuid
-
-    def should_charge_client(self):
-        if not self.instance.client:
-            return False
-        return self.validated_data.get('payment_method_uuid', None) is not None
 
     def validate(self, attrs):
         status = self.initial_data.get('status', None)
@@ -1203,6 +1199,7 @@ class AppointmentUpdateSerializer(
 
     def save_appointment(self, **kwargs):
         status = self.validated_data.get('status', self.instance.status)
+        pay_via_made: bool = self.validated_data.pop('pay_via_made', False)
         user: User = self.context['user']
         appointment: Appointment = self.instance
         with transaction.atomic():
@@ -1231,7 +1228,7 @@ class AppointmentUpdateSerializer(
                     ),
                     tax_rate=appointment.stylist.tax_rate,
                     card_fee=appointment.stylist.card_fee,
-                    is_stripe_payment=self.should_charge_client()
+                    is_stripe_payment=pay_via_made
                 )
 
                 for k, v in appointment_prices._asdict().items():
@@ -1248,10 +1245,14 @@ class AppointmentUpdateSerializer(
                 appointment.status = status
                 appointment.append_status_history(updated_by=user)
 
-                if status == AppointmentStatus.CHECKED_OUT and self.should_charge_client():
-                    # check if there's no charge
-                    # create charge
-                    appointment.charge_client()
+                if status == AppointmentStatus.CHECKED_OUT and pay_via_made and appointment.client:
+                    payment_method_uuid = None
+                    if self.validated_data.get('payment_method_uuid', None):
+                        payment_method = appointment.client.payment_methods.get(
+                            uuid=self.validated_data['payment_method_uuid']
+                        )
+                        payment_method_uuid = payment_method.uuid
+                    appointment.charge_client(payment_method_uuid)
             appointment.save(**kwargs)
         return appointment
 

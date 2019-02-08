@@ -802,7 +802,8 @@ class TestAppointmentUpdateSerializer(object):
             'services': [
                 {'service_uuid': str(service.uuid)}
             ],
-            'payment_method_uuid': payment_method.uuid
+            'payment_method_uuid': payment_method.uuid,
+            'pay_via_made': True
         }
         serializer = AppointmentUpdateSerializer(
             instance=appointment, data=data, partial=True,
