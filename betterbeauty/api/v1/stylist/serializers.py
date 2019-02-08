@@ -1256,31 +1256,30 @@ class AppointmentUpdateSerializer(
         return appointment
 
     def save(self, **kwargs):
-        def save(self, **kwargs):
-            try:
-                return self.save_appointment(**kwargs)
-            except (StripeError, StripeErrorWithParamCode) as err:
-                raise serializers.ValidationError(
-                    {
-                        'non_field_errors': [
-                            {
-                                'code': billing_errors.ERR_UNRECOVERABLE_BILLING_ERROR,
-                                'message': err._message
-                            }
-                        ]
-                    }
-                )
-            except CardError as err:
-                raise serializers.ValidationError(
-                    {
-                        'non_field_errors': [
-                            {
-                                'code': billing_errors.ERR_ACTIONABLE_BILLING_ERROR_WITH_MESSAGE,
-                                'message': err._message
-                            }
-                        ]
-                    }
-                )
+        try:
+            return self.save_appointment(**kwargs)
+        except (StripeError, StripeErrorWithParamCode) as err:
+            raise serializers.ValidationError(
+                {
+                    'non_field_errors': [
+                        {
+                            'code': billing_errors.ERR_UNRECOVERABLE_BILLING_ERROR,
+                            'message': err._message
+                        }
+                    ]
+                }
+            )
+        except CardError as err:
+            raise serializers.ValidationError(
+                {
+                    'non_field_errors': [
+                        {
+                            'code': billing_errors.ERR_ACTIONABLE_BILLING_ERROR_WITH_MESSAGE,
+                            'message': err._message
+                        }
+                    ]
+                }
+            )
 
 
 class StylistTodaySerializer(serializers.ModelSerializer):
