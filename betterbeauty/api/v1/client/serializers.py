@@ -32,6 +32,7 @@ from appointment.constants import (
 )
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus, RATINGS_CHOICES
+from billing.models import PaymentMethod
 from client.models import Client, PreferredStylist
 from client.types import CLIENT_PRIVACY_CHOICES, ClientPrivacy
 from core.models import User
@@ -83,6 +84,7 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
     has_seen_educational_screens = serializers.BooleanField(
         source='client.has_seen_educational_screens', required=False)
     google_api_key = serializers.SerializerMethodField()
+    stripe_public_key = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = User
@@ -90,8 +92,11 @@ class ClientProfileSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
             'first_name', 'last_name', 'phone', 'profile_photo_id', 'profile_photo_url',
             'zip_code', 'birthday', 'email', 'city', 'state', 'privacy',
             'has_seen_educational_screens', 'google_api_key',
-            'google_calendar_integrated', 'profile_completeness',
+            'google_calendar_integrated', 'profile_completeness', 'stripe_public_key'
         ]
+
+    def get_stripe_public_key(self, instance) -> str:
+        return settings.STRIPE_PUBLISHABLE_KEY
 
     def get_google_api_key(self, user: User):
         return settings.GOOGLE_AUTOCOMPLETE_API_KEY
@@ -878,3 +883,15 @@ class AppointmentServiceListUpdateSerializer(
     FormattedErrorMessageMixin, serializers.ModelSerializer
 ):
     services = AppointmentServiceSerializer(many=True)
+
+
+class PaymentMethodSerializer(FormattedErrorMessageMixin, serializers.ModelSerializer):
+    card_last4 = serializers.CharField(read_only=True, source='last_four_digits')
+
+    class Meta:
+        model = PaymentMethod
+        fields = ['uuid', 'card_brand', 'card_last4', ]
+
+
+class PaymentMethodTokenSerializer(FormattedErrorMessageMixin, serializers.Serializer):
+    stripe_token = serializers.CharField(write_only=True, required=True)

@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from django.apps import apps
 from django.contrib.gis.db.models import PointField
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
@@ -47,6 +48,8 @@ class Client(models.Model):
     sms_notifications_enabled = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(null=True, auto_now_add=True)
+
+    stripe_id = models.CharField(null=True, blank=True, max_length=64, default=None)
 
     def geo_code_address(self):
         geo_coded_address = GeoCode(self.zip_code).geo_code(country=self.country)
@@ -159,6 +162,9 @@ class Client(models.Model):
         return super(Client, self).save(force_insert=force_insert, force_update=force_update,
                                         using=using, update_fields=update_fields)
 
+    def get_active_payment_method(self):
+        return self.payment_methods.filter(is_active=True).last()
+
 
 class PreferredStylist(SmartModel):
     uuid = models.UUIDField(unique=True, default=uuid4, editable=False)
@@ -176,6 +182,8 @@ class StylistSearchRequest(models.Model):
     requested_at = models.DateTimeField(auto_now_add=True)
     user_location = PointField(srid=4326, null=True)
     user_ip_addr = models.GenericIPAddressField(null=True)
+    stylists_found = ArrayField(models.IntegerField(), default=list)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     class Meta:
         db_table = 'stylist_search_request'

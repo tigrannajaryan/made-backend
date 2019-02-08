@@ -10,6 +10,7 @@ from api.v1.client.views import (
     HistoryView,
     HomeView,
     InvitationView,
+    PaymentMethodsView,
     PreferredStylistDeleteView,
     PreferredStylistListCreateView,
     SearchStylistView,
@@ -47,4 +48,5 @@ urlpatterns = [
         InvitationView.as_view(), name='client-invitation'),
     url('^invitations/(?P<uuid>[0-9a-f\-]+)$',
         DeclineInvitationView.as_view(), name='decline-invitation'),
+    url('^payment-methods$', PaymentMethodsView.as_view(), name='payment-methods'),
 ]

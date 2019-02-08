@@ -1,4 +1,5 @@
 import datetime
+import logging
 from typing import List, Optional
 
 from dateutil.parser import parse
@@ -17,7 +18,9 @@ from rest_framework import (
     views,
 )
 from rest_framework.response import Response
+from stripe.error import CardError, StripeError
 
+from api.common.constants import HIGH_LEVEL_API_ERROR_CODES
 from api.common.permissions import ClientPermission
 
 from api.v1.client.constants import (ErrorMessages as client_errors,
@@ -35,6 +38,8 @@ from api.v1.client.serializers import (
     FollowerSerializer,
     HistorySerializer,
     HomeSerializer,
+    PaymentMethodSerializer,
+    PaymentMethodTokenSerializer,
     SearchStylistSerializer,
     ServicePricingRequestSerializer,
     ServicePricingSerializer,
@@ -47,6 +52,7 @@ from appointment.constants import ErrorMessages as appt_constants
 from appointment.models import Appointment
 from appointment.preview import AppointmentPreviewRequest, build_appointment_preview_dict
 from appointment.types import AppointmentStatus
+from billing.utils import create_new_payment_method
 from client.models import Client, PreferredStylist, StylistSearchRequest
 from client.types import ClientPrivacy
 from core.types import UserRole
@@ -60,6 +66,9 @@ from salon.utils import (
     generate_client_pricing_hints,
     get_default_service_uuids,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class ClientProfileView(generics.CreateAPIView, generics.RetrieveUpdateAPIView):
@@ -186,12 +195,14 @@ class SearchStylistView(generics.ListAPIView):
         }
         return Response(response_dict, status=status.HTTP_200_OK)
 
-    def save_search_request(self, location):
+    def save_search_request(self, location, stylists):
         ip, is_routable = get_client_ip(self.request)
+        stylists_found = list(map(lambda s: s.id, stylists))
         StylistSearchRequest.objects.create(
             requested_by=self.request.user,
             user_ip_addr=ip,
-            user_location=location
+            user_location=location,
+            stylists_found=stylists_found
         )
 
     def get_queryset(self):
@@ -204,11 +215,12 @@ class SearchStylistView(generics.ListAPIView):
         else:
             ip, is_routable = get_client_ip(self.request)
             location = get_lat_lng_for_ip_address(ip)
-        self.save_search_request(location)
         country: Optional[str] = self.request.user.client.country or 'US'
         client_id: int = self.request.user.client.id
-        return SearchStylistView._search_stylists(query, address_query, location,
-                                                  country, client_id)
+        stylists = SearchStylistView._search_stylists(query, address_query, location,
+                                                      country, client_id)
+        self.save_search_request(location=location, stylists=stylists)
+        return stylists
 
     @staticmethod
     def _search_stylists(query: str, address_query: str, location: Point, country: str,
@@ -631,3 +643,64 @@ class InvitationView(generics.ListCreateAPIView):
         return Response({'invitations':
                         self.serializer_class(created_objects, many=True).data
                          }, status=response_status)
+
+
+class PaymentMethodsView(views.APIView):
+    permission_classes = [ClientPermission, permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response(
+            {
+                'payment_methods': PaymentMethodSerializer(
+                    self.get_queryset(), many=True
+                ).data
+            }
+        )
+
+    def put(self, request):
+        client = self.request.user.client
+        serializer = PaymentMethodTokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            payment_method = create_new_payment_method(
+                client, serializer.validated_data['stripe_token']
+            )
+        except StripeError as err:
+            logger.exception('Could not add payment method for client uuid = {0}'.format(
+                client.uuid
+            ))
+            return Response(
+                {
+                    'code': HIGH_LEVEL_API_ERROR_CODES[400],
+                    'field_errors': {},
+                    'non_field_errors': [
+                        {
+                            'code': err.code
+                        }
+                    ]
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except CardError as err:
+            logger.exception('Could not add payment method for client uuid = {0}'.format(
+                client.uuid
+            ))
+            return Response(
+                {
+                    'code': HIGH_LEVEL_API_ERROR_CODES[400],
+                    'field_errors': {},
+                    'non_field_errors': [
+                        {
+                            'code': err.code, 'message': err._message
+                        }
+                    ]
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return Response(PaymentMethodSerializer(payment_method).data)
+
+    def get_queryset(self):
+        client: Client = self.request.user.client
+        return client.payment_methods.filter(
+            is_active=True
+        )
