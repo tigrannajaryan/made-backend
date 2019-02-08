@@ -662,7 +662,9 @@ class PaymentMethodsView(views.APIView):
         serializer = PaymentMethodTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            payment_method = create_new_payment_method(client, serializer.data['stripe_token'])
+            payment_method = create_new_payment_method(
+                client, serializer.validated_data['stripe_token']
+            )
         except StripeError as err:
             logger.exception('Could not add payment method for client uuid = {0}'.format(
                 client.uuid

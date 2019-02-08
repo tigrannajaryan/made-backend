@@ -17,6 +17,7 @@ from api.v1.client.serializers import (
     AppointmentUpdateSerializer,
     AppointmentValidationMixin,
     ClientProfileSerializer,
+    PaymentMethodTokenSerializer,
     ServicePricingRequestSerializer,
 )
 from appointment.constants import ErrorMessages as appointment_errors
@@ -998,3 +999,15 @@ class TestClientProfileSerializer(object):
         client.refresh_from_db()
         assert(client.zip_code == '54321')
         assert(client.last_geo_coded is None)
+
+
+class TestPaymentMethodTokenSerializer(object):
+    def test_validate(self):
+        data = {}
+        serializer = PaymentMethodTokenSerializer(data=data)
+        assert(serializer.is_valid(raise_exception=False) is False)
+
+        data = {'stripe_token': 'some_token'}
+        serializer = PaymentMethodTokenSerializer(data=data)
+        assert (serializer.is_valid(raise_exception=False) is True)
+        assert(serializer.validated_data['stripe_token'] == 'some_token')
