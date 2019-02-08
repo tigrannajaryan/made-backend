@@ -4,7 +4,7 @@ from django.contrib.postgres.fields import JSONField
 from django.db import models, transaction
 from django.utils import timezone
 
-from stripe.error import CardError, StripeError
+from stripe.error import CardError, StripeError, StripeErrorWithParamCode
 
 from .constants import ChargeStatusChoices, PaymentMethodChoices
 from .types import ChargeStatus, PaymentMethodType
@@ -95,8 +95,9 @@ class Charge(models.Model):
                 self.charged_at = timezone.now()
                 self.save(update_fields=['stripe_id', 'status', 'charged_at', ])
                 return ChargeStatus.SUCCESS
-        except (CardError, StripeError) as error:
+        except (CardError, StripeError, StripeErrorWithParamCode) as error:
             self.status = ChargeStatus.FAILED
             self.error_data = format_stripe_error_data(error)
             self.save(update_fields=['status', 'error_data'])
+            raise
         return ChargeStatus.FAILED

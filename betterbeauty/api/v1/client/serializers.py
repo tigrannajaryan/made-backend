@@ -12,7 +12,7 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from stripe.error import CardError, StripeError
+from stripe.error import CardError, StripeError, StripeErrorWithParamCode
 
 from api.common.fields import PhoneNumberField
 from api.common.mixins import FormattedErrorMessageMixin
@@ -34,6 +34,7 @@ from appointment.constants import (
 )
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus, RATINGS_CHOICES
+from billing.constants import ErrorMessages as billing_errors
 from billing.models import PaymentMethod
 from client.models import Client, PreferredStylist
 from client.types import CLIENT_PRIVACY_CHOICES, ClientPrivacy
@@ -623,7 +624,7 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
             if not client.payment_methods.filter(
                 uuid=uuid, is_active=True
             ).exists():
-                raise ValidationError('err_payment_method_not_found')
+                raise ValidationError(billing_errors.ERR_BAD_PAYMENT_METHOD)
             return uuid
 
     def save_appointment(self, **kwargs):
@@ -648,6 +649,8 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
                 total_regular=Coalesce(Sum('regular_price'), 0)
             )['total_regular']
 
+            payment_method_uuid = self.validated_data.get('payment_method_uuid', None)
+
             # update final prices and save appointment
             appointment_prices: AppointmentPrices = calculate_appointment_prices(
                 price_before_tax=total_client_price_before_tax,
@@ -655,7 +658,7 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
                 include_tax=self.instance.has_tax_included,
                 tax_rate=appointment.stylist.tax_rate,
                 card_fee=appointment.stylist.card_fee,
-                is_stripe_payment=pay_via_made
+                is_stripe_payment=bool(pay_via_made or payment_method_uuid)
             )
 
             for k, v in appointment_prices._asdict().items():
@@ -671,13 +674,9 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
                 appointment.status = status
                 appointment.append_status_history(updated_by=user)
 
-                if status == AppointmentStatus.CHECKED_OUT and pay_via_made:
-                    payment_method_uuid = None
-                    if self.validated_data.get('payment_method_uuid', None):
-                        payment_method = appointment.client.payment_methods.get(
-                            uuid=self.validated_data['payment_method_uuid']
-                        )
-                        payment_method_uuid = payment_method.uuid
+                if status == AppointmentStatus.CHECKED_OUT and (
+                    pay_via_made or payment_method_uuid
+                ):
                     appointment.charge_client(payment_method_uuid)
 
             appointment.save(**kwargs)
@@ -695,8 +694,27 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
     def save(self, **kwargs):
         try:
             return self.save_appointment(**kwargs)
-        except (CardError, StripeError) as error:
-            raise
+        except (StripeError, StripeErrorWithParamCode) as err:
+            raise ValidationError(
+                {
+                    'non_field_errors': [
+                        {
+                            'code': billing_errors.ERR_UNRECOVERABLE_BILLING_ERROR,
+                        }
+                    ]
+                }
+            )
+        except CardError as err:
+            raise ValidationError(
+                {
+                    'non_field_errors': [
+                        {
+                            'code': billing_errors.ERR_ACTIONABLE_BILLING_ERROR_WITH_MESSAGE,
+                            'message': err._message
+                        }
+                    ]
+                }
+            )
 
     def validate_status(self, status: AppointmentStatus) -> AppointmentStatus:
         if status == AppointmentStatus.CHECKED_OUT:
@@ -925,7 +943,7 @@ class PaymentMethodSerializer(FormattedErrorMessageMixin, serializers.ModelSeria
 
     class Meta:
         model = PaymentMethod
-        fields = ['uuid', 'card_brand', 'card_last4', ]
+        fields = ['uuid', 'card_brand', 'card_last4', 'type', ]
 
 
 class PaymentMethodTokenSerializer(FormattedErrorMessageMixin, serializers.Serializer):

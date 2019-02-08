@@ -1087,7 +1087,7 @@ class TestAppointmentUpdateSerializer(object):
         salon = G(Salon, timezone=pytz.utc)
         stylist = G(Stylist, salon=salon)
         client: Client = G(Client, stripe_id='some_id')
-        payment_method: PaymentMethod = G(PaymentMethod, client=client, is_active=True)
+        G(PaymentMethod, client=client, is_active=True)
         appointment: Appointment = G(
             Appointment,
             stylist=stylist,

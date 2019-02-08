@@ -12,7 +12,7 @@ from django.db.models.functions import Coalesce, ExtractDay, ExtractWeekDay
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
-from stripe.error import CardError, StripeError
+from stripe.error import CardError, StripeError, StripeErrorWithParamCode
 
 from api.common.fields import PhoneNumberField
 from api.common.mixins import FormattedErrorMessageMixin
@@ -23,6 +23,7 @@ from appointment.constants import (
 )
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
+from billing.constants import ErrorMessages as billing_errors
 from client.models import Client, PreferredStylist
 from client.types import ClientPrivacy
 from core.choices import CLIENT_OR_STYLIST_ROLE
@@ -1096,13 +1097,11 @@ class AppointmentUpdateSerializer(
 
     def validate_payment_method_uuid(self, uuid: uuid.UUID):
         client: Client = self.instance.client
-        if not client:
-            raise serializers.ValidationError('err_cannot_checkout_without_client')
-        if uuid is not None:
+        if uuid is not None and client:
             if not client.payment_methods.filter(
                 uuid=uuid, is_active=True
             ).exists():
-                raise serializers.ValidationError('err_payment_method_not_found')
+                raise serializers.ValidationError(billing_errors.ERR_BAD_PAYMENT_METHOD)
             return uuid
 
     def validate(self, attrs):
@@ -1257,10 +1256,31 @@ class AppointmentUpdateSerializer(
         return appointment
 
     def save(self, **kwargs):
-        try:
-            return self.save_appointment(**kwargs)
-        except (CardError, StripeError) as error:
-            raise
+        def save(self, **kwargs):
+            try:
+                return self.save_appointment(**kwargs)
+            except (StripeError, StripeErrorWithParamCode) as err:
+                raise serializers.ValidationError(
+                    {
+                        'non_field_errors': [
+                            {
+                                'code': billing_errors.ERR_UNRECOVERABLE_BILLING_ERROR,
+                                'message': err._message
+                            }
+                        ]
+                    }
+                )
+            except CardError as err:
+                raise serializers.ValidationError(
+                    {
+                        'non_field_errors': [
+                            {
+                                'code': billing_errors.ERR_ACTIONABLE_BILLING_ERROR_WITH_MESSAGE,
+                                'message': err._message
+                            }
+                        ]
+                    }
+                )
 
 
 class StylistTodaySerializer(serializers.ModelSerializer):
