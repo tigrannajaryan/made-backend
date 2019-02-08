@@ -650,14 +650,13 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
             )['total_regular']
 
             # update final prices and save appointment
-            is_stripe_payment = 'payment_method_uuid' in self.validated_data
             appointment_prices: AppointmentPrices = calculate_appointment_prices(
                 price_before_tax=total_client_price_before_tax,
                 include_card_fee=self.instance.has_card_fee_included,
                 include_tax=self.instance.has_tax_included,
                 tax_rate=appointment.stylist.tax_rate,
                 card_fee=appointment.stylist.card_fee,
-                is_stripe_payment=is_stripe_payment
+                is_stripe_payment=self.should_charge_client()
             )
 
             for k, v in appointment_prices._asdict().items():
@@ -674,9 +673,13 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
                 appointment.append_status_history(updated_by=user)
 
                 if status == AppointmentStatus.CHECKED_OUT and self.should_charge_client():
-                    # check if there's no charge
-                    # create charge
-                    appointment.charge_client()
+                    payment_method_uuid = None
+                    if self.should_charge_client():
+                        payment_method = appointment.client.payment_methods.get(
+                            uuid=self.validated_data['payment_method_uuid']
+                        )
+                        payment_method_uuid = payment_method.uuid
+                    appointment.charge_client(payment_method_uuid)
 
             appointment.save(**kwargs)
             # If status is changing try to cancel new appointment notification if it's not

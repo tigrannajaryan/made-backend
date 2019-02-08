@@ -24,7 +24,9 @@ def calculate_card_fee(original_cost: Decimal, card_fee: Decimal) -> Decimal:
 
 def calculate_stripe_card_fee(original_cost: Decimal) -> Decimal:
     # Return Stripe transaction fee - 2.9%  + 30 cents
-    return original_cost * Decimal(0.029) + Decimal(0.3)
+    return Decimal(
+        original_cost * Decimal(0.029) + Decimal(0.3)
+    ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
 
 def calculate_stylist_payout_amount(original_cost: Decimal, is_stripe_payment: bool) -> Decimal:
@@ -56,7 +58,6 @@ def calculate_appointment_prices(
     stylist_payout_amount = calculate_stylist_payout_amount(
         grand_total, is_stripe_payment=is_stripe_payment
     )
-
     return AppointmentPrices(
         total_client_price_before_tax=price_before_tax,
         total_tax=total_tax,

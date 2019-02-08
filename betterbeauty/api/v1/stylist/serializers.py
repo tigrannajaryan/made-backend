@@ -1221,7 +1221,6 @@ class AppointmentUpdateSerializer(
                 )['total_regular']
 
                 # update final prices and save appointment
-                is_stripe_payment = 'payment_method_uuid' in self.validated_data
                 appointment_prices: AppointmentPrices = calculate_appointment_prices(
                     price_before_tax=total_client_price_before_tax,
                     include_card_fee=self.validated_data.get(
@@ -1232,7 +1231,7 @@ class AppointmentUpdateSerializer(
                     ),
                     tax_rate=appointment.stylist.tax_rate,
                     card_fee=appointment.stylist.card_fee,
-                    is_stripe_payment=is_stripe_payment
+                    is_stripe_payment=self.should_charge_client()
                 )
 
                 for k, v in appointment_prices._asdict().items():

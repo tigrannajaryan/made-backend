@@ -1,11 +1,11 @@
 import logging
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, Union
 
 import stripe
 from django.conf import settings
 from django.db import transaction
-from stripe.error import CardError, StripeError
+from stripe.error import CardError, StripeError, StripeErrorWithParamCode
 
 from .models import PaymentMethod
 from .types import CardRecord, PaymentMethodType
@@ -14,14 +14,10 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 logger = logging.getLogger(__name__)
 
 
-class BillingError(Exception):
-
-    def __init__(self, message=None, *args, **kwargs):
-        self.message = message
-        super(BillingError, self).__init__(*args, **kwargs)
-
-
-def format_stripe_error_data(error):
+def format_stripe_error_data(
+        error: Union[StripeError, StripeErrorWithParamCode, CardError]
+) -> dict:
+    """Format stripe exception into serializable dict. INH."""
     data = {
         'error_class': error.__class__.__name__,
     }

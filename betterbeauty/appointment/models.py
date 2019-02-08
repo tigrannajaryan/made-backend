@@ -163,13 +163,15 @@ class Appointment(models.Model):
                                                 updated_by=updated_by)
 
     @transaction.atomic
-    def charge_client(self, payment_method_uuid):
+    def charge_client(self, payment_method_uuid=None):
         client: Client = self.client
 
         if not client:
             return
-
-        payment_method = self.client.payment_methods.get(uuid=payment_method_uuid)
+        if payment_method_uuid is None:
+            payment_method = self.client.get_active_payment_method()
+        else:
+            payment_method = self.client.payment_methods.get(uuid=payment_method_uuid)
         self.payment_method = payment_method
         self.save(update_fields=['payment_method', ])
         from billing.models import Charge

@@ -1167,7 +1167,6 @@ class TestGenerateRemindDefineDiscountsNotifications(object):
         notification: Notification = Notification.objects.last()
         assert (notification.code == NotificationCode.REMIND_DEFINE_DISCOUNTS)
         assert (notification.target == UserRole.STYLIST)
-        print(notification.message)
         assert (notification.message.startswith('2 '))
         assert (notification.user == stylist_eligible_for_discounts_reminder.user)
         assert (notification.send_time_window_start == datetime.time(10, 0))
