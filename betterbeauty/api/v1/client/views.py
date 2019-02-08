@@ -195,12 +195,14 @@ class SearchStylistView(generics.ListAPIView):
         }
         return Response(response_dict, status=status.HTTP_200_OK)
 
-    def save_search_request(self, location):
+    def save_search_request(self, location, stylists):
         ip, is_routable = get_client_ip(self.request)
+        stylists_found = list(map(lambda s: s.id, stylists))
         StylistSearchRequest.objects.create(
             requested_by=self.request.user,
             user_ip_addr=ip,
-            user_location=location
+            user_location=location,
+            stylists_found=stylists_found
         )
 
     def get_queryset(self):
@@ -213,11 +215,12 @@ class SearchStylistView(generics.ListAPIView):
         else:
             ip, is_routable = get_client_ip(self.request)
             location = get_lat_lng_for_ip_address(ip)
-        self.save_search_request(location)
         country: Optional[str] = self.request.user.client.country or 'US'
         client_id: int = self.request.user.client.id
-        return SearchStylistView._search_stylists(query, address_query, location,
-                                                  country, client_id)
+        stylists = SearchStylistView._search_stylists(query, address_query, location,
+                                                      country, client_id)
+        self.save_search_request(location=location, stylists=stylists)
+        return stylists
 
     @staticmethod
     def _search_stylists(query: str, address_query: str, location: Point, country: str,
