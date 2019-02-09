@@ -91,6 +91,8 @@ LOGGING = {
             ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
         'appointment': get_logger_dict(
             ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
+        'billing': get_logger_dict(
+            ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
         'client': get_logger_dict(
             ['sentry', 'console', 'syslog', 'madebeauty_log_file', ], 'DEBUG'),
         'core': get_logger_dict(
@@ -347,3 +349,6 @@ GOOGLE_CALENDAR_STYLIST_SYNC_ENABLED = True
 GOOGLE_CALENDAR_CLIENT_SYNC_ENABLED = True
 
 MINUTES_BEFORE_REQUESTING_NEW_CODE = 0
+
+STRIPE_PUBLISHABLE_KEY = os.environ.get(EnvVars.STRIPE_PUBLISHABLE_KEY, '<override in local.py')
+STRIPE_SECRET_KEY = os.environ.get(EnvVars.STRIPE_SECRET_KEY, '<override in local.py')

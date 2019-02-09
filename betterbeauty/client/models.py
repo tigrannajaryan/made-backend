@@ -162,6 +162,9 @@ class Client(models.Model):
         return super(Client, self).save(force_insert=force_insert, force_update=force_update,
                                         using=using, update_fields=update_fields)
 
+    def get_active_payment_method(self):
+        return self.payment_methods.filter(is_active=True).last()
+
 
 class PreferredStylist(SmartModel):
     uuid = models.UUIDField(unique=True, default=uuid4, editable=False)
