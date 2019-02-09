@@ -32,3 +32,4 @@ class NotificationCode(StrEnum):
     DEAL_OF_THE_WEEK = 'deal_of_the_week'
     DEAL_OF_THE_WEEK_PROMO = 'deal_of_the_week_promo'
     INVITE_YOUR_STYLIST = 'invite_your_stylist'
+    CLIENT_REGISTRATION_INCOMPLETE = 'client_registration_incomplete'

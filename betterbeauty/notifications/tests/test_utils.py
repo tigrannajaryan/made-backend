@@ -36,6 +36,7 @@ from salon.models import (
 )
 from salon.utils import create_stylist_profile_for_user
 from ..utils import (
+    generate_client_registration_incomplete_notifications,
     generate_deal_of_week_notifications,
     generate_follow_up_invitation_sms,
     generate_hint_to_first_book_notifications,
@@ -96,6 +97,20 @@ def busy_stylist() -> Stylist:
     # define a discount
     G(StylistService, stylist=stylist, is_enabled=True)
     return stylist
+
+
+@pytest.fixture
+def client_eligible_for_notification() -> Client:
+    client: Client = G(Client,
+                       email=None,
+                       created_at=timezone.now() - datetime.timedelta(days=2))
+    G(
+        Notification, code='some_other_code',
+        sent_at=timezone.now() - datetime.timedelta(hours=25), target=UserRole.STYLIST,
+        user=client.user, pending_to_send=False
+    )
+    G(APNSDevice, user=client.user, application_id=MobileAppIdType.IOS_CLIENT_DEV)
+    return client
 
 
 @pytest.fixture
@@ -1617,4 +1632,52 @@ class TestGenerateInviteYourStylistNotification(object):
         assert (result == 0)
         preferred_stylist.hard_delete()
         result = generate_invite_your_stylist_notifications(dry_run=False)
+        assert (result == 1)
+
+
+class TestGenerateClientIncompleteNotification(object):
+
+    @pytest.mark.django_db
+    def test_positive_path(self, client_eligible_for_notification):
+        client: Client = client_eligible_for_notification
+        client.save()
+        result = generate_client_registration_incomplete_notifications()
+        assert (result == 1)
+        client.email = "test@example.com"
+        client.save()
+        result = generate_client_registration_incomplete_notifications()
+        assert (result == 0)
+
+    @pytest.mark.django_db
+    def test_existing_client_incomplete_notification(self, client_eligible_for_notification):
+        client: Client = client_eligible_for_notification
+        existing_notification: Notification = G(
+            Notification,
+            code=NotificationCode.CLIENT_REGISTRATION_INCOMPLETE,
+            target=UserRole.CLIENT,
+            user=client.user,
+            created_at=timezone.now() - datetime.timedelta(weeks=3)
+        )
+        result = generate_client_registration_incomplete_notifications()
+        assert (result == 0)
+        existing_notification.delete()
+
+        result = generate_client_registration_incomplete_notifications()
+        assert (result == 1)
+
+    @pytest.mark.django_db
+    def test_existing_different_notification(self, client_eligible_for_notification):
+        client: Client = client_eligible_for_notification
+        existing_notification: Notification = G(
+            Notification,
+            code=NotificationCode.DEAL_OF_THE_WEEK,
+            target=UserRole.CLIENT,
+            user=client.user,
+            created_at=timezone.now() - datetime.timedelta(hours=1)
+        )
+        result = generate_client_registration_incomplete_notifications()
+        assert (result == 0)
+        existing_notification.delete()
+
+        result = generate_client_registration_incomplete_notifications()
         assert (result == 1)

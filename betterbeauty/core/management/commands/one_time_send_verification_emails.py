@@ -19,7 +19,7 @@ def one_time_send_verification_emails(
     if not level == EnvLevel.PRODUCTION:
         dry_run = True
     stylists = Stylist.objects.filter(email__isnull=False, email_verified=False,
-                                      deactivated_at__is_null=True).exclude(email='')
+                                      deactivated_at__isnull=True).exclude(email='')
     clients = Client.objects.filter(email__isnull=False, email_verified=False).exclude(email='')
     stylist_emails_sent = 0
     for stylist in stylists:
