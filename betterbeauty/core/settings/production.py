@@ -57,6 +57,11 @@ IS_GEOCODING_ENABLED = True
 TWILLIO_SLACK_CHANNEL = '#auto-twilio'
 AUTO_SIGNUP_SLACK_CHANNEL = '#auto-signup'
 AUTO_BOOKING_SLACK_CHANNEL = '#auto-booking'
+AUTO_STRIPE_SLACK_CHANNEL = '#auto-slack'
+
+AUTO_STRIPE_SLACK_HOOK = (
+    'https://hooks.slack.com/services/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'
+)
 
 NOTIFICATIONS_ENABLED = True
 
