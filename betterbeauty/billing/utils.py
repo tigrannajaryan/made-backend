@@ -1,10 +1,11 @@
 import logging
-from typing import Optional
+from decimal import Decimal
+from typing import Optional, Union
 
 import stripe
 from django.conf import settings
 from django.db import transaction
-from stripe.error import StripeError
+from stripe.error import CardError, StripeError, StripeErrorWithParamCode
 
 from .models import PaymentMethod
 from .types import CardRecord, PaymentMethodType
@@ -13,11 +14,29 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 logger = logging.getLogger(__name__)
 
 
-class BillingError(Exception):
+def format_stripe_error_data(
+        error: Union[StripeError, StripeErrorWithParamCode, CardError]
+) -> dict:
+    """Format stripe exception into serializable dict. INH."""
+    data = {
+        'error_class': error.__class__.__name__,
+    }
+    if hasattr(error, 'message'):
+        data['message'] = error.message
+    else:
+        data['message'] = getattr(error, '_message', 'Unknown error.')
 
-    def __init__(self, message=None, *args, **kwargs):
-        self.message = message
-        super(BillingError, self).__init__(*args, **kwargs)
+    http_status = getattr(error, 'http_status', None)
+    if http_status is not None:
+        data['http_status'] = http_status
+    param = getattr(error, 'param', None)
+    if param is not None:
+        data['param'] = param
+    if isinstance(error, CardError):
+        data['code'] = getattr(error, 'code', None)
+        if error.json_body and 'error' in error.json_body:
+            data['error'] = error.json_body['error']
+    return data
 
 
 def create_stripe_customer_for_client(client, token: str) -> str:
@@ -76,6 +95,14 @@ def create_new_payment_method(client, stripe_token) -> Optional[PaymentMethod]:
     else:
         # Stripe customer exists, so we need to add new Source object from token
         stripe_customer = stripe.Customer.retrieve(client.stripe_id)
+        # The code below *replaces* the default payment source. Down the road, when
+        # we want to support multiple payment methods (e.g. multiple cards or other
+        # payment sources) we'll need to change this code to
+        #
+        # new_payment_method = stripe_customer.sources.create(source=card_token)
+        #
+        # and then use the id of the freshly added payment method to create
+        # the PaymentMethod DB object.
         stripe_customer.source = stripe_token
         stripe_customer.save()
     # We've added the card, and now client is registered with Stripe. Now we need
@@ -95,3 +122,43 @@ def create_new_payment_method(client, stripe_token) -> Optional[PaymentMethod]:
     # de-activate other methods
     payment_method.set_active()
     return payment_method
+
+
+def run_charge(
+        customer_stripe_id: str,
+        amount: Decimal,
+        description: str,
+        payment_method_stripe_id: Optional[str] = None,
+) -> Optional[str]:
+    """
+    Creates actual Stripe charge, and attepmts to charge client
+
+    :param customer_stripe_id: customer stripe id of the client
+    :param payment_method_stripe_id: stripe id of payment method, must be attached to customer.
+    If it omitted, charge will be made using the default payment method
+    :param amount: charge amount in USD
+    :param description: description of the charge, how it will show in client's bank statement
+    :return: stripe id of the charge if successful, None otherwise
+    """
+    if amount <= 0.0:
+        logger.warning(
+            'Could not create charge for client with '
+            'stripe_id == {0} with non-positive amount'.format(
+                customer_stripe_id
+            ))
+        return None
+    charge_data = {
+        'amount': int(amount * 100),
+        'currency': settings.STRIPE_DEFAULT_CURRENCY,
+        'customer': customer_stripe_id,
+        'description': description,
+        'statement_descriptor': settings.STRIPE_DEFAULT_PAYMENT_DESCRIPTOR
+    }
+    if payment_method_stripe_id is not None:
+        charge_data['source'] = payment_method_stripe_id
+    charge = stripe.Charge.create(**charge_data)
+    logger.info('Created ${0} charge for client with stripe_id == {1}'.format(
+        amount,
+        customer_stripe_id
+    ))
+    return charge.id

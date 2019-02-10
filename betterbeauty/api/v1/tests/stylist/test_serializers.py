@@ -38,11 +38,16 @@ from appointment.preview import (
     AppointmentServicePreview,
 )
 from appointment.types import AppointmentStatus
+from billing.models import Charge, PaymentMethod
 from client.models import Client, PreferredStylist
 from core.choices import USER_ROLE
 from core.models import TemporaryFile, User
 from core.types import UserRole, Weekday
-from core.utils import calculate_card_fee, calculate_tax
+from core.utils import (
+    calculate_card_fee,
+    calculate_stylist_payout_amount,
+    calculate_tax,
+)
 from salon.models import (
     Salon,
     ServiceCategory,
@@ -999,7 +1004,7 @@ class TestAppointmentUpdateSerializer(object):
         assert(appointment.status == AppointmentStatus.CANCELLED_BY_STYLIST)
 
     @pytest.mark.django_db
-    def test_save_checked_out_status(self, mocker):
+    def test_save_checked_out_in_salon_status(self, mocker):
         salon = G(Salon, timezone=pytz.utc)
         stylist = G(Stylist, salon=salon)
         appointment = G(
@@ -1074,6 +1079,82 @@ class TestAppointmentUpdateSerializer(object):
             total_services_cost, tax_rate=appointment.stylist.tax_rate))
         assert(saved_appointment.total_card_fee == calculate_card_fee(
             total_services_cost, card_fee=appointment.stylist.card_fee))
+        assert(saved_appointment.stylist_payout_amount == total_services_cost)
+
+    @pytest.mark.django_db
+    @mock.patch.object(Charge, 'run_stripe_charge')
+    def test_save_checked_out_with_stripe(self, billing_mock, mocker):
+        salon = G(Salon, timezone=pytz.utc)
+        stylist = G(Stylist, salon=salon)
+        client: Client = G(Client, stripe_id='some_id')
+        G(PaymentMethod, client=client, is_active=True)
+        appointment: Appointment = G(
+            Appointment,
+            stylist=stylist,
+            client=client,
+            duration=datetime.timedelta(minutes=30)
+        )
+        context = {
+            'stylist': appointment.stylist,
+            'user': appointment.stylist.user
+        }
+        original_service: StylistService = G(
+            StylistService, stylist=appointment.stylist,
+            duration=datetime.timedelta(30),
+            regular_price=20
+        )
+        G(
+            AppointmentService, appointment=appointment,
+            service_uuid=original_service.uuid, service_name=original_service.name,
+            duration=original_service.duration, is_original=True,
+            regular_price=20, client_price=18
+        )
+
+        new_service: StylistService = G(
+            StylistService, stylist=appointment.stylist,
+            duration=datetime.timedelta(30),
+            regular_price=40
+        )
+
+        assert (appointment.services.count() == 1)
+
+        data = {
+            'status': AppointmentStatus.CHECKED_OUT.value,
+            'services': [
+                {
+                    'service_uuid': original_service.uuid
+                },
+                {
+                    'service_uuid': new_service.uuid
+                }
+            ],
+            'has_tax_included': False,
+            'has_card_fee_included': False,
+            'pay_via_made': True
+        }
+
+        serializer = AppointmentUpdateSerializer(
+            instance=appointment, data=data, context=context
+        )
+        assert (serializer.is_valid() is True)
+        saved_appointment = serializer.save()
+        assert (saved_appointment.services.count() == 2)
+        original_appointment_service: AppointmentService = saved_appointment.services.get(
+            is_original=True
+        )
+        assert (original_appointment_service.service_uuid == original_service.uuid)
+        assert (original_appointment_service.client_price == 18)
+        assert (original_appointment_service.regular_price == 20)
+
+        assert (billing_mock.call_count == 1)
+        charge: Charge = appointment.charges.last()
+        appointment.refresh_from_db()
+        assert(charge.amount == appointment.grand_total)
+        assert(
+            appointment.stylist_payout_amount == calculate_stylist_payout_amount(
+                appointment.grand_total, is_stripe_payment=True
+            )
+        )
 
 
 class TestStylistAvailableWeekDayWithBookedTimeSerializer(object):

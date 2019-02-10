@@ -28,10 +28,11 @@ from appointment.preview import (
     AppointmentServicePreview,
 )
 from appointment.types import AppointmentStatus
+from billing.models import Charge, PaymentMethod
 from client.models import Client, ClientPrivacy, PreferredStylist
 from core.models import User
 from core.types import UserRole, Weekday
-from core.utils import calculate_card_fee, calculate_tax
+from core.utils import calculate_card_fee, calculate_stylist_payout_amount, calculate_tax
 from pricing import CalculatedPrice, DiscountType
 from salon.models import (
     Salon,
@@ -746,6 +747,83 @@ class TestAppointmentUpdateSerializer(object):
         assert (serializer.is_valid() is True)
         serializer.save()
         assert (serializer.data['datetime_start_at'] == '2019-02-05T09:00:00-05:00')
+
+    @freeze_time('2019-2-8 12:00 UTC')
+    @pytest.mark.django_db
+    def test_checkout_in_salon(self):
+        salon: Salon = G(Salon, timezone=pytz.UTC)
+        stylist: Stylist = G(Stylist, salon=salon)
+        client: Client = G(Client, stripe_id='some_stripe_id')
+        appointment: Appointment = G(
+            Appointment, stylist=stylist, client=client, status=AppointmentStatus.NEW
+        )
+        service = G(StylistService, regular_price=10, stylist=stylist, is_enabled=True)
+        G(
+            AppointmentService, regular_price=10, client_price=10, is_original=True,
+            service_uuid=service.uuid
+        )
+        G(PaymentMethod, client=client, stripe_id='some_id', is_active=True)
+        data = {
+            'status': AppointmentStatus.CHECKED_OUT,
+            'services': [
+                {'service_uuid': str(service.uuid)}
+            ]
+        }
+        serializer = AppointmentUpdateSerializer(
+            instance=appointment, data=data, partial=True,
+            context={'stylist': stylist,
+                     'user': stylist.user}
+        )
+        assert(serializer.is_valid())
+        updated_appointment = serializer.save()
+        assert(updated_appointment.stylist_payout_amount == updated_appointment.grand_total)
+        assert(Charge.objects.count() == 0)
+
+    @freeze_time('2019-2-8 12:00 UTC')
+    @mock.patch.object(Charge, 'run_stripe_charge')
+    @pytest.mark.django_db
+    def test_checkout_with_stripe(self, billing_mock):
+        salon: Salon = G(Salon, timezone=pytz.UTC)
+        stylist: Stylist = G(Stylist, salon=salon)
+        client: Client = G(Client, stripe_id='some_stripe_id')
+        appointment: Appointment = G(
+            Appointment, stylist=stylist, client=client, status=AppointmentStatus.NEW
+        )
+        service = G(StylistService, regular_price=10, stylist=stylist, is_enabled=True)
+        G(
+            AppointmentService, regular_price=10, client_price=10, is_original=True,
+            service_uuid=service.uuid
+        )
+        payment_method: PaymentMethod = G(
+            PaymentMethod, client=client, stripe_id='some_id', is_active=True
+        )
+        data = {
+            'status': AppointmentStatus.CHECKED_OUT,
+            'services': [
+                {'service_uuid': str(service.uuid)}
+            ],
+            'payment_method_uuid': payment_method.uuid,
+            'pay_via_made': True
+        }
+        serializer = AppointmentUpdateSerializer(
+            instance=appointment, data=data, partial=True,
+            context={'stylist': stylist,
+                     'user': stylist.user
+                     }
+        )
+        assert(serializer.is_valid())
+        updated_appointment = serializer.save()
+        assert(
+            updated_appointment.stylist_payout_amount == calculate_stylist_payout_amount(
+                updated_appointment.grand_total, is_stripe_payment=True
+            )
+        )
+        assert (updated_appointment.payment_method == payment_method)
+        assert(billing_mock.call_count == 1)
+        assert (Charge.objects.count() == 1)
+        charge: Charge = Charge.objects.last()
+        assert(charge.appointment == updated_appointment)
+        assert(charge.amount == appointment.grand_total)
 
 
 class TestAppointmentPreviewRequestSerializer(object):

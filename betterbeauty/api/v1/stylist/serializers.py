@@ -12,6 +12,7 @@ from django.db.models.functions import Coalesce, ExtractDay, ExtractWeekDay
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
+from stripe.error import CardError, StripeError, StripeErrorWithParamCode
 
 from api.common.fields import PhoneNumberField
 from api.common.mixins import FormattedErrorMessageMixin
@@ -22,6 +23,7 @@ from appointment.constants import (
 )
 from appointment.models import Appointment, AppointmentService
 from appointment.types import AppointmentStatus
+from billing.constants import ErrorMessages as billing_errors
 from client.models import Client, PreferredStylist
 from client.types import ClientPrivacy
 from core.choices import CLIENT_OR_STYLIST_ROLE
@@ -1084,10 +1086,24 @@ class AppointmentUpdateSerializer(
     services = AppointmentServiceSerializer(many=True, required=False)
     has_tax_included = serializers.NullBooleanField(required=False)
     has_card_fee_included = serializers.NullBooleanField(required=False)
+    payment_method_uuid = serializers.UUIDField(default=None, write_only=True)
+    pay_via_made = serializers.BooleanField(write_only=True, default=False)
 
     class Meta:
         model = Appointment
-        fields = ['status', 'services', 'has_tax_included', 'has_card_fee_included', ]
+        fields = [
+            'status', 'services', 'has_tax_included', 'has_card_fee_included',
+            'payment_method_uuid', 'pay_via_made',
+        ]
+
+    def validate_payment_method_uuid(self, uuid: uuid.UUID):
+        client: Client = self.instance.client
+        if uuid is not None and client:
+            if not client.payment_methods.filter(
+                uuid=uuid, is_active=True
+            ).exists():
+                raise serializers.ValidationError(billing_errors.ERR_BAD_PAYMENT_METHOD)
+            return uuid
 
     def validate(self, attrs):
         status = self.initial_data.get('status', None)
@@ -1181,8 +1197,9 @@ class AppointmentUpdateSerializer(
                     is_original=False
                 )
 
-    def save(self, **kwargs):
+    def save_appointment(self, **kwargs):
         status = self.validated_data.get('status', self.instance.status)
+        pay_via_made: bool = self.validated_data.pop('pay_via_made', False)
         user: User = self.context['user']
         appointment: Appointment = self.instance
         with transaction.atomic():
@@ -1201,7 +1218,6 @@ class AppointmentUpdateSerializer(
                 )['total_regular']
 
                 # update final prices and save appointment
-
                 appointment_prices: AppointmentPrices = calculate_appointment_prices(
                     price_before_tax=total_client_price_before_tax,
                     include_card_fee=self.validated_data.get(
@@ -1212,6 +1228,7 @@ class AppointmentUpdateSerializer(
                     ),
                     tax_rate=appointment.stylist.tax_rate,
                     card_fee=appointment.stylist.card_fee,
+                    is_stripe_payment=pay_via_made
                 )
 
                 for k, v in appointment_prices._asdict().items():
@@ -1227,8 +1244,43 @@ class AppointmentUpdateSerializer(
                     generate_stylist_cancelled_appointment_notification(appointment)
                 appointment.status = status
                 appointment.append_status_history(updated_by=user)
+
+                if status == AppointmentStatus.CHECKED_OUT and pay_via_made and appointment.client:
+                    payment_method_uuid = None
+                    if self.validated_data.get('payment_method_uuid', None):
+                        payment_method = appointment.client.payment_methods.get(
+                            uuid=self.validated_data['payment_method_uuid']
+                        )
+                        payment_method_uuid = payment_method.uuid
+                    appointment.charge_client(payment_method_uuid)
             appointment.save(**kwargs)
         return appointment
+
+    def save(self, **kwargs):
+        try:
+            return self.save_appointment(**kwargs)
+        except (StripeError, StripeErrorWithParamCode) as err:
+            raise serializers.ValidationError(
+                {
+                    'non_field_errors': [
+                        {
+                            'code': billing_errors.ERR_UNRECOVERABLE_BILLING_ERROR,
+                            'message': err._message
+                        }
+                    ]
+                }
+            )
+        except CardError as err:
+            raise serializers.ValidationError(
+                {
+                    'non_field_errors': [
+                        {
+                            'code': billing_errors.ERR_ACTIONABLE_BILLING_ERROR_WITH_MESSAGE,
+                            'message': err._message
+                        }
+                    ]
+                }
+            )
 
 
 class StylistTodaySerializer(serializers.ModelSerializer):

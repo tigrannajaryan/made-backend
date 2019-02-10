@@ -18,9 +18,9 @@ from rest_framework import (
     views,
 )
 from rest_framework.response import Response
-from stripe.error import CardError, StripeError
+from rest_framework.serializers import ValidationError
+from stripe.error import CardError, StripeError, StripeErrorWithParamCode
 
-from api.common.constants import HIGH_LEVEL_API_ERROR_CODES
 from api.common.permissions import ClientPermission
 
 from api.v1.client.constants import (ErrorMessages as client_errors,
@@ -52,6 +52,7 @@ from appointment.constants import ErrorMessages as appt_constants
 from appointment.models import Appointment
 from appointment.preview import AppointmentPreviewRequest, build_appointment_preview_dict
 from appointment.types import AppointmentStatus
+from billing.constants import ErrorMessages as billing_errors
 from billing.utils import create_new_payment_method
 from client.models import Client, PreferredStylist, StylistSearchRequest
 from client.types import ClientPrivacy
@@ -665,37 +666,33 @@ class PaymentMethodsView(views.APIView):
             payment_method = create_new_payment_method(
                 client, serializer.validated_data['stripe_token']
             )
-        except StripeError as err:
+        except (StripeError, StripeErrorWithParamCode) as err:
             logger.exception('Could not add payment method for client uuid = {0}'.format(
                 client.uuid
             ))
-            return Response(
+            raise ValidationError(
                 {
-                    'code': HIGH_LEVEL_API_ERROR_CODES[400],
-                    'field_errors': {},
                     'non_field_errors': [
                         {
-                            'code': err.code
+                            'code': billing_errors.ERR_UNRECOVERABLE_BILLING_ERROR,
+                            'message': err._message
                         }
                     ]
-                },
-                status=status.HTTP_400_BAD_REQUEST
+                }
             )
         except CardError as err:
             logger.exception('Could not add payment method for client uuid = {0}'.format(
                 client.uuid
             ))
-            return Response(
+            raise ValidationError(
                 {
-                    'code': HIGH_LEVEL_API_ERROR_CODES[400],
-                    'field_errors': {},
                     'non_field_errors': [
                         {
-                            'code': err.code, 'message': err._message
+                            'code': billing_errors.ERR_ACTIONABLE_BILLING_ERROR_WITH_MESSAGE,
+                            'message': err._message
                         }
                     ]
-                },
-                status=status.HTTP_400_BAD_REQUEST
+                }
             )
         return Response(PaymentMethodSerializer(payment_method).data)
 
