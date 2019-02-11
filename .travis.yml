@@ -63,8 +63,7 @@ before_script: make setup-db
 script:
 - make build
 - make test
-# temporarily disable e2e
-# - make e2e-test
+- make e2e-test
 - echo "$TRAVIS_BUILD_NUMBER" > meta/build_number.txt
 - echo "$TRAVIS_COMMIT" > meta/commit_id.txt
 
