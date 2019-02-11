@@ -98,7 +98,6 @@ class Charge(models.Model):
                 send_stripe_charge_notification(self)
                 return ChargeStatus.SUCCESS
         except (CardError, StripeError, StripeErrorWithParamCode) as error:
-            print('got exception')
             self.status = ChargeStatus.FAILED
             error_data = format_stripe_error_data(error)
             self.error_data = error_data
