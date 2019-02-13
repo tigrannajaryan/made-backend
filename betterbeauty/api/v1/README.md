@@ -1832,7 +1832,8 @@ curl -X GET -H 'Authorization: Token jwt_token' \
             "total_discount_percentage": 0,
             "total_discount_amount": 0,
             "client_profile_photo_url": null,
-            "created_at": "2018-11-02T04:12:08.690148-04:00"
+            "created_at": "2018-11-02T04:12:08.690148-04:00",
+            "can_checkout_with_made": false
         }
     ],
     "service_time_gap_minutes": 60,
@@ -2053,6 +2054,7 @@ curl -X POST \
     "total_discount_amount": 0,
     "has_tax_included": False,
     "has_card_fee_included": False,
+    "can_checkout_with_made": false,
     "services": [
         {
             "uuid": "48a468a3-6dc3-4236-b91f-1c6a92b911b4",
@@ -2162,6 +2164,7 @@ curl -X POST \
     "datetime_start_at": "2018-05-20T18:00:00-04:00",
     "duration_minutes": 60,
     "status": "new",
+    "can_checkout_with_made": false,
     "services": [
         {
             "uuid": "ca821ca4-3d34-454a-9aa7-daa291ce2840",
@@ -2289,6 +2292,7 @@ curl -X POST \
     "total_discount_percentage": 10,
     "total_discount_amount": 35,
     "has_card_fee_included": False,
+    "can_checkout_with_made": false,
     "services": [
         {
             "uuid": "50701ff2-4774-4457-8078-5b956a16bd61",
@@ -2362,6 +2366,7 @@ curl -X GET \
             "has_card_fee_included": false,
             "total_discount_percentage": 0,
             "total_discount_amount": 0,
+            "can_checkout_with_made": false
         }],
     "today_visits_count": 1,
     "upcoming_visits_count": 0,
@@ -3130,6 +3135,7 @@ curl -X GET \
         "has_card_fee_included": false,
         "total_discount_percentage": 0,
         "total_discount_amount": 0,
+        "can_checkout_with_made": false
     }
 ]
 ```
@@ -3178,7 +3184,8 @@ curl -X GET \
     "total_discount_percentage": 0,
     "total_discount_amount": 0,
     "rating": null,
-    "comment": null
+    "comment": null,
+    "can_checkout_with_made": false
 }
 ```
 
@@ -3233,6 +3240,7 @@ curl -X POST \
     "has_card_fee_included": false,
     "total_discount_percentage": 0,
     "total_discount_amount": 0,
+    "can_checkout_with_made": false
 }
 ```
 
@@ -3294,7 +3302,8 @@ curl -X PATCH \
     "total_discount_percentage": 0,
     "total_discount_amount": 0,
     "rating": null,
-    "comment": null
+    "comment": null,
+    "can_checkout_with_made": false
 }
 ```
 
@@ -3351,7 +3360,8 @@ curl -X PATCH \
     "total_discount_percentage": 0,
     "total_discount_amount": 0,
     "rating": null,
-    "comment": null
+    "comment": null,
+    "can_checkout_with_made": false
 }
 ```
 
@@ -3402,7 +3412,8 @@ curl -X PATCH \
     "total_discount_percentage": 0,
     "total_discount_amount": 0,
 	"rating": 1,
-	"comment": "She is the best stylist in NYC"
+	"comment": "She is the best stylist in NYC",
+	"can_checkout_with_made": false
 }
 ```
 
@@ -3452,7 +3463,8 @@ curl -X PATCH \
     "total_discount_percentage": 0,
     "total_discount_amount": 0,
 	"rating": 1,
-	"comment": "She is the best stylist in NYC"
+	"comment": "She is the best stylist in NYC",
+	"can_checkout_with_made": false
 }
 ```
 
@@ -3505,7 +3517,8 @@ curl -X POST \
     "has_tax_included": false,
     "has_card_fee_included": false,
     "total_discount_percentage": 0,
-    "total_discount_amount": 0
+    "total_discount_amount": 0,
+    "can_checkout_with_made": false
 }
 ```
 
@@ -3595,7 +3608,8 @@ curl -X GET \
             "tax_percentage": 8.875,
             "card_fee_percentage": 2.75,
             "has_tax_included": false,
-            "has_card_fee_included": false
+            "has_card_fee_included": false,
+            "can_checkout_with_made": false
         }
     ],
     "last_visited": {
@@ -3634,7 +3648,8 @@ curl -X GET \
         "tax_percentage": 8.875,
         "card_fee_percentage": 2.75,
         "has_tax_included": false,
-        "has_card_fee_included": false
+        "has_card_fee_included": false,
+        "can_checkout_with_made": false
     },
     "preferred_stylists": [
         {
@@ -3691,7 +3706,8 @@ curl -X POST \
             "tax_percentage": 8.875,
             "card_fee_percentage": 2.75,
             "has_tax_included": false,
-            "has_card_fee_included": false
+            "has_card_fee_included": false,
+            "can_checkout_with_made": false
         }
     ]
 }

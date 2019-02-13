@@ -712,6 +712,14 @@ class Stylist(models.Model):
         else:
             return None
 
+    @property
+    def can_checkout_with_made(self) -> bool:
+        """Temporary field to decide if it's possible to checkout via made"""
+        # TODO: Once we implement stripe connect, return True if stylist
+        # TODO: has stripe connect integration. For now, will be set to
+        # TODO: False for everyone
+        return False
+
 
 class ServiceCategory(models.Model):
     name = models.CharField(max_length=255, unique=True)
