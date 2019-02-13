@@ -38,6 +38,7 @@ from billing.constants import ErrorMessages as billing_errors
 from billing.models import PaymentMethod
 from client.models import Client, PreferredStylist
 from client.types import CLIENT_PRIVACY_CHOICES, ClientPrivacy
+from core.constants import EnvLevel
 from core.models import User
 from core.types import AppointmentPrices, UserRole
 from core.utils import calculate_appointment_prices
@@ -47,6 +48,7 @@ from integrations.slack import (
 )
 from notifications.utils import (
     cancel_new_appointment_notification,
+    generate_appointment_reschedule_notification,
     generate_client_cancelled_appointment_notification,
     generate_new_appointment_notification,
 )
@@ -630,6 +632,7 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
     def save_appointment(self, **kwargs):
 
         status = self.validated_data.get('status', self.instance.status)
+        current_datetime_start_at = self.instance.datetime_start_at
         pay_via_made: bool = self.validated_data.pop('pay_via_made', False)
         user: User = self.context['user']
         appointment: Appointment = self.instance
@@ -678,6 +681,12 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
                     pay_via_made or payment_method_uuid
                 ):
                     appointment.charge_client(payment_method_uuid)
+
+            if appointment.datetime_start_at != current_datetime_start_at:
+                # TODO: Enable in Production after testing
+                if settings.LEVEL != EnvLevel.PRODUCTION:
+                    generate_appointment_reschedule_notification(
+                        appointment, current_datetime_start_at)
 
             appointment.save(**kwargs)
             # If status is changing try to cancel new appointment notification if it's not
