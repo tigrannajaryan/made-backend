@@ -2,7 +2,6 @@ import datetime
 import decimal
 from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
-from uuid import UUID
 
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -15,7 +14,7 @@ from rest_framework.exceptions import ValidationError
 from stripe.error import CardError, StripeError, StripeErrorWithParamCode
 
 from api.common.fields import PhoneNumberField
-from api.common.mixins import FormattedErrorMessageMixin
+from api.common.mixins import AppointmentPaymentValidationMixin, FormattedErrorMessageMixin
 
 from api.common.utils import save_profile_photo, send_email_verification
 from api.v1.client.constants import ErrorMessages
@@ -611,7 +610,7 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
         return appointment
 
 
-class AppointmentUpdateSerializer(AppointmentSerializer):
+class AppointmentUpdateSerializer(AppointmentPaymentValidationMixin, AppointmentSerializer):
     stylist_uuid = serializers.UUIDField(source='stylist.uuid', read_only=True)
     status = serializers.CharField(read_only=False, required=False)
     payment_method_uuid = serializers.UUIDField(default=None, write_only=True)
@@ -623,17 +622,7 @@ class AppointmentUpdateSerializer(AppointmentSerializer):
             'payment_method_uuid', 'pay_via_made'
         ]
 
-    def validate_payment_method_uuid(self, uuid: UUID):
-        client: Client = self.instance.client
-        if uuid is not None:
-            if not client.payment_methods.filter(
-                uuid=uuid, is_active=True
-            ).exists():
-                raise ValidationError(billing_errors.ERR_BAD_PAYMENT_METHOD)
-            return uuid
-
     def save_appointment(self, **kwargs):
-
         status = self.validated_data.get('status', self.instance.status)
         current_datetime_start_at = self.instance.datetime_start_at
         pay_via_made: bool = self.validated_data.pop('pay_via_made', False)

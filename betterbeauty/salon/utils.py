@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from appointment.constants import AppointmentStatus
 from appointment.models import Appointment, AppointmentService
+from billing.utils import create_connected_account_from_client_token
 from client.constants import END_OF_DAY_BUFFER_TIME_IN_MINUTES
 from client.models import Client
 from core.constants import (
@@ -617,3 +618,17 @@ def calculate_price_with_discount_based_on_appointment(
     )
     price_with_discount = Decimal(price_with_discount).quantize(1, ROUND_HALF_UP)
     return price_with_discount
+
+
+def create_stripe_account_for_stylist(stylist: Stylist, auth_code: str):
+    """Create connected account for stylist in stripe, and save data to DB"""
+    (
+        account_id, stripe_access_token,
+        stripe_refresh_token
+    ) = create_connected_account_from_client_token(auth_code)
+    stylist.stripe_account_id = account_id
+    stylist.stripe_access_token = stripe_access_token
+    stylist.stripe_refresh_token = stripe_refresh_token
+    stylist.save(
+        update_fields=['stripe_account_id', 'stripe_access_token', 'stripe_refresh_token']
+    )

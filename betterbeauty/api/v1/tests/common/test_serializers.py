@@ -9,7 +9,7 @@ from api.v1.common.serializers import (
     PushNotificationTokenSerializer,
 )
 from core.models import User, UserRole
-from integrations.google.types import GoogleIntegrationErrors, GoogleIntegrationType
+from integrations.google.types import IntegrationErrors, IntegrationType
 from notifications import ErrorMessages as NotificationErrors
 from notifications.models import Notification, NotificationChannel
 
@@ -80,7 +80,7 @@ class TestIntegrationAddSerializer(object):
         data = {
             'user_role': UserRole.CLIENT,
             'server_auth_code': 'some_code',
-            'integration_type': GoogleIntegrationType.GOOGLE_CALENDAR
+            'integration_type': IntegrationType.GOOGLE_CALENDAR
         }
         serializer = IntegrationAddSerializer(
             data=data, context={'user': user}
@@ -109,10 +109,10 @@ class TestIntegrationAddSerializer(object):
         )
         assert(serializer.is_valid() is False)
         assert(
-            {'code': GoogleIntegrationErrors.ERR_BAD_INTEGRATION_TYPE} in
+            {'code': IntegrationErrors.ERR_BAD_INTEGRATION_TYPE} in
             serializer.errors['field_errors']['integration_type']
         )
-        data['integration_type'] = GoogleIntegrationType.GOOGLE_CALENDAR
+        data['integration_type'] = IntegrationType.GOOGLE_CALENDAR
         serializer = IntegrationAddSerializer(
             data=data, context={'user': user}
         )

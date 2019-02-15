@@ -18,15 +18,17 @@ def calculate_tax(original_cost: Decimal, tax_rate: Decimal) -> Decimal:
     return original_cost * Decimal(tax_rate)
 
 
-def calculate_card_fee(original_cost: Decimal, card_fee: Decimal) -> Decimal:
-    return original_cost * Decimal(card_fee)
-
-
 def calculate_stripe_card_fee(original_cost: Decimal) -> Decimal:
     # Return Stripe transaction fee - 2.9%  + 30 cents
+    if original_cost <= Decimal(0.0):
+        return Decimal(0)
     return Decimal(
         original_cost * Decimal(0.029) + Decimal(0.3)
     ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+
+def calculate_card_fee(original_cost: Decimal, card_fee: Decimal) -> Decimal:
+    return calculate_stripe_card_fee(original_cost)
 
 
 def calculate_stylist_payout_amount(original_cost: Decimal, is_stripe_payment: bool) -> Decimal:

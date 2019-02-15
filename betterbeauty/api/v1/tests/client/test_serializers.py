@@ -784,7 +784,7 @@ class TestAppointmentUpdateSerializer(object):
     @pytest.mark.django_db
     def test_checkout_with_stripe(self, billing_mock):
         salon: Salon = G(Salon, timezone=pytz.UTC)
-        stylist: Stylist = G(Stylist, salon=salon)
+        stylist: Stylist = G(Stylist, salon=salon, stripe_account_id='some_account')
         client: Client = G(Client, stripe_id='some_stripe_id')
         appointment: Appointment = G(
             Appointment, stylist=stylist, client=client, status=AppointmentStatus.NEW
@@ -824,6 +824,7 @@ class TestAppointmentUpdateSerializer(object):
         charge: Charge = Charge.objects.last()
         assert(charge.appointment == updated_appointment)
         assert(charge.amount == appointment.grand_total)
+        assert(charge.stylist == stylist)
 
 
 class TestAppointmentPreviewRequestSerializer(object):
@@ -953,7 +954,9 @@ class TestAppointmentPreviewResponseSerializer(object):
     def test_preview_response(self):
         salon = G(Salon, name='some salon', timezone=pytz.UTC)
         stylist: Stylist = G(
-            Stylist, service_time_gap=datetime.timedelta(minutes=60), salon=salon)
+            Stylist, service_time_gap=datetime.timedelta(minutes=60), salon=salon,
+
+        )
         service: StylistService = G(
             StylistService, duration=datetime.timedelta(0), stylist=stylist)
 

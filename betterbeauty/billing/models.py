@@ -50,7 +50,9 @@ class PaymentMethod(models.Model):
 
 class Charge(models.Model):
     uuid = models.UUIDField(unique=True, default=uuid4, editable=False)
-    client = models.ForeignKey('client.Client', on_delete=models.CASCADE)
+    client = models.ForeignKey('client.Client', on_delete=models.SET_NULL, null=True, default=None)
+    stylist = models.ForeignKey(
+        'salon.Stylist', on_delete=models.SET_NULL, null=True, default=None)
     payment_method = models.ForeignKey(PaymentMethod, null=True, on_delete=models.SET_NULL)
     appointment = models.ForeignKey(
         'appointment.Appointment', null=True, blank=True, on_delete=models.SET_NULL,
@@ -80,12 +82,13 @@ class Charge(models.Model):
     @transaction.atomic
     def run_stripe_charge(self) -> ChargeStatus:
         # we should only allow running charges once
-        if self.status != ChargeStatus.PENDING or self.stripe_id:
+        if self.status != ChargeStatus.PENDING or self.stripe_id or not self.stylist:
             return self.status
         from .utils import format_stripe_error_data, run_charge
         try:
             charge_id = run_charge(
                 self.client.stripe_id,
+                self.stylist.stripe_account_id,
                 amount=self.amount,
                 description=self.description,
                 payment_method_stripe_id=self.payment_method.stripe_id

@@ -346,6 +346,9 @@ class Stylist(models.Model):
     instagram_access_token = models.CharField(max_length=512, blank=True, null=True)
 
     must_set_deal_of_week = models.BooleanField(default=True)
+    stripe_account_id = models.CharField(max_length=64, null=True, blank=True, default=None)
+    stripe_access_token = models.CharField(max_length=512, blank=True, null=True, default=None)
+    stripe_refresh_token = models.CharField(max_length=512, blank=True, null=True, default=None)
 
     class Meta:
         db_table = 'stylist'
@@ -714,11 +717,7 @@ class Stylist(models.Model):
 
     @property
     def can_checkout_with_made(self) -> bool:
-        """Temporary field to decide if it's possible to checkout via made"""
-        # TODO: Once we implement stripe connect, return True if stylist
-        # TODO: has stripe connect integration. For now, will be set to
-        # TODO: False for everyone
-        return False
+        return bool(self.stripe_account_id)
 
 
 class ServiceCategory(models.Model):

@@ -8,14 +8,16 @@ from oauth2client.client import Error as OauthError
 from rest_framework import generics, parsers, permissions, status, views
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
+from stripe.error import StripeError, StripeErrorWithParamCode
 
 from api.common.constants import HIGH_LEVEL_API_ERROR_CODES
 from api.common.permissions import ClientOrStylistPermission
 from api.v1.stylist.serializers import AppointmentRatingSerializer, StylistProfileDetailsSerializer
 from appointment.models import Appointment
+from billing.constants import ErrorMessages as billing_errors
 from core.models import User
 from core.utils import post_or_get_or_data
-from integrations.google.types import GoogleIntegrationErrors, GoogleIntegrationType
+from integrations.google.types import IntegrationErrors, IntegrationType
 from integrations.google.utils import add_google_calendar_integration_for_user
 from integrations.push.constants import ErrorMessages as push_errors
 from integrations.push.types import PushRegistrationIdType
@@ -23,6 +25,7 @@ from integrations.push.utils import register_device, unregister_device
 from notifications.models import Notification
 from notifications.types import NotificationChannel
 from salon.models import Stylist
+from salon.utils import create_stripe_account_for_stylist
 
 from .serializers import (
     AnalyticsSessionSerializer,
@@ -131,23 +134,41 @@ class IntegrationAddView(views.APIView):
         # for now it's the only integration type that we support,
         # and since we got there past serializer.is_valid - this condition
         # will always be True
-        if data['integration_type'] == GoogleIntegrationType.GOOGLE_CALENDAR:
-            try:
+        try:
+            if data['integration_type'] == IntegrationType.GOOGLE_CALENDAR:
                 add_google_calendar_integration_for_user(
                     user=user, auth_code=data['server_auth_code'],
                     user_role=data['user_role']
                 )
-            except OauthError:
-                logger.exception('Could not get OAuth2 credentials for user {0}, role {1}'.format(
-                    user.uuid, data['user_role']
-                ))
-                return Response({
-                    'code': HIGH_LEVEL_API_ERROR_CODES[400],
-                    'field_errors': {},
+
+            elif data['integration_type'] == IntegrationType.STRIPE_CONNECT and user.is_stylist():
+                create_stripe_account_for_stylist(
+                    stylist=user.stylist,
+                    auth_code=data['server_auth_code']
+                )
+        except OauthError:
+            logger.exception('Could not get OAuth2 credentials for user {0}, role {1}'.format(
+                user.uuid, data['user_role']
+            ))
+            return Response({
+                'code': HIGH_LEVEL_API_ERROR_CODES[400],
+                'field_errors': {},
+                'non_field_errors': [
+                    {'code': IntegrationErrors.ERR_FAILURE_TO_SETUP_OAUTH}
+                ]
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except (StripeError, StripeErrorWithParamCode) as error:
+            raise ValidationError(
+                {
                     'non_field_errors': [
-                        {'code': GoogleIntegrationErrors.ERR_FAILURE_TO_SETUP_OAUTH}
+                        {
+                            'code': billing_errors.ERR_UNRECOVERABLE_BILLING_ERROR,
+                            'message': error._message
+                        }
                     ]
-                }, status=status.HTTP_400_BAD_REQUEST)
+                }
+            )
+
         return Response({}, status=status.HTTP_200_OK)
 
 

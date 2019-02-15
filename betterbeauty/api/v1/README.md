@@ -78,7 +78,7 @@
     - [Register device](#register-device)
     - [Unregister device](#unregister-device)
 
-- [**Google Auth Integration**](#google-auth-integration)
+- [**Integrations**](#integrations)
    - [Add integration](#add-integration)
 
 - [**Analytics**](#analytics)
@@ -254,6 +254,8 @@ such specific errors in particular API calls.
 |err_failure_to_setup_oauth|General problem with setting up oauth credentials|/api/v1/common/integrations|non-field|
 |err_stylist_special_availability_date_not_found|Special availability date not found|/api/v1/stylist/availability/special/{date}|non-field|
 |err_invalid_date_range|Provided date range is invalid|/api/v1/stylist/dates-with-appointments|non-field|
+|err_client_payment_not_setup|Cannot checkout appointment, client payment method is not set up|appointment update APIs|pay_via_made|
+|err_stylist_payment_not_setup|Cannot checkout appointment, stylist payment method is not set up|appointment update APIs|pay_via_made|
 
 # Authorization
 ## Getting auth token with email/password credentials
@@ -2266,7 +2268,9 @@ curl -X POST \
         }
     ],
     "has_tax_included": false,
-    "has_card_fee_included" false
+    "has_card_fee_included" false,
+    "pay_via_made": "true",
+    "payment_method_uuid": "some_valid_uuid"
 }'
 ```
 
@@ -3321,7 +3325,8 @@ curl -X PATCH \
   -H 'Authorization: Token jwt_token' \
   -H 'Content-Type: application/json' \
   -d '{
-	"status": "checked_out"
+	"status": "checked_out",
+	"pay_via_made": false
 }'
 ```
 
@@ -4210,21 +4215,21 @@ push notificaiton (e.g. on attempt to acknowledge an SMS)
 }
 ```
 
-# Google Auth Integration
+# Integrations
 ## Add integration
 To add an integration, frontend passes serverAuthCode obtained through
-frontend flow of Google authorization. On the backend, this server code
-is exchanged to access token and refresh token from Google API, and later
+frontend flow of OAuth authorization. On the backend, this server code
+is exchanged to access token and refresh token from respective API, and later
 is used on the backend. Server code is a one-time entity, and it will be
 invalidate after the first use, even if it was successful. Access and refresh
 tokens, however, are more or less persistent, so they're saved into Stylist
-or Client models (depending on user role)
+or Client models (depending on user role and integration type)
 
 **POST http://apiserver/api/v1/common/integrations**
 
 - **user_role** (required, string) - "stylist" or "client"
 - **integration_type** (required, string) - type of integration, currently only
-`google_calendar` is valid choice
+`google_calendar` and `stripe_connect` are valid choices
 - **server_auth_code** (required, string) - auth code from google
 ```
 curl -X POST \
