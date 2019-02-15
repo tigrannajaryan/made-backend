@@ -14,7 +14,7 @@ from rest_framework_jwt.settings import api_settings
 
 from api.v1.auth.utils import create_client_profile_from_phone
 from api.v1.client.constants import NEW_YORK_LOCATION
-from api.v1.client.serializers import AppointmentValidationMixin
+from api.v1.client.serializers import AppointmentUpdateSerializer, AppointmentValidationMixin
 from appointment.models import Appointment, AppointmentService, AppointmentStatus
 from client.models import Client
 from core.models import PhoneSMSCodes, User, UserRole
@@ -615,6 +615,148 @@ class TestGenerateClientCancelledAppointmentNotification(object):
             notification: Notification = Notification.objects.order_by('created_at').last()
             assert (notification.send_time_window_start == datetime.time(10, 00))
             assert (notification.send_time_window_end == datetime.time.max)
+
+
+class TestGenerateAppointmentResceduleNotification(object):
+
+    @pytest.mark.django_db
+    def test_reschedule_time_window_before_working_day_same_day(
+            self, new_appointment_stylist_client
+    ):
+        stylist, client = new_appointment_stylist_client
+        appointment_datetime = pytz.timezone('America/New_York').localize(
+            datetime.datetime(2018, 12, 4, 10, 00)
+        )
+        appointment: Appointment = G(
+            Appointment, stylist=stylist, client=client,
+            datetime_start_at=appointment_datetime, created_by=client.user
+        )
+        serializer_context = {'stylist': stylist, 'user': stylist.user}
+
+        with freeze_time('2018-12-4 7:30 EST'):
+            data = {
+                'datetime_start_at': appointment.datetime_start_at + datetime.timedelta(hours=1),
+            }
+            serializer = AppointmentUpdateSerializer(instance=appointment, data=data, partial=True,
+                                                     context=serializer_context)
+            assert (serializer.is_valid(raise_exception=True))
+            serializer.save()
+            assert Notification.objects.filter(
+                code=NotificationCode.RESCHEDULED_APPOINTMENT).count() == 1
+            notification: Notification = Notification.objects.last()
+            assert (notification.send_time_window_start == datetime.time(8, 30))
+
+        with freeze_time('2018-12-4 9:20 EST'):
+            data = {
+                'datetime_start_at': appointment.datetime_start_at + datetime.timedelta(
+                    minutes=30),
+            }
+            serializer = AppointmentUpdateSerializer(instance=appointment, data=data, partial=True,
+                                                     context=serializer_context)
+            assert (serializer.is_valid(raise_exception=True))
+            serializer.save()
+            assert Notification.objects.filter(
+                code=NotificationCode.RESCHEDULED_APPOINTMENT).count() == 1
+            notification: Notification = Notification.objects.last()
+            assert (notification.send_time_window_start == datetime.time(9, 35))
+
+        with freeze_time('2018-12-4 9:45 EST'):
+            data = {
+                'datetime_start_at': appointment.datetime_start_at + datetime.timedelta(
+                    minutes=30),
+            }
+            serializer = AppointmentUpdateSerializer(instance=appointment, data=data, partial=True,
+                                                     context=serializer_context)
+            assert (serializer.is_valid(raise_exception=True))
+            serializer.save()
+            assert Notification.objects.filter(
+                code=NotificationCode.RESCHEDULED_APPOINTMENT).count() == 1
+            notification: Notification = Notification.objects.last()
+            assert (notification.send_time_window_start == datetime.time(10, 0))
+
+    @pytest.mark.django_db
+    def test_time_window_during_working_day_same_day(self, new_appointment_stylist_client):
+        stylist, client = new_appointment_stylist_client
+        appointment: Appointment = G(
+            Appointment, stylist=stylist, client=client,
+            datetime_start_at=pytz.timezone('America/New_York').localize(
+                datetime.datetime(2018, 12, 4, 11, 00)
+            ), created_by=client.user
+        )
+        serializer_context = {'stylist': stylist, 'user': stylist.user}
+        # appointment is created during the work day, for the same day
+        # window should be min(day_start - 30 minutes, 10am), but at least 15
+        # minutes later after creation
+        with freeze_time('2018-12-4 10:00 EST'):
+            data = {
+                'datetime_start_at': appointment.datetime_start_at + datetime.timedelta(
+                    minutes=30),
+            }
+            serializer = AppointmentUpdateSerializer(instance=appointment, data=data, partial=True,
+                                                     context=serializer_context)
+            assert (serializer.is_valid(raise_exception=True))
+            serializer.save()
+            assert Notification.objects.filter(
+                code=NotificationCode.RESCHEDULED_APPOINTMENT).count() == 1
+            notification: Notification = Notification.objects.last()
+            assert (notification.send_time_window_start == datetime.time(10, 15))
+
+    @pytest.mark.django_db
+    def test_time_window_during_working_day_next_day(self, new_appointment_stylist_client):
+        stylist, client = new_appointment_stylist_client
+        appointment: Appointment = G(
+            Appointment, stylist=stylist, client=client,
+            datetime_start_at=pytz.timezone('America/New_York').localize(
+                datetime.datetime(2018, 12, 5, 11, 00)
+            ), created_by=client.user
+        )
+        serializer_context = {'stylist': stylist, 'user': stylist.user}
+        # appointment is created during the work day, for the same day
+        # window should be min(day_start - 30 minutes, 10am), but at least 15
+        # minutes later after creation
+        with freeze_time('2018-12-4 10:00 EST'):
+            data = {
+                'datetime_start_at': appointment.datetime_start_at + datetime.timedelta(
+                    minutes=30),
+            }
+            serializer = AppointmentUpdateSerializer(instance=appointment, data=data, partial=True,
+                                                     context=serializer_context)
+            assert (serializer.is_valid(raise_exception=True))
+            serializer.save()
+            assert Notification.objects.filter(
+                code=NotificationCode.RESCHEDULED_APPOINTMENT).count() == 1
+            notification: Notification = Notification.objects.last()
+            assert (notification.send_time_window_start == datetime.time(10, 15))
+
+    @pytest.mark.django_db
+    def test_time_window_right_before_midnight_for_next_day(
+            self, new_appointment_stylist_client):
+        stylist, client = new_appointment_stylist_client
+        appointment: Appointment = G(
+            Appointment, stylist=stylist, client=client,
+            datetime_start_at=pytz.timezone('America/New_York').localize(
+                datetime.datetime(2018, 12, 5, 11, 00)
+            ), created_by=client.user
+        )
+        serializer_context = {'stylist': stylist, 'user': stylist.user}
+        # earliest time we can send notification is after midnight, which is
+        # outside of current time window. So we should set new time window
+        # for tomorrow
+        with freeze_time('2018-12-4 23:55 EST'):
+            data = {
+                'datetime_start_at': appointment.datetime_start_at + datetime.timedelta(
+                    minutes=30),
+            }
+            serializer = AppointmentUpdateSerializer(instance=appointment, data=data, partial=True,
+                                                     context=serializer_context)
+            assert (serializer.is_valid(raise_exception=True))
+            serializer.save()
+            assert Notification.objects.filter(
+                code=NotificationCode.RESCHEDULED_APPOINTMENT).count() == 1
+            notification: Notification = Notification.objects.last()
+            # send time is 30 minutes before tomorrow day starts
+            assert (notification.send_time_window_start == datetime.time(9, 5))
+            assert (notification.send_time_window_end == datetime.time(23, 54))
 
 
 class TestGenerateNewAppointmentNotification(object):

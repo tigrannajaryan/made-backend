@@ -541,6 +541,134 @@ def generate_client_cancelled_appointment_notification(
 
 
 @transaction.atomic()
+def cancel_exsting_update_appointment_notification(
+    appointment: Appointment
+):
+    Notification.objects.filter(
+        code=NotificationCode.RESCHEDULED_APPOINTMENT,
+        pending_to_send=True,
+        data__appointment_uuid=str(appointment.uuid)
+    ).delete()
+
+
+@transaction.atomic()
+def generate_appointment_reschedule_notification(
+        appointment: Appointment, previous_datetime
+) -> int:
+    cancel_exsting_update_appointment_notification(appointment)
+    code = NotificationCode.RESCHEDULED_APPOINTMENT
+    target = UserRole.STYLIST
+    message = (
+        'Appointment previously at {previous_datetime} for ${client_price} {services} from '
+        '{client_name} is rescheduled to {new_datetime}'
+    )
+    stylist: Stylist = appointment.stylist
+    client: Client = appointment.client
+    # if appointment is not new - skip
+    if appointment.status != AppointmentStatus.NEW:
+        return 0
+    # if it's push-only notification, and client has no push devices - skip
+    if is_push_only(code) and not has_push_notification_device(
+            stylist.user, UserRole.STYLIST
+    ):
+        return 0
+
+    client_name = appointment.client.user.get_full_name()
+    message = message.format(
+        previous_datetime=stylist.with_salon_tz(previous_datetime).strftime(
+            '%-I:%M%p, on %b %-d, %Y'
+        ),
+        client_price=int(appointment.total_client_price_before_tax),
+        services=', '.join([s.service_name for s in appointment.services.all()]),
+        client_name='{0} '.format(client_name) if client_name else '',
+        client_phone=to_international_format(client.user.phone, client.country),
+        new_datetime=stylist.with_salon_tz(appointment.datetime_start_at).strftime(
+            '%-I:%M%p, on %b %-d, %Y'
+        ),
+    )
+
+    # Calculate start of send window.
+    # If current time is later than minimum of (stylist's day start - 30 min, 10am) -
+    # schedule to send immediately. If it's not working day for stylist (can happen
+    # in case if stylist set unavailability after appointment was created), we'll
+    # default to 10am.
+    # Otherwise, we'll delay sending to half-hour to the minimum of either day start
+    # or appointment start time
+    current_now: datetime.datetime = stylist.with_salon_tz(timezone.now())
+    # We'll use graceful period delay of 15 minutes, to
+    # allow cancelling it without sending if client cancels appointment
+    GRACE_PERIOD = datetime.timedelta(minutes=15)
+    # we're going to limit minimum time we can send the message before the day
+    # starts
+    MINIMUM_TIME_BEFORE_DAY_START = datetime.timedelta(minutes=30)
+    CURRENT_NOW_WITH_GRACE_PERIOD: datetime.datetime = current_now + GRACE_PERIOD
+    STYLIST_TODAY: datetime.date = current_now.date()
+    # if we're composing the notification to be sent today - we'll discard it after
+    # today's midnight
+    TODAY_MIDNIGHT = stylist.salon.timezone.localize(
+        datetime.datetime.combine(
+            STYLIST_TODAY, datetime.time(0, 0, 0)
+        )
+    ) + datetime.timedelta(days=1)
+    # there can be a situation (if it's too late today) that notification will
+    # go to tomorrow
+    TOMORROW_MIDNIGHT = TODAY_MIDNIGHT + datetime.timedelta(days=1)
+    earliest_time_today = get_earliest_time_to_send_notification_on_date(
+        stylist, STYLIST_TODAY
+    )
+    if current_now >= earliest_time_today:
+        # if stylist already started work, or it's later than 10am - just add
+        # 15 minute grace period to current time
+        send_time_window_start_datetime = CURRENT_NOW_WITH_GRACE_PERIOD
+    else:
+        # if it's earlier than 10am or stylist's work day - set time window
+        # 30 minutes earlier than work start or appointment start time,
+        # but not earlier than (current time + 15 min)
+        send_time_window_start_datetime = max(
+            earliest_time_today - MINIMUM_TIME_BEFORE_DAY_START,
+            CURRENT_NOW_WITH_GRACE_PERIOD
+        )
+    # there's a real chance that we've jumped to tomorrow, if appointment was created
+    # just before the midnight. This means we've lost our send window for today, and
+    # should create time window to use for tomorrow following the same rules as for
+    # today, just honouring tomorrow's day settings
+    if send_time_window_start_datetime.date() == current_now.date():
+        send_time_window_start = send_time_window_start_datetime.time()
+        send_time_window_end = datetime.time(23, 59, 59)
+        discard_after = TODAY_MIDNIGHT
+    else:
+        # we're jumping to tomorrow. We'll set the start of time window to the earliest
+        # time when we can send it tomorrow (i.e. min(start of day or 10am) - 30 minutes
+        tomorrow_send_time_window_start_datetime = get_earliest_time_to_send_notification_on_date(
+            stylist, send_time_window_start_datetime.date()
+        ) - MINIMUM_TIME_BEFORE_DAY_START
+        send_time_window_start = tomorrow_send_time_window_start_datetime.time()
+        # we also need to adjust time window end, to avoid sending today. To do this,
+        # we'll set time window just a minute before now, so it's not sent today
+        send_time_window_end = (current_now - datetime.timedelta(minutes=1)).time()
+        # If appointment is tomorrow - we'll set discard_after to appointment's time,
+        # because it's no longer relevant after it started
+        # Otherwise (if it's on a later date), we'll set it to tomorrow's midnight
+        discard_after = stylist.with_salon_tz(
+            min(TOMORROW_MIDNIGHT, appointment.datetime_start_at)
+        )
+
+    Notification.objects.create(
+        user=appointment.stylist.user, target=target, code=code,
+        message=message,
+        discard_after=discard_after,
+        send_time_window_start=send_time_window_start,
+        send_time_window_end=send_time_window_end,
+        send_time_window_tz=stylist.salon.timezone,
+        data={
+            'appointment_datetime_start_at': appointment.datetime_start_at.isoformat(),
+            'appointment_uuid': str(appointment.uuid)
+        }
+    )
+    return 1
+
+
+@transaction.atomic()
 def generate_new_appointment_notification(
         appointment: Appointment
 ) -> int:
