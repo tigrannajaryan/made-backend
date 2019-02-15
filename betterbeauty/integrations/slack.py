@@ -163,3 +163,17 @@ def send_slack_email(mail):
         )
     except: # noqa we *really* don't want any issues here
         pass
+
+
+def send_stripe_charge_notification(charge, error=None):
+    message = render_to_string(
+        'slack/auto_stripe_notification.txt',
+        context={
+            'charge': charge,
+            'error': error
+        })
+    send_slack_message(
+        channel=settings.AUTO_STRIPE_SLACK_CHANNEL,
+        slack_url=settings.AUTO_STRIPE_SLACK_HOOK,
+        bot_name='twilio-bot', message=message
+    )

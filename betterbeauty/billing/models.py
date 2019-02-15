@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from stripe.error import CardError, StripeError, StripeErrorWithParamCode
 
+from integrations.slack import send_stripe_charge_notification
 from .constants import ChargeStatusChoices, PaymentMethodChoices
 from .types import ChargeStatus, PaymentMethodType
 
@@ -94,10 +95,13 @@ class Charge(models.Model):
                 self.status = ChargeStatus.SUCCESS
                 self.charged_at = timezone.now()
                 self.save(update_fields=['stripe_id', 'status', 'charged_at', ])
+                send_stripe_charge_notification(self)
                 return ChargeStatus.SUCCESS
         except (CardError, StripeError, StripeErrorWithParamCode) as error:
             self.status = ChargeStatus.FAILED
-            self.error_data = format_stripe_error_data(error)
+            error_data = format_stripe_error_data(error)
+            self.error_data = error_data
             self.save(update_fields=['status', 'error_data'])
+            send_stripe_charge_notification(self, error_data['message'])
             raise
         return ChargeStatus.FAILED
