@@ -510,6 +510,9 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
     duration_minutes = DurationMinuteField(source='duration', read_only=True)
     status = serializers.CharField(read_only=True)
     rating = serializers.ChoiceField(choices=RATINGS_CHOICES, required=False)
+    can_checkout_with_made = serializers.BooleanField(
+        read_only=True, source='stylist.can_checkout_with_made'
+    )
 
     class Meta:
         model = Appointment
@@ -519,7 +522,7 @@ class AppointmentSerializer(FormattedErrorMessageMixin,
             'status', 'total_tax', 'total_card_fee', 'total_client_price_before_tax',
             'services', 'grand_total', 'has_tax_included', 'has_card_fee_included',
             'tax_percentage', 'card_fee_percentage', 'total_discount_percentage',
-            'total_discount_amount', 'rating', 'comment',
+            'total_discount_amount', 'rating', 'comment', 'can_checkout_with_made',
         ]
 
     def create(self, validated_data):
@@ -860,6 +863,9 @@ class AppointmentPreviewResponseSerializer(serializers.Serializer):
     )
 
     services = AppointmentServiceSerializer(many=True)
+    can_checkout_with_made = serializers.BooleanField(
+        read_only=True, source='stylist.can_checkout_with_made'
+    )
 
 
 class FollowerSerializer(serializers.ModelSerializer):
