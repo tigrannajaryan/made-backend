@@ -1,0 +1,8 @@
+{% extends 'email/notification/base.txt' %}
+{% block 'body' %}
+Hundreds of Top-Rated stylists are already taking bookings on MadeBeauty. But we understand that when you love your stylist, you want to remain loyal!
+
+Problem solved, invite your stylist to create a profile on MadeBeauty! Simple click search and invite your stylist. We will send an invitation to your favorite stylist letting them know the great benefits of using the service!
+
+Get to inviting now!!
+{% endblock %}

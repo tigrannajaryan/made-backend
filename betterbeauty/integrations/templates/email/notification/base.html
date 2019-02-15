@@ -1,0 +1,53 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html charset=UTF-8">
+    <style>
+      a:link{text-decoration:none;color:#00788a}
+      a:visited{text-decoration:none;color:#00788a}
+      a:hover{text-decoration:underline}
+      h2 a:visited{color:#000 !important}
+      h3 a:visited{color:#000 !important}
+      .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td {line-height: 100%;}
+      .ExternalClass {width: 100%;}
+    </style>
+  </head>
+  <body>
+    <header style="height:180px;padding:75px 32px 0;margin-bottom:64px;background:#FBB597;box-sizing:border-box;">
+      <img src="https://s3.amazonaws.com/made-email/email-made.png" alt="Logo" title="Logo" style="display:block" width="174" height="52"/>
+    </header>
+    <main style="padding:0 32px;">
+      <div class="made-title" style="margin-bottom:32px;font-size:28px;font-weight:700;line-height:32px;color:#000000;letter-spacing:-0.7px;">
+        {% block title %}{% endblock %}
+      </div>
+      <div class="made-text" style="margin-bottom:32px;font-size:18px;line-height:24px;color:#999999;">
+        {% block greeting %}
+        <p>Hey {{short_name}},</p>
+        <br/>
+        {% endblock %}
+        {% block body %}{% endblock %}
+        {% block thankyou %}
+        <br/>
+        <p>Have a great day,</p>
+        <p>The Made Team</p>
+        {% endblock %}
+    </div>
+    {% if cta_url and cta_text%}
+      <a href="{{ cta_url }}" class="made-button" style="color:#00788a;display:block;width:200px;height:48px;margin:0 auto 56px;font-size:18px;font-weight:600;line-height:48px;color:#000000;text-align:center;text-decoration:none;background:#FBB597;border-radius:10px;">{{ cta_text }}</a>
+    {% endif %}
+    </main>
+    <footer style="padding:32px 0 42px;color:#999999;text-align:center;background:#F5F5F5;">
+      <a href="https://www.youtube.com/channel/UCL_BF_mQGPksnYpTlTqBXvw" class="made-linkIcon" style="text-decoration:none;color:#00788a;display:inline-block;margin:0 8px;vertical-align:middle;">
+        <img src="https://s3.amazonaws.com/made-email/email-yt.png" alt="Youtube" title="Youtube" style="display:block" width="20" height="20"/>
+    </a>
+      <a href="https://www.instagram.com/get_made/" class="made-linkIcon" style="text-decoration:none;color:#00788a;display:inline-block;margin:0 8px;vertical-align:middle;">
+        <img src="https://s3.amazonaws.com/made-email/email-li.png" alt="Instagram" title="Instagram" style="display:block" width="20" height="20"/>
+    </a>
+      <div>
+        <a href="{{ unsubscribe_url }}" class="made-link" style="text-decoration:none;color:#00788a;display:inline-block;margin-top:16px;font-size:15px;line-height:16px;color:#999999;padding-right:5px;margin-right:5px;border-right:1px solid #999999;">Unsubscribe</a>
+        <a href="https://madebeauty.com/privacy-policy/" class="made-link" style="text-decoration:none;color:#00788a;display:inline-block;margin-top:16px;font-size:15px;line-height:16px;color:#999999;padding-right:5px;margin-right:5px;border-right:1px solid #999999;">Privacy Policy</a>
+        <a href="https://madebeauty.com/#contact" class="made-link" style="text-decoration:none;color:#00788a;display:inline-block;margin-top:16px;font-size:15px;line-height:16px;color:#999999;">Contact Support</a>
+      </div>
+    </footer>
+  </body>
+</html>
