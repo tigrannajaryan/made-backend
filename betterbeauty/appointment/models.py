@@ -184,6 +184,7 @@ class Appointment(models.Model):
         )
         charge: Charge = Charge.objects.create(
             client=client,
+            stylist=self.stylist,
             payment_method=payment_method,
             appointment=self,
             amount=self.grand_total,

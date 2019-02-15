@@ -15,7 +15,7 @@ from rest_framework.validators import UniqueValidator
 from stripe.error import CardError, StripeError, StripeErrorWithParamCode
 
 from api.common.fields import PhoneNumberField
-from api.common.mixins import FormattedErrorMessageMixin
+from api.common.mixins import AppointmentPaymentValidationMixin, FormattedErrorMessageMixin
 from api.common.utils import save_profile_photo, send_email_verification
 from appointment.constants import (
     APPOINTMENT_STYLIST_SETTABLE_STATUSES,
@@ -1079,6 +1079,7 @@ class AppointmentPreviewResponseSerializer(serializers.Serializer):
 
 class AppointmentUpdateSerializer(
     FormattedErrorMessageMixin,
+    AppointmentPaymentValidationMixin,
     AppointmentValidationMixin,
     serializers.ModelSerializer
 ):
@@ -1095,15 +1096,6 @@ class AppointmentUpdateSerializer(
             'status', 'services', 'has_tax_included', 'has_card_fee_included',
             'payment_method_uuid', 'pay_via_made',
         ]
-
-    def validate_payment_method_uuid(self, uuid: uuid.UUID):
-        client: Client = self.instance.client
-        if uuid is not None and client:
-            if not client.payment_methods.filter(
-                uuid=uuid, is_active=True
-            ).exists():
-                raise serializers.ValidationError(billing_errors.ERR_BAD_PAYMENT_METHOD)
-            return uuid
 
     def validate(self, attrs):
         status = self.initial_data.get('status', None)

@@ -1,6 +1,7 @@
 :credit_card: {% if charge.status == 'success' %}:white_check_mark: Stripe charge succeeded{% else %}:no_entry_sign: Stripe charge failed{% endif %}
 
-Client: *{{ charge.client.get_full_name }}*
+From client: *{{ charge.client.get_full_name }}*
+To stylist: *{{ charge.stylist.get_full_name }}*
 Charge amount: *${{ charge.amount }}*
 Appointment: *{{ charge.appointment }}*
 {% if error %}Error: *{{ error }}*{% endif %}

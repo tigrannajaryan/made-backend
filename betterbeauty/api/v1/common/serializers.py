@@ -17,8 +17,8 @@ from core.models import (
 )
 from core.types import UserRole
 from integrations.google.types import (
-    GoogleIntegrationErrors,
-    GoogleIntegrationType,
+    IntegrationErrors,
+    IntegrationType,
 )
 from integrations.instagram import get_recent_media, InstagramMediaItem
 from integrations.push.types import PUSH_NOTIFICATION_TOKEN_CHOICES
@@ -90,9 +90,9 @@ class IntegrationAddSerializer(FormattedErrorMessageMixin, serializers.Serialize
     integration_type = serializers.CharField(required=True)
 
     def validate_integration_type(self, integration_type: str) -> str:
-        if integration_type != GoogleIntegrationType.GOOGLE_CALENDAR:
+        if integration_type != IntegrationType.GOOGLE_CALENDAR:
             raise serializers.ValidationError(
-                GoogleIntegrationErrors.ERR_BAD_INTEGRATION_TYPE
+                IntegrationErrors.ERR_BAD_INTEGRATION_TYPE
             )
         return integration_type
 
