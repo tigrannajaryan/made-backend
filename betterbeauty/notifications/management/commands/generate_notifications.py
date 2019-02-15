@@ -5,6 +5,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
+from core.constants import EnvLevel
 from notifications.types import NotificationCode
 from notifications.utils import (
     generate_client_registration_incomplete_notifications,
@@ -19,6 +20,7 @@ from notifications.utils import (
     generate_remind_define_hours_notifications,
     generate_remind_define_services_notification,
     generate_remind_invite_clients_notifications,
+    generate_stylist_appeared_in_search_notification,
     generate_stylist_registration_incomplete_notifications,
     generate_tomorrow_appointments_notifications,
     send_all_notifications,
@@ -242,6 +244,22 @@ class Command(BaseCommand):
             notification_count, (time_end - time_start).total_seconds(),
             NotificationCode.CLIENT_REGISTRATION_INCOMPLETE
         ), self.stdout)
+
+        if settings.LEVEL != EnvLevel.PRODUCTION:
+            stdout_and_log(
+                'Generating {0} notifications'.format(
+                    NotificationCode.APPEARED_IN_SEARCH),
+                self.stdout
+            )
+            time_start = timezone.now()
+            notification_count = generate_stylist_appeared_in_search_notification(
+                dry_run=dry_run
+            )
+            time_end = timezone.now()
+            stdout_and_log('...{0} {2} notifications generated; took {1} seconds'.format(
+                notification_count, (time_end - time_start).total_seconds(),
+                NotificationCode.APPEARED_IN_SEARCH
+            ), self.stdout)
 
         if force_send:
             self.stdout.write('Going to send push notifications now')

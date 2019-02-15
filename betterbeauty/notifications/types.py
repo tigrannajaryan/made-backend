@@ -34,3 +34,4 @@ class NotificationCode(StrEnum):
     INVITE_YOUR_STYLIST = 'invite_your_stylist'
     CLIENT_REGISTRATION_INCOMPLETE = 'client_registration_incomplete'
     RESCHEDULED_APPOINTMENT = 'rescheduled_appointment'
+    APPEARED_IN_SEARCH = 'client_appeared_in_search'
