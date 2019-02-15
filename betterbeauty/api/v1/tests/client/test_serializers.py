@@ -870,7 +870,7 @@ class TestAppointmentPreviewRequestSerializer(object):
             datetime_start_at=datetime.datetime(
                 2018, 1, 1, 0, 0, tzinfo=pytz.UTC
             ).astimezone(pytz.timezone(settings.TIME_ZONE)),
-            has_tax_included=False,
+            has_tax_included=True,
             has_card_fee_included=False,
             appointment_uuid=None,
             services=[
