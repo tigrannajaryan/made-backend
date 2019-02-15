@@ -202,6 +202,7 @@ class StylistSerializer(
     instagram_access_token = serializers.CharField(
         required=False, allow_blank=True, allow_null=True, write_only=True
     )
+    can_checkout_with_made = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Stylist
@@ -210,7 +211,7 @@ class StylistSerializer(
             'salon_name', 'salon_address', 'profile_photo_id', 'instagram_url', 'public_phone',
             'website_url', 'salon_city', 'salon_zipcode', 'salon_state', 'is_profile_bookable',
             'google_calendar_integrated', 'email', 'instagram_integrated',
-            'instagram_access_token',
+            'instagram_access_token', 'can_checkout_with_made',
         ]
 
     def get_google_calendar_integrated(self, instance: Stylist) -> bool:
@@ -911,6 +912,10 @@ class AppointmentSerializer(
     # status will be read-only in this serializer, to avoid arbitrary setting
     status = serializers.CharField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
+    stripe_connect_client_id = serializers.SerializerMethodField(read_only=True)
+    can_checkout_with_made = serializers.BooleanField(
+        read_only=True, source='stylist.can_checkout_with_made'
+    )
 
     class Meta:
         model = Appointment
@@ -920,8 +925,12 @@ class AppointmentSerializer(
             'total_tax', 'total_card_fee', 'total_client_price_before_tax',
             'services', 'grand_total', 'has_tax_included', 'has_card_fee_included',
             'tax_percentage', 'card_fee_percentage', 'client_profile_photo_url', 'created_at',
-            'total_discount_percentage', 'total_discount_amount',
+            'total_discount_percentage', 'total_discount_amount', 'stripe_connect_client_id',
+            'can_checkout_with_made',
         ]
+
+    def get_stripe_connect_client_id(self, instance):
+        return settings.STRIPE_CONNECT_CLIENT_ID
 
     def validate(self, attrs):
         errors = {}
@@ -1089,13 +1098,21 @@ class AppointmentUpdateSerializer(
     has_card_fee_included = serializers.NullBooleanField(required=False)
     payment_method_uuid = serializers.UUIDField(default=None, write_only=True)
     pay_via_made = serializers.BooleanField(write_only=True, default=False)
+    can_checkout_with_made = serializers.BooleanField(
+        read_only=True, source='stylist.can_checkout_with_made'
+    )
+    stripe_connect_client_id = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Appointment
         fields = [
             'status', 'services', 'has_tax_included', 'has_card_fee_included',
-            'payment_method_uuid', 'pay_via_made',
+            'payment_method_uuid', 'pay_via_made', 'can_checkout_with_made',
+            'stripe_connect_client_id',
         ]
+
+    def get_stripe_connect_client_id(self, instance):
+        return settings.STRIPE_CONNECT_CLIENT_ID
 
     def validate(self, attrs):
         status = self.initial_data.get('status', None)
