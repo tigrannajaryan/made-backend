@@ -90,7 +90,10 @@ class IntegrationAddSerializer(FormattedErrorMessageMixin, serializers.Serialize
     integration_type = serializers.CharField(required=True)
 
     def validate_integration_type(self, integration_type: str) -> str:
-        if integration_type != IntegrationType.GOOGLE_CALENDAR:
+        if integration_type not in [
+            IntegrationType.GOOGLE_CALENDAR,
+            IntegrationType.STRIPE_CONNECT
+        ]:
             raise serializers.ValidationError(
                 IntegrationErrors.ERR_BAD_INTEGRATION_TYPE
             )

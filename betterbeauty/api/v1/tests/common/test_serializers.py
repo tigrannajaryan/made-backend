@@ -117,3 +117,8 @@ class TestIntegrationAddSerializer(object):
             data=data, context={'user': user}
         )
         assert (serializer.is_valid() is True)
+        data['integration_type'] = IntegrationType.STRIPE_CONNECT
+        serializer = IntegrationAddSerializer(
+            data=data, context={'user': user}
+        )
+        assert (serializer.is_valid() is True)
