@@ -1,5 +1,6 @@
 import datetime
 import logging
+from collections import Counter
 from io import TextIOBase
 from typing import List, Optional, Tuple
 
@@ -8,13 +9,13 @@ import pytz
 from django.conf import settings
 from django.contrib.gis.measure import D
 from django.db import transaction
-from django.db.models import Count, Exists, Max, OuterRef, Q
+from django.db.models import Count, Exists, Func, Max, OuterRef, Q
 from django.utils import timezone
 
 # from api.v1.stylist.views import NearbyClientsView
 from appointment.models import Appointment
 from appointment.types import AppointmentStatus
-from client.models import Client
+from client.models import Client, StylistSearchRequest
 from core.models import User, UserRole
 from core.utils.phone import to_international_format
 from integrations.push.types import MobileAppIdType
@@ -2003,6 +2004,104 @@ def generate_invite_your_stylist_notifications(dry_run=False) -> int:
             )
         )
     # if any notifications were generated - bulk created them
+    if notifications_to_create_list and not dry_run:
+        Notification.objects.bulk_create(notifications_to_create_list)
+    return len(notifications_to_create_list)
+
+
+class Unnest(Func):
+    function = 'Unnest'
+
+
+def get_search_appearances_per_stylist_in_past_week() -> Counter:
+    search_appearence_past_days = timezone.now() - datetime.timedelta(days=7)
+
+    stylist_ids_search_count = Counter(list(
+        StylistSearchRequest.objects.filter(
+            created_at__gte=search_appearence_past_days).annotate(stylists_found_ids=Unnest(
+                'stylists_found', distinct=True)).values_list(
+            'stylists_found_ids', flat=True)))
+
+    return stylist_ids_search_count
+
+
+@transaction.atomic
+def generate_stylist_appeared_in_search_notification(dry_run=False) -> int:
+    '''
+    Generate the notifications to denote how many times the stylist has appeared in search
+    results. The filter should match the following criteria
+
+    1. If stylist appeared in search results in Client App more than 0 times.
+       This appearance happened no more than 7 days ago
+    2. Last notification of any type sent to the stylist was more than 7 days ago
+    3. More than 7 days since stylist registration
+
+    :param dry_run: if set to True, don't actually create notifications
+    :return: number of notifications created
+    '''
+    code = NotificationCode.APPEARED_IN_SEARCH
+    target = UserRole.STYLIST
+    send_time_window_start = datetime.time(11, 0)
+    send_time_window_end = datetime.time(18, 0)
+    discard_after = timezone.now() + datetime.timedelta(days=7)
+
+    recent_same_notification_sent__before_days = timezone.now() - datetime.timedelta(days=7)
+
+    message = (
+        'Your name appeared in searches by Made clients {0} times '
+        'since {1}.'
+    )
+
+    stylist_created_before_days = timezone.now() - datetime.timedelta(days=7)
+
+    stylist_ids_search_count = get_search_appearances_per_stylist_in_past_week()
+
+    stylist_has_same_notifications_recently_subquery = Notification.objects.filter(
+        user_id=OuterRef('user__id'),
+        created_at__gte=recent_same_notification_sent__before_days,
+        target=target,
+        code=code
+    )
+
+    eligible_stylists_ids = Stylist.objects.filter(
+        id__in=stylist_ids_search_count.keys(),
+        created_at__lte=stylist_created_before_days
+    ).annotate(
+        stylist_has_same_notifications_recently=Exists(
+            stylist_has_same_notifications_recently_subquery),
+    ).filter(
+        stylist_has_same_notifications_recently=False,
+    ).values_list('id', flat=True)
+
+    if is_push_only(code):
+        stylist_has_registered_devices = Q(
+            user__apnsdevice__active=True) | Q(
+            user__gcmdevice__active=True)
+        eligible_stylists_ids = eligible_stylists_ids.filter(
+            stylist_has_registered_devices
+        )
+
+    eligible_stylists = Stylist.objects.filter(
+        id__in=eligible_stylists_ids
+    ).select_for_update(skip_locked=True)
+
+    notifications_to_create_list: List[Notification] = []
+    for stylist in eligible_stylists.iterator():
+        notifications_to_create_list.append(
+            Notification(
+                user=stylist.user,
+                code=code,
+                target=target,
+                message=message.format(
+                    stylist_ids_search_count[stylist.id],
+                    recent_same_notification_sent__before_days.strftime('%b %-d')),
+                send_time_window_start=send_time_window_start,
+                send_time_window_end=send_time_window_end,
+                send_time_window_tz=stylist.salon.timezone,
+                discard_after=discard_after,
+            )
+        )
+    # if any notifications were generated - bulk create them
     if notifications_to_create_list and not dry_run:
         Notification.objects.bulk_create(notifications_to_create_list)
     return len(notifications_to_create_list)
