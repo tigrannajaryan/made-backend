@@ -67,6 +67,9 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
         NotificationCode.APPEARED_IN_SEARCH: [
             NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
         ],
+        NotificationCode.RESCHEDULED_APPOINTMENT: [
+            NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
+        ],
     }
 else:
     NOTIFICATION_CHANNEL_PRIORITY = {
@@ -122,6 +125,9 @@ else:
             NotificationChannel.PUSH
         ],
         NotificationCode.APPEARED_IN_SEARCH: [
+            NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
+        ],
+        NotificationCode.RESCHEDULED_APPOINTMENT: [
             NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
         ],
     }
