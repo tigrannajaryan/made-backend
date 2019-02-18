@@ -1860,7 +1860,7 @@ class StylistSettingsResponseSerializer(serializers.Serializer):
             'stripe_connect_client_id', 'can_checkout_with_made',
         ]
 
-    def get_stripe_connect_client_id(self):
+    def get_stripe_connect_client_id(self, stylist: Stylist):
         return settings.STRIPE_CONNECT_CLIENT_ID
 
     def get_tax_percentage(self, stylist: Stylist):
