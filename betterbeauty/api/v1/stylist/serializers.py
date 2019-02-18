@@ -1850,12 +1850,18 @@ class StylistSettingsResponseSerializer(serializers.Serializer):
     tax_percentage = serializers.SerializerMethodField()
     card_fee_percentage = serializers.SerializerMethodField()
     google_calendar_integrated = serializers.SerializerMethodField()
+    stripe_connect_client_id = serializers.SerializerMethodField(read_only=True)
+    can_checkout_with_made = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Stylist
         fields = [
             'tax_percentage', 'card_fee_percentage', 'google_calendar_integrated',
+            'stripe_connect_client_id', 'can_checkout_with_made',
         ]
+
+    def get_stripe_connect_client_id(self):
+        return settings.STRIPE_CONNECT_CLIENT_ID
 
     def get_tax_percentage(self, stylist: Stylist):
         return Decimal(stylist.tax_rate * 100).quantize(Decimal('.00001'))

@@ -2545,9 +2545,11 @@ in one gulp for the Stylist app's Settings screen.
 **RESPONSE 200 OK**
 ```json
 {
-  "tax_percentage" : 6.5,
-  "card_fee_percentage" : 2.5,
-  "google_calendar_integrated" : true
+  "tax_percentage": 6.5,
+  "card_fee_percentage": 2.5,
+  "google_calendar_integrated": true,
+  "can_checkout_with_made": false,
+  "stripe_connect_client_id": "stripe_connect_id"
 }
 ```
 
@@ -2568,9 +2570,11 @@ curl -X POST \
 
 ```json
 {
-  "tax_percentage" : 6.5,
-  "card_fee_percentage" : 2.5,
-  "google_calendar_integrated" : true
+  "tax_percentage": 6.5,
+  "card_fee_percentage": 2.5,
+  "google_calendar_integrated": true,
+  "can_checkout_with_made": false,
+  "stripe_connect_client_id": "stripe_connect_id"
 }
 ```
 
