@@ -28,7 +28,7 @@ from core.models import (
     User
 )
 from core.types import MobileOSType, UserRole
-from integrations.google.types import GoogleIntegrationErrors, GoogleIntegrationType
+from integrations.google.types import IntegrationErrors, IntegrationType
 from integrations.instagram import InstagramContentType
 from integrations.push.constants import ErrorMessages
 from integrations.test_instagram import mocked_instagram_requests_get
@@ -150,7 +150,7 @@ class TestIntegrationAddView(object):
         data = {
             'user_role': UserRole.CLIENT,
             'server_auth_code': 'some code',
-            'integration_type': GoogleIntegrationType.GOOGLE_CALENDAR
+            'integration_type': IntegrationType.GOOGLE_CALENDAR
         }
         response = client.post(
             url, data=data, HTTP_AUTHORIZATION=client_auth_token
@@ -168,7 +168,7 @@ class TestIntegrationAddView(object):
         data = {
             'user_role': UserRole.STYLIST,
             'server_auth_code': 'some code',
-            'integration_type': GoogleIntegrationType.GOOGLE_CALENDAR
+            'integration_type': IntegrationType.GOOGLE_CALENDAR
         }
         response = client.post(
             url, data=data, HTTP_AUTHORIZATION=stylist_auth_token
@@ -188,14 +188,14 @@ class TestIntegrationAddView(object):
         data = {
             'user_role': UserRole.CLIENT,
             'server_auth_code': 'some code',
-            'integration_type': GoogleIntegrationType.GOOGLE_CALENDAR
+            'integration_type': IntegrationType.GOOGLE_CALENDAR
         }
         response = client.post(
             url, data=data, HTTP_AUTHORIZATION=client_auth_token
         )
         assert(response.status_code == status.HTTP_400_BAD_REQUEST)
         assert(
-            {'code': GoogleIntegrationErrors.ERR_FAILURE_TO_SETUP_OAUTH} in
+            {'code': IntegrationErrors.ERR_FAILURE_TO_SETUP_OAUTH} in
             response.data['non_field_errors']
         )
 

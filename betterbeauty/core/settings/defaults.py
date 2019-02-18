@@ -356,6 +356,9 @@ MINUTES_BEFORE_REQUESTING_NEW_CODE = 0
 
 STRIPE_PUBLISHABLE_KEY = os.environ.get(EnvVars.STRIPE_PUBLISHABLE_KEY, '<override in local.py')
 STRIPE_SECRET_KEY = os.environ.get(EnvVars.STRIPE_SECRET_KEY, '<override in local.py')
+STRIPE_CONNECT_CLIENT_ID = os.environ.get(
+    EnvVars.STRIPE_CONNECT_CLIENT_ID, '<override in local.py'
+)
 # this is what will show in the client's bank statement as the merchant name for a charge
 STRIPE_DEFAULT_PAYMENT_DESCRIPTOR = 'MadeBeauty, Inc'
 STRIPE_DEFAULT_CURRENCY = 'usd'

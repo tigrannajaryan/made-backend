@@ -1,8 +1,10 @@
-from rest_framework.serializers import BaseSerializer
+import uuid
 
+from rest_framework.serializers import BaseSerializer, ValidationError
 from rest_framework_friendly_errors import settings as friendly_rest_frm_settings
 from rest_framework_friendly_errors.mixins import FriendlyErrorMessagesMixin
 
+from billing.constants import ErrorMessages as billing_errors
 from .constants import HIGH_LEVEL_API_ERROR_CODES
 
 
@@ -134,3 +136,25 @@ class FormattedErrorMessageMixin(FriendlyErrorMessagesMixin):
                     for list_element_errors, data_item in zip(errors, self.data[field_name])
                 ]
         return [self.get_field_error_entry(error, field) for error in errors]
+
+
+class AppointmentPaymentValidationMixin(object):
+    def validate_pay_via_made(self, value: bool):
+        instance = getattr(self, 'instance')
+        if value is False:
+            return value
+        if not instance.client or not instance.client.stripe_id:
+            raise ValidationError(billing_errors.ERR_CLIENT_PAYMENT_NOT_SETUP)
+        if not instance.stylist.can_checkout_with_made:
+            raise ValidationError(billing_errors.ERR_STYLIST_PAYMENT_NOT_SETUP)
+        return value
+
+    def validate_payment_method_uuid(self, uuid: uuid.UUID):
+        instance = getattr(self, 'instance')
+        client = instance.client
+        if uuid is not None and client:
+            if not client.payment_methods.filter(
+                uuid=uuid, is_active=True
+            ).exists():
+                raise ValidationError(billing_errors.ERR_BAD_PAYMENT_METHOD)
+            return uuid

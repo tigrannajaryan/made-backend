@@ -1085,7 +1085,7 @@ class TestAppointmentUpdateSerializer(object):
     @mock.patch.object(Charge, 'run_stripe_charge')
     def test_save_checked_out_with_stripe(self, billing_mock, mocker):
         salon = G(Salon, timezone=pytz.utc)
-        stylist = G(Stylist, salon=salon)
+        stylist = G(Stylist, salon=salon, stripe_account_id='some_account_id')
         client: Client = G(Client, stripe_id='some_id')
         G(PaymentMethod, client=client, is_active=True)
         appointment: Appointment = G(
@@ -1155,6 +1155,7 @@ class TestAppointmentUpdateSerializer(object):
                 appointment.grand_total, is_stripe_payment=True
             )
         )
+        assert(charge.stylist == stylist)
 
 
 class TestStylistAvailableWeekDayWithBookedTimeSerializer(object):

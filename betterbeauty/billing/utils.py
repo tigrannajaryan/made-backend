@@ -1,11 +1,12 @@
 import logging
 from decimal import Decimal
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 import stripe
 from django.conf import settings
 from django.db import transaction
 from stripe.error import CardError, StripeError, StripeErrorWithParamCode
+from stripe.oauth import OAuth
 
 from .models import PaymentMethod
 from .types import CardRecord, PaymentMethodType
@@ -126,6 +127,7 @@ def create_new_payment_method(client, stripe_token) -> Optional[PaymentMethod]:
 
 def run_charge(
         customer_stripe_id: str,
+        stylist_account_stripe_id: str,
         amount: Decimal,
         description: str,
         payment_method_stripe_id: Optional[str] = None,
@@ -134,6 +136,7 @@ def run_charge(
     Creates actual Stripe charge, and attepmts to charge client
 
     :param customer_stripe_id: customer stripe id of the client
+    :param stylist_account_stripe_id: account stripe id of the stylist
     :param payment_method_stripe_id: stripe id of payment method, must be attached to customer.
     If it omitted, charge will be made using the default payment method
     :param amount: charge amount in USD
@@ -152,7 +155,8 @@ def run_charge(
         'currency': settings.STRIPE_DEFAULT_CURRENCY,
         'customer': customer_stripe_id,
         'description': description,
-        'statement_descriptor': settings.STRIPE_DEFAULT_PAYMENT_DESCRIPTOR
+        'statement_descriptor': settings.STRIPE_DEFAULT_PAYMENT_DESCRIPTOR,
+        'destination': {'account': stylist_account_stripe_id}
     }
     if payment_method_stripe_id is not None:
         charge_data['source'] = payment_method_stripe_id
@@ -162,3 +166,14 @@ def run_charge(
         customer_stripe_id
     ))
     return charge.id
+
+
+def create_connected_account_from_client_token(auth_code: str) -> Tuple[str, str, str]:
+    """Perform OAuth exchange and creates connected account, returning account id and tokens"""
+    stripe_oauth_params = {
+        'client_secret': settings.STRIPE_SECRET_KEY,
+        'code': auth_code,
+        'grant_type': 'authorization_code'
+    }
+    response = OAuth.token(**stripe_oauth_params)
+    return response['stripe_user_id'], response['access_token'], response['refresh_token']
