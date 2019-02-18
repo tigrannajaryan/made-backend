@@ -16,7 +16,7 @@ from api.v1.auth.utils import create_client_profile_from_phone
 from api.v1.client.constants import NEW_YORK_LOCATION
 from api.v1.client.serializers import AppointmentUpdateSerializer, AppointmentValidationMixin
 from appointment.models import Appointment, AppointmentService, AppointmentStatus
-from client.models import Client
+from client.models import Client, StylistSearchRequest
 from core.models import PhoneSMSCodes, User, UserRole
 from core.types import Weekday
 from core.utils.auth import custom_jwt_payload_handler
@@ -49,8 +49,10 @@ from ..utils import (
     generate_remind_define_hours_notifications,
     generate_remind_define_services_notification,
     generate_remind_invite_clients_notifications,
+    generate_stylist_appeared_in_search_notification,
     generate_stylist_registration_incomplete_notifications,
     generate_tomorrow_appointments_notifications,
+    get_search_appearances_per_stylist_in_past_week,
 )
 
 
@@ -130,6 +132,14 @@ def stylist_eligible_for_notification(stylist_created_before_days=89) -> Stylist
     )
     G(StylistService, stylist=stylist, is_enabled=True)
     G(APNSDevice, user=stylist.user, application_id=MobileAppIdType.IOS_STYLIST_DEV)
+    return stylist
+
+
+@pytest.fixture
+def stylist_eligible_for_appeared_in_notification() -> Stylist:
+
+    stylist = stylist_eligible_for_notification(stylist_created_before_days=10)
+    G(StylistSearchRequest, stylists_found=[stylist.id])
     return stylist
 
 
@@ -1823,3 +1833,52 @@ class TestGenerateClientIncompleteNotification(object):
 
         result = generate_client_registration_incomplete_notifications()
         assert (result == 1)
+
+
+class TestGenerateStylistAppearedInSearchNotification(object):
+
+    @pytest.mark.django_db
+    def test_positive_path(self, stylist_eligible_for_appeared_in_notification: Stylist):
+        assert (generate_stylist_appeared_in_search_notification() == 1)
+
+    @pytest.mark.django_db
+    def test_search_appearences_count(
+            self, stylist_eligible_for_appeared_in_notification: Stylist):
+        search_appearances = get_search_appearances_per_stylist_in_past_week()
+        assert (len(search_appearances) == 1)
+        assert (search_appearances[stylist_eligible_for_appeared_in_notification.id] == 1)
+
+        G(StylistSearchRequest, stylists_found=[stylist_eligible_for_appeared_in_notification.id])
+        search_appearances = get_search_appearances_per_stylist_in_past_week()
+        assert (len(search_appearances) == 1)
+        assert (search_appearances[stylist_eligible_for_appeared_in_notification.id] == 2)
+
+        # test for search appearance of different stylist
+        G(StylistSearchRequest, stylists_found=[G(Stylist).id])
+        search_appearances = get_search_appearances_per_stylist_in_past_week()
+        assert (len(search_appearances) == 2)
+        assert (search_appearances[stylist_eligible_for_appeared_in_notification.id] == 2)
+
+        # test for search appearance older than past_week
+        G(StylistSearchRequest, stylists_found=[stylist_eligible_for_appeared_in_notification.id],
+          created_at=timezone.now() - datetime.timedelta(days=8))
+        search_appearances = get_search_appearances_per_stylist_in_past_week()
+        assert (len(search_appearances) == 2)
+        assert (search_appearances[stylist_eligible_for_appeared_in_notification.id] == 2)
+
+    @pytest.mark.django_db
+    def test_stylist_registered_in_last_7_days(
+            self, stylist_eligible_for_appeared_in_notification: Stylist):
+        stylist_eligible_for_appeared_in_notification.created_at = (
+            timezone.now() - datetime.timedelta(days=6)
+        )
+        stylist_eligible_for_appeared_in_notification.save()
+        assert (generate_stylist_appeared_in_search_notification() == 0)
+
+    @pytest.mark.django_db
+    def test_search_appearence_before_7_days(
+            self, stylist_eligible_for_appeared_in_notification: Stylist):
+        stylist_search_request = StylistSearchRequest.objects.first()
+        stylist_search_request.created_at = timezone.now() - datetime.timedelta(days=8)
+        stylist_search_request.save()
+        assert (generate_stylist_appeared_in_search_notification() == 0)

@@ -64,6 +64,9 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
         NotificationCode.CLIENT_REGISTRATION_INCOMPLETE: [
             NotificationChannel.PUSH
         ],
+        NotificationCode.APPEARED_IN_SEARCH: [
+            NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
+        ],
     }
 else:
     NOTIFICATION_CHANNEL_PRIORITY = {
@@ -117,5 +120,8 @@ else:
         ],
         NotificationCode.CLIENT_REGISTRATION_INCOMPLETE: [
             NotificationChannel.PUSH
+        ],
+        NotificationCode.APPEARED_IN_SEARCH: [
+            NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
         ],
     }
