@@ -63,6 +63,7 @@ def calculate_appointment_prices(
     return AppointmentPrices(
         total_client_price_before_tax=price_before_tax,
         total_tax=total_tax,
+        tax_percentage=tax_rate,
         total_card_fee=total_card_fee,
         grand_total=grand_total,
         has_tax_included=include_tax,
