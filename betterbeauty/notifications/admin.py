@@ -9,7 +9,7 @@ class NotificationAdmin(admin.ModelAdmin):
 
     def formfield_for_dbfield(self, db_field, **kwargs):
         formfield = super(NotificationAdmin, self).formfield_for_dbfield(db_field, **kwargs)
-        if db_field.name == 'message':
+        if db_field.name == 'message' or db_field.name == 'sms_message':
             attrs = formfield.widget.attrs
             attrs['rows'] = '5'
             formfield.widget = forms.Textarea(attrs=attrs)

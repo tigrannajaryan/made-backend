@@ -1951,6 +1951,11 @@ def generate_invite_your_stylist_notifications(dry_run=False) -> int:
         'Did you know you can now invite your stylist to accept appointments in Made? '
         'You can do it from the search screen in Made app.'
     )
+    sms_message = (
+        'Did you know you can now invite your stylist to accept appointments in Made? '
+        'You can do it from the search screen in Made app.'
+        'Click here to open Made app: https://madebeauty.com/get/'
+    )
     notifications_to_create_list: List[Notification] = []
 
     client_has_prior_notifications_with_same_code_subquery = Notification.objects.filter(
@@ -1996,10 +2001,12 @@ def generate_invite_your_stylist_notifications(dry_run=False) -> int:
                 code=code,
                 target=target,
                 message=message,
+                sms_message=sms_message,
                 send_time_window_start=send_time_window_start,
                 send_time_window_end=send_time_window_end,
                 send_time_window_tz=pytz.timezone(settings.TIME_ZONE),
                 discard_after=discard_after,
+                forced_channel=NotificationChannel.SMS,
                 data={}
             )
         )
