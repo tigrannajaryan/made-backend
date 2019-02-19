@@ -1022,7 +1022,8 @@ class TestAppointmentUpdateSerializer(object):
             Appointment,
             stylist=stylist,
             duration=datetime.timedelta(minutes=30),
-            tax_percentage=4.0
+            tax_percentage=4.0,
+            has_tax_included=False
         )
         context = {
             'stylist': appointment.stylist,
@@ -1082,7 +1083,6 @@ class TestAppointmentUpdateSerializer(object):
         assert(added_appointment_service.client_price == 40)
         assert(added_appointment_service.regular_price == 40)
 
-        assert(saved_appointment.has_card_fee_included is False)
         assert(saved_appointment.has_tax_included is False)
         total_services_cost = sum([s.client_price for s in saved_appointment.services.all()], 0)
         assert(saved_appointment.total_client_price_before_tax == total_services_cost)
