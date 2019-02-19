@@ -33,6 +33,7 @@ class UserRole(StrEnum):
 class AppointmentPrices(NamedTuple):
     total_client_price_before_tax: Decimal
     total_tax: Decimal
+    tax_percentage: Decimal
     total_card_fee: Decimal
     grand_total: Decimal
     has_tax_included: bool
