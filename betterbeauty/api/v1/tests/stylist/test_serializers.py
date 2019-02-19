@@ -726,7 +726,7 @@ class TestAppointmentSerializer(object):
             stylist=stylist_data, duration=datetime.timedelta(minutes=30),
             regular_price=50
         )
-        stylist_data.tax_rate = Decimal(9.0)
+        stylist_data.tax_rate = Decimal(0.09)
         stylist_data.save()
         stylist_data.available_days.filter(weekday=Weekday.THURSDAY).update(
             is_available=True,
@@ -763,7 +763,11 @@ class TestAppointmentSerializer(object):
         assert(original_service.client_price == 50)
         assert(original_service.service_uuid == service.uuid)
         assert(original_service.service_name == service.name)
-        assert(appointment.tax_percentage == stylist_data.tax_rate)
+        assert(appointment.tax_percentage == stylist_data.tax_rate * 100)
+        assert(
+            appointment.total_tax ==
+            appointment.total_client_price_before_tax * stylist_data.tax_rate
+        )
 
     @freeze_time('2018-05-17 15:30:00 UTC')
     @pytest.mark.django_db
@@ -778,7 +782,7 @@ class TestAppointmentSerializer(object):
             work_start_at=datetime.time(8, 0),
             work_end_at=datetime.time(17, 0)
         )
-        stylist_data.tax_rate = Decimal(9.0)
+        stylist_data.tax_rate = Decimal(0.09)
         stylist_data.save()
 
         available_time: datetime.datetime = datetime.datetime(
@@ -821,7 +825,7 @@ class TestAppointmentSerializer(object):
         assert (original_service.client_price == 50)
         assert (original_service.service_uuid == service.uuid)
         assert (original_service.service_name == service.name)
-        assert (appointment.tax_percentage == stylist_data.tax_rate)
+        assert (appointment.tax_percentage == stylist_data.tax_rate * 100)
 
     @freeze_time('2018-05-17 15:30:00 UTC')
     @pytest.mark.django_db
@@ -1013,7 +1017,7 @@ class TestAppointmentUpdateSerializer(object):
     @pytest.mark.django_db
     def test_save_checked_out_in_salon_status(self, mocker):
         salon = G(Salon, timezone=pytz.utc)
-        stylist: Stylist = G(Stylist, salon=salon, tax_rate=9.0)
+        stylist: Stylist = G(Stylist, salon=salon, tax_rate=0.09)
         appointment = G(
             Appointment,
             stylist=stylist,
@@ -1088,7 +1092,7 @@ class TestAppointmentUpdateSerializer(object):
         assert(saved_appointment.total_card_fee == calculate_card_fee(
             total_services_cost, card_fee=appointment.stylist.card_fee))
         assert(saved_appointment.stylist_payout_amount == total_services_cost)
-        assert(saved_appointment.tax_percentage == stylist.tax_rate)
+        assert(saved_appointment.tax_percentage == stylist.tax_rate * 100)
 
     @pytest.mark.django_db
     @mock.patch.object(Charge, 'run_stripe_charge')
