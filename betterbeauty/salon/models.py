@@ -230,19 +230,9 @@ class StylistWeekdayDiscount(models.Model):
             self, is_deal_of_week: bool, with_target_discount: Optional[int]=None
     ) -> Tuple[bool, Optional[DealOfWeekError]]:
         """Check if can be set/unset as deal of week, return optional error code"""
-        MINIMUM_DAYS_BEFORE_CHANGE = 2
         MINIMUM_DISCOUNT_PERCENTAGE = 30
         if is_deal_of_week == self.is_deal_of_week:
             return True, None
-        if is_deal_of_week is False:
-            # we should prohibit un-setting deal of week if it's less than
-            # MINIMUM_DAYS_BEFORE_CHANGE before the weekday
-            current_weekday = self.stylist.get_current_now().isoweekday()
-            days_before_weekday = self.weekday - current_weekday
-            if days_before_weekday < 0:
-                days_before_weekday += 7
-            if days_before_weekday <= MINIMUM_DAYS_BEFORE_CHANGE:
-                return False, DealOfWeekError.ERR_DATE_TOO_CLOSE
         if is_deal_of_week is True:
             if with_target_discount is None:
                 with_target_discount = self.discount_percent
