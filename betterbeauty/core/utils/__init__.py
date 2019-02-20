@@ -45,6 +45,7 @@ def calculate_appointment_prices(
         card_fee: Decimal,
         is_stripe_payment: Optional[bool] = False
 ) -> AppointmentPrices:
+
     grand_total: Decimal = price_before_tax
     # HOTFIX: if grand_total is passed as int or float - cast it
     # explicitly to Decimal
@@ -63,7 +64,7 @@ def calculate_appointment_prices(
     return AppointmentPrices(
         total_client_price_before_tax=price_before_tax,
         total_tax=total_tax,
-        tax_percentage=tax_rate,
+        tax_percentage=tax_rate * 100,
         total_card_fee=total_card_fee,
         grand_total=grand_total,
         has_tax_included=include_tax,
