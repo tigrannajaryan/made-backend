@@ -667,7 +667,7 @@ class PaymentMethodsView(views.APIView):
                 client, serializer.validated_data['stripe_token']
             )
         except (StripeError, StripeErrorWithParamCode) as err:
-            logger.exception('Could not add payment method for client uuid = {0}'.format(
+            logger.warning('Could not add payment method for client uuid = {0}'.format(
                 client.uuid
             ))
             raise ValidationError(
@@ -681,7 +681,7 @@ class PaymentMethodsView(views.APIView):
                 }
             )
         except CardError as err:
-            logger.exception('Could not add payment method for client uuid = {0}'.format(
+            logger.warning('Could not add payment method for client uuid = {0}'.format(
                 client.uuid
             ))
             raise ValidationError(
