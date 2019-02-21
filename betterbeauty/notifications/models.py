@@ -19,7 +19,7 @@ from integrations.push.utils import (
 from integrations.twilio import send_sms_message
 from notifications.settings import NOTIFICATION_CHANNEL_PRIORITY
 from .types import (
-    NOTIFICATION_CNANNEL_CHOICES,
+    NOTIFICATION_CHANNEL_CHOICES,
     NotificationChannel,
 )
 
@@ -39,6 +39,7 @@ class Notification(models.Model):
     target = models.CharField(choices=CLIENT_OR_STYLIST_ROLE, max_length=16)
     code = models.CharField(max_length=64, verbose_name='Notification code')
     message = models.CharField(max_length=1024)
+    sms_message = models.CharField(max_length=1024, blank=True, null=True, default=None)
     data = JSONField(default=default_json_field_value, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     send_time_window_start = models.TimeField()
@@ -47,7 +48,7 @@ class Notification(models.Model):
     pending_to_send = models.BooleanField(default=True)
     sent_at = models.DateTimeField(null=True, default=None, blank=True)
     sent_via_channel = models.CharField(
-        max_length=16, null=True, choices=NOTIFICATION_CNANNEL_CHOICES,
+        max_length=16, null=True, choices=NOTIFICATION_CHANNEL_CHOICES,
         default=None, blank=True
     )
     discard_after = models.DateTimeField()
@@ -55,13 +56,13 @@ class Notification(models.Model):
     # deprecated field. notifications.settings.NOTIFICATION_CHANNEL_PRIORITY must
     # be used to indicate which channel to send over
     channel = models.CharField(
-        max_length=16, null=True, choices=NOTIFICATION_CNANNEL_CHOICES,
+        max_length=16, null=True, choices=NOTIFICATION_CHANNEL_CHOICES,
         default=NotificationChannel.PUSH
     )
 
     forced_channel = models.CharField(
         verbose_name='Specifically selected channel for current notification',
-        max_length=16, null=True, blank=True, choices=NOTIFICATION_CNANNEL_CHOICES,
+        max_length=16, null=True, blank=True, choices=NOTIFICATION_CHANNEL_CHOICES,
         default=None
     )
 
@@ -120,6 +121,9 @@ class Notification(models.Model):
             update_fields=['sent_via_channel', 'sent_at', 'pending_to_send', ])
         return True
 
+    def get_sms_message(self):
+        return self.sms_message if self.sms_message else self.message
+
     def send_and_mark_sent_sms_now(self) -> bool:
         """Send SMS message to the user and mark message as sent"""
         if not self.can_send_now():
@@ -128,7 +132,7 @@ class Notification(models.Model):
         user: User = self.user
         message_sid = send_sms_message(
             to_phone=user.phone,
-            body=self.message,
+            body=self.get_sms_message(),
             role=self.target
         )
 

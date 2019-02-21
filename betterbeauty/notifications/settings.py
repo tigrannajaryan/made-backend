@@ -59,7 +59,7 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
             NotificationChannel.PUSH, NotificationChannel.SMS
         ],
         NotificationCode.INVITE_YOUR_STYLIST: [
-            NotificationChannel.PUSH,  # NotificationChannel.EMAIL
+            NotificationChannel.SMS, NotificationChannel.PUSH,  # NotificationChannel.EMAIL
         ],
         NotificationCode.CLIENT_REGISTRATION_INCOMPLETE: [
             NotificationChannel.PUSH
@@ -119,7 +119,7 @@ else:
             NotificationChannel.PUSH, NotificationChannel.SMS
         ],
         NotificationCode.INVITE_YOUR_STYLIST: [
-            NotificationChannel.PUSH,  # NotificationChannel.EMAIL
+            NotificationChannel.SMS, NotificationChannel.PUSH,  # NotificationChannel.EMAIL
         ],
         NotificationCode.CLIENT_REGISTRATION_INCOMPLETE: [
             NotificationChannel.PUSH
