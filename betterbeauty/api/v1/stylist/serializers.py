@@ -1229,12 +1229,8 @@ class AppointmentUpdateSerializer(
                 # update final prices and save appointment
                 appointment_prices: AppointmentPrices = calculate_appointment_prices(
                     price_before_tax=total_client_price_before_tax,
-                    include_card_fee=self.validated_data.get(
-                        'has_card_fee_included', self.instance.has_card_fee_included
-                    ),
-                    include_tax=self.validated_data.get(
-                        'has_tax_included', self.instance.has_tax_included
-                    ),
+                    include_card_fee=self.instance.has_card_fee_included,
+                    include_tax=self.instance.has_tax_included,
                     tax_rate=appointment.stylist.tax_rate,
                     card_fee=appointment.stylist.card_fee,
                     is_stripe_payment=pay_via_made

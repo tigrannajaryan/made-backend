@@ -637,6 +637,38 @@ class AppointmentUpdateSerializer(AppointmentPaymentValidationMixin, Appointment
                 StylistAppointmentUpdateSerializer.update_appointment_services(
                     appointment, self.validated_data['services']
                 )
+            # if appointment date changes, then recalculate the original prices
+            if appointment.datetime_start_at != current_datetime_start_at:
+                discount_percentage: int = 0
+                discount_type: Optional[DiscountType] = None
+                for appointment_service in appointment.services.all():
+                    service: StylistService = appointment.stylist.services.get(
+                        uuid=appointment_service.service_uuid
+                    )
+                    client_price: CalculatedPrice = (
+                        calculate_price_and_discount_for_client_on_date(
+                            service=service, client=appointment.client,
+                            date=appointment.datetime_start_at.date()
+                        ))
+                    appointment_service.client_price = client_price.price
+                    appointment_service.calculated_price = client_price.price
+                    appointment_service.applied_discount = (
+                        client_price.applied_discount.value
+                        if client_price.applied_discount else None
+                    )
+                    appointment_service.discount_percentage = client_price.discount_percentage
+                    appointment_service.save(update_fields=[
+                        'client_price', 'calculated_price', 'applied_discount',
+                        'discount_percentage',
+                    ])
+
+                    if not discount_percentage:
+                        discount_percentage = client_price.discount_percentage
+                    if not discount_type:
+                        discount_type = client_price.applied_discount
+                appointment.discount_type = discount_type
+                appointment.total_discount_percentage = discount_percentage
+
             total_client_price_before_tax: Decimal = appointment.services.aggregate(
                 total_before_tax=Coalesce(Sum('client_price'), 0)
             )['total_before_tax']
