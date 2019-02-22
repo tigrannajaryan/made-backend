@@ -182,13 +182,20 @@ class Appointment(models.Model):
                 '%b %-d'
             )
         )
+        charge_stylist_description = 'Appointment on {formatted_date} with {client_name}'.format(
+            client_name=self.client.user.get_full_name(),
+            formatted_date=self.stylist.with_salon_tz(self.datetime_start_at).strftime(
+                '%b %-d'
+            )
+        )
         charge: Charge = Charge.objects.create(
             client=client,
             stylist=self.stylist,
             payment_method=payment_method,
             appointment=self,
             amount=self.grand_total,
-            description=charge_description
+            description=charge_description,
+            stylist_description=charge_stylist_description,
         )
         charge.run_stripe_charge()
 
