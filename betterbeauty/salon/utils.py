@@ -515,14 +515,12 @@ def get_date_with_lowest_price_on_current_week(
     If there's repeating low price, e.g. [1.0, 2.0, 1.0, 3.0] - then we will return None
     """
 
-    # filter out prices of this week only
+    # filter out prices of the remainder of this week only
     current_date = stylist.with_salon_tz(timezone.now()).date()
-    # Sunday is the beginning of the week
-    weekday = current_date.weekday()
-    begin_of_week_date = current_date - datetime.timedelta(days=weekday)
+    weekday = current_date.isoweekday() % 7  # Sunday is the beginning of the week
     end_of_week_date = current_date + datetime.timedelta(days=6 - weekday)
     this_week_prices: List[ClientPriceOnDate] = list(filter(
-        lambda price_on_date: begin_of_week_date <= price_on_date.date <= end_of_week_date,
+        lambda price_on_date: current_date <= price_on_date.date <= end_of_week_date,
         prices_on_dates
     ))
     # There may be a situation when we don't have enough data for this week; return None in
