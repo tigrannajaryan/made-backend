@@ -129,18 +129,23 @@ def run_charge(
         customer_stripe_id: str,
         stylist_account_stripe_id: str,
         amount: Decimal,
-        description: str,
+        source_description: str,
+        destination_description: str,
         payment_method_stripe_id: Optional[str] = None,
+        **metadata
 ) -> Optional[str]:
     """
-    Creates actual Stripe charge, and attepmts to charge client
+    Creates actual Stripe charge, and attempts to charge client
 
     :param customer_stripe_id: customer stripe id of the client
     :param stylist_account_stripe_id: account stripe id of the stylist
     :param payment_method_stripe_id: stripe id of payment method, must be attached to customer.
     If it omitted, charge will be made using the default payment method
     :param amount: charge amount in USD
-    :param description: description of the charge, how it will show in client's bank statement
+    :param source_description: description of the charge,
+           how it will show in Client's bank statement
+    :param destination_description: description of transfer,
+           how it will show in Stylist's bank statement
     :return: stripe id of the charge if successful, None otherwise
     """
     if amount <= 0.0:
@@ -154,13 +159,23 @@ def run_charge(
         'amount': int(amount * 100),
         'currency': settings.STRIPE_DEFAULT_CURRENCY,
         'customer': customer_stripe_id,
-        'description': description,
+        'description': source_description,
         'statement_descriptor': settings.STRIPE_DEFAULT_PAYMENT_DESCRIPTOR,
-        'destination': {'account': stylist_account_stripe_id}
+        'destination': {'account': stylist_account_stripe_id},
+        'metadata': metadata
     }
     if payment_method_stripe_id is not None:
         charge_data['source'] = payment_method_stripe_id
     charge = stripe.Charge.create(**charge_data)
+    if charge.transfer:
+        # When a charge is created, we're setting description only on payment (e.g. it is
+        # visible for the client who's source of transfer. In order to set description on the
+        # destination (i.e. visible to stylist) we should update the transfer object, too
+        transfer = stripe.Transfer.retrieve(charge.transfer)
+        transfer.description = destination_description
+        transfer.metadata = metadata
+        transfer.save()
+
     logger.info('Created ${0} charge for client with stripe_id == {1}'.format(
         amount,
         customer_stripe_id
