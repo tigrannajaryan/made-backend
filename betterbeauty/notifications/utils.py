@@ -125,7 +125,6 @@ def generate_hint_to_first_book_notifications(dry_run=False) -> int:
         stylist__user__phone__isnull=False,
         stylist__user__is_active=True,
         client__user__is_active=True,
-        stylist__has_business_hours_set=True,
         stylist__deactivated_at=None,
         client_has_notifications=False,
         stylist_has_discounts=True,
@@ -192,7 +191,6 @@ def generate_hint_to_select_stylist_notifications(dry_run=False) -> int:
         services__is_enabled=True,
         user__phone__isnull=False,
         user__is_active=True,
-        has_business_hours_set=True,
         deactivated_at__isnull=True
     ).distinct('id')
 
@@ -269,7 +267,6 @@ def generate_hint_to_rebook_notifications(dry_run=False) -> int:
         services__is_enabled=True,
         user__phone__isnull=False,
         user__is_active=True,
-        has_business_hours_set=True,
         deactivated_at__isnull=True
     ).distinct('id')
     if not bookable_stylists.exists():
@@ -1375,7 +1372,6 @@ def generate_remind_invite_clients_notifications(dry_run=False) -> int:
         created_at__lte=one_day_ago,
         user__phone__isnull=False,
         deactivated_at__isnull=True,
-        has_business_hours_set=True,
     ).values_list('id', flat=True)
 
     if is_push_only(code):
@@ -1476,7 +1472,6 @@ def generate_remind_add_photo_notifications(dry_run=False) -> int:
         created_at__lte=one_day_ago,
         user__phone__isnull=False,
         deactivated_at__isnull=True,
-        has_business_hours_set=True,
     ).values_list('id', flat=True)
 
     if is_push_only(code):
@@ -1570,7 +1565,6 @@ def generate_remind_define_discounts_notifications(dry_run=False) -> int:
         created_at__gte=earliest_time_stylist_created_profile,
         created_at__lte=one_day_ago,
         has_enabled_services=True,
-        has_business_hours_set=True,
         user__phone__isnull=False,
         deactivated_at__isnull=True,
     ).values_list('id', flat=True)
@@ -1838,7 +1832,6 @@ def generate_deal_of_week_notifications(dry_run=False) -> int:
           ps.deleted_at ISNULL AND
           -- stylist is generally bookable
           su.phone IS NOT NULL AND
-          st.has_business_hours_set AND
           EXISTS(SELECT 1
                  FROM public.stylist_service
                  WHERE cu.is_active IS TRUE AND stylist_service.stylist_id = st.id) AND
