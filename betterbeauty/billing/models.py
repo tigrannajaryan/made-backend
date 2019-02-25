@@ -62,6 +62,7 @@ class Charge(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     charged_at = models.DateTimeField(null=True, blank=True)
     description = models.TextField(blank=True, null=True)
+    stylist_description = models.TextField(blank=True, null=True)
     status = models.CharField(
         max_length=16, choices=ChargeStatusChoices, default=ChargeStatus.PENDING
     )
@@ -87,11 +88,16 @@ class Charge(models.Model):
         from .utils import format_stripe_error_data, run_charge
         try:
             charge_id = run_charge(
-                self.client.stripe_id,
-                self.stylist.stripe_account_id,
+                customer_stripe_id=self.client.stripe_id,
+                stylist_account_stripe_id=self.stylist.stripe_account_id,
                 amount=self.amount,
-                description=self.description,
-                payment_method_stripe_id=self.payment_method.stripe_id
+                source_description=self.description,
+                destination_description=self.stylist_description,
+                payment_method_stripe_id=self.payment_method.stripe_id,
+                made_appointment_uuid=str(self.appointment.uuid),
+                made_charge_uuid=str(self.uuid),
+                made_client_uuid=str(self.client.uuid),
+                made_stylist_uuid=str(self.stylist.uuid)
             )
             if charge_id:
                 self.stripe_id = charge_id
