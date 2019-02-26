@@ -965,8 +965,7 @@ class SearchStylistSerializer(
     def get_is_profile_bookable(self, stylist: Stylist):
         return bool(
             stylist.user__phone and
-            stylist.services_count and
-            stylist.has_business_hours_set
+            stylist.services_count
         )
 
     def get_profile_photo_url(self, stylist: Stylist):
