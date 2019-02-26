@@ -37,7 +37,6 @@ from billing.constants import ErrorMessages as billing_errors
 from billing.models import PaymentMethod
 from client.models import Client, PreferredStylist
 from client.types import CLIENT_PRIVACY_CHOICES, ClientPrivacy
-from core.constants import EnvLevel
 from core.models import User
 from core.types import AppointmentPrices, UserRole
 from core.utils import calculate_appointment_prices
@@ -705,14 +704,20 @@ class AppointmentUpdateSerializer(AppointmentPaymentValidationMixin, Appointment
                     pay_via_made or payment_method_uuid
                 ):
                     appointment.charge_client(payment_method_uuid)
-
+            is_appointment_reschedule = False
             if appointment.datetime_start_at != current_datetime_start_at:
-                # TODO: Enable in Production after testing
-                if settings.LEVEL != EnvLevel.PRODUCTION:
-                    generate_appointment_reschedule_notification(
-                        appointment, current_datetime_start_at)
-
+                generate_appointment_reschedule_notification(
+                    appointment, current_datetime_start_at)
+                is_appointment_reschedule = True
             appointment.save(**kwargs)
+            if is_appointment_reschedule:
+                # appointment is rescheduled, so if it was added to Google calendars
+                # we need to re-create it. We will delete the source event if it was
+                # added, and periodic script will re-create it with new date and time
+                if appointment.client_google_calendar_id:
+                    appointment.cancel_client_google_calendar_event()
+                if appointment.stylist_google_calendar_id:
+                    appointment.cancel_stylist_google_calendar_event(ignore_status=True)
             # If status is changing try to cancel new appointment notification if it's not
             # sent yet
             if (
