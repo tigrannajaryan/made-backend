@@ -12,7 +12,13 @@ from appointment.models import Appointment, AppointmentService, AppointmentStatu
 from client.models import Client
 from core.models import User
 from core.types import Weekday
-from ..models import Salon, Stylist, StylistService, StylistSpecialAvailableDate
+from ..models import (
+    Salon,
+    Stylist,
+    StylistService,
+    StylistSpecialAvailableDate,
+    StylistWeekdayDiscount,
+)
 from ..types import ClientPriceOnDate
 from ..utils import (
     create_stylist_profile_for_user,
@@ -20,7 +26,8 @@ from ..utils import (
     get_current_loyalty_discount,
     get_date_with_lowest_price_on_current_week,
     get_loyalty_discount_for_week,
-    get_most_popular_service
+    get_most_popular_service,
+    get_next_deal_of_week_date,
 )
 
 
@@ -299,3 +306,20 @@ def test_get_date_with_lowest_price_on_current_week():
         )
         # the lowest price is in the past
         assert(lowest_price_date is None)
+
+
+@pytest.mark.django_db
+def test_get_next_deal_of_week_date():
+    salon: Salon = G(Salon, timezone=pytz.UTC)
+    stylist: Stylist = G(Stylist, salon=salon)
+    deal_of_week = G(StylistWeekdayDiscount, stylist=stylist, weekday=3, is_deal_of_week=True)
+    with freeze_time(pytz.UTC.localize(datetime.datetime(2019, 2, 26, 12, 0))):
+        assert(get_next_deal_of_week_date(stylist) == datetime.date(2019, 2, 27))
+    with freeze_time(pytz.UTC.localize(datetime.datetime(2019, 2, 24, 12, 0))):
+        assert(get_next_deal_of_week_date(stylist) == datetime.date(2019, 2, 27))
+    with freeze_time(pytz.UTC.localize(datetime.datetime(2019, 2, 27, 12, 0))):
+        assert(get_next_deal_of_week_date(stylist) == datetime.date(2019, 3, 6))
+    with freeze_time(pytz.UTC.localize(datetime.datetime(2019, 3, 1, 12, 0))):
+        assert(get_next_deal_of_week_date(stylist) == datetime.date(2019, 3, 6))
+    deal_of_week.delete()
+    assert(get_next_deal_of_week_date(stylist) is None)
