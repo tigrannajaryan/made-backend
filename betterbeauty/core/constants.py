@@ -10,6 +10,7 @@ class EnvLevel(StrEnum):
 
 class EnvVars(StrEnum):
 
+    SECRET_KEY = 'SECRET_KEY'
     RDS_DB_NAME = 'RDS_DB_NAME'
     RDS_USERNAME = 'RDS_USERNAME'
     RDS_PASSWORD = 'RDS_PASSWORD'
