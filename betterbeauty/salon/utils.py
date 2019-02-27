@@ -540,18 +540,33 @@ def get_date_with_lowest_price_on_current_week(
     return prices_on_days_sorted[0].date
 
 
+def get_next_deal_of_week_date(stylist: Stylist) -> Optional[datetime.date]:
+    """Return date of next deal of the week if set by stylist, else None"""
+    deal_of_week_weekday: Optional[int] = stylist.get_deal_of_week_weekday()
+    if not deal_of_week_weekday:
+        return None
+    today = stylist.with_salon_tz(timezone.now()).date()
+    today_weekday = today.isoweekday()
+    if today_weekday < deal_of_week_weekday:
+        return today + datetime.timedelta(deal_of_week_weekday - today_weekday)
+    return today + datetime.timedelta(deal_of_week_weekday - today_weekday + 7)
+
+
 def generate_client_pricing_hints(
         client: Client, stylist: Stylist, prices_on_dates: List[ClientPriceOnDate]
 ) -> List[ClientPricingHint]:
     hints: List[ClientPricingHint] = []
     MIN_DAYS_BEFORE_LOYALTY_DISCOUNT_HINT = 3
+    MIN_DAYS_BEFORE_DEAL_OF_WEEK = 2
     loyalty_discount: LoyaltyDiscountTransitionInfo = get_current_loyalty_discount(stylist, client)
+    current_discount_percent: int = loyalty_discount.current_discount_percent
     # 1. Check if current loyalty discount is about to transition to lower level
     if loyalty_discount.current_discount_percent and loyalty_discount.transitions_at:
         days_before_discount_ends = (loyalty_discount.transitions_at - timezone.now()).days
         if days_before_discount_ends <= MIN_DAYS_BEFORE_LOYALTY_DISCOUNT_HINT:
-            if loyalty_discount.transitions_to_percent:
-                # loyalty discount is about to transition to different non-zero percentage
+            if 0 < loyalty_discount.transitions_to_percent < current_discount_percent:
+                # loyalty discount is about to transition to different non-zero
+                # percentage, which is less than current discount
                 hints.append(
                     ClientPricingHint(
                         priority=1,
@@ -566,7 +581,7 @@ def generate_client_pricing_hints(
                     )
                 )
             # loyalty discount just ends
-            else:
+            elif loyalty_discount.transitions_to_percent == 0:
                 hints.append(
                     ClientPricingHint(
                         priority=1,
@@ -575,7 +590,22 @@ def generate_client_pricing_hints(
                         )
                     )
                 )
-    # 2. Check if there's a local minimum of price between current now and the
+    # 2. Check if there's upcoming deal of week
+    next_deal_of_week_date: Optional[datetime.date] = get_next_deal_of_week_date(stylist=stylist)
+    if next_deal_of_week_date:
+        days_before_deal_of_week = (
+            next_deal_of_week_date - stylist.with_salon_tz(timezone.now()).date()
+        ).days
+        if days_before_deal_of_week > MIN_DAYS_BEFORE_DEAL_OF_WEEK:
+            hints.append(
+                ClientPricingHint(
+                    priority=2,
+                    hint='Book the Deal of the Week this {weekday}.'.format(
+                        weekday=next_deal_of_week_date.strftime('%A')
+                    )
+                )
+            )
+    # 3. Check if there's a local minimum of price between current now and the
     # end of the week
     lowest_price_date = get_date_with_lowest_price_on_current_week(
         stylist=stylist,
@@ -584,7 +614,7 @@ def generate_client_pricing_hints(
     if lowest_price_date is not None:
         hints.append(
             ClientPricingHint(
-                priority=2,
+                priority=3,
                 hint='Best price this week is {weekday}.'.format(
                     weekday=lowest_price_date.strftime('%A')
                 )

@@ -708,6 +708,14 @@ class Stylist(models.Model):
     def can_checkout_with_made(self) -> bool:
         return bool(self.stripe_account_id)
 
+    def get_deal_of_week_weekday(self) -> int:
+        deal_of_week: Optional[StylistWeekdayDiscount] = self.weekday_discounts.filter(
+            is_deal_of_week=True
+        ).last()
+        if deal_of_week:
+            return deal_of_week.weekday
+        return 0
+
 
 class ServiceCategory(models.Model):
     name = models.CharField(max_length=255, unique=True)

@@ -681,12 +681,7 @@ class StylistDiscountsSerializer(
     deal_of_week_weekday = serializers.SerializerMethodField()
 
     def get_deal_of_week_weekday(self, stylist: Stylist) -> int:
-        deal_of_week: Optional[StylistWeekdayDiscount] = stylist.weekday_discounts.filter(
-            is_deal_of_week=True
-        ).last()
-        if deal_of_week:
-            return deal_of_week.weekday
-        return 0
+        return stylist.get_deal_of_week_weekday()
 
     def validate(self, attrs):
         if 'deal_of_week_weekday' in self.initial_data:
