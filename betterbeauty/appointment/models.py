@@ -337,7 +337,7 @@ class Appointment(models.Model):
                     self.uuid))
             self.client.remove_google_oauth_token()
 
-    def cancel_stylist_google_calendar_event(self):
+    def cancel_stylist_google_calendar_event(self, ignore_status: bool = False):
         """
         Cancel google calendar event in stylist's calendar (if exists) and clean up
         event id value from DB
@@ -349,7 +349,7 @@ class Appointment(models.Model):
             return
         if self.status not in [
             AppointmentStatus.CANCELLED_BY_CLIENT, AppointmentStatus.CANCELLED_BY_STYLIST
-        ]:
+        ] and not ignore_status:
             return
         try:
             stylist: Stylist = self.stylist
@@ -386,7 +386,7 @@ class Appointment(models.Model):
                     self.uuid))
             self.stylist.remove_google_oauth_token()
 
-    def cancel_client_google_calendar_event(self):
+    def cancel_client_google_calendar_event(self, ignore_status: bool = False):
         """
         Cancel google calendar event in client's calendar (if exists) and clean up
         event id value from DB
@@ -401,7 +401,7 @@ class Appointment(models.Model):
             return
         if self.status not in [
             AppointmentStatus.CANCELLED_BY_CLIENT, AppointmentStatus.CANCELLED_BY_STYLIST
-        ]:
+        ] and not ignore_status:
             return
         try:
             http_auth: Http = build_oauth_http_object_from_tokens(

@@ -413,7 +413,6 @@ class Stylist(models.Model):
         return bool(
             self.user.phone and
             self.has_services_set and
-            self.has_business_hours_set and
             has_necessary_deal_of_week_set
         )
 

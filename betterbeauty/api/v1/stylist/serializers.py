@@ -1203,6 +1203,7 @@ class AppointmentUpdateSerializer(
 
     def save_appointment(self, **kwargs):
         status = self.validated_data.get('status', self.instance.status)
+        current_datetime_start_at = self.instance.datetime_start_at
         pay_via_made: bool = self.validated_data.pop('pay_via_made', False)
         user: User = self.context['user']
         appointment: Appointment = self.instance
@@ -1237,7 +1238,9 @@ class AppointmentUpdateSerializer(
                     total_regular_price_before_tax - total_client_price_before_tax,
                     Decimal(0)
                 )
-
+            is_appointment_reschedule = False
+            if appointment.datetime_start_at != current_datetime_start_at:
+                is_appointment_reschedule = True
             if appointment.status != status:
                 if (appointment.status == AppointmentStatus.NEW and
                         status == AppointmentStatus.CANCELLED_BY_STYLIST):
@@ -1254,6 +1257,14 @@ class AppointmentUpdateSerializer(
                         payment_method_uuid = payment_method.uuid
                     appointment.charge_client(payment_method_uuid)
             appointment.save(**kwargs)
+            if is_appointment_reschedule:
+                # appointment is rescheduled, so if it was added to Google calendars
+                # we need to re-create it. We will delete the source event if it was
+                # added, and periodic script will re-create it with new date and time
+                if appointment.client_google_calendar_id:
+                    appointment.cancel_client_google_calendar_event()
+                if appointment.stylist_google_calendar_id:
+                    appointment.cancel_stylist_google_calendar_event(ignore_status=True)
         return appointment
 
     def save(self, **kwargs):
