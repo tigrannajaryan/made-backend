@@ -68,7 +68,7 @@ pytest-reuse-db:
 
 full-test: test
     # Create a new folder tmp and pull the current develop branch
-	git worktree add tmp origin/develop
+	git worktree add tmp develop
 	cd tmp
 	# setup virtualenv, install requirements
 	sudo make install-py
