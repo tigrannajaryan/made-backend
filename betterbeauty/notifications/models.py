@@ -198,7 +198,8 @@ class Notification(models.Model):
                 if not self.user.client.sms_notifications_enabled:
                     return False
             return True
-        if channel == NotificationChannel.EMAIL and self.email_details['to']:
+        if (channel == NotificationChannel.EMAIL and 'to' in self.email_details and
+                self.email_details['to']):
             if self.target == UserRole.CLIENT:
                 return Client.objects.filter(email=self.email_details['to'],
                                              email_notifications_enabled=True,
