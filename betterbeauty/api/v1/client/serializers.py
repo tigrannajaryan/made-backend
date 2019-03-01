@@ -624,6 +624,8 @@ class AppointmentUpdateSerializer(AppointmentPaymentValidationMixin, Appointment
     def save_appointment(self, **kwargs):
         status = self.validated_data.get('status', self.instance.status)
         current_datetime_start_at = self.instance.datetime_start_at
+        current_services = ', '.join([s.service_name for s in self.instance.services.all()])
+        current_total_price_before_tax = self.instance.total_client_price_before_tax
         pay_via_made: bool = self.validated_data.pop('pay_via_made', False)
         user: User = self.context['user']
         appointment: Appointment = self.instance
@@ -706,8 +708,11 @@ class AppointmentUpdateSerializer(AppointmentPaymentValidationMixin, Appointment
                     appointment.charge_client(payment_method_uuid)
             is_appointment_reschedule = False
             if appointment.datetime_start_at != current_datetime_start_at:
+
                 generate_appointment_reschedule_notification(
-                    appointment, current_datetime_start_at)
+                    appointment, current_datetime_start_at, current_total_price_before_tax,
+                    current_services
+                )
                 is_appointment_reschedule = True
             appointment.save(**kwargs)
             if is_appointment_reschedule:

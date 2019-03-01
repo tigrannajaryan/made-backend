@@ -7,7 +7,7 @@ from .defaults import *  # noqa
 from .utils import parse_database_url
 
 LEVEL = EnvLevel.DEVELOPMENT
-BASE_URL = 'http://betterbeauty.local:8080'
+BASE_URL = 'http://betterbeauty.local:8000'
 
 PG_PORT = os.environ.get(EnvVars.PGPORT, 5432)
 

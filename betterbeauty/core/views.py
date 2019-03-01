@@ -16,6 +16,8 @@ from rest_framework import permissions, response, status, views
 from api.common.utils import email_verification_token
 from client.models import Client
 from core.constants import (
+    EMAIL_PAGE_NOT_FOUND_URL,
+    EMAIL_UNSUBSCRIBE_REDIRECT_URL,
     EMAIL_VERIFICATION_FAILIURE_REDIRECT_URL,
     EMAIL_VERIFICATION_SUCCESS_REDIRECT_URL,
     ENV_BLACKLIST,
@@ -117,3 +119,24 @@ class EmailVerificationView(views.View):
             return HttpResponseRedirect(
                 redirect_to=EMAIL_VERIFICATION_SUCCESS_REDIRECT_URL)
         return HttpResponseRedirect(redirect_to=EMAIL_VERIFICATION_FAILIURE_REDIRECT_URL)
+
+
+class EmailUnsubscribeView(views.View):
+
+    def get(self, request, role, uuid):
+        try:
+            if not (uuid and role):
+                raise KeyError
+            client_or_stylist: Union[Client, Stylist] = None
+            if role == UserRole.CLIENT.value:
+                client_or_stylist = Client.objects.get(uuid=uuid)
+            elif role == UserRole.STYLIST.value:
+                client_or_stylist = Stylist.objects.get(uuid=uuid)
+            if client_or_stylist:
+                client_or_stylist.email_notifications_enabled = False
+                client_or_stylist.save()
+                return HttpResponseRedirect(
+                    redirect_to=EMAIL_UNSUBSCRIBE_REDIRECT_URL
+                )
+        except Exception as e:
+            return HttpResponseRedirect(redirect_to=EMAIL_PAGE_NOT_FOUND_URL)
