@@ -363,3 +363,5 @@ STRIPE_CONNECT_CLIENT_ID = os.environ.get(
 # this is what will show in the client's bank statement as the merchant name for a charge
 STRIPE_DEFAULT_PAYMENT_DESCRIPTOR = 'MadeBeauty, Inc'
 STRIPE_DEFAULT_CURRENCY = 'usd'
+
+DEFAULT_FROM_EMAIL = 'MadeBeauty <noreply@madebeauty.com>'

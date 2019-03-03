@@ -61,6 +61,7 @@ ENV_BLACKLIST = {
     ]
 }
 
-
 EMAIL_VERIFICATION_SUCCESS_REDIRECT_URL = 'https://madebeauty.com/email-confirm-success/'
 EMAIL_VERIFICATION_FAILIURE_REDIRECT_URL = 'https://madebeauty.com/email-confirm-expired/'
+EMAIL_UNSUBSCRIBE_REDIRECT_URL = 'https://madebeauty.com/unsubscribe-success/'
+EMAIL_PAGE_NOT_FOUND_URL = 'https://madebeauty.com/page-not-found/'

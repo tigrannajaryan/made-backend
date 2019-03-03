@@ -1,0 +1,11 @@
+Hey {{short_name}},
+
+{% block body %}
+{% endblock %}
+
+Have a great day,
+
+The Made Team
+{% if unsubscribe_url %}
+Click this link to Unsubscribe: {{unsubscribe_url}}
+{% endif %}

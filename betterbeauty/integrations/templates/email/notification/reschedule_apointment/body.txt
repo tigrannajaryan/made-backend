@@ -1,0 +1,16 @@
+{% extends 'email/notification/base.txt' %}
+{% block body %}
+Your client, {{client_name}} has made a change to their upcoming appointment.
+
+Previous Appointment:
+{{previous_datetime}}
+{{previous_services}}
+{{previous_client_price}}
+
+New Appointment:
+{{new_datetime}}
+{{new_services}}
+{{new_client_price}}
+
+This has been updated in your MadePro calendar.
+{% endblock %}

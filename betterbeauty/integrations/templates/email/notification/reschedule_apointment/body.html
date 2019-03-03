@@ -1,0 +1,16 @@
+{% extends 'email/notification/base.html' %}
+{% block body %}
+<p>Your client, {{ client_name }} has made a change to their upcoming appointment.</p>
+<br/>
+<p>Previous Appointment:</p>
+<p>{{ previous_datetime }}</p>
+<p>{{ previous_services }}</p>
+<p>{{ previous_client_price  }}</p>
+<br/>
+<p>New Appointment:</p>
+<p>{{ new_datetime }}</p>
+<p>{{ new_services }}</p>
+<p>{{ new_client_price }}</p>
+<br/>
+<p>This has been updated in your MadePro calendar.</p>
+{% endblock %}
