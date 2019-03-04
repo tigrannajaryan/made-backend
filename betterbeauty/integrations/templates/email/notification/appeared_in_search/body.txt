@@ -1,5 +1,5 @@
 {% extends 'email/notification/base.txt' %}
-{% block 'body' %}
+{% block body %}
 You are getting noticed!! You name appeared {{appearance_count}} times in the MadeBeauty app in the last {{days_since}} days!
 
 Want to increase your chances of getting booked? Make sure your services and promotions are up to date for a better chance of getting bookings.

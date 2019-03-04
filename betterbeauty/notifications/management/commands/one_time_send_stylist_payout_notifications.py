@@ -1,12 +1,15 @@
 import datetime
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db.models import Exists, OuterRef
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 from core.models import UserRole
 from notifications.models import Notification
 from notifications.types import NotificationCode
+from notifications.utils import get_unsubscribe_url
 from salon.models import Stylist
 
 
@@ -51,10 +54,27 @@ class Command(BaseCommand):
             has_notification_already=False
         )
         for stylist in eligible_stylists.iterator():
+            short_name = stylist.get_short_name()
+            unsubscribe_url = get_unsubscribe_url(target, stylist.uuid)
+            msg_plain = render_to_string('email/notification/stylist_payout_promo/body.txt',
+                                         {'short_name': short_name,
+                                          'unsubscribe_url': unsubscribe_url})
+            msg_html = render_to_string('email/notification/stylist_payout_promo/body.html',
+                                        {'short_name': short_name,
+                                         'unsubscribe_url': unsubscribe_url})
+            mail_subject = render_to_string('email/notification/stylist_payout_promo/subject.txt',
+                                            {'short_name': short_name})
             notifications_to_create_list.append(
                 Notification(
                     user=stylist.user,
                     code=code,
+                    email_details={
+                        'from': settings.DEFAULT_FROM_EMAIL,
+                        'to': stylist.email,
+                        'subject': mail_subject,
+                        'text_content': msg_plain,
+                        'html_content': msg_html
+                    },
                     target=target,
                     message=message,
                     send_time_window_start=send_time_window_start,
