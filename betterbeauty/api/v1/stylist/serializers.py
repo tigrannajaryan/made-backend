@@ -171,6 +171,46 @@ class StylistServiceSerializer(
         return super(StylistServiceSerializer, self).update(instance, data_to_save)
 
 
+class StylistProfileStatusSerializer(serializers.ModelSerializer):
+    has_personal_data = serializers.SerializerMethodField()
+    has_picture_set = serializers.SerializerMethodField()
+    has_services_set = serializers.BooleanField(read_only=True)
+    has_business_hours_set = serializers.BooleanField(read_only=True)
+    has_weekday_discounts_set = serializers.SerializerMethodField()
+    has_other_discounts_set = serializers.SerializerMethodField()
+    must_select_deal_of_week = serializers.BooleanField(read_only=True)
+    can_checkout_with_made = serializers.BooleanField(read_only=True)
+    google_calendar_integrated = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Stylist
+        fields = [
+            'has_personal_data', 'has_picture_set', 'has_services_set',
+            'has_business_hours_set', 'has_weekday_discounts_set', 'has_other_discounts_set',
+            'has_invited_clients', 'must_select_deal_of_week', 'can_checkout_with_made',
+            'google_calendar_integrated',
+        ]
+
+    def get_google_calendar_integrated(self, instance: Stylist) -> bool:
+        return bool(instance.google_access_token and instance.google_refresh_token)
+
+    def get_has_personal_data(self, stylist: Stylist) -> bool:
+        full_name = stylist.get_full_name()
+        has_name = full_name and len(full_name) > 1
+        salon: Optional[Salon] = getattr(stylist, 'salon')
+        has_address = salon and salon.address
+        return bool(has_name and stylist.user.phone and has_address)
+
+    def get_has_picture_set(self, stylist: Stylist) -> bool:
+        return stylist.get_profile_photo_url() is not None
+
+    def get_has_weekday_discounts_set(self, stylist: Stylist) -> bool:
+        return stylist.is_discount_configured
+
+    def get_has_other_discounts_set(self, stylist: Stylist) -> bool:
+        return stylist.is_discount_configured
+
+
 class StylistSerializer(
     FormattedErrorMessageMixin,
     serializers.ModelSerializer
@@ -203,6 +243,7 @@ class StylistSerializer(
         required=False, allow_blank=True, allow_null=True, write_only=True
     )
     can_checkout_with_made = serializers.BooleanField(read_only=True)
+    profile_status = StylistProfileStatusSerializer(source='*', read_only=True)
 
     class Meta:
         model = Stylist
@@ -211,7 +252,7 @@ class StylistSerializer(
             'salon_name', 'salon_address', 'profile_photo_id', 'instagram_url', 'public_phone',
             'website_url', 'salon_city', 'salon_zipcode', 'salon_state', 'is_profile_bookable',
             'google_calendar_integrated', 'email', 'instagram_integrated',
-            'instagram_access_token', 'can_checkout_with_made',
+            'instagram_access_token', 'can_checkout_with_made', 'profile_status',
         ]
 
     def get_google_calendar_integrated(self, instance: Stylist) -> bool:
@@ -489,40 +530,6 @@ class StylistServiceListSerializer(
                 service_serializer.is_valid(raise_exception=True)
                 service_serializer.save()
             return super(StylistServiceListSerializer, self).update(instance, validated_data)
-
-
-class StylistProfileStatusSerializer(serializers.ModelSerializer):
-    has_personal_data = serializers.SerializerMethodField()
-    has_picture_set = serializers.SerializerMethodField()
-    has_services_set = serializers.BooleanField(read_only=True)
-    has_business_hours_set = serializers.BooleanField(read_only=True)
-    has_weekday_discounts_set = serializers.SerializerMethodField()
-    has_other_discounts_set = serializers.SerializerMethodField()
-    must_select_deal_of_week = serializers.BooleanField(read_only=True)
-
-    class Meta:
-        model = Stylist
-        fields = [
-            'has_personal_data', 'has_picture_set', 'has_services_set',
-            'has_business_hours_set', 'has_weekday_discounts_set', 'has_other_discounts_set',
-            'has_invited_clients', 'must_select_deal_of_week',
-        ]
-
-    def get_has_personal_data(self, stylist: Stylist) -> bool:
-        full_name = stylist.get_full_name()
-        has_name = full_name and len(full_name) > 1
-        salon: Optional[Salon] = getattr(stylist, 'salon')
-        has_address = salon and salon.address
-        return bool(has_name and stylist.user.phone and has_address)
-
-    def get_has_picture_set(self, stylist: Stylist) -> bool:
-        return stylist.get_profile_photo_url() is not None
-
-    def get_has_weekday_discounts_set(self, stylist: Stylist) -> bool:
-        return stylist.is_discount_configured
-
-    def get_has_other_discounts_set(self, stylist: Stylist) -> bool:
-        return stylist.is_discount_configured
 
 
 class StylistAvailableWeekDaySerializer(
