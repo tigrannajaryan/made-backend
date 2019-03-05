@@ -108,11 +108,27 @@ the automated tests for the new feature.
 - PostGIS
 
 
-## Local setup and installation
+## Setup and installation
 
 - add following line to your `/etc/hosts` file:
 
 `127.0.0.1 betterbeauty.local`
+
+### Docker
+
+#### Setup and run
+- install `docker` and `docker-compose`
+- from the root of the project run `docker-compose up --build`
+
+You should be able to access development server at `http://betterbeauty.local:8000`
+
+#### Adding a superuser
+To add a superuser, you can log into your docker container:
+- use `docker ps` to identify the name of your container
+- run `docker exec -it {name_of_your_running_container} /bin/bash`
+- go to `/madebeauty` inside your container, and run `COMMAND=createsuperuser make manage`
+
+### Native installation
 
 - install PostgreSQL 10.x and PostGIS extension corresponding to your
 PostgreSQL version.

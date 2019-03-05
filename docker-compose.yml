@@ -1,0 +1,13 @@
+version: '3.2'
+
+services:
+  web:
+    build: .
+    volumes:
+      - made-backend:/madebeauty
+    command: make run-docker
+    ports:
+      - "8000:8000"
+volumes:
+  made-backend:
+    driver: local
