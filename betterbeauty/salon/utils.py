@@ -13,6 +13,7 @@ from billing.utils import create_connected_account_from_client_token
 from client.constants import END_OF_DAY_BUFFER_TIME_IN_MINUTES
 from client.models import Client
 from core.constants import (
+    DEFAULT_DEAL_OF_WEEK,
     DEFAULT_FIRST_TIME_BOOK_DISCOUNT_PERCENT,
     DEFAULT_REBOOK_WITHIN_1_WEEK_DISCOUNT_PERCENT,
     DEFAULT_REBOOK_WITHIN_2_WEEKS_DISCOUNT_PERCENT,
@@ -28,7 +29,14 @@ from pricing import (
     DiscountSettings,
 )
 from pricing.constants import COMPLETELY_BOOKED_DEMAND, PRICE_BLOCK_SIZE
-from salon.models import Invitation, Salon, Stylist, StylistAvailableWeekDay, StylistService
+from salon.models import (
+    Invitation,
+    Salon,
+    Stylist,
+    StylistAvailableWeekDay,
+    StylistService,
+    StylistWeekdayDiscount,
+)
 from salon.types import (
     ClientPriceOnDate,
     ClientPricingHint,
@@ -358,11 +366,12 @@ def create_stylist_profile_for_user(user: User, **kwargs) -> Stylist:
         stylist = Stylist.objects.create(user=user, **kwargs)
         for i in range(1, 8):
             stylist.get_or_create_weekday_availability(Weekday(i))
-            discount = stylist.get_or_create_weekday_discount(
+            discount: StylistWeekdayDiscount = stylist.get_or_create_weekday_discount(
                 Weekday(i)
             )
             discount.discount_percent = DEFAULT_WEEKDAY_DISCOUNT_PERCENTS[i]
-            discount.save(update_fields=['discount_percent', ])
+            discount.is_deal_of_week = i == DEFAULT_DEAL_OF_WEEK
+            discount.save(update_fields=['discount_percent', 'is_deal_of_week'])
         if UserRole.STYLIST.value not in user.role:
             current_roles: list = user.role if user.role else []
             current_roles.append(UserRole.STYLIST.value)
