@@ -157,23 +157,26 @@ class Notification(models.Model):
 
         if not self.can_send_now():
             return False
-        mails_count = send_mail(
-            self.email_details['subject'],
-            self.email_details['text_content'],
-            self.email_details['from'],
-            [self.email_details['to']],
-            html_message=self.email_details['html_content'],
-            fail_silently=False,
-        )
-        logger.info('{0} mails sent'.format(mails_count))
-        logger.info('Rescedule email sent to {0}'.format(self.email_details['to']))
-        self.sent_via_channel = NotificationChannel.EMAIL
-        self.sent_at = timezone.now()
-        self.pending_to_send = False
-        self.save(
-            update_fields=['sent_via_channel', 'sent_at', 'pending_to_send', ]
-        )
-        return True
+        if 'to' in self.email_details and self.email_details['to']:
+            mails_count = send_mail(
+                self.email_details['subject'],
+                self.email_details['text_content'],
+                self.email_details['from'],
+                [self.email_details['to']],
+                html_message=self.email_details['html_content'],
+                fail_silently=False,
+            )
+            logger.info('{0} email notification sent to {1}'.format(mails_count,
+                                                                    self.email_details['to']))
+            self.sent_via_channel = NotificationChannel.EMAIL
+            self.sent_at = timezone.now()
+            self.pending_to_send = False
+            self.save(
+                update_fields=['sent_via_channel', 'sent_at', 'pending_to_send', ]
+            )
+            return True
+        else:
+            return False
 
     def can_send_over_channel(self, channel: NotificationChannel) -> bool:
         """Verify if notification can be sent over given channel"""

@@ -71,7 +71,7 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
             NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
         ],
         NotificationCode.STYLIST_PAYOUT_PROMO: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
         ],
     }
 else:
@@ -134,6 +134,6 @@ else:
             NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
         ],
         NotificationCode.STYLIST_PAYOUT_PROMO: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
         ],
     }
