@@ -5,7 +5,7 @@ services:
     build: .
     volumes:
       - made-backend:/madebeauty
-    command: make run-docker
+    command: make run-inside-docker
     ports:
       - "8000:8000"
 volumes:
