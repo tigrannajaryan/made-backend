@@ -12,6 +12,7 @@ class NotificationChannel(StrEnum):
 NOTIFICATION_CHANNEL_CHOICES = Choices(
     (NotificationChannel.SMS.value, 'sms', 'SMS message'),
     (NotificationChannel.PUSH.value, 'push', 'Push Notification'),
+    (NotificationChannel.EMAIL.value, 'email', 'Email Notification'),
 )
 
 

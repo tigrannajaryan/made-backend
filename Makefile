@@ -32,10 +32,13 @@ setup-db:
 setup-db-osx:
 	. install_scripts/local_osx_setup.sh
 
+setup-db-docker:
+	. install_scripts/docker_db_setup.sh
+
 install-py: .install-py
 .install-py: $(PROJECT)/requirements/common.txt $(PROJECT)/requirements/$(LEVEL).txt
-	[ ! -d "$(VIRTUAL_ENV)/" ] && virtualenv -p python3.6 $(VIRTUAL_ENV)/ || :
-	$(PYTHON) -m pip install --exists-action w $(requirements)
+	[ ! -d "$(VIRTUAL_ENV)/" ] && python3.6 -m venv $(VIRTUAL_ENV)/ || :
+	$(PYTHON) -m pip install pip wheel --upgrade && $(PYTHON) -m pip install --exists-action w $(requirements)
 
 clean:
 	@echo "cleaning compiled files..."
@@ -71,3 +74,10 @@ e2e-test:
 
 flake8:
 	$(FLAKE8) --statistics ./$(PROJECT)/
+
+setup-docker: .setup-docker
+.setup-docker: setup-db-docker install-py
+
+run-inside-docker: setup-docker
+	service postgresql start
+	make run

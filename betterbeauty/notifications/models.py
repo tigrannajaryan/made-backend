@@ -4,11 +4,13 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.contrib.postgres.fields import JSONField
+from django.core.mail import send_mail
 from django.db import models
 from django.utils import timezone
 
 from timezone_field import TimeZoneField
 
+from client.models import Client
 from core.choices import CLIENT_OR_STYLIST_ROLE
 from core.models import User, UserRole
 from integrations.push.utils import (
@@ -18,6 +20,7 @@ from integrations.push.utils import (
 )
 from integrations.twilio import send_sms_message
 from notifications.settings import NOTIFICATION_CHANNEL_PRIORITY
+from salon.models import Stylist
 from .types import (
     NOTIFICATION_CHANNEL_CHOICES,
     NotificationChannel,
@@ -40,6 +43,8 @@ class Notification(models.Model):
     code = models.CharField(max_length=64, verbose_name='Notification code')
     message = models.CharField(max_length=1024)
     sms_message = models.CharField(max_length=1024, blank=True, null=True, default=None)
+    # email_details JSON will contain from, to, subject and text_content, html_content
+    email_details = JSONField(default=default_json_field_value, blank=True, null=True)
     data = JSONField(default=default_json_field_value, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     send_time_window_start = models.TimeField()
@@ -51,6 +56,7 @@ class Notification(models.Model):
         max_length=16, null=True, choices=NOTIFICATION_CHANNEL_CHOICES,
         default=None, blank=True
     )
+
     discard_after = models.DateTimeField()
     device_acked_at = models.DateTimeField(null=True, default=None, editable=False)
     # deprecated field. notifications.settings.NOTIFICATION_CHANNEL_PRIORITY must
@@ -147,6 +153,31 @@ class Notification(models.Model):
             ])
         return True
 
+    def send_and_mark_sent_email_now(self) -> bool:
+
+        if not self.can_send_now():
+            return False
+        if 'to' in self.email_details and self.email_details['to']:
+            mails_count = send_mail(
+                self.email_details['subject'],
+                self.email_details['text_content'],
+                self.email_details['from'],
+                [self.email_details['to']],
+                html_message=self.email_details['html_content'],
+                fail_silently=False,
+            )
+            logger.info('{0} email notification sent to {1}'.format(mails_count,
+                                                                    self.email_details['to']))
+            self.sent_via_channel = NotificationChannel.EMAIL
+            self.sent_at = timezone.now()
+            self.pending_to_send = False
+            self.save(
+                update_fields=['sent_via_channel', 'sent_at', 'pending_to_send', ]
+            )
+            return True
+        else:
+            return False
+
     def can_send_over_channel(self, channel: NotificationChannel) -> bool:
         """Verify if notification can be sent over given channel"""
         if not settings.NOTIFICATIONS_ENABLED:
@@ -170,7 +201,16 @@ class Notification(models.Model):
                 if not self.user.client.sms_notifications_enabled:
                     return False
             return True
-
+        if (channel == NotificationChannel.EMAIL and 'to' in self.email_details and
+                self.email_details['to']):
+            if self.target == UserRole.CLIENT:
+                return Client.objects.filter(email=self.email_details['to'],
+                                             email_notifications_enabled=True,
+                                             email_verified=True).exists()
+            elif self.target == UserRole.STYLIST:
+                return Stylist.objects.filter(email=self.email_details['to'],
+                                              email_notifications_enabled=True,
+                                              email_verified=True).exists()
         return False
 
     def get_channel_to_send_over(self) -> Optional[NotificationChannel]:
@@ -193,6 +233,8 @@ class Notification(models.Model):
             return self.send_and_mark_sent_sms_now()
         if channel == NotificationChannel.PUSH:
             return self.send_and_mark_sent_push_notification_now()
+        if channel == NotificationChannel.EMAIL:
+            return self.send_and_mark_sent_email_now()
         logger.warning(
             'Notification.send_and_mark_sent_now got wrong channel {0}'.format(
                 channel

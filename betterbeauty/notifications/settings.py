@@ -38,7 +38,7 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
             NotificationChannel.PUSH  # NotificationChannel.SMS
         ],
         NotificationCode.REMIND_INVITE_CLIENTS: [
-            NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
+            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
         ],
         NotificationCode.REMIND_DEFINE_SERVICES: [
             NotificationChannel.PUSH, NotificationChannel.SMS
@@ -59,19 +59,19 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
             NotificationChannel.PUSH, NotificationChannel.SMS
         ],
         NotificationCode.INVITE_YOUR_STYLIST: [
-            NotificationChannel.SMS, NotificationChannel.PUSH,  # NotificationChannel.EMAIL
+            NotificationChannel.SMS, NotificationChannel.EMAIL, NotificationChannel.PUSH
         ],
         NotificationCode.CLIENT_REGISTRATION_INCOMPLETE: [
             NotificationChannel.PUSH
         ],
         NotificationCode.APPEARED_IN_SEARCH: [
-            NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
+            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
         ],
         NotificationCode.RESCHEDULED_APPOINTMENT: [
-            NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
+            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
         ],
         NotificationCode.STYLIST_PAYOUT_PROMO: [
-            NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
+            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
         ],
     }
 else:
@@ -101,7 +101,7 @@ else:
             NotificationChannel.PUSH  # NotificationChannel.SMS
         ],
         NotificationCode.REMIND_INVITE_CLIENTS: [
-            NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
+            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
         ],
         NotificationCode.REMIND_ADD_PHOTO: [
             NotificationChannel.PUSH, NotificationChannel.SMS,
@@ -122,18 +122,18 @@ else:
             NotificationChannel.PUSH, NotificationChannel.SMS
         ],
         NotificationCode.INVITE_YOUR_STYLIST: [
-            NotificationChannel.SMS, NotificationChannel.PUSH,  # NotificationChannel.EMAIL
+            NotificationChannel.SMS, NotificationChannel.EMAIL, NotificationChannel.PUSH
         ],
         NotificationCode.CLIENT_REGISTRATION_INCOMPLETE: [
             NotificationChannel.PUSH
         ],
         NotificationCode.APPEARED_IN_SEARCH: [
-            NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
+            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
         ],
         NotificationCode.RESCHEDULED_APPOINTMENT: [
-            NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
+            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
         ],
         NotificationCode.STYLIST_PAYOUT_PROMO: [
-            NotificationChannel.PUSH, NotificationChannel.SMS  # NotificationChannel.EMAIL
+            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
         ],
     }

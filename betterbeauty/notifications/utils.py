@@ -10,9 +10,10 @@ from django.conf import settings
 from django.contrib.gis.measure import D
 from django.db import transaction
 from django.db.models import Count, Exists, Func, Max, OuterRef, Q
+from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils import timezone
 
-# from api.v1.stylist.views import NearbyClientsView
 from appointment.models import Appointment
 from appointment.types import AppointmentStatus
 from client.models import Client, StylistSearchRequest
@@ -41,6 +42,10 @@ def is_push_only(code: NotificationCode) -> bool:
     """Return True if notification to be delivered ONLY via push"""
     channels: List = NOTIFICATION_CHANNEL_PRIORITY.get(code, [])
     return frozenset(channels) == frozenset([NotificationChannel.PUSH])
+
+
+def get_unsubscribe_url(target: str, uuid):
+    return '{0}{1}'.format(settings.BASE_URL, reverse('email-unsubscribe', args=[target, uuid]))
 
 
 @transaction.atomic()
@@ -551,7 +556,7 @@ def cancel_exsting_update_appointment_notification(
 
 @transaction.atomic()
 def generate_appointment_reschedule_notification(
-        appointment: Appointment, previous_datetime
+        appointment: Appointment, previous_datetime, previous_client_price, previous_services
 ) -> int:
     cancel_exsting_update_appointment_notification(appointment)
     code = NotificationCode.RESCHEDULED_APPOINTMENT
@@ -571,18 +576,23 @@ def generate_appointment_reschedule_notification(
     ):
         return 0
 
-    client_name = appointment.client.user.get_full_name()
+    client_name = client.user.get_full_name()
+    client_name = '{0} '.format(client_name) if client_name else ''
+    previous_datetime = stylist.with_salon_tz(previous_datetime).strftime(
+        '%-I:%M%p, on %b %-d, %Y'
+    )
+    new_client_price = int(appointment.total_client_price_before_tax)
+    new_services = ', '.join([s.service_name for s in appointment.services.all()])
+    new_datetime = stylist.with_salon_tz(appointment.datetime_start_at).strftime(
+        '%-I:%M%p, on %b %-d, %Y'
+    )
     message = message.format(
-        previous_datetime=stylist.with_salon_tz(previous_datetime).strftime(
-            '%-I:%M%p, on %b %-d, %Y'
-        ),
-        client_price=int(appointment.total_client_price_before_tax),
-        services=', '.join([s.service_name for s in appointment.services.all()]),
-        client_name='{0} '.format(client_name) if client_name else '',
-        client_phone=to_international_format(client.user.phone, client.country),
-        new_datetime=stylist.with_salon_tz(appointment.datetime_start_at).strftime(
-            '%-I:%M%p, on %b %-d, %Y'
-        ),
+        previous_datetime=previous_datetime,
+        client_price=previous_client_price,
+        previous_services=new_services,
+        services=new_services,
+        client_name=client_name,
+        new_datetime=new_datetime,
     )
 
     # Calculate start of send window.
@@ -650,11 +660,45 @@ def generate_appointment_reschedule_notification(
         discard_after = stylist.with_salon_tz(
             min(TOMORROW_MIDNIGHT, appointment.datetime_start_at)
         )
-
+    client_name = appointment.client.user.get_short_name()
+    client_name = '{0} '.format(client_name) if client_name else ''
+    stylist_name = stylist.get_short_name()
+    unsubscribe_url = get_unsubscribe_url(target, stylist.uuid)
+    msg_plain = render_to_string('email/notification/reschedule_apointment/body.txt',
+                                 {'short_name': stylist_name,
+                                  'unsubscribe_url': unsubscribe_url,
+                                  'client_name': client_name,
+                                  'previous_datetime': previous_datetime,
+                                  'previous_services': previous_services,
+                                  'previous_client_price': previous_client_price,
+                                  'new_datetime': new_datetime,
+                                  'new_services': new_services,
+                                  'new_client_price': new_client_price,
+                                  })
+    msg_html = render_to_string('email/notification/reschedule_apointment/body.html',
+                                {'short_name': stylist_name,
+                                 'unsubscribe_url': unsubscribe_url,
+                                 'previous_datetime': previous_datetime,
+                                 'previous_services': previous_services,
+                                 'previous_client_price': previous_client_price,
+                                 'new_datetime': new_datetime,
+                                 'new_services': new_services,
+                                 'new_client_price': new_client_price,
+                                 })
+    mail_subject = render_to_string('email/notification/reschedule_apointment/subject.txt', {
+        'short_name': stylist_name, 'client_name': client_name})
     Notification.objects.create(
         user=appointment.stylist.user, target=target, code=code,
         message=message,
+        email_details={
+            'from': settings.DEFAULT_FROM_EMAIL,
+            'to': stylist.email,
+            'subject': mail_subject,
+            'text_content': msg_plain,
+            'html_content': msg_html
+        },
         discard_after=discard_after,
+        forced_channel=NotificationChannel.EMAIL,
         send_time_window_start=send_time_window_start,
         send_time_window_end=send_time_window_end,
         send_time_window_tz=stylist.salon.timezone,
@@ -1329,6 +1373,7 @@ def generate_remind_invite_clients_notifications(dry_run=False) -> int:
         'We noticed that you have not invited any clients to Made Pro. Stylists who '
         'invite 10 or more clients usually get their first booking within 24 hours.'
     )
+
     earliest_time_stylist_created_profile = timezone.now() - datetime.timedelta(days=79)
     one_day_ago = timezone.now() - datetime.timedelta(hours=24)
     earliest_time_same_notification_sent = timezone.now() - datetime.timedelta(days=20)
@@ -1389,10 +1434,27 @@ def generate_remind_invite_clients_notifications(dry_run=False) -> int:
     notifications_to_create_list: List[Notification] = []
 
     for stylist in eligible_stylists.iterator():
+        short_name = stylist.get_short_name()
+        unsubscribe_url = get_unsubscribe_url(target, stylist.uuid)
+        msg_plain = render_to_string('email/notification/remind_invite_clients/body.txt',
+                                     {'short_name': short_name,
+                                      'unsubscribe_url': unsubscribe_url})
+        msg_html = render_to_string('email/notification/remind_invite_clients/body.html',
+                                    {'short_name': short_name, 'unsubscribe_url': unsubscribe_url})
+        mail_subject = render_to_string('email/notification/remind_invite_clients/subject.txt',
+                                        {'short_name': short_name})
+
         notifications_to_create_list.append(
             Notification(
                 user=stylist.user,
                 code=code,
+                email_details={
+                    'from': settings.DEFAULT_FROM_EMAIL,
+                    'to': stylist.email,
+                    'subject': mail_subject,
+                    'text_content': msg_plain,
+                    'html_content': msg_html
+                },
                 target=target,
                 message=message,
                 send_time_window_start=send_time_window_start,
@@ -1987,6 +2049,17 @@ def generate_invite_your_stylist_notifications(dry_run=False) -> int:
     ).select_for_update(skip_locked=True)
 
     for client in eligible_clients_queryset:
+        client_name = client.user.get_short_name()
+        short_name = '{0} '.format(client_name) if client_name else ''
+        unsubscribe_url = get_unsubscribe_url(target, client.uuid)
+        msg_plain = render_to_string('email/notification/invite_your_stylist/body.txt',
+                                     {'short_name': short_name,
+                                      'unsubscribe_url': unsubscribe_url})
+        msg_html = render_to_string('email/notification/invite_your_stylist/body.html',
+                                    {'short_name': short_name, 'unsubscribe_url': unsubscribe_url})
+        mail_subject = render_to_string('email/notification/invite_your_stylist/subject.txt',
+                                        {'short_name': short_name})
+
         discard_after = client.created_at + datetime.timedelta(days=90)
         notifications_to_create_list.append(
             Notification(
@@ -1995,6 +2068,13 @@ def generate_invite_your_stylist_notifications(dry_run=False) -> int:
                 target=target,
                 message=message,
                 sms_message=sms_message,
+                email_details={
+                    'from': settings.DEFAULT_FROM_EMAIL,
+                    'to': client.email,
+                    'subject': mail_subject,
+                    'text_content': msg_plain,
+                    'html_content': msg_html
+                },
                 send_time_window_start=send_time_window_start,
                 send_time_window_end=send_time_window_end,
                 send_time_window_tz=pytz.timezone(settings.TIME_ZONE),
@@ -2039,13 +2119,15 @@ def generate_stylist_appeared_in_search_notification(dry_run=False) -> int:
     :param dry_run: if set to True, don't actually create notifications
     :return: number of notifications created
     '''
+    SEND_NOTIFICATION_ONCE_IN_DAYS = 7
+
     code = NotificationCode.APPEARED_IN_SEARCH
     target = UserRole.STYLIST
     send_time_window_start = datetime.time(11, 0)
     send_time_window_end = datetime.time(18, 0)
     discard_after = timezone.now() + datetime.timedelta(days=7)
-
-    recent_same_notification_sent__before_days = timezone.now() - datetime.timedelta(days=7)
+    recent_same_notification_sent__before_days = timezone.now() - datetime.timedelta(
+        days=SEND_NOTIFICATION_ONCE_IN_DAYS)
 
     message = (
         'Your name appeared in searches by Made clients {0} times '
@@ -2087,6 +2169,19 @@ def generate_stylist_appeared_in_search_notification(dry_run=False) -> int:
 
     notifications_to_create_list: List[Notification] = []
     for stylist in eligible_stylists.iterator():
+        short_name = stylist.get_short_name()
+        unsubscribe_url = get_unsubscribe_url(target, stylist.uuid)
+        msg_plain = render_to_string('email/notification/appeared_in_search/body.txt',
+                                     {'short_name': short_name, 'unsubscribe_url': unsubscribe_url,
+                                      'appearance_count': stylist_ids_search_count[stylist.id],
+                                      'days_since': SEND_NOTIFICATION_ONCE_IN_DAYS})
+        msg_html = render_to_string('email/notification/appeared_in_search/body.html',
+                                    {'short_name': short_name, 'unsubscribe_url': unsubscribe_url,
+                                     'appearance_count': stylist_ids_search_count[stylist.id],
+                                     'days_since': SEND_NOTIFICATION_ONCE_IN_DAYS})
+        mail_subject = render_to_string('email/notification/appeared_in_search/subject.txt',
+                                        {'short_name': short_name})
+
         notifications_to_create_list.append(
             Notification(
                 user=stylist.user,
@@ -2095,6 +2190,13 @@ def generate_stylist_appeared_in_search_notification(dry_run=False) -> int:
                 message=message.format(
                     stylist_ids_search_count[stylist.id],
                     recent_same_notification_sent__before_days.strftime('%b %-d')),
+                email_details={
+                    'from': settings.DEFAULT_FROM_EMAIL,
+                    'to': stylist.email,
+                    'subject': mail_subject,
+                    'text_content': msg_plain,
+                    'html_content': msg_html
+                },
                 send_time_window_start=send_time_window_start,
                 send_time_window_end=send_time_window_end,
                 send_time_window_tz=stylist.salon.timezone,

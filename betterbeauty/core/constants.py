@@ -1,4 +1,4 @@
-from .types import StrEnum
+from .types import StrEnum, Weekday
 
 
 class EnvLevel(StrEnum):
@@ -10,6 +10,7 @@ class EnvLevel(StrEnum):
 
 class EnvVars(StrEnum):
 
+    SECRET_KEY = 'SECRET_KEY'
     RDS_DB_NAME = 'RDS_DB_NAME'
     RDS_USERNAME = 'RDS_USERNAME'
     RDS_PASSWORD = 'RDS_PASSWORD'
@@ -38,7 +39,7 @@ DEFAULT_REBOOK_WITHIN_3_WEEKS_DISCOUNT_PERCENT = 15
 DEFAULT_REBOOK_WITHIN_4_WEEKS_DISCOUNT_PERCENT = 10
 
 DEFAULT_WEEKDAY_DISCOUNT_PERCENTS = {
-    1: 20,
+    1: 30,
     2: 20,
     3: 20,
     4: 20,
@@ -46,6 +47,8 @@ DEFAULT_WEEKDAY_DISCOUNT_PERCENTS = {
     6: 0,
     7: 0
 }
+
+DEFAULT_DEAL_OF_WEEK = Weekday.MONDAY
 
 # We restrict some environment vars to specific environments.
 # For eg. twilio is restricted only to production.
@@ -60,6 +63,7 @@ ENV_BLACKLIST = {
     ]
 }
 
-
 EMAIL_VERIFICATION_SUCCESS_REDIRECT_URL = 'https://madebeauty.com/email-confirm-success/'
 EMAIL_VERIFICATION_FAILIURE_REDIRECT_URL = 'https://madebeauty.com/email-confirm-expired/'
+EMAIL_UNSUBSCRIBE_REDIRECT_URL = 'https://madebeauty.com/unsubscribe-success/'
+EMAIL_PAGE_NOT_FOUND_URL = 'https://madebeauty.com/page-not-found/'

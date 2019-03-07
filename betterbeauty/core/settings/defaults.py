@@ -112,7 +112,8 @@ LOGGING = {
 }
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '_8aa&jg@cd64@%2%20&6kzpu$cf8xu3hme&q&fu2gei(#7*h0r'
+SECRET_KEY = os.environ.get(EnvVars.SECRET_KEY,
+                            "%3h%_#mrt&eb+k-auzt(qdg_ix&9x!h_shf%bk=kr@a_cg__j_")
 
 ALLOWED_HOSTS = ['betterbeauty.local', ]
 
@@ -362,3 +363,5 @@ STRIPE_CONNECT_CLIENT_ID = os.environ.get(
 # this is what will show in the client's bank statement as the merchant name for a charge
 STRIPE_DEFAULT_PAYMENT_DESCRIPTOR = 'MadeBeauty, Inc'
 STRIPE_DEFAULT_CURRENCY = 'usd'
+
+DEFAULT_FROM_EMAIL = 'MadeBeauty <noreply@madebeauty.com>'
