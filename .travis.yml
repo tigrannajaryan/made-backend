@@ -28,6 +28,7 @@ notifications:
 branches:
   only:
   - develop
+  - feature/aswin/test-db-with-previous-version-of-code
 
 language: python
 python:
@@ -62,7 +63,7 @@ before_script: make setup-db
 
 script:
 - make build
-- make test
+- make full-test
 # temporarily disable e2e
 # - make e2e-test
 - echo "$TRAVIS_BUILD_NUMBER" > meta/build_number.txt

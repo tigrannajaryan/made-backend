@@ -62,7 +62,27 @@ mypy:
 pytest:
 	$(PYTEST) --ds=core.settings.tests --html=test-reports/junit/testresults.html \
 		--cov=$(PROJECT) --cov-report term --cov-report xml \
-		--cov-report html:test-reports/coverage-html $(TEST_ARGS) $(PROJECT)
+		--cov-report html:test-reports/coverage-html --create-db --reuse-db $(TEST_ARGS) $(PROJECT)
+
+pytest-reuse-db:
+	$(PYTEST) --ds=core.settings.tests --junit-xml=test-reports/junit/testresults.xml \
+		--cov=$(PROJECT) --cov-report term --cov-report xml \
+		--cov-report html:test-reports/coverage-html --reuse-db $(TEST_ARGS) $(PROJECT)
+
+full-test: test
+    # Create a new folder tmp and pull the current develop branch
+	git worktree add tmp develop
+	cd tmp
+	# setup virtualenv, install requirements
+	sudo make install-py
+	sudo make clean
+	sudo make lint
+	# reuse the already migrated db and test previous version of code
+	sudo make pytest-reuse-db
+	# remove tmp directory
+	rm -rf tmp
+	# remove from git worktree
+	sudo git worktree prune
 
 test: clean lint pytest
 	LEVEL=tests
