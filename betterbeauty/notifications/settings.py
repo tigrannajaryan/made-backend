@@ -14,126 +14,126 @@ from notifications.types import NotificationChannel, NotificationCode
 if settings.LEVEL == EnvLevel.PRODUCTION:
     NOTIFICATION_CHANNEL_PRIORITY = {
         NotificationCode.HINT_TO_FIRST_BOOK: [
-            NotificationChannel.PUSH, NotificationChannel.SMS,
+            NotificationChannel.PUSH,  # NotificationChannel.SMS,
         ],
         NotificationCode.HINT_TO_SELECT_STYLIST: [
-            NotificationChannel.PUSH, NotificationChannel.SMS,
+            NotificationChannel.PUSH,  # NotificationChannel.SMS,
         ],
         NotificationCode.HINT_TO_REBOOK: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.NEW_APPOINTMENT: [
-            NotificationChannel.PUSH, NotificationChannel.SMS,
+            NotificationChannel.PUSH,  # NotificationChannel.SMS,
         ],
         NotificationCode.TOMORROW_APPOINTMENTS: [
-            NotificationChannel.PUSH  # NotificationChannel.SMS
+            NotificationChannel.PUSH
         ],
         NotificationCode.REGISTRATION_INCOMPLETE: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.STYLIST_CANCELLED_APPOINTMENT: [
-            NotificationChannel.PUSH  # NotificationChannel.SMS
+            NotificationChannel.PUSH
         ],
         NotificationCode.CLIENT_CANCELLED_APPOINTMENT: [
-            NotificationChannel.PUSH  # NotificationChannel.SMS
+            NotificationChannel.PUSH
         ],
         NotificationCode.REMIND_INVITE_CLIENTS: [
-            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
+            NotificationChannel.PUSH, NotificationChannel.EMAIL,  # NotificationChannel.SMS
         ],
         NotificationCode.REMIND_DEFINE_SERVICES: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.REMIND_DEFINE_HOURS: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.REMIND_ADD_PHOTO: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.REMIND_DEFINE_DISCOUNTS: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.DEAL_OF_THE_WEEK: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.DEAL_OF_THE_WEEK_PROMO: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.INVITE_YOUR_STYLIST: [
-            NotificationChannel.SMS, NotificationChannel.EMAIL, NotificationChannel.PUSH
+            NotificationChannel.EMAIL, NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.CLIENT_REGISTRATION_INCOMPLETE: [
             NotificationChannel.PUSH
         ],
         NotificationCode.APPEARED_IN_SEARCH: [
-            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
+            NotificationChannel.PUSH, NotificationChannel.EMAIL,  # NotificationChannel.SMS
         ],
         NotificationCode.RESCHEDULED_APPOINTMENT: [
-            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
+            NotificationChannel.PUSH, NotificationChannel.EMAIL,  # NotificationChannel.SMS
         ],
         NotificationCode.STYLIST_PAYOUT_PROMO: [
-            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
+            NotificationChannel.PUSH, NotificationChannel.EMAIL,  # NotificationChannel.SMS
         ],
     }
 else:
     NOTIFICATION_CHANNEL_PRIORITY = {
         NotificationCode.HINT_TO_FIRST_BOOK: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.HINT_TO_SELECT_STYLIST: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.HINT_TO_REBOOK: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.NEW_APPOINTMENT: [
-            NotificationChannel.PUSH, NotificationChannel.SMS,
+            NotificationChannel.PUSH,  # NotificationChannel.SMS,
         ],
         NotificationCode.TOMORROW_APPOINTMENTS: [
-            NotificationChannel.PUSH  # NotificationChannel.SMS
+            NotificationChannel.PUSH
         ],
         NotificationCode.REGISTRATION_INCOMPLETE: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.STYLIST_CANCELLED_APPOINTMENT: [
-            NotificationChannel.PUSH  # NotificationChannel.SMS
+            NotificationChannel.PUSH
         ],
         NotificationCode.CLIENT_CANCELLED_APPOINTMENT: [
-            NotificationChannel.PUSH  # NotificationChannel.SMS
+            NotificationChannel.PUSH
         ],
         NotificationCode.REMIND_INVITE_CLIENTS: [
-            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
+            NotificationChannel.PUSH, NotificationChannel.EMAIL,  # NotificationChannel.SMS
         ],
         NotificationCode.REMIND_ADD_PHOTO: [
-            NotificationChannel.PUSH, NotificationChannel.SMS,
+            NotificationChannel.PUSH,  # NotificationChannel.SMS,
         ],
         NotificationCode.REMIND_DEFINE_SERVICES: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.REMIND_DEFINE_HOURS: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.REMIND_DEFINE_DISCOUNTS: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.DEAL_OF_THE_WEEK: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.DEAL_OF_THE_WEEK_PROMO: [
-            NotificationChannel.PUSH, NotificationChannel.SMS
+            NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.INVITE_YOUR_STYLIST: [
-            NotificationChannel.SMS, NotificationChannel.EMAIL, NotificationChannel.PUSH
+            NotificationChannel.EMAIL, NotificationChannel.PUSH,  # NotificationChannel.SMS
         ],
         NotificationCode.CLIENT_REGISTRATION_INCOMPLETE: [
             NotificationChannel.PUSH
         ],
         NotificationCode.APPEARED_IN_SEARCH: [
-            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
+            NotificationChannel.PUSH, NotificationChannel.EMAIL,  # NotificationChannel.SMS
         ],
         NotificationCode.RESCHEDULED_APPOINTMENT: [
-            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
+            NotificationChannel.PUSH, NotificationChannel.EMAIL,  # NotificationChannel.SMS
         ],
         NotificationCode.STYLIST_PAYOUT_PROMO: [
-            NotificationChannel.PUSH, NotificationChannel.EMAIL, NotificationChannel.SMS
+            NotificationChannel.PUSH, NotificationChannel.EMAIL,  # NotificationChannel.SMS
         ],
     }
