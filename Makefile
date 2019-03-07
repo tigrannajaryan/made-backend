@@ -60,7 +60,7 @@ mypy:
 	MYPYPATH=$(MYPYPATH) $(MYPY) --ignore-missing-imports $(PROJECT)/
 
 pytest:
-	$(PYTEST) --ds=core.settings.tests --junit-xml=test-reports/junit/testresults.xml \
+	$(PYTEST) --ds=core.settings.tests --html=test-reports/junit/testresults.html \
 		--cov=$(PROJECT) --cov-report term --cov-report xml \
 		--cov-report html:test-reports/coverage-html $(TEST_ARGS) $(PROJECT)
 
