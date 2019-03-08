@@ -377,6 +377,8 @@ class AppointmentValidationMixin(object):
     def validate_datetime_start_at(self, datetime_start_at: datetime.datetime):
         context: Dict = getattr(self, 'context', {})
 
+        MADE_CUTOFF_DATE = datetime.date(2019, 4, 1)
+
         stylist: Stylist = context['stylist']
         # check if appointment start is in the past
         if datetime_start_at < timezone.now():
@@ -387,6 +389,12 @@ class AppointmentValidationMixin(object):
         if not stylist.is_working_day(datetime_start_at):
             raise serializers.ValidationError(
                 appointment_errors.ERR_APPOINTMENT_NON_WORKING_DAY
+            )
+
+        # check if appointment is later than cutoff date
+        if datetime_start_at.date() > MADE_CUTOFF_DATE:
+            raise serializers.ValidationError(
+                appointment_errors.ERR_APPOINTMENT_OUTSIDE_WORKING_HOURS
             )
 
         # check if appointment doesn't fit working hours
