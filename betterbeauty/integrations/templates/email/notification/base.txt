@@ -3,7 +3,7 @@ Hey {{short_name}},
 {% block body %}
 {% endblock %}
 
-Have a great day,
+{% block wishes %}Have a great day,{% endblock %}
 
 The Made Team
 {% if unsubscribe_url %}

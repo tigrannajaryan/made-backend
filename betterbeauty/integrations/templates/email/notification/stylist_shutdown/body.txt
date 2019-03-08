@@ -1,0 +1,20 @@
+{% extends 'email/notification/base.txt' %}
+{% block body %}
+First, we want to thank each of our early users of the MadePro app, our entire team has enjoyed working alongside so many talented stylists and their loyal clients as we brought our vision to life. A year ago, we founded the MADE app with a simple concept in mind, to connect clients and stylist at the best rates in the beauty industry and to keep clients coming back.
+
+While we have seen a lot of early success with many of our users, including rebooking rates above industry average and hundreds of client bookings, we haven't found the fit in the market that we were looking to achieve at this point. As a result, we have recently made the difficult decision to scale down and discontinue the MadePro and MadeBeauty client and stylist apps.
+
+What does this mean for you?
+We will keep both apps active through April 30, 2019, to assist you in moving your clients and bookings over to another booking system.
+
+What happens to my bank details?
+We will not store or keep any bank details in our system.
+
+What happens to my client information?
+We will notify all clients that have booked with you via the MadeBeauty app that we are discontinuing the app. You can also link all current bookings to your google calendar to keep them stored.
+
+Thank you again for coming on our journey with us and supporting MADE!
+
+Please don't hesitate to reach out if you have any further questions or concerns.
+{% endblock %}
+{% block wishes %}Best Wishes,{% endblock %}

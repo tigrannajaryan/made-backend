@@ -37,3 +37,5 @@ class NotificationCode(StrEnum):
     RESCHEDULED_APPOINTMENT = 'rescheduled_appointment'
     APPEARED_IN_SEARCH = 'client_appeared_in_search'
     STYLIST_PAYOUT_PROMO = 'stylist_payout_promo'
+    STYLIST_SHUTDOWN = 'stylist_shutdown'
+    CLIENT_SHUTDOWN = 'client_shutdown'

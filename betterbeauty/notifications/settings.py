@@ -73,6 +73,12 @@ if settings.LEVEL == EnvLevel.PRODUCTION:
         NotificationCode.STYLIST_PAYOUT_PROMO: [
             NotificationChannel.PUSH, NotificationChannel.EMAIL,  # NotificationChannel.SMS
         ],
+        NotificationCode.STYLIST_SHUTDOWN: [
+            NotificationChannel.EMAIL, NotificationChannel.SMS,
+        ],
+        NotificationCode.CLIENT_SHUTDOWN: [
+            NotificationChannel.EMAIL, NotificationChannel.SMS,
+        ],
     }
 else:
     NOTIFICATION_CHANNEL_PRIORITY = {
@@ -135,5 +141,11 @@ else:
         ],
         NotificationCode.STYLIST_PAYOUT_PROMO: [
             NotificationChannel.PUSH, NotificationChannel.EMAIL,  # NotificationChannel.SMS
+        ],
+        NotificationCode.STYLIST_SHUTDOWN: [
+            NotificationChannel.EMAIL, NotificationChannel.SMS,
+        ],
+        NotificationCode.CLIENT_SHUTDOWN: [
+            NotificationChannel.EMAIL, NotificationChannel.SMS,
         ],
     }
