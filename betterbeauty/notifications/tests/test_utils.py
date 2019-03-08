@@ -213,6 +213,7 @@ class TestGenerateHintToFirstBookNotification(object):
     @freeze_time('2018-11-9 20:30:00 UTC')
     def test_bookable_stylist(self, bookable_stylist):
         client = G(Client)
+        G(APNSDevice, user=client.user, application_id=MobileAppIdType.IOS_STYLIST_DEV)
         G(
             PreferredStylist, client=client, stylist=bookable_stylist,
             created_at=datetime.datetime(2018, 11, 5, 0, 0, tzinfo=pytz.UTC)
