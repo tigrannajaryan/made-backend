@@ -377,7 +377,7 @@ class AppointmentValidationMixin(object):
     def validate_datetime_start_at(self, datetime_start_at: datetime.datetime):
         context: Dict = getattr(self, 'context', {})
 
-        MADE_CUTOFF_DATE = datetime.date(2019, 4, 1)
+        MADE_CUTOFF_DATE = datetime.date(2019, 4, 30)
 
         stylist: Stylist = context['stylist']
         # check if appointment start is in the past
